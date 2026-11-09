@@ -1,0 +1,14 @@
+.DS_Store
+.claude/settings.local.json
+.idea/
+.vscode/
+# configuración y secretos de cada instalación
+.env
+*.env.local
+# compilados y dependencias
+target/
+node_modules/
+dist/
+coverage/
+# datos de una instalación local (documentos, base de datos)
+data/
