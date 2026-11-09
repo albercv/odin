@@ -272,7 +272,7 @@ Reproduce la variante medida en el estudio (script `pruebas-busqueda/scripts/fts
   - `unaccent` y `pg_trgm` son extensiones de confianza de la imagen oficial `postgres:17`. Las crea el rol de migraciones, dueño de la base, sin superusuario.
   - No hace falta una imagen propia.
 - **Canal exacto:** los términos con cifras o identificadores, como `2024/113` o `B-12345678`, se buscan con `ILIKE` sobre el texto literal y suben primero en el orden.
-- **Filtros:** la empresa (obligatoria, sale del `Actor`) y el proyecto (opcional). Solo entran las fichas `APPROVED` (pendiente de confirmar, apartado 13).
+- **Filtros:** la empresa (obligatoria, sale del `Actor`) y el proyecto (opcional). Solo entran las fichas `APPROVED`; las `PENDING` y las `REJECTED` no aparecen (D-036, D-037).
 - **Resultado:** hasta `limit` resultados, 10 por defecto y 50 como máximo. Cada uno lleva:
   - el tipo de fuente (`ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`) y su identificador;
   - título, página y si es paginado;
@@ -431,9 +431,15 @@ El MCP la ofrece para que la IA compruebe sus citas antes de responder. El cereb
   - para cada tarea: `make check` en verde y su verificación, ejecutada;
   - para la fase: `make demo` en verde y un informe de lo que funciona y lo que falta.
 
-## 13. Dudas para el CEO
+## 13. Dudas para el CEO, resueltas (D-036 y D-037, 2026-11-09)
 
-Las respuestas, cuando lleguen, sustituyen la propuesta del CTO que aparece en cada punto.
+El CEO las resolvió con la delegación del propietario. Respuestas:
+
+- **Fichas pendientes:** los compañeros no las ven hasta que se aprueban. Que el autor vea las suyas pendientes, marcadas «pendiente de revisión», queda para la fase 2 y será por MCP (D-037); en la fase 1 basta el aviso de `saveKnowledgeCard`. Las rechazadas no aparecen en ninguna búsqueda. Qué se dice al autor de una rechazada, en la fase 2.
+- **Registro de preguntas:** se guardan el texto y el autor. El trabajador verá sus propias preguntas (fase 2). El panel nunca lista las preguntas de una persona concreta; en la fase 2, solo recuentos descriptivos. Las preguntas que acabaron en «no consta» podrán salir como lista de huecos de la documentación, sin autor. Plazo de conservación: pendiente de la validación legal (D-022).
+- **Autorrevisión** (D-037): un administrador que además tiene usuario de trabajador puede revisar sus propias fichas; en una microempresa puede no haber nadie más. La marca de quién revisó deja constancia.
+
+Preguntas originales y propuesta del CTO:
 
 1. **¿Una ficha pendiente de revisar aparece en las búsquedas?** Propuesta: no, solo las aprobadas. El trabajador no tiene panel, así que en la fase 1 no ve sus fichas pendientes; la herramienta `saveKnowledgeCard` le dice que queda pendiente de revisión.
 2. **Registro de preguntas:** ¿se guarda el texto de cada pregunta junto a su autor (el encargo pide registrar el autor de cada pregunta) y quién puede verlo? Propuesta: se guarda; en la fase 1 nadie lo ve en el panel, y en la fase 2 solo sale en estadísticas descriptivas.

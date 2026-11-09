@@ -35,9 +35,9 @@
   - Commits en español sin atribución a Claude, ni `Co-Authored-By` ni firmas.
   - Sin push. El CTO hace el merge `--no-ff` a la feature.
 - **Contratos:** JSON en camelCase. Errores RFC 9457.
-- **Decisiones pendientes del CEO (spec 13), aisladas:**
-  - las fichas visibles en la búsqueda salen de `CardVisibilitySettings.searchableStatuses` (por defecto `{APPROVED}`);
-  - guardar el texto de las preguntas depende de `QuestionLogSettings.storeText` (por defecto `true`; si es `false`, se guarda `null`).
+- **Decisiones del CEO (D-036 y D-037, spec 13):**
+  - en la búsqueda de la fase 1 solo entran las fichas `APPROVED`; las `PENDING` y las `REJECTED` no aparecen (que el autor vea sus pendientes, en la fase 2);
+  - de cada pregunta se guardan el texto y el autor; el panel nunca lista las preguntas de una persona.
 
 **Ajuste del spec 7:** las variables de RLS son `app.company_ids` (UUID separados por comas, porque `CompanyScope` es un conjunto) y `app.group_scope`.
 
@@ -111,7 +111,7 @@ Los nombres de esta sección son los que usan todas las tareas.
   - `QuestionRecord(UUID id, CompanyId companyId, UserId authorId, String text, int hitCount, Instant askedAt)`, donde `text` admite `null`.
 - **`search`:**
   - `SourceType`, con los valores `ORIGINAL_DOCUMENT` y `KNOWLEDGE_CARD`;
-  - `SearchQuery(List<String> terms, CompanyScope scope, Optional<ProjectId> projectId, int limit, Set<CardStatus> cardStatuses)`;
+  - `SearchQuery(List<String> terms, CompanyScope scope, Optional<ProjectId> projectId, int limit)`;
   - `SearchHit(SourceType sourceType, UUID sourceId, String title, Optional<Integer> pageNumber, boolean paginated, Optional<ProjectId> projectId, String authorName, Instant date, String excerpt, double rank)`;
   - `SearchResult(List<SearchHit> hits)`, con `noSource()`;
   - `QuoteMatcher.containsLiteral(String pageText, String quote)`, que normaliza los espacios (cualquier secuencia pasa a ser un espacio) y las mayúsculas; las tildes no.
@@ -152,9 +152,7 @@ Los casos de uso reciben además `java.time.Clock`.
 - `InstallationSettings(String setupToken)`;
 - `SessionSettings(Duration idleTimeout)`, por defecto 8 horas;
 - `UploadSettings(long maxBytes)`, por defecto 52428800;
-- `ProcessingSettings(Duration staleAfter, int maxAttempts)`, por defecto 15 minutos y 3;
-- `CardVisibilitySettings(Set<CardStatus> searchableStatuses)`;
-- `QuestionLogSettings(boolean storeText)`.
+- `ProcessingSettings(Duration staleAfter, int maxAttempts)`, por defecto 15 minutos y 3.
 
 **Casos de uso:** una clase por caso, con un método público `execute(...)`, en `com.e2d.odin.application.<área>`. Las firmas están en las tareas 2 y 3.
 
@@ -296,7 +294,7 @@ Reglas que fija el spec (6.1, 6.2, 6.6 y 6.8):
   - Las operaciones del trabajador exigen `requireWorker` y la capacidad correspondiente: `SEARCH_KNOWLEDGE` para buscar, leer, listar y verificar, y `SAVE_KNOWLEDGE_CARD` para guardar.
   - Su ámbito es siempre `actor.scope()`.
 - **Límites:**
-  - `SearchKnowledge`: 10 por defecto y 50 como máximo. Guarda un `QuestionRecord` (texto = consultas unidas con `" | "`, o `null` si `storeText=false`) y pasa `cardStatuses` desde `CardVisibilitySettings`.
+  - `SearchKnowledge`: 10 por defecto y 50 como máximo. Guarda un `QuestionRecord` (texto = consultas unidas con `" | "`) sin estados de ficha: el filtro de fichas aprobadas es del adaptador.
   - `ListDocuments`: 100 por defecto y 500 como máximo. Un `limit` mayor se recorta.
 - **Revisión (`ReviewCard`):**
   - Solo con una ficha `PENDING`; si no, `ConflictException`.
@@ -313,7 +311,7 @@ Reglas que fija el spec (6.1, 6.2, 6.6 y 6.8):
 - [ ] **Paso 2:** pruebas de los casos de uso, con dobles. Ejecútalas y comprueba que fallan. Como mínimo:
   - `UploadDocumentTest`: `storesOriginalAndCreatesReceived`, `duplicateInSameCompanyReturnsExisting`, `sameFileInOtherCompanyIsNotDuplicate` (foco de revisión 2), `failedDuplicateIsRequeued`, `rejectsEmptyContent`, `rejectsTooLarge`, `rejectsProjectOfOtherCompany` y `companyAdminCannotUploadToOtherCompany`;
   - `ProcessPendingDocumentsTest`: `pdfWithTextBecomesReady`, `pdfWithoutTextBecomesPendingReader`, `imageBecomesPendingReader`, `readerErrorBecomesFailed`, `thirdAttemptFails` y `nonPaginatedStoresSinglePage`;
-  - `SearchKnowledgeTest`: `usesActorScopeOnly`, `passesApprovedOnlyByDefault`, `recordsQuestionWithAuthor`, `recordsNullTextWhenDisabled`, `capsLimitAt50`, `requiresSearchCapability` y `adminCannotSearch`;
+  - `SearchKnowledgeTest`: `usesActorScopeOnly`, `recordsQuestionWithAuthor`, `capsLimitAt50`, `requiresSearchCapability` y `adminCannotSearch`;
   - `ReadPageTest`: `otherCompanyDocumentIsNotFound`;
   - `VerifyCitationTest`: `trueForLiteralQuote` y `falseForOtherCompanyDocument`;
   - `SaveKnowledgeCardTest`: `createsPendingCardWithAuthor` y `requiresSaveCapability`;
@@ -378,7 +376,7 @@ Valores que fija el spec 7:
 - **Orden:** `ts_rank_cd`.
 - **Filtros:**
   - páginas solo de documentos `READY`;
-  - fichas solo con estado en `cardStatuses`;
+  - solo fichas `APPROVED`;
   - ámbito con `inScope(query.scope())`;
   - el proyecto, si llega.
 - **Extracto:** `ts_headline` con `StartSel="", StopSel="", MaxFragments=1`. Si el resultado no es literal según `QuoteMatcher`, se recortan 300 caracteres alrededor de la primera coincidencia.
@@ -388,7 +386,7 @@ Valores que fija el spec 7:
   - `identifierChannelRanksFirst`;
   - `excerptIsLiteral`, que comprueba `QuoteMatcher.containsLiteral(pageText, excerpt)` en todos los resultados;
   - `otherCompanyNeverReturned`;
-  - `pendingCardNotReturnedWithApprovedOnly`;
+  - `pendingCardNeverReturned` y `rejectedCardNeverReturned`;
   - `notReadyDocumentNotReturned`;
   - `emptyOrStopwordQueryReturnsNoSource`, con `""`, `"¿?"` y `"de la el"` (foco de revisión 3).
 
