@@ -9,7 +9,6 @@ import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.shared.CardId;
-import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import java.time.Clock;
@@ -28,9 +27,8 @@ public class ReviewCard {
     public KnowledgeCard execute(Actor actor, CardId id, ReviewDecision decision, Optional<String> correctedBody,
             Optional<String> note) {
         AccessPolicy.requireAdmin(actor);
-        KnowledgeCard card = cards.findById(CompanyScope.all(), id)
+        KnowledgeCard card = cards.findById(actor.scope(), id)
                 .orElseThrow(() -> new NotFoundException("Ficha no encontrada"));
-        AccessPolicy.requireAdminOf(actor, card.companyId());
         if (card.status() != CardStatus.PENDING) {
             throw new ConflictException("La ficha ya está revisada");
         }

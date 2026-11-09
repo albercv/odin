@@ -14,6 +14,12 @@ class QuoteMatcherTest {
     }
 
     @Test
+    void matchesAcrossNonBreakingSpaces() {
+        assertThat(QuoteMatcher.containsLiteral("La\u00a0franquicia\u2009se\u202faplica", "franquicia se aplica"))
+                .isTrue();
+    }
+
+    @Test
     void matchesIgnoringCase() {
         assertThat(QuoteMatcher.containsLiteral(PAGE, "FRANQUICIA SE APLICA")).isTrue();
     }

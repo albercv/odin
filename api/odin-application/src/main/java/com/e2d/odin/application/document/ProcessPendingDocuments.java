@@ -36,7 +36,7 @@ public class ProcessPendingDocuments {
     }
 
     private void process(Document document) {
-        if (document.attemptCount() >= settings.maxAttempts()) {
+        if (document.attemptCount() > settings.maxAttempts()) {
             documents.save(document.markFailed("demasiados intentos"));
             return;
         }

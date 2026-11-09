@@ -94,20 +94,47 @@ class ProcessPendingDocumentsTest {
         assertThat(after.failureReason()).contains("pdf corrupto");
     }
 
-    @Test
-    void thirdAttemptFails() {
-        Document d = upload(DocumentFormat.PDF);
-        ProcessPendingDocuments processor = processor(pdfReader("uno"));
-        for (int i = 0; i < 2; i++) {
+    private void crashedClaims(int times) {
+        for (int i = 0; i < times; i++) {
             docs.claimNextForProcessing(clock.instant(), Duration.ofMinutes(15));
             clock.advance(Duration.ofMinutes(16));
         }
+    }
 
-        assertThat(processor.processNext()).isTrue();
+    @Test
+    void thirdClaimStillProcesses() {
+        Document d = upload(DocumentFormat.PDF);
+        crashedClaims(2);
+
+        processor(pdfReader("uno")).processNext();
+
+        assertThat(docs.get(d.id()).orElseThrow().status()).isEqualTo(DocumentStatus.READY);
+    }
+
+    @Test
+    void fourthClaimFailsAfterThreeAttempts() {
+        Document d = upload(DocumentFormat.PDF);
+        crashedClaims(3);
+
+        assertThat(processor(pdfReader("uno")).processNext()).isTrue();
 
         Document after = docs.get(d.id()).orElseThrow();
         assertThat(after.status()).isEqualTo(DocumentStatus.FAILED);
         assertThat(after.failureReason()).contains("demasiados intentos");
+        assertThat(docs.pagesOf(d.id())).isEmpty();
+    }
+
+    @Test
+    void retryAfterTooManyAttemptsProcessesAgain() {
+        Document d = upload(DocumentFormat.PDF);
+        crashedClaims(3);
+        ProcessPendingDocuments processor = processor(pdfReader("uno"));
+        processor.processNext();
+
+        new RetryDocument(docs).execute(Actors.companyAdmin(company), d.id());
+        processor.processNext();
+
+        assertThat(docs.get(d.id()).orElseThrow().status()).isEqualTo(DocumentStatus.READY);
     }
 
     @Test

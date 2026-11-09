@@ -15,6 +15,6 @@ public final class QuoteMatcher {
     }
 
     private static String normalize(String text) {
-        return text.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        return text.replaceAll("[\\s\\p{Z}]+", " ").trim().toLowerCase(Locale.ROOT);
     }
 }

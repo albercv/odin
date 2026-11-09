@@ -15,6 +15,7 @@ import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.List;
 import java.util.Optional;
@@ -83,11 +84,11 @@ class ReviewCardTest {
     }
 
     @Test
-    void companyAdminOfOtherCompanyForbidden() {
+    void companyAdminOfOtherCompanyGetsNotFound() {
         KnowledgeCard card = Fixtures.card(cards, companyA, CardStatus.PENDING);
 
         assertThatThrownBy(() -> review.execute(Actors.companyAdmin(companyB), card.id(), ReviewDecision.APPROVE,
-                Optional.empty(), Optional.empty())).isInstanceOf(ForbiddenException.class);
+                Optional.empty(), Optional.empty())).isInstanceOf(NotFoundException.class);
         assertThat(cards.get(card.id()).orElseThrow().status()).isEqualTo(CardStatus.PENDING);
     }
 
