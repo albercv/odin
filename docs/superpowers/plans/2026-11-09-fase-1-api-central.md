@@ -448,7 +448,7 @@ Valores que fija el spec 7:
 
 **Ficheros:**
 - **Crear:** en `odin-adapter-web/src/main/java/com/e2d/odin/adapter/web/`:
-  - `setup/SetupController`;
+  - `setup/SetupController` y `setup/HealthController` (`GET /v1/health` devuelve `{ "status": "ok" }`);
   - `admin/*Controller`, para la sesión, las empresas, los proyectos, los usuarios, las claves, los documentos y las fichas;
   - `worker/*Controller`, para `me`, `search`, `documents`, `citations` y `cards`;
   - `security/ActorResolutionFilter`, `OriginCheckFilter`, `LoginRateLimiter` y `CurrentActor`;
@@ -621,7 +621,7 @@ Valores que fija el spec 7:
 
 **Ficheros:**
 - **Crear:**
-  - `deploy/demo/poliza-ficticia.pdf`, un PDF con texto generado a partir de `corpus-limpio/c2-almendros/poliza-seguro-2024.txt` y sus páginas;
+  - `deploy/demo/poliza-ficticia.pdf`, un PDF con texto generado a partir de `corpus-limpio/c2-almendros/poliza-seguro-2024.txt` y sus páginas. Se genera con PDFBox, que ya está en el proyecto; se versiona el PDF, no el generador;
   - `deploy/demo/demo.ts` (cliente de la API y cliente MCP del SDK, por stdio contra `mcp`);
   - `panel/e2e/demo.spec.ts` (Playwright).
 - **Modificar:** el objetivo `demo` del `Makefile`, que arranca la pila con un `.env` temporal, ejecuta la demostración y la para.
