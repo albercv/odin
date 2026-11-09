@@ -43,6 +43,25 @@ describe('buildServer', () => {
     expect(JSON.parse(fake.requests.at(-1)!.body)).toEqual({ queries: ['plazo'], limit: 5 });
   });
 
+  it('searchMapsCardsAsCardsWithOriginAndWithoutPage', async () => {
+    const card = { sourceType: 'KNOWLEDGE_CARD', sourceId: 'k1', title: 'Truco', paginated: false,
+      authorName: 'Ana', date: '2026-01-01T00:00:00Z', excerpt: 'se hace así', rank: 1 };
+    const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [card], noSource: false } }));
+    const parsed = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['truco'] } })));
+    expect(parsed.hits[0]).toEqual({ sourceType: 'KNOWLEDGE_CARD', cardId: 'k1', title: 'Truco', authorName: 'Ana',
+      date: '2026-01-01T00:00:00Z', projectId: null, excerpt: 'se hace así',
+      origin: 'Ficha aportada por Ana; resumen hecho por IA' });
+  });
+
+  it('instructionsExplainHowToCiteCardsAndUseVerifyCitation', async () => {
+    const client = await connect(() => meWith(ALL));
+    const instructions = client.getInstructions() ?? '';
+    expect(instructions).toContain('por título, autor y fecha');
+    expect(instructions).toContain('no tienen página');
+    expect(instructions).toContain('verifyCitation es solo para documentos');
+    expect(instructions).toContain('si verifyCitation devuelve false, no uses esa cita');
+  });
+
   it('noSourceMessage', async () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [], noSource: true } }));
     const result = await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['nada'] } });
