@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, type S } from '../api/client';
+import { MAX_DOCUMENTS, api, type S } from '../api/client';
 import { Notice } from '../components/Notice';
 import { useAction, useLoad } from '../components/useLoad';
 
@@ -41,7 +41,7 @@ function DocRow({ d, onRetry }: { d: S['DocumentView']; onRetry: () => void }) {
   return (
     <tr>
       <td>{d.title}</td>
-      <td>{STATUS[d.status ?? ''] ?? d.status}</td>
+      <td>{STATUS[d.status] ?? d.status}</td>
       <td>{d.failureReason}</td>
       <td>{d.status === 'FAILED' && <button type="button" onClick={onRetry}>Reintentar</button>}</td>
     </tr>
@@ -51,15 +51,17 @@ function DocRow({ d, onRetry }: { d: S['DocumentView']; onRetry: () => void }) {
 export function Documents({ companyId }: { companyId: string }) {
   const list = useLoad(() => api.documents(companyId), [companyId]);
   const { error, act } = useAction();
-  const retry = async (id?: string) => id && (await act(() => api.retry(id))) && list.reload();
+  const retry = async (id: string) => (await act(() => api.retry(id))) && list.reload();
   return (
     <section>
       <h1>Documentos</h1>
       <Notice message={error ?? list.error} />
       <UploadForm companyId={companyId} onDone={list.reload} />
+      <button type="button" onClick={list.reload}>Actualizar</button>
+      {list.data?.truncated && <p role="status">La lista está cortada: se muestran los primeros {MAX_DOCUMENTS} documentos.</p>}
       <table>
         <thead><tr><th>Título</th><th>Estado</th><th>Motivo</th><th>Acciones</th></tr></thead>
-        <tbody>{list.data?.map((d) => <DocRow key={d.id} d={d} onRetry={() => retry(d.id)} />)}</tbody>
+        <tbody>{list.data?.documents.map((d) => <DocRow key={d.id} d={d} onRetry={() => retry(d.id)} />)}</tbody>
       </table>
     </section>
   );

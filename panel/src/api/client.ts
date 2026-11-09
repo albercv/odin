@@ -33,6 +33,20 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
 const a = '/v1/admin';
 const co = (id: string) => `${a}/companies/${id}`;
 
+const PAGE_SIZE = 500;
+export const MAX_DOCUMENTS = 2000;
+
+// Recorre las páginas de la API con offset, como collectDocuments en el MCP.
+async function allDocuments(companyId: string) {
+  const documents: S['DocumentView'][] = [];
+  while (documents.length <= MAX_DOCUMENTS) {
+    const page = await request<S['DocumentView'][]>('GET', `${co(companyId)}/documents?offset=${documents.length}&limit=${PAGE_SIZE}`);
+    documents.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return { documents: documents.slice(0, MAX_DOCUMENTS), truncated: documents.length > MAX_DOCUMENTS };
+}
+
 export const api = {
   me: () => request<S['AdminMe']>('GET', `${a}/me`, undefined, true),
   login: (b: S['Login']) => request<S['UserRef']>('POST', `${a}/session`, b, true),
@@ -50,7 +64,7 @@ export const api = {
   keys: (userId: string) => request<S['KeyView'][]>('GET', `${a}/users/${userId}/keys`),
   issueKey: (userId: string, label: string) => request<S['IssuedKeyView']>('POST', `${a}/users/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
-  documents: (id: string) => request<S['DocumentView'][]>('GET', `${co(id)}/documents?limit=100`),
+  documents: allDocuments,
   upload: (id: string, file: File, title: string, projectId: string) => {
     const q = new URLSearchParams();
     if (title) q.set('title', title);
