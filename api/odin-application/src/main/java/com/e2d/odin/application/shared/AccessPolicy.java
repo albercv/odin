@@ -39,7 +39,7 @@ public final class AccessPolicy {
 
     public static void requireCapability(Company company, Capability capability) {
         if (!company.capabilities().contains(capability)) {
-            throw new ForbiddenException("La empresa no tiene activada esta capacidad");
+            throw new ForbiddenException("Tu empresa no tiene activada esta función");
         }
     }
 }

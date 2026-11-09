@@ -1,0 +1,77 @@
+package com.e2d.odin.adapter.web.admin;
+
+import com.e2d.odin.adapter.web.dto.Responses;
+import com.e2d.odin.adapter.web.security.CurrentActor;
+import com.e2d.odin.application.document.GetDocument;
+import com.e2d.odin.application.document.ListCompanyDocuments;
+import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.document.UploadOutcome;
+import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.ProjectId;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+@RestController
+public class AdminDocumentController {
+
+    private final UploadDocument upload;
+    private final ListCompanyDocuments list;
+    private final GetDocument get;
+    private final RetryDocument retry;
+
+    public AdminDocumentController(UploadDocument upload, ListCompanyDocuments list, GetDocument get,
+            RetryDocument retry) {
+        this.upload = upload;
+        this.list = list;
+        this.get = get;
+        this.retry = retry;
+    }
+
+    @GetMapping("/v1/admin/companies/{companyId}/documents")
+    public List<Responses.DocumentView> list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "100") int limit) {
+        return list.execute(actor, new CompanyId(companyId), offset, limit).stream()
+                .map(Responses.DocumentView::from).toList();
+    }
+
+    @PostMapping(path = "/v1/admin/companies/{companyId}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Responses.Upload> upload(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String title, @RequestParam(required = false) UUID projectId)
+            throws IOException {
+        String name = title == null || title.isBlank() ? file.getOriginalFilename() : title;
+        UploadOutcome outcome = upload.execute(actor, new CompanyId(companyId),
+                Optional.ofNullable(projectId).map(ProjectId::new), name, file.getOriginalFilename(),
+                file.getBytes());
+        return ResponseEntity.status(outcome.duplicate() ? HttpStatus.OK : HttpStatus.CREATED)
+                .body(Responses.Upload.from(outcome));
+    }
+
+    @GetMapping("/v1/admin/documents/{documentId}")
+    public Responses.DocumentView get(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId) {
+        return Responses.DocumentView.from(get.execute(actor, new DocumentId(documentId)));
+    }
+
+    @PostMapping("/v1/admin/documents/{documentId}/retry")
+    public Responses.DocumentView retry(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId) {
+        return Responses.DocumentView.from(retry.execute(actor, new DocumentId(documentId)));
+    }
+}
