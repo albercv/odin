@@ -11,6 +11,8 @@
     "check:types": "openapi-typescript ../api/openapi.json -o node_modules/.cache-types.ts && diff -q node_modules/.cache-types.ts src/api/types.ts",
     "build": "tsc -p tsconfig.build.json",
     "start:stdio": "tsx src/stdio.ts",
+    "start:stdio:dist": "node dist/stdio.js",
+    "start:http:dist": "node dist/http.js",
     "start:http": "tsx src/http.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

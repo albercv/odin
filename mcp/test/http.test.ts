@@ -41,4 +41,11 @@ describe('http transport', () => {
     const url = `http://127.0.0.1:${(mcp.address() as AddressInfo).port}/mcp`;
     await expect(open(url, 'mala')).rejects.toThrow();
   });
+
+  it('httpBindsToLoopbackByDefault', async () => {
+    delete process.env.MCP_HOST;
+    fake = await startFakeApi(() => ({ status: 200, body: {} }));
+    mcp = await startHttpServer(fake.url, 0);
+    expect((mcp.address() as AddressInfo).address).toBe('127.0.0.1');
+  });
 });

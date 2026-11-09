@@ -46,7 +46,7 @@ async function route(apiUrl: string, sessions: Sessions, req: IncomingMessage, r
   return transport.handleRequest(req, res, body);
 }
 
-export function startHttpServer(apiUrl: string, port: number): Promise<Server> {
+export function startHttpServer(apiUrl: string, port: number, host = process.env.MCP_HOST ?? '127.0.0.1'): Promise<Server> {
   const sessions: Sessions = new Map();
   const server = createServer((req, res) => {
     route(apiUrl, sessions, req, res).catch((error) => {
@@ -54,7 +54,7 @@ export function startHttpServer(apiUrl: string, port: number): Promise<Server> {
       if (!res.headersSent) reply(res, status, status === 401 ? errorMessage(error) : 'Error interno del servidor MCP.');
     });
   });
-  return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
+  return new Promise((resolve) => server.listen(port, host, () => resolve(server)));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
