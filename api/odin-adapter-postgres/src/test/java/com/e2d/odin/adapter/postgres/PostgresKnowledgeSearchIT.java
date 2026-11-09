@@ -65,6 +65,22 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     }
 
     @Test
+    void identifierWithTrailingPunctuationStillMatches() {
+        CompanyId c = newCompany();
+        page(c, "Doc", DocumentStatus.READY, "Referencia ATL-4417-2024 del contrato.");
+        assertThat(find(CompanyScope.of(c), "ATL-4417-2024?")).hasSize(1);
+    }
+
+    @Test
+    void pureNumbersAreNotBoosted() {
+        CompanyId c = newCompany();
+        page(c, "Doc", DocumentStatus.READY, "póliza seguro seguro daños 2025", "póliza seguro daños");
+        List<SearchHit> hits = find(CompanyScope.of(c), "póliza seguro daños", "2025");
+        assertThat(hits).isNotEmpty();
+        assertThat(hits).allSatisfy(h -> assertThat(h.rank()).isLessThan(100));
+    }
+
+    @Test
     void identifierWithoutWordsStillMatchesByLiteral() {
         CompanyId c = newCompany();
         page(c, "Doc", DocumentStatus.READY, "Referencia ATL-4417-2024 del contrato.");

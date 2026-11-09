@@ -21,7 +21,9 @@ import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 public class PostgresKnowledgeSearch implements KnowledgeSearch {
 
     private static final int EXCERPT_CONTEXT = 150;
-    private static final Pattern HAS_DIGIT = Pattern.compile(".*\\d.*");
+    private static final Pattern IDENTIFIER = Pattern.compile("(?=.*\\d)(?=.*[\\p{L}\\-/.]).{5,}");
+    private static final Pattern EDGE_PUNCTUATION = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
+    private static final int MAX_IDENTIFIERS = 10;
     private static final String CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
                    d.project_id, u.display_name AS author, d.uploaded_at AS date, p.text AS body,
@@ -93,16 +95,13 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     }
 
     private static String boost(String column, int exactCount) {
-        List<String> parts = new ArrayList<>(List.of("0"));
-        for (int i = 0; i < exactCount; i++) {
-            parts.add("(" + column + " ILIKE :x" + i + ")::int * 100");
-        }
-        return "(" + String.join(" + ", parts) + ")";
+        return "(CASE WHEN " + anyMatch(column, exactCount) + " THEN 100 ELSE 0 END)";
     }
 
     private static List<String> exactTokens(List<String> terms) {
-        return terms.stream().flatMap(t -> Arrays.stream(t.trim().split("\\s+")))
-                .filter(token -> token.length() >= 3 && HAS_DIGIT.matcher(token).matches()).distinct().toList();
+        return terms.stream().flatMap(t -> Arrays.stream(t.trim().split("\s+")))
+                .map(token -> EDGE_PUNCTUATION.matcher(token).replaceAll(""))
+                .filter(token -> IDENTIFIER.matcher(token).matches()).distinct().limit(MAX_IDENTIFIERS).toList();
     }
 
     private static SearchHit hit(ResultSet rs, List<String> terms) throws SQLException {
