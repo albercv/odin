@@ -11,6 +11,7 @@ import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
+import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.Optional;
@@ -45,6 +46,24 @@ class LogInAdminTest {
         assertThatThrownBy(() -> logIn.execute("g@demo.test", "equivocada-123456"))
                 .isInstanceOf(UnauthorizedException.class).hasMessage("Credenciales no válidas");
         assertThatThrownBy(() -> logIn.execute("nadie@demo.test", "una-clave-larga-1"))
+                .isInstanceOf(UnauthorizedException.class).hasMessage("Credenciales no válidas");
+    }
+
+    @Test
+    void inactiveAdminCannotLogIn() {
+        users.save(new User(adminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), false,
+                Optional.of("pw:una-clave-larga-1")));
+
+        assertThatThrownBy(() -> logIn.execute("g@demo.test", "una-clave-larga-1"))
+                .isInstanceOf(UnauthorizedException.class).hasMessage("Credenciales no válidas");
+    }
+
+    @Test
+    void workerCannotLogIn() {
+        users.save(new User(new UserId(UUID.randomUUID()), "Wanda", Optional.of("w@demo.test"), Role.WORKER,
+                Optional.of(new CompanyId(UUID.randomUUID())), true, Optional.of("pw:una-clave-larga-1")));
+
+        assertThatThrownBy(() -> logIn.execute("w@demo.test", "una-clave-larga-1"))
                 .isInstanceOf(UnauthorizedException.class).hasMessage("Credenciales no válidas");
     }
 }
