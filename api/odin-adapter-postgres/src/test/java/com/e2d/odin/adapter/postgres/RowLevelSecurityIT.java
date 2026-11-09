@@ -11,6 +11,7 @@ import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.Connection;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class RowLevelSecurityIT extends AbstractPostgresIT {
 
@@ -106,5 +108,34 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
             assertThat(seen).isZero();
         }
         runIn(null, null, 0);
+    }
+
+    @Test
+    void appRoleIsNeitherSuperuserNorBypassRlsNorOwnerOfTables() throws SQLException {
+        try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
+            try (ResultSet rs = s.executeQuery(
+                    "SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = 'odin_app'")) {
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getBoolean("rolbypassrls")).isFalse();
+                assertThat(rs.getBoolean("rolsuper")).isFalse();
+            }
+            try (ResultSet rs = s.executeQuery("SELECT tableowner FROM pg_tables WHERE tablename = 'document'")) {
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getString("tableowner")).isNotEqualTo("odin_app");
+            }
+        }
+    }
+
+    @Test
+    void scopeVariablesDoNotLeakAcrossCallsOnAReusedConnection() throws SQLException {
+        try (SingleConnectionDataSource single = new SingleConnectionDataSource(Db.app().getConnection(), true)) {
+            ScopedTransactions reused = new ScopedTransactions(single);
+            long inside = reused.inScope(CompanyScope.all(),
+                    jdbc -> jdbc.sql("SELECT count(*) FROM document").query(Long.class).single());
+            assertThat(inside).isEqualTo(2);
+            Connection c = single.getConnection();
+            assertThat(count(c, "document")).isZero();
+            assertThat(count(c, "knowledge_card")).isZero();
+        }
     }
 }

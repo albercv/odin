@@ -8,6 +8,7 @@ import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
@@ -17,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DuplicateKeyException;
 
 class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
 
@@ -51,7 +51,7 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         CompanyId b = newCompany();
         Document d = newDocument(a, newUser(a), "Manual", DocumentStatus.READY);
         docs.save(copyIn(d, b, newUser(b)));
-        assertThatThrownBy(() -> docs.save(copyIn(d, a, d.uploadedBy()))).isInstanceOf(DuplicateKeyException.class);
+        assertThatThrownBy(() -> docs.save(copyIn(d, a, d.uploadedBy()))).isInstanceOf(ConflictException.class);
     }
 
     @Test

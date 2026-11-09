@@ -9,12 +9,12 @@ import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DuplicateKeyException;
 
 class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
 
@@ -57,7 +57,7 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         users.save(user(null, Optional.empty()));
         users.save(user(null, Optional.empty()));
         assertThatThrownBy(() -> users.save(user("DUP@x.com", Optional.empty())))
-                .isInstanceOf(DuplicateKeyException.class);
+                .isInstanceOf(ConflictException.class);
     }
 
     @Test
@@ -81,7 +81,7 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     void keyPrefixIsUnique() {
         UserId owner = newUser(newCompany());
         keys.save(key(owner, "same"));
-        assertThatThrownBy(() -> keys.save(key(owner, "same"))).isInstanceOf(DuplicateKeyException.class);
+        assertThatThrownBy(() -> keys.save(key(owner, "same"))).isInstanceOf(ConflictException.class);
     }
 
     @Test
