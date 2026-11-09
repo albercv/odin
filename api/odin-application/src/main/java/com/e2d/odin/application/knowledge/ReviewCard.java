@@ -32,6 +32,9 @@ public class ReviewCard {
         if (card.status() != CardStatus.PENDING) {
             throw new ConflictException("La ficha ya está revisada");
         }
+        if (decision == ReviewDecision.REJECT) {
+            Validation.requireText(note.orElse(null), "el motivo del rechazo");
+        }
         CardReview review = new CardReview(actor.userId(), decision, clock.instant(), note);
         KnowledgeCard reviewed = switch (decision) {
             case APPROVE -> card.approve(review);

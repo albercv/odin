@@ -20,8 +20,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
-/** Respuestas de la API. Nunca incluyen huellas de contraseñas, de claves ni de sesiones. */
+/**
+ * Respuestas de la API. Nunca incluyen huellas de contraseñas, de claves ni de sesiones. Todo campo sin
+ * {@code @Nullable} se publica como obligatorio en el contrato OpenAPI ({@code WebConfig}).
+ */
 public final class Responses {
 
     private Responses() {
@@ -33,7 +37,7 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record AdminMe(UUID userId, String displayName, Role role, UUID companyId) {
+    public record AdminMe(UUID userId, String displayName, Role role, @Nullable UUID companyId) {
         public static AdminMe from(Actor a) {
             return new AdminMe(a.userId().value(), a.displayName(), a.role(),
                     a.companyId().map(c -> c.value()).orElse(null));
@@ -59,14 +63,15 @@ public final class Responses {
         }
     }
 
-    public record UserView(UUID id, String displayName, String email, Role role, UUID companyId, boolean active) {
+    public record UserView(UUID id, String displayName, @Nullable String email, Role role, @Nullable UUID companyId,
+            boolean active) {
         public static UserView from(User u) {
             return new UserView(u.id().value(), u.displayName(), u.email().orElse(null), u.role(),
                     u.companyId().map(c -> c.value()).orElse(null), u.active());
         }
     }
 
-    public record KeyView(UUID id, String label, String prefix, Instant createdAt, Instant revokedAt) {
+    public record KeyView(UUID id, String label, String prefix, Instant createdAt, @Nullable Instant revokedAt) {
         public static KeyView from(AccessKey k) {
             return new KeyView(k.id().value(), k.label(), k.prefix(), k.createdAt(), k.revokedAt().orElse(null));
         }
@@ -78,13 +83,23 @@ public final class Responses {
         }
     }
 
-    public record DocumentView(UUID id, UUID companyId, UUID projectId, String title, String filename, String format,
-            String status, String failureReason, boolean paginated, Instant uploadedAt, int attemptCount) {
+    public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
+            String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
+            int attemptCount) {
         public static DocumentView from(Document d) {
             return new DocumentView(d.id().value(), d.companyId().value(),
                     d.projectId().map(p -> p.value()).orElse(null), d.title(), d.filename(), d.format().name(),
                     d.status().name(), d.failureReason().orElse(null), d.paginated(), d.uploadedAt(),
                     d.attemptCount());
+        }
+    }
+
+    /** Vista del trabajador: solo documentos listos y sin datos internos del proceso. */
+    public record WorkerDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
+            boolean paginated, Instant uploadedAt) {
+        public static WorkerDocumentView from(Document d) {
+            return new WorkerDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
+                    d.filename(), d.format().name(), d.paginated(), d.uploadedAt());
         }
     }
 
@@ -94,14 +109,14 @@ public final class Responses {
         }
     }
 
-    public record ReviewView(UUID reviewerId, String decision, Instant reviewedAt, String note) {
+    public record ReviewView(UUID reviewerId, String decision, Instant reviewedAt, @Nullable String note) {
         static ReviewView from(CardReview r) {
             return new ReviewView(r.reviewerId().value(), r.decision().name(), r.reviewedAt(), r.note().orElse(null));
         }
     }
 
-    public record CardView(UUID id, UUID companyId, UUID projectId, String title, String body, String originalBody,
-            UUID authorId, Instant createdAt, String status, ReviewView review) {
+    public record CardView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String body,
+            @Nullable String originalBody, UUID authorId, Instant createdAt, String status, @Nullable ReviewView review) {
         public static CardView from(KnowledgeCard c) {
             return new CardView(c.id().value(), c.companyId().value(), c.projectId().map(p -> p.value()).orElse(null),
                     c.title(), c.body(), c.originalBody().orElse(null), c.authorId().value(), c.createdAt(),
@@ -115,8 +130,8 @@ public final class Responses {
         }
     }
 
-    public record Hit(String sourceType, UUID sourceId, String title, Integer pageNumber, boolean paginated,
-            UUID projectId, String authorName, Instant date, String excerpt, double rank) {
+    public record Hit(String sourceType, UUID sourceId, String title, @Nullable Integer pageNumber, boolean paginated,
+            @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank) {
         static Hit from(SearchHit h) {
             return new Hit(h.sourceType().name(), h.sourceId(), h.title(), h.pageNumber().orElse(null),
                     h.paginated(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),

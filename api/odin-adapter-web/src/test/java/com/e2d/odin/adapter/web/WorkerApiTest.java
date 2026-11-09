@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
@@ -110,6 +111,18 @@ class WorkerApiTest extends WebTestSupport {
                 .content(quote.formatted("vacaciones  SON 22"))).andExpect(jsonPath("$.verified").value(true));
         mvc.perform(post("/v1/citations/verify").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content(quote.formatted("vacaciones son 23"))).andExpect(jsonPath("$.verified").value(false));
+    }
+
+    @Test
+    void workerListingShowsOnlyReadyDocumentsWithoutInternalFields() throws Exception {
+        CompanyId company = newCompany();
+        Document ready = Fixtures.readyDocument(w.docs, company, "texto");
+        w.docs.save(Fixtures.document(w.docs, company, DocumentStatus.FAILED).markFailed("interno"));
+        mvc.perform(get("/v1/documents").header(AUTH, workerKey(company))).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].id").value(ready.id().value().toString()))
+                .andExpect(jsonPath("$[0].failureReason").doesNotExist())
+                .andExpect(jsonPath("$[0].attemptCount").doesNotExist())
+                .andExpect(jsonPath("$[0].status").doesNotExist());
     }
 
     @Test

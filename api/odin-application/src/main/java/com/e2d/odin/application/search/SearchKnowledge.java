@@ -11,6 +11,7 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.search.SearchQuery;
 import com.e2d.odin.domain.search.SearchResult;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Clock;
 import java.util.List;
 
@@ -38,11 +39,13 @@ public class SearchKnowledge {
         CompanyId companyId = WorkerAccess.require(actor, organizations, Capability.SEARCH_KNOWLEDGE);
         WorkerAccess.requireProject(organizations, companyId, request.projectId());
         List<String> terms = request.queries() == null ? List.of() : request.queries();
+        if (terms.stream().allMatch(q -> q == null || q.isBlank())) {
+            throw new ValidationException("Indica al menos una consulta con texto");
+        }
         int limit = WorkerAccess.cap(request.limit(), DEFAULT_LIMIT, MAX_LIMIT);
         SearchResult result = search.search(new SearchQuery(terms, actor.scope(), request.projectId(), limit));
-        String text = terms.isEmpty() ? null : String.join(" | ", terms);
-        questions.record(new QuestionRecord(ids.newId(), companyId, actor.userId(), text, result.hits().size(),
-                clock.instant()));
+        questions.record(new QuestionRecord(ids.newId(), companyId, actor.userId(), String.join(" | ", terms),
+                result.hits().size(), clock.instant()));
         return result;
     }
 }

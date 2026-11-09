@@ -50,7 +50,7 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
 
     private int readEverything(CompanyScope scope) {
         int seen = ownerDocs.findById(scope, documentOfA.id()).stream().toList().size();
-        seen += ownerDocs.list(scope, Optional.empty(), 0, 10).size();
+        seen += ownerDocs.list(scope, Optional.empty(), Optional.empty(), 0, 10).size();
         seen += ownerDocs.findPage(scope, documentOfA.id(), 1).stream().toList().size();
         seen += ownerCards.findById(scope, pendingOfA.id()).stream().toList().size();
         seen += ownerCards.listByStatus(scope, CardStatus.PENDING).size();

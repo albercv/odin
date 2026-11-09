@@ -19,6 +19,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.UnsupportedFormatException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -82,16 +83,33 @@ class ProcessPendingDocumentsTest {
         assertThat(docs.get(d.id()).orElseThrow().status()).isEqualTo(DocumentStatus.PENDING_READER);
     }
 
-    @Test
-    void readerErrorBecomesFailed() {
+    private Document failWith(RuntimeException error) {
         Document d = upload(DocumentFormat.PDF);
-        var failing = new StubTextReader(Set.of(DocumentFormat.PDF), new IllegalStateException("pdf corrupto"));
-
-        processor(failing).processNext();
-
+        processor(new StubTextReader(Set.of(DocumentFormat.PDF), error)).processNext();
         Document after = docs.get(d.id()).orElseThrow();
         assertThat(after.status()).isEqualTo(DocumentStatus.FAILED);
-        assertThat(after.failureReason()).contains("pdf corrupto");
+        return after;
+    }
+
+    @Test
+    void unreadableDocumentStoresGenericReasonWithoutInternalText() {
+        Document after = failWith(new UnsupportedFormatException("PDFBox: /ruta/interna corrupta"));
+
+        assertThat(after.failureReason()).contains(ProcessPendingDocuments.UNREADABLE);
+    }
+
+    @Test
+    void unexpectedReaderErrorStoresReaderUnavailableWithoutInternalText() {
+        Document after = failWith(new IllegalStateException("SQL interno /var/lib/odin/originals/ab"));
+
+        assertThat(after.failureReason()).contains(ProcessPendingDocuments.READER_UNAVAILABLE);
+    }
+
+    @Test
+    void errorWithoutMessageNeverStoresNull() {
+        Document after = failWith(new NullPointerException());
+
+        assertThat(after.failureReason()).contains(ProcessPendingDocuments.READER_UNAVAILABLE);
     }
 
     private void crashedClaims(int times) {
@@ -120,7 +138,7 @@ class ProcessPendingDocumentsTest {
 
         Document after = docs.get(d.id()).orElseThrow();
         assertThat(after.status()).isEqualTo(DocumentStatus.FAILED);
-        assertThat(after.failureReason()).contains("demasiados intentos");
+        assertThat(after.failureReason()).contains(ProcessPendingDocuments.TOO_MANY_ATTEMPTS);
         assertThat(docs.pagesOf(d.id())).isEmpty();
     }
 

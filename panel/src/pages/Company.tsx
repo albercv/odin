@@ -61,14 +61,14 @@ function NewUser({ companyId, onDone }: { companyId: string; onDone: () => void 
 function UserRow({ u, onChanged }: { u: S['UserView']; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
   const { error, act } = useAction();
-  const toggle = async () => (await act(() => api.setActive(u.id ?? '', !u.active))) && onChanged();
+  const toggle = async () => (await act(() => api.setActive(u.id, !u.active))) && onChanged();
   return (
     <li>
       {u.displayName} · {u.role === 'WORKER' ? 'Trabajador' : 'Administrador'} · {u.active ? 'activo' : 'desactivado'}
       <Notice message={error} />
       <button type="button" onClick={toggle}>{u.active ? 'Desactivar' : 'Activar'} {u.displayName}</button>
       <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>Claves de {u.displayName}</button>
-      {open && <Keys userId={u.id ?? ''} />}
+      {open && <Keys userId={u.id} />}
     </li>
   );
 }

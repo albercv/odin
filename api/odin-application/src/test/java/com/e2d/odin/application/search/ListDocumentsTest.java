@@ -13,6 +13,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,17 @@ class ListDocumentsTest {
 
         assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.of(1000))).hasSize(500);
         assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).hasSize(100);
+    }
+
+    @Test
+    void listsOnlyReadyDocuments() {
+        Document ready = Fixtures.document(docs, companyA, DocumentStatus.READY);
+        for (DocumentStatus other : List.of(DocumentStatus.RECEIVED, DocumentStatus.PROCESSING, DocumentStatus.FAILED,
+                DocumentStatus.PENDING_READER)) {
+            Fixtures.document(docs, companyA, other);
+        }
+
+        assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).containsExactly(ready);
     }
 
     @Test

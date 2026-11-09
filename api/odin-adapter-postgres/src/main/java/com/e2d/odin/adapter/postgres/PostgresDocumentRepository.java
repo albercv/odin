@@ -64,13 +64,16 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public List<Document> list(CompanyScope scope, Optional<ProjectId> projectId, int offset, int limit) {
+    public List<Document> list(CompanyScope scope, Optional<ProjectId> projectId, Optional<DocumentStatus> status,
+            int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
-        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql("SELECT " + COLUMNS + """
-                 FROM document WHERE (CAST(:project AS uuid) IS NULL OR project_id = :project) AND %s
-                ORDER BY title, id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("company_id"))), scope)
-                .param("project", project).param("offset", offset).param("limit", limit)
-                .query((rs, n) -> document(rs)).list());
+        String sql = "SELECT " + COLUMNS + """
+                 FROM document WHERE (CAST(:project AS uuid) IS NULL OR project_id = :project)
+                  AND (CAST(:status AS text) IS NULL OR status = :status) AND %s
+                ORDER BY title, id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("company_id"));
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("project", project)
+                .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
+                .param("limit", limit).query((rs, n) -> document(rs)).list());
     }
 
     @Override

@@ -64,11 +64,11 @@ public class WorkerController {
     }
 
     @GetMapping("/v1/documents")
-    public List<Responses.DocumentView> documents(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+    public List<Responses.WorkerDocumentView> documents(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @RequestParam(required = false) UUID projectId, @RequestParam(defaultValue = "0") int offset,
             @RequestParam(required = false) Integer limit) {
         return listDocuments.execute(actor, Optional.ofNullable(projectId).map(ProjectId::new), offset,
-                Optional.ofNullable(limit)).stream().map(Responses.DocumentView::from).toList();
+                Optional.ofNullable(limit)).stream().map(Responses.WorkerDocumentView::from).toList();
     }
 
     @GetMapping("/v1/documents/{documentId}/pages/{pageNumber}")

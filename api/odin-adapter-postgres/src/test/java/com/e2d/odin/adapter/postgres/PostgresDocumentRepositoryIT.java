@@ -62,11 +62,23 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         Document zeta = newDocument(a, ua, "Zeta", DocumentStatus.READY);
         Document alfa = newDocument(a, ua, "Alfa", DocumentStatus.READY);
         Document otra = newDocument(b, newUser(b), "Aaa", DocumentStatus.READY);
-        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), 0, 10)).containsExactly(alfa, zeta);
-        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), 1, 10)).containsExactly(zeta);
-        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), 0, 1)).containsExactly(alfa);
-        assertThat(docs.list(CompanyScope.all(), Optional.empty(), 0, 10)).containsExactly(otra, alfa, zeta);
-        assertThat(docs.list(CompanyScope.of(b), Optional.of(new ProjectId(UUID.randomUUID())), 0, 10)).isEmpty();
+        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), Optional.empty(), 0, 10)).containsExactly(alfa, zeta);
+        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), Optional.empty(), 1, 10)).containsExactly(zeta);
+        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), Optional.empty(), 0, 1)).containsExactly(alfa);
+        assertThat(docs.list(CompanyScope.all(), Optional.empty(), Optional.empty(), 0, 10)).containsExactly(otra, alfa, zeta);
+        assertThat(docs.list(CompanyScope.of(b), Optional.of(new ProjectId(UUID.randomUUID())), Optional.empty(), 0, 10)).isEmpty();
+    }
+
+    @Test
+    void listFiltersByStatus() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        Document ready = newDocument(a, ua, "Listo", DocumentStatus.READY);
+        newDocument(a, ua, "Fallido", DocumentStatus.FAILED);
+        newDocument(a, ua, "Pendiente", DocumentStatus.PENDING_READER);
+        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), Optional.of(DocumentStatus.READY), 0, 10))
+                .containsExactly(ready);
+        assertThat(docs.list(CompanyScope.of(a), Optional.empty(), Optional.empty(), 0, 10)).hasSize(3);
     }
 
     @Test
@@ -80,7 +92,7 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
                 d.status(), d.failureReason(), d.paginated(), ua, d.uploadedAt(), d.processingStartedAt(), 0);
         docs.save(inProject);
         newDocument(a, ua, "Sin proyecto", DocumentStatus.READY);
-        assertThat(docs.list(CompanyScope.of(a), Optional.of(p), 0, 10)).containsExactly(inProject);
+        assertThat(docs.list(CompanyScope.of(a), Optional.of(p), Optional.empty(), 0, 10)).containsExactly(inProject);
     }
 
     @Test

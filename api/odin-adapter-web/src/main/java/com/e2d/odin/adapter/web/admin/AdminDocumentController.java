@@ -11,6 +11,7 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,8 @@ public class AdminDocumentController {
     }
 
     @PostMapping(path = "/v1/admin/companies/{companyId}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ApiResponse(responseCode = "201", description = "Documento nuevo")
+    @ApiResponse(responseCode = "200", description = "El mismo fichero ya estaba en la empresa (duplicate: true)")
     public ResponseEntity<Responses.Upload> upload(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) String title, @RequestParam(required = false) UUID projectId)
