@@ -50,15 +50,17 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
 
     @Override
     public Optional<KnowledgeCard> findById(CompanyScope scope, CardId id) {
-        return tx.inScope(scope, jdbc -> jdbc.sql("SELECT " + COLUMNS + " FROM knowledge_card WHERE id = :id")
-                .param("id", id.value()).query((rs, n) -> card(rs)).optional());
+        String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE id = :id AND " + Sql.inScope("company_id");
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("id", id.value())
+                .query((rs, n) -> card(rs)).optional());
     }
 
     @Override
     public List<KnowledgeCard> listByStatus(CompanyScope scope, CardStatus status) {
-        return tx.inScope(scope, jdbc -> jdbc
-                .sql("SELECT " + COLUMNS + " FROM knowledge_card WHERE status = :status ORDER BY seq")
-                .param("status", status.name()).query((rs, n) -> card(rs)).list());
+        String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE status = :status AND "
+                + Sql.inScope("company_id") + " ORDER BY seq";
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("status", status.name())
+                .query((rs, n) -> card(rs)).list());
     }
 
     private static KnowledgeCard card(ResultSet rs) throws SQLException {

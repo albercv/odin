@@ -51,8 +51,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> findById(CompanyScope scope, DocumentId id) {
-        return tx.inScope(scope, jdbc -> jdbc.sql("SELECT " + COLUMNS + " FROM document WHERE id = :id")
-                .param("id", id.value()).query((rs, n) -> document(rs)).optional());
+        String sql = "SELECT " + COLUMNS + " FROM document WHERE id = :id AND " + Sql.inScope("company_id");
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("id", id.value())
+                .query((rs, n) -> document(rs)).optional());
     }
 
     @Override
@@ -63,20 +64,23 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public List<Document> list(CompanyScope scope, Optional<ProjectId> projectId, int offset, int limit) {
+    public List<Document> list(CompanyScope scope, Optional<ProjectId> projectId, Optional<DocumentStatus> status,
+            int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
-        return tx.inScope(scope, jdbc -> jdbc.sql("SELECT " + COLUMNS + """
+        String sql = "SELECT " + COLUMNS + """
                  FROM document WHERE (CAST(:project AS uuid) IS NULL OR project_id = :project)
-                ORDER BY title, id OFFSET :offset LIMIT :limit""")
-                .param("project", project).param("offset", offset).param("limit", limit)
-                .query((rs, n) -> document(rs)).list());
+                  AND (CAST(:status AS text) IS NULL OR status = :status) AND %s
+                ORDER BY title, id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("company_id"));
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("project", project)
+                .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
+                .param("limit", limit).query((rs, n) -> document(rs)).list());
     }
 
     @Override
     public Optional<DocumentPage> findPage(CompanyScope scope, DocumentId id, int pageNumber) {
-        return tx.inScope(scope, jdbc -> jdbc.sql("""
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql("""
                 SELECT document_id, number, text, reader_name, reader_version FROM document_page
-                WHERE document_id = :id AND number = :number""")
+                WHERE document_id = :id AND number = :number AND """ + Sql.inScope("company_id")), scope)
                 .param("id", id.value()).param("number", pageNumber)
                 .query((rs, n) -> new DocumentPage(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("number"),
                         rs.getString("text"), rs.getString("reader_name"), rs.getString("reader_version")))

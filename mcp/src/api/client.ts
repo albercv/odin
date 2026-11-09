@@ -1,7 +1,7 @@
 import type { components } from './types.js';
 
 export type Me = components['schemas']['Me'];
-export type DocumentView = components['schemas']['DocumentView'];
+export type WorkerDocumentView = components['schemas']['WorkerDocumentView'];
 export type Page = components['schemas']['Page'];
 export type SavedCard = components['schemas']['SavedCard'];
 export type Hit = components['schemas']['Hit'];
@@ -23,7 +23,7 @@ export class ApiError extends Error {
 export interface ApiClient {
   me(): Promise<Me>;
   search(body: SearchRequest): Promise<SearchResponse>;
-  listDocuments(projectId: string | undefined, offset: number, limit: number): Promise<DocumentView[]>;
+  listDocuments(projectId: string | undefined, offset: number, limit: number): Promise<WorkerDocumentView[]>;
   readPage(documentId: string, pageNumber: number): Promise<Page>;
   verifyCitation(body: VerifyCitationRequest): Promise<Verification>;
   saveCard(body: SaveCardRequest): Promise<SavedCard>;

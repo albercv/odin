@@ -381,9 +381,9 @@ export interface components {
         };
         CompanyView: {
             /** Format: uuid */
-            id?: string;
-            name?: string;
-            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
+            id: string;
+            name: string;
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
         };
         Setup: {
             setupToken?: string;
@@ -394,7 +394,7 @@ export interface components {
         };
         UserRef: {
             /** Format: uuid */
-            userId?: string;
+            userId: string;
         };
         SearchRequest: {
             queries?: string[];
@@ -404,25 +404,25 @@ export interface components {
             limit?: number;
         };
         Hit: {
-            sourceType?: string;
+            sourceType: string;
             /** Format: uuid */
-            sourceId?: string;
-            title?: string;
+            sourceId: string;
+            title: string;
             /** Format: int32 */
             pageNumber?: number;
-            paginated?: boolean;
+            paginated: boolean;
             /** Format: uuid */
             projectId?: string;
-            authorName?: string;
+            authorName: string;
             /** Format: date-time */
-            date?: string;
-            excerpt?: string;
+            date: string;
+            excerpt: string;
             /** Format: double */
-            rank?: number;
+            rank: number;
         };
         SearchResponse: {
-            hits?: components["schemas"]["Hit"][];
-            noSource?: boolean;
+            hits: components["schemas"]["Hit"][];
+            noSource: boolean;
         };
         VerifyCitation: {
             /** Format: uuid */
@@ -432,7 +432,7 @@ export interface components {
             quote?: string;
         };
         Verification: {
-            verified?: boolean;
+            verified: boolean;
         };
         SaveCard: {
             title?: string;
@@ -442,18 +442,18 @@ export interface components {
         };
         SavedCard: {
             /** Format: uuid */
-            id?: string;
-            status?: string;
-            message?: string;
+            id: string;
+            status: string;
+            message: string;
         };
         KeyLabel: {
             label?: string;
         };
         IssuedKeyView: {
             /** Format: uuid */
-            id?: string;
-            prefix?: string;
-            key?: string;
+            id: string;
+            prefix: string;
+            key: string;
         };
         Login: {
             email?: string;
@@ -461,21 +461,21 @@ export interface components {
         };
         DocumentView: {
             /** Format: uuid */
-            id?: string;
+            id: string;
             /** Format: uuid */
-            companyId?: string;
+            companyId: string;
             /** Format: uuid */
             projectId?: string;
-            title?: string;
-            filename?: string;
-            format?: string;
-            status?: string;
+            title: string;
+            filename: string;
+            format: string;
+            status: string;
             failureReason?: string;
-            paginated?: boolean;
+            paginated: boolean;
             /** Format: date-time */
-            uploadedAt?: string;
+            uploadedAt: string;
             /** Format: int32 */
-            attemptCount?: number;
+            attemptCount: number;
         };
         Name: {
             name?: string;
@@ -489,25 +489,25 @@ export interface components {
         };
         UserView: {
             /** Format: uuid */
-            id?: string;
-            displayName?: string;
+            id: string;
+            displayName: string;
             email?: string;
             /** @enum {string} */
-            role?: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
+            role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
             /** Format: uuid */
             companyId?: string;
-            active?: boolean;
+            active: boolean;
         };
         ProjectView: {
             /** Format: uuid */
-            id?: string;
+            id: string;
             /** Format: uuid */
-            companyId?: string;
-            name?: string;
+            companyId: string;
+            name: string;
         };
         Upload: {
-            document?: components["schemas"]["DocumentView"];
-            duplicate?: boolean;
+            document: components["schemas"]["DocumentView"];
+            duplicate: boolean;
         };
         Review: {
             /** @enum {string} */
@@ -517,27 +517,27 @@ export interface components {
         };
         CardView: {
             /** Format: uuid */
-            id?: string;
+            id: string;
             /** Format: uuid */
-            companyId?: string;
+            companyId: string;
             /** Format: uuid */
             projectId?: string;
-            title?: string;
-            body?: string;
+            title: string;
+            body: string;
             originalBody?: string;
             /** Format: uuid */
-            authorId?: string;
+            authorId: string;
             /** Format: date-time */
-            createdAt?: string;
-            status?: string;
+            createdAt: string;
+            status: string;
             review?: components["schemas"]["ReviewView"];
         };
         ReviewView: {
             /** Format: uuid */
-            reviewerId?: string;
-            decision?: string;
+            reviewerId: string;
+            decision: string;
             /** Format: date-time */
-            reviewedAt?: string;
+            reviewedAt: string;
             note?: string;
         };
         UserActive: {
@@ -545,41 +545,53 @@ export interface components {
         };
         Me: {
             /** Format: uuid */
-            userId?: string;
-            displayName?: string;
+            userId: string;
+            displayName: string;
             /** @enum {string} */
-            role?: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
-            company?: components["schemas"]["CompanyView"];
-            projects?: components["schemas"]["ProjectView"][];
+            role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
+            company: components["schemas"]["CompanyView"];
+            projects: components["schemas"]["ProjectView"][];
         };
         Health: {
-            status?: string;
+            status: string;
+        };
+        WorkerDocumentView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId?: string;
+            title: string;
+            filename: string;
+            format: string;
+            paginated: boolean;
+            /** Format: date-time */
+            uploadedAt: string;
         };
         Page: {
             /** Format: uuid */
-            documentId?: string;
-            title?: string;
+            documentId: string;
+            title: string;
             /** Format: int32 */
-            pageNumber?: number;
-            paginated?: boolean;
-            text?: string;
+            pageNumber: number;
+            paginated: boolean;
+            text: string;
         };
         KeyView: {
             /** Format: uuid */
-            id?: string;
-            label?: string;
-            prefix?: string;
+            id: string;
+            label: string;
+            prefix: string;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
             /** Format: date-time */
             revokedAt?: string;
         };
         AdminMe: {
             /** Format: uuid */
-            userId?: string;
-            displayName?: string;
+            userId: string;
+            displayName: string;
             /** @enum {string} */
-            role?: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
+            role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
             /** Format: uuid */
             companyId?: string;
         };
@@ -797,8 +809,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Sesión cerrada */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1014,8 +1026,17 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description El mismo fichero ya estaba en la empresa (duplicate: true) */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Upload"];
+                };
+            };
+            /** @description Documento nuevo */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1162,7 +1183,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DocumentView"][];
+                    "application/json": components["schemas"]["WorkerDocumentView"][];
                 };
             };
         };

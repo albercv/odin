@@ -20,6 +20,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ValidationException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -64,6 +65,20 @@ class SearchKnowledgeTest {
         assertThat(record.companyId()).isEqualTo(companyA);
         assertThat(record.text()).isEqualTo("franquicia | seguro");
         assertThat(record.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void allEmptyQueriesAreRejected() {
+        List<List<String>> empties = List.of(List.of(), List.of(" ", ""));
+        for (List<String> queries : empties) {
+            SearchRequest empty = new SearchRequest(queries, Optional.empty(), Optional.empty());
+            assertThatThrownBy(() -> useCase.execute(Actors.worker(companyA), empty))
+                    .isInstanceOf(ValidationException.class);
+        }
+        assertThatThrownBy(() -> useCase.execute(Actors.worker(companyA),
+                new SearchRequest(null, Optional.empty(), Optional.empty()))).isInstanceOf(ValidationException.class);
+        assertThat(log.records()).isEmpty();
+        assertThat(search.lastQuery()).isNull();
     }
 
     @Test

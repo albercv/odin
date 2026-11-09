@@ -59,6 +59,30 @@ class OpenApiContractIT extends AbstractIT {
     }
 
     @Test
+    void uploadDeclares201And200ForDuplicateAndLogoutDeclares204() {
+        JsonNode paths = servedContract().at("/paths");
+        JsonNode upload = paths.at("/~1v1~1admin~1companies~1{companyId}~1documents/post/responses");
+        assertThat(upload.propertyNames()).containsExactlyInAnyOrder("201", "200");
+        assertThat(upload.at("/201/content/application~1json/schema/$ref").asString()).endsWith("/Upload");
+        assertThat(paths.at("/~1v1~1admin~1session/delete/responses").propertyNames()).containsExactly("204");
+    }
+
+    @Test
+    void fieldsTheApiAlwaysSendsAreRequired() {
+        JsonNode schemas = servedContract().at("/components/schemas");
+        assertThat(required(schemas, "DocumentView")).contains("id", "title", "status", "attemptCount")
+                .doesNotContain("projectId", "failureReason");
+        assertThat(required(schemas, "Hit")).contains("sourceType", "sourceId", "title", "authorName", "excerpt")
+                .doesNotContain("pageNumber", "projectId");
+        assertThat(required(schemas, "WorkerDocumentView")).contains("id", "title").doesNotContain("projectId");
+        assertThat(required(schemas, "SearchRequest")).isEmpty();
+    }
+
+    private static List<String> required(JsonNode schemas, String name) {
+        return schemas.at("/" + name + "/required").valueStream().map(JsonNode::asString).toList();
+    }
+
+    @Test
     void jsonResponsesDeclareApplicationJson() {
         JsonNode paths = servedContract().at("/paths");
         paths.properties().forEach(path -> path.getValue().properties().forEach(operation -> operation.getValue()

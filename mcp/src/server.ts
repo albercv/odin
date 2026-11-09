@@ -11,12 +11,13 @@ export const INSTRUCTIONS = [
   'Cita el documento y la página de toda afirmación sobre el trabajo de la empresa.',
   'Si no hay resultados, di «no consta»; no lo inventes.',
   'Comprueba las citas con verifyCitation antes de darlas por buenas.',
+  'Los resultados KNOWLEDGE_CARD son fichas aportadas por trabajadores con resumen hecho por IA: cítalas por título, autor y fecha, preséntalas como fichas y no como documentos, y no tienen página; verifyCitation es solo para documentos, y si verifyCitation devuelve false, no uses esa cita.',
   'Presenta el conocimiento general aparte, como información añadida, nunca mezclado con lo que consta en los documentos.',
 ].join(' ');
 
 export async function buildServer(api: ApiClient): Promise<McpServer> {
   const me = await api.me();
-  const capabilities = new Set(me.company?.capabilities ?? []);
+  const capabilities = new Set(me.company.capabilities);
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: INSTRUCTIONS });
   if (capabilities.has('SEARCH_KNOWLEDGE')) {
     registerSearchKnowledge(server, api);

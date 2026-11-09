@@ -10,6 +10,7 @@ import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.NewSession;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.ValidationException;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
 import org.springframework.http.HttpHeaders;
@@ -52,6 +53,7 @@ public class SessionController {
     }
 
     @DeleteMapping("/session")
+    @ApiResponse(responseCode = "204", description = "Sesión cerrada")
     public ResponseEntity<Void> logout(
             @CookieValue(name = ActorResolutionFilter.SESSION_COOKIE, required = false) String token) {
         logOut.execute(token);

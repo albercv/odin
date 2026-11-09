@@ -1,11 +1,9 @@
 package com.e2d.odin.adapter.postgres;
 
-import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -32,10 +30,8 @@ public class ScopedTransactions {
 
     private <T> T inTransaction(CompanyScope scope, Function<JdbcClient, T> work) {
         return transaction.execute(status -> {
-            String ids = scope.companies().stream().map(CompanyId::value).map(Object::toString)
-                    .collect(Collectors.joining(","));
             jdbc.sql("SELECT set_config('app.company_ids', :ids, true), set_config('app.group_scope', :group, true)")
-                    .param("ids", ids)
+                    .param("ids", Sql.companyIds(scope))
                     .param("group", scope.allCompanies() ? "on" : "off")
                     .query().singleRow();
             return work.apply(jdbc);

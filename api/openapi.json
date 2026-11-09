@@ -258,8 +258,8 @@
           }
         } ],
         "responses" : {
-          "200" : {
-            "description" : "OK"
+          "204" : {
+            "description" : "Sesión cerrada"
           }
         }
       }
@@ -559,8 +559,18 @@
           }
         },
         "responses" : {
+          "201" : {
+            "description" : "Documento nuevo",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
           "200" : {
-            "description" : "OK",
+            "description" : "El mismo fichero ya estaba en la empresa (duplicate: true)",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -757,7 +767,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/DocumentView"
+                    "$ref" : "#/components/schemas/WorkerDocumentView"
                   }
                 }
               }
@@ -939,7 +949,8 @@
             },
             "uniqueItems" : true
           }
-        }
+        },
+        "required" : [ "capabilities", "id", "name" ]
       },
       "Setup" : {
         "type" : "object",
@@ -968,7 +979,8 @@
             "type" : "string",
             "format" : "uuid"
           }
-        }
+        },
+        "required" : [ "userId" ]
       },
       "SearchRequest" : {
         "type" : "object",
@@ -1027,7 +1039,8 @@
             "type" : "number",
             "format" : "double"
           }
-        }
+        },
+        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "title" ]
       },
       "SearchResponse" : {
         "type" : "object",
@@ -1041,7 +1054,8 @@
           "noSource" : {
             "type" : "boolean"
           }
-        }
+        },
+        "required" : [ "hits", "noSource" ]
       },
       "VerifyCitation" : {
         "type" : "object",
@@ -1065,7 +1079,8 @@
           "verified" : {
             "type" : "boolean"
           }
-        }
+        },
+        "required" : [ "verified" ]
       },
       "SaveCard" : {
         "type" : "object",
@@ -1095,7 +1110,8 @@
           "message" : {
             "type" : "string"
           }
-        }
+        },
+        "required" : [ "id", "message", "status" ]
       },
       "KeyLabel" : {
         "type" : "object",
@@ -1118,7 +1134,8 @@
           "key" : {
             "type" : "string"
           }
-        }
+        },
+        "required" : [ "id", "key", "prefix" ]
       },
       "Login" : {
         "type" : "object",
@@ -1172,7 +1189,8 @@
             "type" : "integer",
             "format" : "int32"
           }
-        }
+        },
+        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "paginated", "status", "title", "uploadedAt" ]
       },
       "Name" : {
         "type" : "object",
@@ -1224,7 +1242,8 @@
           "active" : {
             "type" : "boolean"
           }
-        }
+        },
+        "required" : [ "active", "displayName", "id", "role" ]
       },
       "ProjectView" : {
         "type" : "object",
@@ -1240,7 +1259,8 @@
           "name" : {
             "type" : "string"
           }
-        }
+        },
+        "required" : [ "companyId", "id", "name" ]
       },
       "Upload" : {
         "type" : "object",
@@ -1251,7 +1271,8 @@
           "duplicate" : {
             "type" : "boolean"
           }
-        }
+        },
+        "required" : [ "document", "duplicate" ]
       },
       "Review" : {
         "type" : "object",
@@ -1306,7 +1327,8 @@
           "review" : {
             "$ref" : "#/components/schemas/ReviewView"
           }
-        }
+        },
+        "required" : [ "authorId", "body", "companyId", "createdAt", "id", "status", "title" ]
       },
       "ReviewView" : {
         "type" : "object",
@@ -1325,7 +1347,8 @@
           "note" : {
             "type" : "string"
           }
-        }
+        },
+        "required" : [ "decision", "reviewedAt", "reviewerId" ]
       },
       "UserActive" : {
         "type" : "object",
@@ -1358,7 +1381,8 @@
               "$ref" : "#/components/schemas/ProjectView"
             }
           }
-        }
+        },
+        "required" : [ "company", "displayName", "projects", "role", "userId" ]
       },
       "Health" : {
         "type" : "object",
@@ -1366,7 +1390,38 @@
           "status" : {
             "type" : "string"
           }
-        }
+        },
+        "required" : [ "status" ]
+      },
+      "WorkerDocumentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "format" : {
+            "type" : "string"
+          },
+          "paginated" : {
+            "type" : "boolean"
+          },
+          "uploadedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "filename", "format", "id", "paginated", "title", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -1388,7 +1443,8 @@
           "text" : {
             "type" : "string"
           }
-        }
+        },
+        "required" : [ "documentId", "pageNumber", "paginated", "text", "title" ]
       },
       "KeyView" : {
         "type" : "object",
@@ -1411,7 +1467,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "createdAt", "id", "label", "prefix" ]
       },
       "AdminMe" : {
         "type" : "object",
@@ -1431,7 +1488,8 @@
             "type" : "string",
             "format" : "uuid"
           }
-        }
+        },
+        "required" : [ "displayName", "role", "userId" ]
       }
     }
   }

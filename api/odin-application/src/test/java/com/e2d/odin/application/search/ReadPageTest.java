@@ -42,6 +42,15 @@ class ReadPageTest {
     }
 
     @Test
+    void notReadyDocumentIsNotFound() {
+        Document ready = Fixtures.readyDocument(docs, companyA, "texto");
+        docs.save(ready.markFailed("roto"));
+
+        assertThatThrownBy(() -> readPage.execute(Actors.worker(companyA), ready.id(), 1))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
     void missingPageIsNotFound() {
         Document d = Fixtures.readyDocument(docs, companyA, "texto");
 

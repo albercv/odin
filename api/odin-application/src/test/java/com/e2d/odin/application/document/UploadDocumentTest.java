@@ -114,7 +114,7 @@ class UploadDocumentTest {
     void companyAdminCannotUploadToOtherCompany() {
         assertThatThrownBy(() -> send(Actors.companyAdmin(companyB), companyA, CONTENT))
                 .isInstanceOf(ForbiddenException.class);
-        assertThat(docs.list(Actors.groupAdmin().scope(), Optional.empty(), 0, 10)).isEmpty();
+        assertThat(docs.list(Actors.groupAdmin().scope(), Optional.empty(), Optional.empty(), 0, 10)).isEmpty();
         assertThat(store.size()).isZero();
     }
 

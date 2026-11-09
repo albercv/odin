@@ -26,6 +26,16 @@ class RenameCompanyTest {
     }
 
     @Test
+    void companyAdminOfOtherCompanyCannotRename() {
+        CompanyId other = Fixtures.company(organizations);
+        String before = organizations.findCompany(company).orElseThrow().name();
+
+        assertThatThrownBy(() -> rename.execute(Actors.companyAdmin(other), company, "Nuevo"))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(organizations.findCompany(company).orElseThrow().name()).isEqualTo(before);
+    }
+
+    @Test
     void groupAdminCanRename() {
         rename.execute(Actors.groupAdmin(), company, "Nuevo");
 

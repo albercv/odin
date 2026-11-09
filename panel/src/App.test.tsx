@@ -5,7 +5,7 @@ import { App } from './App';
 import { Documents } from './pages/Documents';
 import { Review } from './pages/Review';
 import { Keys } from './components/Keys';
-import { mockFetch } from './mockApi';
+import { mockFetch, type Routes } from './mockApi';
 
 const company = { id: 'c1', name: 'Acme', capabilities: ['SEARCH_KNOWLEDGE'] };
 
@@ -67,7 +67,7 @@ test('issuedKeyShownOnceWithCopy', async () => {
 
 test('documentsListShowsStatusAndReason', async () => {
   const calls = mockFetch({
-    'GET /v1/admin/companies/c1/documents?limit=100': () => [
+    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => [
       { id: 'd1', title: 'Contrato', filename: 'c.pdf', status: 'FAILED', failureReason: 'Fichero ilegible' },
       { id: 'd2', title: 'Manual', filename: 'm.txt', status: 'READY' },
     ],
@@ -81,6 +81,34 @@ test('documentsListShowsStatusAndReason', async () => {
   expect(screen.getByText('Listo')).toBeInTheDocument();
   await userEvent.click(within(row).getByRole('button', { name: 'Reintentar' }));
   await waitFor(() => expect(calls.some((c) => c.key === 'POST /v1/admin/documents/d1/retry')).toBe(true));
+});
+
+const docs = (from: number, n: number) =>
+  Array.from({ length: n }, (_, i) => ({ id: `d${from + i}`, title: `Doc ${from + i}`, filename: 'f.pdf', status: 'READY' }));
+
+test('documentsListWalksAllPagesAndRefreshes', async () => {
+  const calls = mockFetch({
+    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => docs(0, 500),
+    'GET /v1/admin/companies/c1/documents?offset=500&limit=500': () => docs(500, 20),
+    'GET /v1/admin/companies/c1/projects': () => [],
+  });
+  render(<Documents companyId="c1" />);
+  expect(await screen.findByText('Doc 519')).toBeInTheDocument();
+  expect(screen.queryByText(/lista está cortada/)).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+  await waitFor(() => expect(calls.filter((c) => c.key.endsWith('offset=500&limit=500'))).toHaveLength(2));
+});
+
+test('documentsListWarnsWhenTruncated', async () => {
+  const routes: Routes = { 'GET /v1/admin/companies/c1/projects': () => [] };
+  for (let offset = 0; offset <= 2000; offset += 500) {
+    routes[`GET /v1/admin/companies/c1/documents?offset=${offset}&limit=500`] = () => docs(offset, 500);
+  }
+  mockFetch(routes);
+  render(<Documents companyId="c1" />);
+  expect(await screen.findByText(/La lista está cortada: se muestran los primeros 2000 documentos/)).toBeInTheDocument();
+  expect(screen.getByText('Doc 1999')).toBeInTheDocument();
+  expect(screen.queryByText('Doc 2000')).toBeNull();
 });
 
 test('reviewApproveCorrectReject', async () => {
@@ -98,7 +126,8 @@ test('reviewApproveCorrectReject', async () => {
   await userEvent.clear(within(second).getByLabelText('Texto corregido'));
   await userEvent.type(within(second).getByLabelText('Texto corregido'), 'Mejor');
   await userEvent.click(within(second).getByRole('button', { name: 'Corregir y aprobar' }));
-  await userEvent.type(within(await card(3)).getByLabelText('Motivo (opcional)'), 'Dudoso');
+  expect(within(await card(3)).getByRole('button', { name: 'Rechazar' })).toBeDisabled();
+  await userEvent.type(within(await card(3)).getByLabelText('Motivo del rechazo'), 'Dudoso');
   await userEvent.click(within(await card(3)).getByRole('button', { name: 'Rechazar' }));
   const sent = (id: string) => calls.find((c) => c.key === `POST /v1/admin/cards/${id}/review`)?.body;
   await waitFor(() => expect(sent('k3')).toEqual({ decision: 'REJECT', note: 'Dudoso' }));

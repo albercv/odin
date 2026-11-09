@@ -21,6 +21,7 @@ public class ListCompanyDocuments {
     public List<Document> execute(Actor actor, CompanyId companyId, int offset, int limit) {
         AccessPolicy.requireAdminOf(actor, companyId);
         int capped = WorkerAccess.cap(Optional.of(limit), 100, 500);
-        return documents.list(CompanyScope.of(companyId), Optional.empty(), Math.max(0, offset), capped);
+        return documents.list(CompanyScope.of(companyId), Optional.empty(), Optional.empty(), Math.max(0, offset),
+                capped);
     }
 }

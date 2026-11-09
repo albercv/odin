@@ -30,13 +30,13 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                    %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
                  q
-            WHERE d.status = 'READY' AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project)
+            WHERE d.status = 'READY' AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project) AND %5$s
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, u.display_name, c.created_at, c.body,
                    %3$s + ts_rank_cd(c.tsv, q.q)::float8
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
-            WHERE c.status = 'APPROVED' AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project)
+            WHERE c.status = 'APPROVED' AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project) AND %6$s
               AND (c.tsv @@ q.q OR %4$s)""";
     private final ScopedTransactions tx;
 
@@ -60,7 +60,8 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 + " project_id, author, date, body, rank, ts_headline('odin_spanish', body, q.q,"
                 + " 'StartSel=\"\", StopSel=\"\", MaxFragments=1') AS headline FROM (" + candidates(exact.size())
                 + ") r, q ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
-        StatementSpec spec = jdbc.sql(sql).param("project", query.projectId().map(ProjectId::value).orElse(null))
+        StatementSpec spec = Sql.scoped(jdbc.sql(sql), query.scope())
+                .param("project", query.projectId().map(ProjectId::value).orElse(null))
                 .param("limit", query.limit());
         for (int i = 0; i < terms.size(); i++) {
             spec = spec.param("t" + i, terms.get(i));
@@ -75,7 +76,8 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     private static String candidates(int exactCount) {
         String bodyMatch = anyMatch("p.text", exactCount);
         String cardMatch = anyMatch("c.body", exactCount);
-        return CANDIDATES.formatted(boost("p.text", exactCount), bodyMatch, boost("c.body", exactCount), cardMatch);
+        return CANDIDATES.formatted(boost("p.text", exactCount), bodyMatch, boost("c.body", exactCount), cardMatch,
+                Sql.inScope("d.company_id"), Sql.inScope("c.company_id"));
     }
 
     private static String tsquery(int termCount) {
@@ -99,7 +101,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     }
 
     private static List<String> exactTokens(List<String> terms) {
-        return terms.stream().flatMap(t -> Arrays.stream(t.trim().split("\s+")))
+        return terms.stream().flatMap(t -> Arrays.stream(t.trim().split("\\s+")))
                 .map(token -> EDGE_PUNCTUATION.matcher(token).replaceAll(""))
                 .filter(token -> IDENTIFIER.matcher(token).matches()).distinct().limit(MAX_IDENTIFIERS).toList();
     }

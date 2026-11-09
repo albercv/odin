@@ -8,7 +8,8 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient): void
     'searchKnowledge',
     {
       description:
-        'Busca en los documentos y fichas aprobadas de la empresa. Cada resultado trae documento, página y extracto para citar.',
+        'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
+        'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha y su origen, y no tienen página.',
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto'),
@@ -18,20 +19,33 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient): void
     (args) =>
       guarded(async () => {
         const result = await api.search(args);
-        if (result.noSource || !result.hits?.length) return textResult(NO_SOURCE_MESSAGE);
+        if (result.noSource || !result.hits.length) return textResult(NO_SOURCE_MESSAGE);
         return jsonResult({ hits: result.hits.map(toCitation) });
       }),
   );
 }
 
-const toCitation = (hit: Hit) => ({
-  sourceType: hit.sourceType,
-  documentId: hit.sourceId,
-  title: hit.title,
-  pageNumber: hit.pageNumber ?? null,
-  paginated: hit.paginated,
-  projectId: hit.projectId ?? null,
-  authorName: hit.authorName,
-  date: hit.date,
-  excerpt: hit.excerpt,
-});
+// Una ficha nunca se presenta como documento: lleva cardId y su marca de origen (spec 6.8, D-024).
+const toCitation = (hit: Hit) =>
+  hit.sourceType === 'KNOWLEDGE_CARD'
+    ? {
+        sourceType: hit.sourceType,
+        cardId: hit.sourceId,
+        title: hit.title,
+        authorName: hit.authorName,
+        date: hit.date,
+        projectId: hit.projectId ?? null,
+        excerpt: hit.excerpt,
+        origin: `Ficha aportada por ${hit.authorName}; resumen hecho por IA`,
+      }
+    : {
+        sourceType: hit.sourceType,
+        documentId: hit.sourceId,
+        title: hit.title,
+        pageNumber: hit.pageNumber ?? null,
+        paginated: hit.paginated,
+        projectId: hit.projectId ?? null,
+        authorName: hit.authorName,
+        date: hit.date,
+        excerpt: hit.excerpt,
+      };

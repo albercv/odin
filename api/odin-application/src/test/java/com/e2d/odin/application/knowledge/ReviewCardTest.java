@@ -70,9 +70,21 @@ class ReviewCardTest {
         KnowledgeCard card = Fixtures.card(cards, companyA, CardStatus.PENDING);
 
         KnowledgeCard result = review.execute(adminA, card.id(), ReviewDecision.REJECT, Optional.empty(),
-                Optional.empty());
+                Optional.of("Duplicada"));
 
         assertThat(result.status()).isEqualTo(CardStatus.REJECTED);
+        assertThat(result.review().flatMap(r -> r.note())).contains("Duplicada");
+    }
+
+    @Test
+    void rejectRequiresNote() {
+        KnowledgeCard card = Fixtures.card(cards, companyA, CardStatus.PENDING);
+
+        for (Optional<String> note : List.of(Optional.<String>empty(), Optional.of("  "))) {
+            assertThatThrownBy(() -> review.execute(adminA, card.id(), ReviewDecision.REJECT, Optional.empty(), note))
+                    .isInstanceOf(ValidationException.class);
+        }
+        assertThat(cards.get(card.id()).orElseThrow().status()).isEqualTo(CardStatus.PENDING);
     }
 
     @Test

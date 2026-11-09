@@ -30,6 +30,16 @@ class SetCompanyCapabilitiesTest {
     }
 
     @Test
+    void companyAdminOfOtherCompanyCannotChangeCapabilities() {
+        CompanyId other = Fixtures.company(organizations);
+
+        assertThatThrownBy(() -> set.execute(Actors.companyAdmin(other), company, EnumSet.allOf(Capability.class)))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(organizations.findCompany(company).orElseThrow().capabilities())
+                .containsExactly(Capability.SEARCH_KNOWLEDGE);
+    }
+
+    @Test
     void groupAdminCanChangeCapabilities() {
         set.execute(Actors.groupAdmin(), company, EnumSet.noneOf(Capability.class));
 

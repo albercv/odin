@@ -8,7 +8,7 @@ function IssuedKey({ issued, onClose }: { issued: S['IssuedKeyView']; onClose: (
     <div className="issued" role="status">
       <p><strong>No se volverá a mostrar.</strong> Guárdala ahora.</p>
       <code>{issued.key}</code>
-      <button type="button" onClick={() => navigator.clipboard.writeText(issued.key ?? '')}>Copiar</button>
+      <button type="button" onClick={() => navigator.clipboard.writeText(issued.key)}>Copiar</button>
       <button type="button" onClick={onClose}>Entendido</button>
     </div>
   );
@@ -33,8 +33,8 @@ export function Keys({ userId }: { userId: string }) {
     setLabel('');
     keys.reload();
   };
-  const revoke = async (id?: string) => {
-    if (id && (await act(() => api.revokeKey(id)))) keys.reload();
+  const revoke = async (id: string) => {
+    if (await act(() => api.revokeKey(id))) keys.reload();
   };
   return (
     <section aria-label="Claves">
