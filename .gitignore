@@ -13,3 +13,5 @@ coverage/
 # datos de una instalación local (documentos, base de datos)
 data/
 api/.m2/
+test-results/
+playwright-report/
