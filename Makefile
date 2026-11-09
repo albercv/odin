@@ -25,4 +25,4 @@ down:
 	$(COMPOSE) down
 
 demo:
-	@echo "pendiente (tarea 12)"; exit 1
+	@deploy/demo/run-demo.sh

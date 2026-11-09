@@ -6,5 +6,5 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   { rules: { 'max-lines-per-function': ['error', { max: 30, skipBlankLines: true, skipComments: true }] } },
-  { files: ['test/**'], rules: { 'max-lines-per-function': 'off' } },
+  { files: ['test/**', 'scripts/**'], rules: { 'max-lines-per-function': 'off' } },
 );
