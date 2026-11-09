@@ -1,0 +1,62 @@
+package com.e2d.odin.application.identity;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryUserRepository;
+import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.identity.User;
+import com.e2d.odin.domain.shared.ConflictException;
+import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.shared.ValidationException;
+import org.junit.jupiter.api.Test;
+
+class SetUpInstallationTest {
+
+    private static final String PASSWORD = "una-clave-larga-1";
+
+    private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
+    private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final SetUpInstallation setUp = new SetUpInstallation(organizations, users, new FakePasswordHasher(),
+            new SequenceIdGenerator(), new InstallationSettings("token-secreto"));
+
+    @Test
+    void createsGroupAndFirstAdmin() {
+        UserId id = setUp.execute("token-secreto", "Grupo Demo", "Gema", "Gema@Demo.test", PASSWORD);
+
+        User admin = users.findById(id).orElseThrow();
+        assertThat(organizations.findGroup()).get().extracting("name").isEqualTo("Grupo Demo");
+        assertThat(admin.role()).isEqualTo(Role.GROUP_ADMIN);
+        assertThat(admin.companyId()).isEmpty();
+        assertThat(admin.email()).contains("gema@demo.test");
+        assertThat(admin.passwordHash()).contains("pw:" + PASSWORD);
+    }
+
+    @Test
+    void rejectsWrongToken() {
+        assertThatThrownBy(() -> setUp.execute("otro", "G", "Gema", "g@demo.test", PASSWORD))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> setUp.execute("", "G", "Gema", "g@demo.test", PASSWORD))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(organizations.findGroup()).isEmpty();
+    }
+
+    @Test
+    void rejectsSecondSetup() {
+        setUp.execute("token-secreto", "G", "Gema", "g@demo.test", PASSWORD);
+
+        assertThatThrownBy(() -> setUp.execute("token-secreto", "G2", "Otra", "o@demo.test", PASSWORD))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void rejectsShortPassword() {
+        assertThatThrownBy(() -> setUp.execute("token-secreto", "G", "Gema", "g@demo.test", "corta"))
+                .isInstanceOf(ValidationException.class);
+    }
+}
