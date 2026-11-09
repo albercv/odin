@@ -25,6 +25,12 @@ public final class AccessPolicy {
         }
     }
 
+    public static void requireAdmin(Actor actor) {
+        if (actor.role() == Role.WORKER) {
+            throw new ForbiddenException("Solo un administrador puede hacer esto");
+        }
+    }
+
     public static void requireWorker(Actor actor) {
         if (actor.role() != Role.WORKER) {
             throw new ForbiddenException("Solo un trabajador puede hacer esto");
