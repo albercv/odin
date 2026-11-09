@@ -9,6 +9,7 @@ import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.NewSession;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.shared.ValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
 import org.springframework.http.HttpHeaders;
@@ -39,7 +40,11 @@ public class SessionController {
 
     @PostMapping("/session")
     public ResponseEntity<Responses.UserRef> login(@RequestBody Requests.Login request, HttpServletRequest http) {
-        String email = request.email() == null ? "" : request.email().trim().toLowerCase(Locale.ROOT);
+        if (request.email() == null || request.email().isBlank() || request.password() == null
+                || request.password().isEmpty()) {
+            throw new ValidationException("Faltan el correo o la contraseña");
+        }
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
         limiter.check(email, http.getRemoteAddr());
         NewSession session = logIn.execute(request.email(), request.password());
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie(session.token(), false).toString())
