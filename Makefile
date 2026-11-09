@@ -18,7 +18,7 @@ check:
 COMPOSE = docker compose -f deploy/compose.yaml --env-file deploy/.env
 
 up:
-	@test -f deploy/.env || { echo "Falta deploy/.env: cópialo de deploy/.env.example (cp deploy/.env.example deploy/.env) y cambia los valores."; exit 1; }
+	@test -f deploy/.env || { echo "Falta deploy/.env: cópialo de deploy/.env.example (cp deploy/.env.example deploy/.env) y cambia las claves y el token."; exit 1; }
 	$(COMPOSE) up -d --build --wait
 
 down:

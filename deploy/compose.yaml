@@ -24,7 +24,8 @@ services:
         condition: service_healthy
     environment:
       ODIN_DB_URL: jdbc:postgresql://postgres:5432/${ODIN_DB_NAME:-odin}
-      ODIN_DB_APP_USER: ${ODIN_DB_APP_USER:?falta ODIN_DB_APP_USER en deploy/.env}
+      # fijo: la migración V4 crea siempre el rol odin_app
+      ODIN_DB_APP_USER: odin_app
       ODIN_DB_APP_PASSWORD: ${ODIN_DB_APP_PASSWORD:?falta ODIN_DB_APP_PASSWORD en deploy/.env}
       ODIN_DB_OWNER_USER: ${ODIN_DB_OWNER_USER:?falta ODIN_DB_OWNER_USER en deploy/.env}
       ODIN_DB_OWNER_PASSWORD: ${ODIN_DB_OWNER_PASSWORD:?falta ODIN_DB_OWNER_PASSWORD en deploy/.env}

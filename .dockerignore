@@ -4,3 +4,6 @@
 api/.m2
 **/.env
 .git
+**/.env.*
+data/
+.superpowers/

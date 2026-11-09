@@ -8,7 +8,6 @@ ENV_FILE="$TMP/demo.env"
 cat > "$ENV_FILE" <<EOF
 ODIN_DB_OWNER_USER=demo_owner
 ODIN_DB_OWNER_PASSWORD=demo-falsa-dueno-$$
-ODIN_DB_APP_USER=odin_app
 ODIN_DB_APP_PASSWORD=demo-falsa-app-$$
 ODIN_DB_NAME=odin
 ODIN_SETUP_TOKEN=demo-falso-token-$$
