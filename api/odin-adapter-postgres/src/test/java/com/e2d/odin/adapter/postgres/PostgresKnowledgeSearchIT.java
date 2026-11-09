@@ -71,6 +71,16 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         assertThat(find(CompanyScope.of(c), "ATL-4417-2024?")).hasSize(1);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"franquicia\tATL-4417-2024", "franquicia\nATL-4417-2024"})
+    void identifierSeparatedByTabOrNewlineStillUsesTheExactChannel(String query) {
+        CompanyId c = newCompany();
+        page(c, "Doc", DocumentStatus.READY, "Referencia ATL-4417-2024 del contrato.");
+        List<SearchHit> hits = find(CompanyScope.of(c), query);
+        assertThat(hits).hasSize(1);
+        assertThat(hits.get(0).rank()).isGreaterThanOrEqualTo(100);
+    }
+
     @Test
     void pureNumbersAreNotBoosted() {
         CompanyId c = newCompany();
