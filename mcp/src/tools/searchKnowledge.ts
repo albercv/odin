@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { ApiClient } from '../api/client.js';
+import type { ApiClient, Hit } from '../api/client.js';
 import { NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
 
 export function registerSearchKnowledge(server: McpServer, api: ApiClient): void {
@@ -18,13 +18,13 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient): void
     (args) =>
       guarded(async () => {
         const result = await api.search(args);
-        if (result.noSource || result.hits.length === 0) return textResult(NO_SOURCE_MESSAGE);
+        if (result.noSource || !result.hits?.length) return textResult(NO_SOURCE_MESSAGE);
         return jsonResult({ hits: result.hits.map(toCitation) });
       }),
   );
 }
 
-const toCitation = (hit: Awaited<ReturnType<ApiClient['search']>>['hits'][number]) => ({
+const toCitation = (hit: Hit) => ({
   sourceType: hit.sourceType,
   documentId: hit.sourceId,
   title: hit.title,

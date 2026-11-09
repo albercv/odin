@@ -9,7 +9,7 @@ test:
 
 check:
 	cd api && mvn -q verify
-	cd mcp && npm ci --silent && npm run lint && npm run typecheck && npm test
+	cd mcp && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm test
 
 up:
 	@echo "pendiente (tarea 11)"; exit 1

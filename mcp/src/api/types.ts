@@ -396,12 +396,33 @@ export interface components {
             /** Format: uuid */
             userId?: string;
         };
-        Search: {
+        SearchRequest: {
             queries?: string[];
             /** Format: uuid */
             projectId?: string;
             /** Format: int32 */
             limit?: number;
+        };
+        Hit: {
+            sourceType?: string;
+            /** Format: uuid */
+            sourceId?: string;
+            title?: string;
+            /** Format: int32 */
+            pageNumber?: number;
+            paginated?: boolean;
+            /** Format: uuid */
+            projectId?: string;
+            authorName?: string;
+            /** Format: date-time */
+            date?: string;
+            excerpt?: string;
+            /** Format: double */
+            rank?: number;
+        };
+        SearchResponse: {
+            hits?: components["schemas"]["Hit"][];
+            noSource?: boolean;
         };
         VerifyCitation: {
             /** Format: uuid */
@@ -592,7 +613,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CompanyView"];
+                    "application/json": components["schemas"]["CompanyView"];
                 };
             };
         };
@@ -616,7 +637,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserRef"];
+                    "application/json": components["schemas"]["UserRef"];
                 };
             };
         };
@@ -630,7 +651,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Search"];
+                "application/json": components["schemas"]["SearchRequest"];
             };
         };
         responses: {
@@ -640,7 +661,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Search"];
+                    "application/json": components["schemas"]["SearchResponse"];
                 };
             };
         };
@@ -664,7 +685,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Verification"];
+                    "application/json": components["schemas"]["Verification"];
                 };
             };
         };
@@ -688,7 +709,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["SavedCard"];
+                    "application/json": components["schemas"]["SavedCard"];
                 };
             };
         };
@@ -710,7 +731,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["KeyView"][];
+                    "application/json": components["schemas"]["KeyView"][];
                 };
             };
         };
@@ -736,7 +757,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["IssuedKeyView"];
+                    "application/json": components["schemas"]["IssuedKeyView"];
                 };
             };
         };
@@ -760,7 +781,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserRef"];
+                    "application/json": components["schemas"]["UserRef"];
                 };
             };
         };
@@ -802,7 +823,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["DocumentView"];
+                    "application/json": components["schemas"]["DocumentView"];
                 };
             };
         };
@@ -822,7 +843,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CompanyView"][];
+                    "application/json": components["schemas"]["CompanyView"][];
                 };
             };
         };
@@ -846,7 +867,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CompanyView"];
+                    "application/json": components["schemas"]["CompanyView"];
                 };
             };
         };
@@ -868,7 +889,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserView"][];
+                    "application/json": components["schemas"]["UserView"][];
                 };
             };
         };
@@ -894,7 +915,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserView"];
+                    "application/json": components["schemas"]["UserView"];
                 };
             };
         };
@@ -916,7 +937,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ProjectView"][];
+                    "application/json": components["schemas"]["ProjectView"][];
                 };
             };
         };
@@ -942,7 +963,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ProjectView"];
+                    "application/json": components["schemas"]["ProjectView"];
                 };
             };
         };
@@ -967,7 +988,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["DocumentView"][];
+                    "application/json": components["schemas"]["DocumentView"][];
                 };
             };
         };
@@ -999,7 +1020,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Upload"];
+                    "application/json": components["schemas"]["Upload"];
                 };
             };
         };
@@ -1025,7 +1046,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CardView"];
+                    "application/json": components["schemas"]["CardView"];
                 };
             };
         };
@@ -1051,7 +1072,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserView"];
+                    "application/json": components["schemas"]["UserView"];
                 };
             };
         };
@@ -1077,7 +1098,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CompanyView"];
+                    "application/json": components["schemas"]["CompanyView"];
                 };
             };
         };
@@ -1097,7 +1118,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Me"];
+                    "application/json": components["schemas"]["Me"];
                 };
             };
         };
@@ -1117,7 +1138,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Health"];
+                    "application/json": components["schemas"]["Health"];
                 };
             };
         };
@@ -1141,7 +1162,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["DocumentView"][];
+                    "application/json": components["schemas"]["DocumentView"][];
                 };
             };
         };
@@ -1164,7 +1185,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Page"];
+                    "application/json": components["schemas"]["Page"];
                 };
             };
         };
@@ -1184,7 +1205,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AdminMe"];
+                    "application/json": components["schemas"]["AdminMe"];
                 };
             };
         };
@@ -1206,7 +1227,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["DocumentView"];
+                    "application/json": components["schemas"]["DocumentView"];
                 };
             };
         };
@@ -1230,7 +1251,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CardView"][];
+                    "application/json": components["schemas"]["CardView"][];
                 };
             };
         };

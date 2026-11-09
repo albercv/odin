@@ -8,6 +8,7 @@
   },
   "scripts": {
     "generate:types": "openapi-typescript ../api/openapi.json -o src/api/types.ts",
+    "check:types": "openapi-typescript ../api/openapi.json -o node_modules/.cache-types.ts && diff -q node_modules/.cache-types.ts src/api/types.ts",
     "build": "tsc -p tsconfig.build.json",
     "start:stdio": "tsx src/stdio.ts",
     "start:http": "tsx src/http.ts",

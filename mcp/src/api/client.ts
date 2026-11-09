@@ -4,23 +4,12 @@ export type Me = components['schemas']['Me'];
 export type DocumentView = components['schemas']['DocumentView'];
 export type Page = components['schemas']['Page'];
 export type SavedCard = components['schemas']['SavedCard'];
-// El contrato exporta la respuesta de /v1/search con el esquema de la petición (colisión de nombres); se declara aquí.
-export interface Hit {
-  sourceType: string;
-  sourceId: string;
-  title: string;
-  pageNumber?: number;
-  paginated: boolean;
-  projectId?: string;
-  authorName: string;
-  date: string;
-  excerpt: string;
-  rank: number;
-}
-export interface SearchResponse {
-  hits: Hit[];
-  noSource: boolean;
-}
+export type Hit = components['schemas']['Hit'];
+export type SearchRequest = components['schemas']['SearchRequest'];
+export type SearchResponse = components['schemas']['SearchResponse'];
+export type VerifyCitationRequest = components['schemas']['VerifyCitation'];
+export type Verification = components['schemas']['Verification'];
+export type SaveCardRequest = components['schemas']['SaveCard'];
 
 export class ApiError extends Error {
   constructor(
@@ -33,11 +22,11 @@ export class ApiError extends Error {
 
 export interface ApiClient {
   me(): Promise<Me>;
-  search(body: { queries: string[]; projectId?: string; limit?: number }): Promise<SearchResponse>;
+  search(body: SearchRequest): Promise<SearchResponse>;
   listDocuments(projectId: string | undefined, offset: number, limit: number): Promise<DocumentView[]>;
   readPage(documentId: string, pageNumber: number): Promise<Page>;
-  verifyCitation(body: { documentId: string; pageNumber: number; quote: string }): Promise<{ verified: boolean }>;
-  saveCard(body: { title: string; body: string; projectId?: string }): Promise<SavedCard>;
+  verifyCitation(body: VerifyCitationRequest): Promise<Verification>;
+  saveCard(body: SaveCardRequest): Promise<SavedCard>;
 }
 
 export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
