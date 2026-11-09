@@ -118,4 +118,14 @@ class ResolveActorTest {
         assertThatThrownBy(() -> resolve.fromSessionToken("nada"))
                 .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
     }
+
+    @Test
+    void sessionOfDeactivatedUserIsRejected() {
+        String token = givenSession();
+        UserId adminId = sessions.findByTokenHash(secrets.hash(token)).orElseThrow().userId();
+        users.save(users.findById(adminId).orElseThrow().deactivated());
+
+        assertThatThrownBy(() -> resolve.fromSessionToken(token))
+                .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
+    }
 }
