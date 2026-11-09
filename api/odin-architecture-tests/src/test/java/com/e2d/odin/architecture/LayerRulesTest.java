@@ -34,7 +34,6 @@ class LayerRulesTest {
         slices()
                 .matching("com.e2d.odin.adapter.(*)..")
                 .should().notDependOnEachOther()
-                .allowEmptyShould(true)
                 .check(ODIN);
     }
 
