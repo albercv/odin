@@ -6,10 +6,12 @@ setup:
 test:
 	cd api && mvn -q test
 	cd mcp && npm ci --silent && npm test
+	cd panel && npm ci --silent && npm test
 
 check:
 	cd api && mvn -q verify
 	cd mcp && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm run build && npm test
+	cd panel && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm test && npm run build
 
 up:
 	@echo "pendiente (tarea 11)"; exit 1
