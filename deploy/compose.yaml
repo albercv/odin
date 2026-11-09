@@ -4,8 +4,8 @@ services:
   postgres:
     image: postgres:17.10
     environment:
-      POSTGRES_USER: ${ODIN_DB_OWNER_USER}
-      POSTGRES_PASSWORD: ${ODIN_DB_OWNER_PASSWORD}
+      POSTGRES_USER: ${ODIN_DB_OWNER_USER:?falta ODIN_DB_OWNER_USER en deploy/.env}
+      POSTGRES_PASSWORD: ${ODIN_DB_OWNER_PASSWORD:?falta ODIN_DB_OWNER_PASSWORD en deploy/.env}
       POSTGRES_DB: ${ODIN_DB_NAME:-odin}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -23,15 +23,15 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      ODIN_DB_URL: ${ODIN_DB_URL}
-      ODIN_DB_APP_USER: ${ODIN_DB_APP_USER}
-      ODIN_DB_APP_PASSWORD: ${ODIN_DB_APP_PASSWORD}
-      ODIN_DB_OWNER_USER: ${ODIN_DB_OWNER_USER}
-      ODIN_DB_OWNER_PASSWORD: ${ODIN_DB_OWNER_PASSWORD}
-      ODIN_SETUP_TOKEN: ${ODIN_SETUP_TOKEN}
-      ODIN_PANEL_ORIGIN: ${ODIN_PANEL_ORIGIN}
-      ODIN_ORIGINALS_DIR: ${ODIN_ORIGINALS_DIR:-/var/lib/odin/originals}
-      ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:-52428800}
+      ODIN_DB_URL: jdbc:postgresql://postgres:5432/${ODIN_DB_NAME:-odin}
+      ODIN_DB_APP_USER: ${ODIN_DB_APP_USER:?falta ODIN_DB_APP_USER en deploy/.env}
+      ODIN_DB_APP_PASSWORD: ${ODIN_DB_APP_PASSWORD:?falta ODIN_DB_APP_PASSWORD en deploy/.env}
+      ODIN_DB_OWNER_USER: ${ODIN_DB_OWNER_USER:?falta ODIN_DB_OWNER_USER en deploy/.env}
+      ODIN_DB_OWNER_PASSWORD: ${ODIN_DB_OWNER_PASSWORD:?falta ODIN_DB_OWNER_PASSWORD en deploy/.env}
+      ODIN_SETUP_TOKEN: ${ODIN_SETUP_TOKEN:?falta ODIN_SETUP_TOKEN en deploy/.env}
+      ODIN_PANEL_ORIGIN: ${ODIN_PANEL_ORIGIN:?falta ODIN_PANEL_ORIGIN en deploy/.env}
+      ODIN_ORIGINALS_DIR: /var/lib/odin/originals
+      ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:?falta ODIN_UPLOAD_MAX_BYTES en deploy/.env}
     volumes:
       - originals:/var/lib/odin/originals
     ports:
@@ -50,6 +50,8 @@ services:
       dockerfile: deploy/panel.Dockerfile
     depends_on:
       - api
+    environment:
+      ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:?falta ODIN_UPLOAD_MAX_BYTES en deploy/.env}
     ports:
       - "127.0.0.1:${ODIN_PANEL_PORT:-8088}:80"
 
