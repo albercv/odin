@@ -83,14 +83,15 @@ async function withMcp<T>(key: string, run: (call: (name: string, args: object) 
 }
 
 type Hit = { documentId: string; pageNumber: number | null; excerpt: string };
-async function searchAsA(key: string): Promise<{ hit: Hit; verified: boolean }> {
+async function searchAsA(key: string, docId: string): Promise<{ hit: Hit; verified: boolean }> {
   return withMcp(key, async (call) => {
     const { hits } = JSON.parse(await call('searchKnowledge', { queries: [QUERY] })) as { hits: Hit[] };
-    const hit = hits.find((h) => h.pageNumber !== null && h.excerpt) as Hit;
+    const hit = hits.find((h) => h.documentId === docId && h.pageNumber !== null && /ATL-4417|franquicia/i.test(h.excerpt));
+    if (!hit) throw new Error('ningún resultado es del PDF subido con texto de la póliza');
     // el extracto puede traer elipsis de recorte; se cita lo que hay entre ellas
     const quote = hit.excerpt.replace(/[…[\]]|\.\.\./g, ' ').split(/\s{2,}/).sort((a, b) => b.length - a.length)[0]!.trim();
-    const v = JSON.parse(await call('verifyCitation', { documentId: hit.documentId, pageNumber: hit.pageNumber, quote })) as { literal?: boolean; verified?: boolean };
-    return { hit, verified: (v.literal ?? v.verified) === true };
+    const v = JSON.parse(await call('verifyCitation', { documentId: hit.documentId, pageNumber: hit.pageNumber, quote })) as { verified: boolean };
+    return { hit, verified: v.verified === true };
   });
 }
 
@@ -108,12 +109,16 @@ async function prepare(): Promise<void> {
   const docId = await uploadPdf(a);
   await waitReady(a, docId);
   check(true, 'Paso 4: PDF ficticio subido a la empresa A y procesado (READY)');
-  const found = await searchAsA(wa.key);
+  const found = await searchAsA(wa.key, docId);
   check(!!found.hit.pageNumber && !!found.hit.excerpt, `Paso 5: MCP de A devuelve un resultado del PDF (página ${found.hit.pageNumber})`);
   check(found.verified, 'Paso 5b: verifyCitation confirma el extracto como literal');
   const outB = await withMcp(wb.key, (call) => call('searchKnowledge', { queries: [QUERY] }));
   check(outB === NO_SOURCE, 'Paso 6: MCP de B recibe «No consta en los documentos de tu empresa.»');
-  const page = await fetch(`${API}/v1/documents/${docId}/pages/${found.hit.pageNumber}`, { headers: { Authorization: `Bearer ${wb.key}` } });
+  const pageUrl = `${API}/v1/documents/${docId}/pages/${found.hit.pageNumber}`;
+  const own = await fetch(pageUrl, { headers: { Authorization: `Bearer ${wa.key}` } });
+  const ownText = own.status === 200 ? ((await own.json()) as { text: string }).text : '';
+  check(own.status === 200 && ownText.includes('ATL-4417-2024'), 'Paso 6a: control positivo, el trabajador de A lee esa misma página (200, texto de la póliza)');
+  const page = await fetch(pageUrl, { headers: { Authorization: `Bearer ${wb.key}` } });
   check(page.status === 404, 'Paso 6b: el trabajador de B no puede leer la página del PDF de A (404)');
   const saved = await withMcp(wa.key, (call) => call('saveKnowledgeCard', CARD));
   check(saved.includes('PENDING') && saved.includes('Ficha guardada; queda pendiente de revisión.'), 'Paso 7: MCP de A guarda la ficha, queda PENDING');

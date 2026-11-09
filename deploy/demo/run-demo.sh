@@ -20,7 +20,7 @@ ODIN_MCP_PORT=$DEMO_MCP_PORT
 EOF
 COMPOSE=(docker compose -p odin-demo -f "$ROOT/deploy/compose.yaml" --env-file "$ENV_FILE")
 cleanup() {
-  [ $? -eq 0 ] || { echo "== últimas líneas del registro de la API =="; "${COMPOSE[@]}" logs --no-color --tail 40 api 2>&1 || true; }
+  [ $? -eq 0 ] || { echo "== últimas líneas del registro de postgres y la API =="; "${COMPOSE[@]}" logs --no-color --tail 40 postgres api 2>&1 || true; }
   "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TMP"; }
 trap cleanup EXIT
 
