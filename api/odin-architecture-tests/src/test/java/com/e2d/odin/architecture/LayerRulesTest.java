@@ -15,19 +15,17 @@ class LayerRulesTest {
     @Test
     void domainDependsOnlyOnJava() {
         classes()
-                .that().resideInAPackage("..domain..")
+                .that().resideInAPackage("com.e2d.odin.domain..")
                 .should().onlyDependOnClassesThat().resideInAnyPackage("com.e2d.odin.domain..", "java..")
-                .allowEmptyShould(true)
                 .check(ODIN);
     }
 
     @Test
     void applicationDependsOnlyOnDomainAndJava() {
         classes()
-                .that().resideInAPackage("..application..")
+                .that().resideInAPackage("com.e2d.odin.application..")
                 .should().onlyDependOnClassesThat()
                 .resideInAnyPackage("com.e2d.odin.application..", "com.e2d.odin.domain..", "java..")
-                .allowEmptyShould(true)
                 .check(ODIN);
     }
 
@@ -43,9 +41,8 @@ class LayerRulesTest {
     @Test
     void noSpringOutsideAdaptersAndBootstrap() {
         noClasses()
-                .that().resideOutsideOfPackages("..adapter..", "..bootstrap..")
+                .that().resideOutsideOfPackages("com.e2d.odin.adapter..", "com.e2d.odin.bootstrap..")
                 .should().dependOnClassesThat().resideInAPackage("org.springframework..")
-                .allowEmptyShould(true)
                 .check(ODIN);
     }
 }
