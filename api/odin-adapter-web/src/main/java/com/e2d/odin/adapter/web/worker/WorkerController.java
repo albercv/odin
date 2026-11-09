@@ -56,11 +56,11 @@ public class WorkerController {
     }
 
     @PostMapping("/v1/search")
-    public Responses.Search search(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @RequestBody Requests.Search request) {
+    public Responses.SearchResponse search(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestBody Requests.SearchRequest request) {
         SearchRequest searchRequest = new SearchRequest(validQueries(request.queries()),
                 Optional.ofNullable(request.projectId()).map(ProjectId::new), Optional.ofNullable(request.limit()));
-        return Responses.Search.from(search.execute(actor, searchRequest));
+        return Responses.SearchResponse.from(search.execute(actor, searchRequest));
     }
 
     @GetMapping("/v1/documents")
