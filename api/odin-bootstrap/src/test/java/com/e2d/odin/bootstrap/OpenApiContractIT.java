@@ -6,6 +6,11 @@ import com.e2d.odin.bootstrap.ApiClient.Reply;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+import com.e2d.odin.adapter.web.dto.Requests;
+import com.e2d.odin.adapter.web.dto.Responses;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import tools.jackson.databind.JsonNode;
@@ -29,6 +34,42 @@ class OpenApiContractIT extends AbstractIT {
             Files.writeString(CONTRACT, MAPPER.writeValueAsString(served) + "\n");
         }
         assertThat(served).isEqualTo(MAPPER.readTree(Files.readString(CONTRACT)));
+    }
+
+    @Test
+    void searchResponseSchemaIsDistinctFromItsRequestSchema() {
+        JsonNode search = servedContract().at("/paths/~1v1~1search/post");
+        JsonNode schemas = servedContract().at("/components/schemas");
+        String request = search.at("/requestBody/content/application~1json/schema/$ref").asString();
+        String response = search.at("/responses/200/content/application~1json/schema/$ref").asString();
+        assertThat(schemas.at("/" + request.substring(request.lastIndexOf('/') + 1) + "/properties/queries").isObject())
+                .isTrue();
+        JsonNode responseProperties = schemas.at("/" + response.substring(response.lastIndexOf('/') + 1) + "/properties");
+        assertThat(responseProperties.has("hits")).isTrue();
+        assertThat(responseProperties.has("noSource")).isTrue();
+    }
+
+    @Test
+    void everyDtoHasItsOwnSchema() {
+        List<String> dtoNames = Stream.concat(Arrays.stream(Requests.class.getDeclaredClasses()),
+                Arrays.stream(Responses.class.getDeclaredClasses())).map(Class::getSimpleName).toList();
+        List<String> schemaNames = servedContract().at("/components/schemas").propertyNames().stream().toList();
+        assertThat(dtoNames).doesNotHaveDuplicates();
+        assertThat(schemaNames).containsExactlyInAnyOrderElementsOf(dtoNames);
+    }
+
+    @Test
+    void jsonResponsesDeclareApplicationJson() {
+        JsonNode paths = servedContract().at("/paths");
+        paths.properties().forEach(path -> path.getValue().properties().forEach(operation -> operation.getValue()
+                .at("/responses").properties().forEach(response -> {
+                    JsonNode content = response.getValue().path("content");
+                    assertThat(content.has("*/*")).as(path.getKey() + " " + operation.getKey()).isFalse();
+                })));
+    }
+
+    private JsonNode servedContract() {
+        return new ApiClient(port).get("/v1/openapi.json").json();
     }
 
     private static JsonNode normalize(JsonNode contract) {

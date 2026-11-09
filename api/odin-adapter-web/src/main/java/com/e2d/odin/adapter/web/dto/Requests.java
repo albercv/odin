@@ -36,7 +36,7 @@ public final class Requests {
     public record Review(ReviewDecision decision, String correctedBody, String note) {
     }
 
-    public record Search(List<String> queries, UUID projectId, Integer limit) {
+    public record SearchRequest(List<String> queries, UUID projectId, Integer limit) {
     }
 
     public record VerifyCitation(UUID documentId, Integer pageNumber, String quote) {

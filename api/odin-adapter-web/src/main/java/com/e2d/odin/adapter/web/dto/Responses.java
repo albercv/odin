@@ -124,9 +124,9 @@ public final class Responses {
         }
     }
 
-    public record Search(List<Hit> hits, boolean noSource) {
-        public static Search from(SearchResult r) {
-            return new Search(r.hits().stream().map(Hit::from).toList(), r.hits().isEmpty());
+    public record SearchResponse(List<Hit> hits, boolean noSource) {
+        public static SearchResponse from(SearchResult r) {
+            return new SearchResponse(r.hits().stream().map(Hit::from).toList(), r.hits().isEmpty());
         }
     }
 
