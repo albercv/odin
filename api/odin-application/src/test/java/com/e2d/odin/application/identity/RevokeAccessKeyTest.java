@@ -6,12 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -24,6 +25,7 @@ class RevokeAccessKeyTest {
 
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final MutableClock clock = new MutableClock();
     private final RevokeAccessKey revoke = new RevokeAccessKey(keys, users, clock);
     private final CompanyId company = Fixtures.company(new InMemoryOrganizationRepository());
@@ -31,9 +33,9 @@ class RevokeAccessKeyTest {
 
     RevokeAccessKeyTest() {
         UserId workerId = new UserId(UUID.randomUUID());
-        users.save(new User(workerId, "Wanda", Optional.empty(), Role.WORKER, Optional.of(company), true,
-                Optional.empty()));
-        keys.save(new AccessKey(keyId, workerId, "portátil", "abcdefgh", "h:secreto", clock.instant(),
+        People.member(users, memberships, workerId, "Wanda", Optional.empty(), Role.WORKER, company, true,
+                Optional.empty());
+        keys.save(new AccessKey(keyId, workerId, company, "portátil", "abcdefgh", "h:secreto", clock.instant(),
                 Optional.empty()));
     }
 

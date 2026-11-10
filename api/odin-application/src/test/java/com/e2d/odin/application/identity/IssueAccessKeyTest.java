@@ -6,8 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.domain.identity.AccessKey;
@@ -24,16 +26,15 @@ import org.junit.jupiter.api.Test;
 class IssueAccessKeyTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
-    private final IssueAccessKey issue = new IssueAccessKey(keys, users, new FakeSecretHasher(),
-            new SequenceTokenGenerator(), new SequenceIdGenerator(), new MutableClock());
+    private final IssueAccessKey issue = new IssueAccessKey(keys, users, memberships,
+            new FakeSecretHasher(), new SequenceTokenGenerator(), new SequenceIdGenerator(), new MutableClock());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
 
     private User saveUser(Role role, boolean active) {
-        User user = new User(new UserId(UUID.randomUUID()), "Wanda", Optional.empty(), role, Optional.of(company),
-                active, Optional.empty());
-        users.save(user);
-        return user;
+        return People.member(users, memberships, new UserId(UUID.randomUUID()), "Wanda", Optional.empty(), role,
+                company, active, Optional.empty());
     }
 
     @Test
@@ -47,6 +48,7 @@ class IssueAccessKeyTest {
         assertThat(stored.secretHash()).isEqualTo("h:" + secret).doesNotContain(issued.plainKey());
         assertThat(stored.prefix()).isEqualTo(issued.prefix());
         assertThat(stored.label()).isEqualTo("portátil");
+        assertThat(stored.companyId()).isEqualTo(company);
     }
 
     @Test

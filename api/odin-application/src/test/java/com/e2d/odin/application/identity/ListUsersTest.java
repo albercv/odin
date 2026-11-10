@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.UserId;
@@ -17,12 +18,13 @@ import org.junit.jupiter.api.Test;
 class ListUsersTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
-    private final ListUsers list = new ListUsers(users);
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final ListUsers list = new ListUsers(users, memberships);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
 
     ListUsersTest() {
-        users.save(new User(new UserId(UUID.randomUUID()), "Wanda", Optional.empty(), Role.WORKER,
-                Optional.of(company), true, Optional.empty()));
+        People.member(users, memberships, new UserId(UUID.randomUUID()), "Wanda", Optional.empty(), Role.WORKER,
+                company, true, Optional.empty());
     }
 
     @Test

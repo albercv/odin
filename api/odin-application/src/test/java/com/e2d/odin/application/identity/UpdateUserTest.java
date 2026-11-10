@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
@@ -21,25 +23,27 @@ import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class UpdateUserTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final UpdateUser update = new UpdateUser(users, sessions);
+    private final UpdateUser update = new UpdateUser(users, memberships, sessions);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
     private final UserId adminId = new UserId(UUID.randomUUID());
     private final Actor admin = Actors.companyAdmin(company);
 
     UpdateUserTest() {
-        users.save(new User(workerId, "Wanda", Optional.of("w@demo.test"), Role.WORKER, Optional.of(company), true,
-                Optional.empty()));
-        users.save(new User(adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, Optional.of(company),
-                true, Optional.of("pw:x")));
+        People.member(users, memberships, workerId, "Wanda", Optional.of("w@demo.test"), Role.WORKER, company, true,
+                Optional.empty());
+        People.member(users, memberships, adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company,
+                true, Optional.of("pw:x"));
     }
 
     private static UserChanges name(String name) {
@@ -57,7 +61,7 @@ class UpdateUserTest {
     @Test
     void changesNameAndEmail() {
         User user = update.execute(admin, workerId,
-                new UserChanges(Optional.of("Wanda Díaz"), Optional.of(" W2@Demo.test "), Optional.empty()));
+                new UserChanges(Optional.of("Wanda Díaz"), Optional.of(" W2@Demo.test "), Optional.empty())).user();
 
         assertThat(user.displayName()).isEqualTo("Wanda Díaz");
         assertThat(user.email()).contains("w2@demo.test");
@@ -77,14 +81,14 @@ class UpdateUserTest {
 
     @Test
     void sameEmailOnSameUserIsNotConflict() {
-        User user = update.execute(admin, workerId, email("W@demo.test"));
+        User user = update.execute(admin, workerId, email("W@demo.test")).user();
 
         assertThat(user.email()).contains("w@demo.test");
     }
 
     @Test
     void blankEmailClearsWorkersEmail() {
-        assertThat(update.execute(admin, workerId, email("")).email()).isEmpty();
+        assertThat(update.execute(admin, workerId, email("")).user().email()).isEmpty();
     }
 
     @Test
@@ -100,6 +104,24 @@ class UpdateUserTest {
     }
 
     @Test
+    void deactivatingAMemberDeactivatesTheMembershipNotThePerson() {
+        update.execute(admin, workerId, active(false));
+
+        assertThat(memberships.find(workerId, company).orElseThrow().active()).isFalse();
+        assertThat(users.findById(workerId).orElseThrow().active()).isTrue();
+    }
+
+    @Test
+    void deactivatingTheGroupAdminDeactivatesThePerson() {
+        UserId groupAdminId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, groupAdminId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+
+        update.execute(Actors.groupAdmin(), groupAdminId, active(false));
+
+        assertThat(users.findById(groupAdminId).orElseThrow().active()).isFalse();
+    }
+
+    @Test
     void deactivatingClosesTheUsersSessions() {
         String token = sessions.open(adminId);
 
@@ -112,8 +134,7 @@ class UpdateUserTest {
     @Test
     void companyAdminCannotUpdateTheGroupAdmin() {
         UserId groupAdminId = new UserId(UUID.randomUUID());
-        users.save(new User(groupAdminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), true,
-                Optional.of("pw:x")));
+        People.groupAdmin(users, groupAdminId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
 
         assertThatThrownBy(() -> update.execute(admin, groupAdminId, active(false)))
                 .isInstanceOf(ForbiddenException.class);
@@ -122,11 +143,11 @@ class UpdateUserTest {
 
     @Test
     void cannotDeactivateOneself() {
-        Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Optional.of(company));
+        Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Set.of(company));
 
         assertThatThrownBy(() -> update.execute(self, adminId, active(false)))
                 .isInstanceOf(ValidationException.class).hasMessage("No puedes desactivarte a ti mismo");
-        assertThat(users.findById(adminId).orElseThrow().active()).isTrue();
+        assertThat(memberships.find(adminId, company).orElseThrow().active()).isTrue();
     }
 
     @Test

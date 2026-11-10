@@ -7,7 +7,6 @@ import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.InstallationToken;
 import com.e2d.odin.application.shared.Validation;
-import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -44,7 +43,7 @@ public class SetUpInstallation {
         organizations.saveGroup(new Group(new GroupId(ids.newId()), name));
         UserId id = new UserId(ids.newId());
         users.save(new User(id, Validation.requireText(adminName, "el nombre"), Optional.of(email),
-                Role.GROUP_ADMIN, Optional.empty(), true, Optional.of(passwords.hash(password))));
+                true, true, Optional.of(passwords.hash(password))));
         return id;
     }
 }

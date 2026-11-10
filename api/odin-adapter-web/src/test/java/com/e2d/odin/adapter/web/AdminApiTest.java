@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -105,7 +106,7 @@ class AdminApiTest extends WebTestSupport {
     void deactivatingUserBlocksTheirKey() throws Exception {
         CompanyId company = newCompany();
         String key = workerKey(company);
-        UserId worker = w.users.listByCompany(company).get(0).id();
+        UserId worker = w.memberships.listByCompany(company).get(0).userId();
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
@@ -116,7 +117,7 @@ class AdminApiTest extends WebTestSupport {
     void patchUserUpdatesFields() throws Exception {
         CompanyId company = newCompany();
         workerKey(company);
-        UserId worker = w.users.listByCompany(company).get(0).id();
+        UserId worker = w.memberships.listByCompany(company).get(0).userId();
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"Nuevo\",\"email\":\"N@e.test\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.displayName").value("Nuevo"))
@@ -127,7 +128,7 @@ class AdminApiTest extends WebTestSupport {
     void patchUserReactivates() throws Exception {
         CompanyId company = newCompany();
         workerKey(company);
-        UserId worker = w.users.listByCompany(company).get(0).id();
+        UserId worker = w.memberships.listByCompany(company).get(0).userId();
         Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(group).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"active\":false}")).andExpect(jsonPath("$.active").value(false));
@@ -139,7 +140,7 @@ class AdminApiTest extends WebTestSupport {
     void deleteUserIs204() throws Exception {
         CompanyId company = newCompany();
         String key = workerKey(company);
-        UserId worker = w.users.listByCompany(company).get(0).id();
+        UserId worker = w.memberships.listByCompany(company).get(0).userId();
         Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
         mvc.perform(delete("/v1/admin/users/" + worker.value()).cookie(group)).andExpect(status().isNoContent());
         mvc.perform(get("/v1/me").header("Authorization", key)).andExpect(status().isUnauthorized());
@@ -173,10 +174,8 @@ class AdminApiTest extends WebTestSupport {
     }
 
     private User companyAdmin(CompanyId company, String email) {
-        User user = new User(new UserId(UUID.randomUUID()), "Carlos", Optional.of(email), Role.COMPANY_ADMIN,
-                Optional.of(company), true, Optional.of(w.passwords.hash("clave-muy-larga-1")));
-        w.users.save(user);
-        return user;
+        return People.member(w.users, w.memberships, new UserId(UUID.randomUUID()), "Carlos", Optional.of(email),
+                Role.COMPANY_ADMIN, company, true, Optional.of(w.passwords.hash("clave-muy-larga-1")));
     }
 
     @Test

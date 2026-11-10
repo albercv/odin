@@ -5,6 +5,7 @@ import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
 import com.e2d.odin.adapter.postgres.PostgresAdminSessionRepository;
 import com.e2d.odin.adapter.postgres.PostgresDocumentRepository;
 import com.e2d.odin.adapter.postgres.PostgresKnowledgeCardRepository;
+import com.e2d.odin.adapter.postgres.PostgresMembershipRepository;
 import com.e2d.odin.adapter.postgres.PostgresKnowledgeSearch;
 import com.e2d.odin.adapter.postgres.PostgresOrganizationRepository;
 import com.e2d.odin.adapter.postgres.PostgresQuestionLog;
@@ -24,6 +25,7 @@ import com.e2d.odin.application.port.KnowledgeCardRepository;
 import com.e2d.odin.application.port.KnowledgeSearch;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.OriginalFileStore;
+import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
@@ -54,6 +56,11 @@ public class AdapterConfiguration {
     @Bean
     UserRepository userRepository(ScopedTransactions tx) {
         return new PostgresUserRepository(tx);
+    }
+
+    @Bean
+    MembershipRepository membershipRepository(ScopedTransactions tx) {
+        return new PostgresMembershipRepository(tx);
     }
 
     @Bean

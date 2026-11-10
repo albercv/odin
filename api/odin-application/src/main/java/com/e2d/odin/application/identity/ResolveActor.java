@@ -2,6 +2,7 @@ package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.SecretComparison;
@@ -9,7 +10,9 @@ import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
+import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
+import java.util.Set;
 
 public class ResolveActor {
 
@@ -21,13 +24,15 @@ public class ResolveActor {
 
     private final AccessKeyRepository keys;
     private final UserRepository users;
+    private final MembershipRepository memberships;
     private final AdminSessions sessions;
     private final SecretHasher secrets;
 
-    public ResolveActor(AccessKeyRepository keys, UserRepository users, AdminSessions sessions,
-            SecretHasher secrets) {
+    public ResolveActor(AccessKeyRepository keys, UserRepository users, MembershipRepository memberships,
+            AdminSessions sessions, SecretHasher secrets) {
         this.keys = keys;
         this.users = users;
+        this.memberships = memberships;
         this.sessions = sessions;
         this.secrets = secrets;
     }
@@ -35,15 +40,25 @@ public class ResolveActor {
     public Actor fromAccessKey(String plainKey) {
         AccessKey key = findKey(plainKey);
         User user = users.findById(key.userId()).filter(User::active).orElseThrow(ResolveActor::unauthorized);
-        if (user.role() != Role.WORKER) {
-            throw unauthorized();
-        }
-        return toActor(user);
+        memberships.find(key.userId(), key.companyId()).filter(m -> m.active() && m.isWorker())
+                .orElseThrow(ResolveActor::unauthorized);
+        return new Actor(user.id(), user.displayName(), Role.WORKER, Set.of(key.companyId()));
     }
 
     public Actor fromSessionToken(String token) {
-        return sessions.resolve(token).flatMap(users::findById).filter(User::active).map(ResolveActor::toActor)
+        return sessions.resolve(token).flatMap(users::findById).filter(User::active).map(this::administratorActor)
                 .orElseThrow(ResolveActor::unauthorized);
+    }
+
+    private Actor administratorActor(User user) {
+        if (user.groupAdmin()) {
+            return new Actor(user.id(), user.displayName(), Role.GROUP_ADMIN, Set.of());
+        }
+        Set<CompanyId> companies = UserAdministration.companiesAdministeredBy(memberships, user.id());
+        if (companies.isEmpty()) {
+            throw unauthorized();
+        }
+        return new Actor(user.id(), user.displayName(), Role.COMPANY_ADMIN, companies);
     }
 
     private AccessKey findKey(String plainKey) {
@@ -57,10 +72,6 @@ public class ResolveActor {
         return keys.findByPrefix(prefix)
                 .filter(k -> k.revokedAt().isEmpty() && SecretComparison.equal(k.secretHash(), secretHash))
                 .orElseThrow(ResolveActor::unauthorized);
-    }
-
-    private static Actor toActor(User user) {
-        return new Actor(user.id(), user.displayName(), user.role(), user.companyId());
     }
 
     private static UnauthorizedException unauthorized() {

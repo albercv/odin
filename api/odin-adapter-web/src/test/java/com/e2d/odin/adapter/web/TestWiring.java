@@ -10,6 +10,7 @@ import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
 import com.e2d.odin.application.fake.InMemoryQuestionLog;
@@ -65,6 +66,7 @@ public class TestWiring {
 
     final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     final InMemoryUserRepository users = new InMemoryUserRepository();
+    final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
@@ -87,7 +89,7 @@ public class TestWiring {
     }
 
     @Bean ResolveActor resolveActor() {
-        return new ResolveActor(keys, users, adminSessions(), secrets);
+        return new ResolveActor(keys, users, memberships, adminSessions(), secrets);
     }
 
     @Bean SetUpInstallation setUpInstallation() {
@@ -95,7 +97,7 @@ public class TestWiring {
     }
 
     @Bean LogInAdmin logInAdmin() {
-        return new LogInAdmin(users, passwords, adminSessions());
+        return new LogInAdmin(users, memberships, passwords, adminSessions());
     }
 
     @Bean LogOutAdmin logOutAdmin() {
@@ -135,19 +137,19 @@ public class TestWiring {
     }
 
     @Bean RegisterUser registerUser() {
-        return new RegisterUser(users, orgs, passwords, ids);
+        return new RegisterUser(users, memberships, orgs, passwords, ids);
     }
 
     @Bean ListUsers listUsers() {
-        return new ListUsers(users);
+        return new ListUsers(users, memberships);
     }
 
     @Bean UpdateUser updateUser() {
-        return new UpdateUser(users, adminSessions());
+        return new UpdateUser(users, memberships, adminSessions());
     }
 
     @Bean ChangePassword changePassword() {
-        return new ChangePassword(users, passwords, adminSessions());
+        return new ChangePassword(users, memberships, passwords, adminSessions());
     }
 
     @Bean RecoverGroupAdmin recoverGroupAdmin() {
@@ -155,15 +157,15 @@ public class TestWiring {
     }
 
     @Bean DeleteUser deleteUser() {
-        return new DeleteUser(users, adminSessions(), clock);
+        return new DeleteUser(users, memberships, adminSessions(), clock);
     }
 
     @Bean IssueAccessKey issueAccessKey() {
-        return new IssueAccessKey(keys, users, secrets, tokens, ids, clock);
+        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock);
     }
 
     @Bean ListAccessKeys listAccessKeys() {
-        return new ListAccessKeys(keys, users);
+        return new ListAccessKeys(keys, users, memberships);
     }
 
     @Bean RevokeAccessKey revokeAccessKey() {

@@ -5,10 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -22,14 +23,15 @@ class ListAccessKeysTest {
 
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
-    private final ListAccessKeys list = new ListAccessKeys(keys, users);
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final ListAccessKeys list = new ListAccessKeys(keys, users, memberships);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
 
     ListAccessKeysTest() {
-        users.save(new User(workerId, "Wanda", Optional.empty(), Role.WORKER, Optional.of(company), true,
-                Optional.empty()));
-        keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), workerId, "portátil", "abcdefgh", "h:x",
+        People.member(users, memberships, workerId, "Wanda", Optional.empty(), Role.WORKER, company, true,
+                Optional.empty());
+        keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), workerId, company, "portátil", "abcdefgh", "h:x",
                 Instant.parse("2026-11-09T10:00:00Z"), Optional.empty()));
     }
 

@@ -42,6 +42,7 @@ import com.e2d.odin.application.port.KnowledgeCardRepository;
 import com.e2d.odin.application.port.KnowledgeSearch;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.OriginalFileStore;
+import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
@@ -78,13 +79,15 @@ public class UseCaseConfiguration {
 
     @Bean
     ResolveActor resolveActor(
-            AccessKeyRepository keys, UserRepository users, AdminSessions sessions, SecretHasher secrets) {
-        return new ResolveActor(keys, users, sessions, secrets);
+            AccessKeyRepository keys, UserRepository users, MembershipRepository memberships,
+            AdminSessions sessions, SecretHasher secrets) {
+        return new ResolveActor(keys, users, memberships, sessions, secrets);
     }
 
     @Bean
-    LogInAdmin logInAdmin(UserRepository users, PasswordHasher passwords, AdminSessions sessions) {
-        return new LogInAdmin(users, passwords, sessions);
+    LogInAdmin logInAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
+            AdminSessions sessions) {
+        return new LogInAdmin(users, memberships, passwords, sessions);
     }
 
     @Bean
@@ -135,25 +138,27 @@ public class UseCaseConfiguration {
     @Bean
     RegisterUser registerUser(
             UserRepository users,
+            MembershipRepository memberships,
             OrganizationRepository organizations,
             PasswordHasher passwords,
             IdGenerator ids) {
-        return new RegisterUser(users, organizations, passwords, ids);
+        return new RegisterUser(users, memberships, organizations, passwords, ids);
     }
 
     @Bean
-    ListUsers listUsers(UserRepository users) {
-        return new ListUsers(users);
+    ListUsers listUsers(UserRepository users, MembershipRepository memberships) {
+        return new ListUsers(users, memberships);
     }
 
     @Bean
-    UpdateUser updateUser(UserRepository users, AdminSessions sessions) {
-        return new UpdateUser(users, sessions);
+    UpdateUser updateUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions) {
+        return new UpdateUser(users, memberships, sessions);
     }
 
     @Bean
-    ChangePassword changePassword(UserRepository users, PasswordHasher passwords, AdminSessions sessions) {
-        return new ChangePassword(users, passwords, sessions);
+    ChangePassword changePassword(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
+            AdminSessions sessions) {
+        return new ChangePassword(users, memberships, passwords, sessions);
     }
 
     @Bean
@@ -163,24 +168,27 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DeleteUser deleteUser(UserRepository users, AdminSessions sessions, Clock clock) {
-        return new DeleteUser(users, sessions, clock);
+    DeleteUser deleteUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
+            Clock clock) {
+        return new DeleteUser(users, memberships, sessions, clock);
     }
 
     @Bean
     IssueAccessKey issueAccessKey(
             AccessKeyRepository keys,
             UserRepository users,
+            MembershipRepository memberships,
             SecretHasher secrets,
             TokenGenerator tokens,
             IdGenerator ids,
             Clock clock) {
-        return new IssueAccessKey(keys, users, secrets, tokens, ids, clock);
+        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock);
     }
 
     @Bean
-    ListAccessKeys listAccessKeys(AccessKeyRepository keys, UserRepository users) {
-        return new ListAccessKeys(keys, users);
+    ListAccessKeys listAccessKeys(AccessKeyRepository keys, UserRepository users,
+            MembershipRepository memberships) {
+        return new ListAccessKeys(keys, users, memberships);
     }
 
     @Bean

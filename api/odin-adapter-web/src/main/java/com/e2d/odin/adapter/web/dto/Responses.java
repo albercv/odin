@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web.dto;
 
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
+import com.e2d.odin.application.identity.UserSummary;
 import com.e2d.odin.application.organization.MeView;
 import com.e2d.odin.application.search.PageView;
 import com.e2d.odin.domain.document.Document;
@@ -40,7 +41,7 @@ public final class Responses {
     public record AdminMe(UUID userId, String displayName, Role role, @Nullable UUID companyId) {
         public static AdminMe from(Actor a) {
             return new AdminMe(a.userId().value(), a.displayName(), a.role(),
-                    a.companyId().map(c -> c.value()).orElse(null));
+                    a.companies().stream().findFirst().map(c -> c.value()).orElse(null));
         }
     }
 
@@ -65,9 +66,10 @@ public final class Responses {
 
     public record UserView(UUID id, String displayName, @Nullable String email, Role role, @Nullable UUID companyId,
             boolean active) {
-        public static UserView from(User u) {
-            return new UserView(u.id().value(), u.displayName(), u.email().orElse(null), u.role(),
-                    u.companyId().map(c -> c.value()).orElse(null), u.active());
+        public static UserView from(UserSummary s) {
+            User u = s.user();
+            return new UserView(u.id().value(), u.displayName(), u.email().orElse(null), s.role(),
+                    s.companyId().map(c -> c.value()).orElse(null), s.active());
         }
     }
 
