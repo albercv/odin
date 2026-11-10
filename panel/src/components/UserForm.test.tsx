@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { UserForm } from './UserForm';
 import { mockFetch } from '../mockApi';
 
-const created = { status: 201, body: { id: 'u9', displayName: 'Ana', role: 'WORKER', active: true } };
-const path = 'POST /v1/admin/companies/c1/users';
+const created = { status: 201, body: { member: { userId: 'u9', displayName: 'Ana', roles: ['WORKER'], active: true }, alreadyExisted: false } };
+const path = 'POST /v1/admin/companies/c1/members';
 
 test('workerFormHasNoPasswordAndEmailIsOptional', async () => {
   const calls = mockFetch({ [path]: () => created });
@@ -15,7 +15,7 @@ test('workerFormHasNoPasswordAndEmailIsOptional', async () => {
   await userEvent.type(screen.getByLabelText('Nombre'), 'Ana');
   await userEvent.click(screen.getByRole('button', { name: 'Crear usuario' }));
   await waitFor(() => expect(onDone).toHaveBeenCalled());
-  expect(calls.find((c) => c.key === path)?.body).toEqual({ displayName: 'Ana', role: 'WORKER' });
+  expect(calls.find((c) => c.key === path)?.body).toEqual({ displayName: 'Ana', roles: ['WORKER'] });
 });
 
 test('adminFormRequiresPassword', async () => {
@@ -30,7 +30,7 @@ test('adminFormRequiresPassword', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Crear usuario' }));
   await waitFor(() => expect(calls.some((c) => c.key === path)).toBe(true));
   expect(calls.find((c) => c.key === path)?.body).toEqual({
-    displayName: 'Bea', email: 'bea@acme.test', role: 'COMPANY_ADMIN', password: 'una-clave-larga-1',
+    displayName: 'Bea', email: 'bea@acme.test', roles: ['COMPANY_ADMIN'], password: 'una-clave-larga-1',
   });
 });
 

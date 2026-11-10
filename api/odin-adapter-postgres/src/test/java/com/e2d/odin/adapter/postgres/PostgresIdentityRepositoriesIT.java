@@ -3,7 +3,8 @@ package com.e2d.odin.adapter.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.e2d.odin.application.identity.ListUsers;
+import com.e2d.odin.application.identity.ListMembers;
+import com.e2d.odin.application.identity.MemberView;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
@@ -14,6 +15,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -60,17 +62,32 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     }
 
     @Test
-    void softDeletedPersonDoesNotAppearInTheCompanyUserListing() {
+    void softDeletedPersonDoesNotAppearInTheCompanyMemberListing() {
         CompanyId company = newCompany();
         UserId kept = newUser(company);
         UserId gone = newUser(company);
-        ListUsers list = new ListUsers(users, memberships);
+        ListMembers list = new ListMembers(users, memberships);
         Actor admin = new Actor(new UserId(UUID.randomUUID()), "Carlos", Role.COMPANY_ADMIN, Set.of(company));
-        assertThat(list.execute(admin, company)).extracting(s -> s.user().id()).containsExactly(kept, gone);
+        assertThat(list.execute(admin, company)).extracting(MemberView::userId).containsExactly(kept, gone);
 
         users.delete(gone, Instant.now());
 
-        assertThat(list.execute(admin, company)).extracting(s -> s.user().id()).containsExactly(kept);
+        assertThat(list.execute(admin, company)).extracting(MemberView::userId).containsExactly(kept);
+    }
+
+    @Test
+    void findsSeveralPeopleByIdInOneQueryIgnoringDeletedAndUnknown() {
+        User first = user("uno@x.com");
+        User second = user("dos@x.com");
+        User deleted = user("tres@x.com");
+        users.save(first);
+        users.save(second);
+        users.save(deleted);
+        users.delete(deleted.id(), Instant.now());
+
+        assertThat(users.findAllById(List.of(first.id(), second.id(), deleted.id(), new UserId(UUID.randomUUID()))))
+                .containsExactlyInAnyOrder(first, second);
+        assertThat(users.findAllById(List.of())).isEmpty();
     }
 
     @Test

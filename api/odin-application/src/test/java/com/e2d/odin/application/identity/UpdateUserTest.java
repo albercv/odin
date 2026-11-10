@@ -13,6 +13,7 @@ import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -61,7 +62,7 @@ class UpdateUserTest {
     @Test
     void changesNameAndEmail() {
         User user = update.execute(admin, workerId,
-                new UserChanges(Optional.of("Wanda Díaz"), Optional.of(" W2@Demo.test "), Optional.empty())).user();
+                new UserChanges(Optional.of("Wanda Díaz"), Optional.of(" W2@Demo.test "), Optional.empty()));
 
         assertThat(user.displayName()).isEqualTo("Wanda Díaz");
         assertThat(user.email()).contains("w2@demo.test");
@@ -81,14 +82,14 @@ class UpdateUserTest {
 
     @Test
     void sameEmailOnSameUserIsNotConflict() {
-        User user = update.execute(admin, workerId, email("W@demo.test")).user();
+        User user = update.execute(admin, workerId, email("W@demo.test"));
 
         assertThat(user.email()).contains("w@demo.test");
     }
 
     @Test
     void blankEmailClearsWorkersEmail() {
-        assertThat(update.execute(admin, workerId, email("")).user().email()).isEmpty();
+        assertThat(update.execute(admin, workerId, email("")).email()).isEmpty();
     }
 
     @Test
@@ -98,27 +99,41 @@ class UpdateUserTest {
     }
 
     @Test
-    void deactivatesAndReactivates() {
-        assertThat(update.execute(admin, workerId, active(false)).active()).isFalse();
-        assertThat(update.execute(admin, workerId, active(true)).active()).isTrue();
+    void groupAdminDeactivatesAndReactivatesAPerson() {
+        assertThat(update.execute(Actors.groupAdmin(), workerId, active(false)).active()).isFalse();
+        assertThat(users.findById(workerId).orElseThrow().active()).isFalse();
+        assertThat(memberships.find(workerId, company).orElseThrow().active()).isTrue();
+
+        assertThat(update.execute(Actors.groupAdmin(), workerId, active(true)).active()).isTrue();
     }
 
     @Test
-    void deactivatingAMemberDeactivatesTheMembershipNotThePerson() {
-        update.execute(admin, workerId, active(false));
-
-        assertThat(memberships.find(workerId, company).orElseThrow().active()).isFalse();
+    void onlyGroupAdminDeactivatesAPerson() {
+        assertThatThrownBy(() -> update.execute(admin, workerId, active(false)))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Solo el administrador del grupo activa o desactiva a una persona");
         assertThat(users.findById(workerId).orElseThrow().active()).isTrue();
     }
 
     @Test
-    void deactivatingTheGroupAdminDeactivatesThePerson() {
-        UserId groupAdminId = new UserId(UUID.randomUUID());
-        People.groupAdmin(users, groupAdminId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+    void companyAdminCannotEditPersonWhoBelongsToAnotherCompany() {
+        memberships.save(new Membership(workerId, new CompanyId(UUID.randomUUID()), Set.of(Role.WORKER), true));
 
-        update.execute(Actors.groupAdmin(), groupAdminId, active(false));
+        assertThatThrownBy(() -> update.execute(admin, workerId, name("X")))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Solo el administrador del grupo edita a una persona que está en varias empresas");
+        assertThat(users.findById(workerId).orElseThrow().displayName()).isEqualTo("Wanda");
+        assertThat(update.execute(Actors.groupAdmin(), workerId, name("Wanda Díaz")).displayName())
+                .isEqualTo("Wanda Díaz");
+    }
 
-        assertThat(users.findById(groupAdminId).orElseThrow().active()).isFalse();
+    @Test
+    void companyAdminOfTwoCompaniesEditsAPersonWhoIsOnlyInThose() {
+        CompanyId second = new CompanyId(UUID.randomUUID());
+        memberships.save(new Membership(workerId, second, Set.of(Role.WORKER), true));
+        Actor both = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Set.of(company, second));
+
+        assertThat(update.execute(both, workerId, name("Wanda Díaz")).displayName()).isEqualTo("Wanda Díaz");
     }
 
     @Test
@@ -143,11 +158,11 @@ class UpdateUserTest {
 
     @Test
     void cannotDeactivateOneself() {
-        Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Set.of(company));
+        Actor self = new Actor(adminId, "Carlos", Role.GROUP_ADMIN, Set.of());
 
         assertThatThrownBy(() -> update.execute(self, adminId, active(false)))
                 .isInstanceOf(ValidationException.class).hasMessage("No puedes desactivarte a ti mismo");
-        assertThat(memberships.find(adminId, company).orElseThrow().active()).isTrue();
+        assertThat(users.findById(adminId).orElseThrow().active()).isTrue();
     }
 
     @Test

@@ -2,12 +2,12 @@ package com.e2d.odin.adapter.web.dto;
 
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
-import com.e2d.odin.application.identity.UserSummary;
 import com.e2d.odin.application.organization.MeView;
 import com.e2d.odin.application.search.PageView;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.knowledge.CardReview;
@@ -38,10 +38,19 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record AdminMe(UUID userId, String displayName, Role role, @Nullable UUID companyId) {
-        public static AdminMe from(Actor a) {
-            return new AdminMe(a.userId().value(), a.displayName(), a.role(),
-                    a.companies().stream().findFirst().map(c -> c.value()).orElse(null));
+    public record CompanyRef(UUID id, String name) {
+        public static CompanyRef from(Company c) {
+            return new CompanyRef(c.id().value(), c.name());
+        }
+    }
+
+    /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
+    public record AdminMe(UUID userId, String displayName, Role role, @Nullable UUID companyId,
+            List<CompanyRef> companies) {
+        public static AdminMe from(Actor a, List<Company> administered) {
+            UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
+            return new AdminMe(a.userId().value(), a.displayName(), a.role(), onlyCompany,
+                    administered.stream().map(CompanyRef::from).toList());
         }
     }
 
@@ -64,12 +73,20 @@ public final class Responses {
         }
     }
 
-    public record UserView(UUID id, String displayName, @Nullable String email, Role role, @Nullable UUID companyId,
+    public record MemberView(UUID userId, String displayName, @Nullable String email, Set<Role> roles,
             boolean active) {
-        public static UserView from(UserSummary s) {
-            User u = s.user();
-            return new UserView(u.id().value(), u.displayName(), u.email().orElse(null), s.role(),
-                    s.companyId().map(c -> c.value()).orElse(null), s.active());
+        public static MemberView from(com.e2d.odin.application.identity.MemberView m) {
+            return new MemberView(m.userId().value(), m.displayName(), m.email().orElse(null), m.roles(), m.active());
+        }
+
+        public static MemberView from(User user, Membership membership) {
+            return from(com.e2d.odin.application.identity.MemberView.of(user, membership));
+        }
+    }
+
+    public record MemberAdded(MemberView member, boolean alreadyExisted) {
+        public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added) {
+            return new MemberAdded(MemberView.from(added.user(), added.membership()), added.alreadyExisted());
         }
     }
 

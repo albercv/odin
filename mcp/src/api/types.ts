@@ -116,22 +116,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/users/{userId}/keys": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["keys"];
-        put?: never;
-        post: operations["issue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/admin/session": {
         parameters: {
             query?: never;
@@ -180,22 +164,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/companies/{companyId}/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_1"];
-        put?: never;
-        post: operations["create_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/admin/companies/{companyId}/projects": {
         parameters: {
             query?: never;
@@ -206,6 +174,38 @@ export interface paths {
         get: operations["projects"];
         put?: never;
         post: operations["createProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_1"];
+        put?: never;
+        post: operations["add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/members/{userId}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["keys"];
+        put?: never;
+        post: operations["issue"];
         delete?: never;
         options?: never;
         head?: never;
@@ -290,6 +290,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["renameProject"];
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove"];
+        options?: never;
+        head?: never;
+        patch: operations["update_1"];
         trace?: never;
     };
     "/v1/me": {
@@ -502,15 +518,6 @@ export interface components {
             status: string;
             message: string;
         };
-        KeyLabel: {
-            label?: string;
-        };
-        IssuedKeyView: {
-            /** Format: uuid */
-            id: string;
-            prefix: string;
-            key: string;
-        };
         Login: {
             email?: string;
             password?: string;
@@ -536,30 +543,39 @@ export interface components {
         Name: {
             name?: string;
         };
-        CreateUser: {
-            displayName?: string;
-            email?: string;
-            /** @enum {string} */
-            role?: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
-            password?: string;
-        };
-        UserView: {
-            /** Format: uuid */
-            id: string;
-            displayName: string;
-            email?: string;
-            /** @enum {string} */
-            role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
-            /** Format: uuid */
-            companyId?: string;
-            active: boolean;
-        };
         ProjectView: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             companyId: string;
             name: string;
+        };
+        AddMember: {
+            displayName?: string;
+            email?: string;
+            roles?: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
+            password?: string;
+        };
+        MemberAdded: {
+            member: components["schemas"]["MemberView"];
+            alreadyExisted: boolean;
+        };
+        MemberView: {
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+            email?: string;
+            roles: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
+            active: boolean;
+        };
+        KeyLabel: {
+            label?: string;
+        };
+        IssuedKeyView: {
+            /** Format: uuid */
+            id: string;
+            prefix: string;
+            key: string;
         };
         Upload: {
             document: components["schemas"]["DocumentView"];
@@ -602,6 +618,11 @@ export interface components {
             email?: string;
             active?: boolean;
         };
+        UpdateMember: {
+            roles?: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
+            active?: boolean;
+            password?: string;
+        };
         Me: {
             /** Format: uuid */
             userId: string;
@@ -635,6 +656,21 @@ export interface components {
             paginated: boolean;
             text: string;
         };
+        AdminMe: {
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+            /** @enum {string} */
+            role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
+            /** Format: uuid */
+            companyId?: string;
+            companies: components["schemas"]["CompanyRef"][];
+        };
+        CompanyRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
         KeyView: {
             /** Format: uuid */
             id: string;
@@ -644,15 +680,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             revokedAt?: string;
-        };
-        AdminMe: {
-            /** Format: uuid */
-            userId: string;
-            displayName: string;
-            /** @enum {string} */
-            role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
-            /** Format: uuid */
-            companyId?: string;
         };
     };
     responses: never;
@@ -831,54 +858,6 @@ export interface operations {
             };
         };
     };
-    keys: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["KeyView"][];
-                };
-            };
-        };
-    };
-    issue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["KeyLabel"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IssuedKeyView"];
-                };
-            };
-        };
-    };
     login: {
         parameters: {
             query?: never;
@@ -989,54 +968,6 @@ export interface operations {
             };
         };
     };
-    list_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                companyId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserView"][];
-                };
-            };
-        };
-    };
-    create_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                companyId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateUser"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserView"];
-                };
-            };
-        };
-    };
     projects: {
         parameters: {
             query?: never;
@@ -1081,6 +1012,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectView"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberView"][];
+                };
+            };
+        };
+    };
+    add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMember"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberAdded"];
+                };
+            };
+        };
+    };
+    keys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyView"][];
+                };
+            };
+        };
+    };
+    issue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyLabel"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedKeyView"];
                 };
             };
         };
@@ -1218,7 +1247,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserView"];
+                    "application/json": components["schemas"]["UserRef"];
                 };
             };
         };
@@ -1293,6 +1322,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectView"];
+                };
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMember"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberView"];
                 };
             };
         };

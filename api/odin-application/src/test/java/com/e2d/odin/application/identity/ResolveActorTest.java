@@ -212,4 +212,41 @@ class ResolveActorTest {
         assertThatThrownBy(() -> resolve.fromSessionToken(token))
                 .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
     }
+
+    @Test
+    void keyStopsWorkingWhenMembershipLosesWorkerRole() {
+        givenWorker(true);
+        assertThat(resolve.fromAccessKey(PLAIN_KEY).role()).isEqualTo(Role.WORKER);
+
+        memberships.save(new Membership(workerId, company, Set.of(Role.COMPANY_ADMIN), true));
+
+        assertThatThrownBy(() -> resolve.fromAccessKey(PLAIN_KEY))
+                .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
+    }
+
+    @Test
+    void keyOfCompanyAResolvesToCompanyAOnly() {
+        givenWorker(true);
+        CompanyId companyB = new CompanyId(UUID.randomUUID());
+        memberships.save(new Membership(workerId, companyB, Set.of(Role.WORKER), true));
+        keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), workerId, companyB, "otro", "ijklmnop",
+                "h:otro-secreto", clock.instant(), Optional.empty()));
+
+        assertThat(resolve.fromAccessKey(PLAIN_KEY).companies()).containsExactly(company);
+        assertThat(resolve.fromAccessKey("odin_ijklmnop_otro-secreto").companies()).containsExactly(companyB);
+    }
+
+    @Test
+    void adminOfTwoCompaniesGetsBothInActor() {
+        UserId adminId = new UserId(UUID.randomUUID());
+        CompanyId companyB = new CompanyId(UUID.randomUUID());
+        People.member(users, memberships, adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company,
+                true, Optional.of("pw:x"));
+        memberships.save(new Membership(adminId, companyB, Set.of(Role.COMPANY_ADMIN, Role.WORKER), true));
+
+        Actor actor = resolve.fromSessionToken(openSession(adminId));
+
+        assertThat(actor.role()).isEqualTo(Role.COMPANY_ADMIN);
+        assertThat(actor.companies()).containsExactlyInAnyOrder(company, companyB);
+    }
 }

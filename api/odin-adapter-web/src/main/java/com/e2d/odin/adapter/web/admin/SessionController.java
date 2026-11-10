@@ -8,6 +8,7 @@ import com.e2d.odin.adapter.web.security.LoginRateLimiter;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.NewSession;
+import com.e2d.odin.application.organization.ListCompanies;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -33,11 +34,14 @@ public class SessionController {
     private final LogInAdmin logIn;
     private final LogOutAdmin logOut;
     private final LoginRateLimiter limiter;
+    private final ListCompanies listCompanies;
 
-    public SessionController(LogInAdmin logIn, LogOutAdmin logOut, LoginRateLimiter limiter) {
+    public SessionController(LogInAdmin logIn, LogOutAdmin logOut, LoginRateLimiter limiter,
+            ListCompanies listCompanies) {
         this.logIn = logIn;
         this.logOut = logOut;
         this.limiter = limiter;
+        this.listCompanies = listCompanies;
     }
 
     @PostMapping("/session")
@@ -72,7 +76,7 @@ public class SessionController {
 
     @GetMapping("/me")
     public Responses.AdminMe me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor) {
-        return Responses.AdminMe.from(actor);
+        return Responses.AdminMe.from(actor, listCompanies.execute(actor));
     }
 
     private static ResponseCookie cookie(String value, boolean expire) {

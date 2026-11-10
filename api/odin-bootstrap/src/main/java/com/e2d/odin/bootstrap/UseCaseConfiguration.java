@@ -10,10 +10,16 @@ import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
-import com.e2d.odin.application.identity.ListUsers;
+import com.e2d.odin.application.identity.AddMember;
+import com.e2d.odin.application.identity.MemberAdded;
+import com.e2d.odin.application.identity.MemberChanges;
+import com.e2d.odin.application.identity.MemberView;
+import com.e2d.odin.application.identity.NewMember;
+import com.e2d.odin.application.identity.ListMembers;
+import com.e2d.odin.application.identity.RemoveMember;
+import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
-import com.e2d.odin.application.identity.RegisterUser;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.identity.RevokeAccessKey;
@@ -56,6 +62,8 @@ import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
+import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Clock;
 import java.util.List;
@@ -136,18 +144,13 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    RegisterUser registerUser(
-            UserRepository users,
-            MembershipRepository memberships,
-            OrganizationRepository organizations,
-            PasswordHasher passwords,
-            IdGenerator ids) {
-        return new RegisterUser(users, memberships, organizations, passwords, ids);
+    ListMembers listMembers(UserRepository users, MembershipRepository memberships) {
+        return new ListMembers(users, memberships);
     }
 
     @Bean
-    ListUsers listUsers(UserRepository users, MembershipRepository memberships) {
-        return new ListUsers(users, memberships);
+    RemoveMember removeMember(MembershipRepository memberships, AdminSessions sessions, Clock clock) {
+        return new RemoveMember(memberships, sessions, clock);
     }
 
     @Bean
@@ -169,8 +172,39 @@ public class UseCaseConfiguration {
 
     @Bean
     DeleteUser deleteUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
-            Clock clock) {
-        return new DeleteUser(users, memberships, sessions, clock);
+            Clock clock, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new DeleteUser(users, memberships, sessions, clock) {
+            @Override
+            public void execute(Actor actor, UserId id) {
+                transaction.executeWithoutResult(status -> super.execute(actor, id));
+            }
+        };
+    }
+
+    @Bean
+    AddMember addMember(UserRepository users, MembershipRepository memberships,
+            OrganizationRepository organizations, PasswordHasher passwords, IdGenerator ids,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new AddMember(users, memberships, organizations, passwords, ids) {
+            @Override
+            public MemberAdded execute(Actor actor, CompanyId companyId, NewMember newMember) {
+                return transaction.execute(status -> super.execute(actor, companyId, newMember));
+            }
+        };
+    }
+
+    @Bean
+    UpdateMember updateMember(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
+            AdminSessions sessions, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateMember(users, memberships, passwords, sessions) {
+            @Override
+            public MemberView execute(Actor actor, CompanyId companyId, UserId userId, MemberChanges changes) {
+                return transaction.execute(status -> super.execute(actor, companyId, userId, changes));
+            }
+        };
     }
 
     @Bean
@@ -186,9 +220,8 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ListAccessKeys listAccessKeys(AccessKeyRepository keys, UserRepository users,
-            MembershipRepository memberships) {
-        return new ListAccessKeys(keys, users, memberships);
+    ListAccessKeys listAccessKeys(AccessKeyRepository keys, MembershipRepository memberships) {
+        return new ListAccessKeys(keys, memberships);
     }
 
     @Bean

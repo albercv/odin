@@ -25,7 +25,10 @@ public final class Requests {
     public record Capabilities(Set<Capability> capabilities) {
     }
 
-    public record CreateUser(String displayName, String email, Role role, String password) {
+    public record AddMember(String displayName, String email, Set<Role> roles, String password) {
+    }
+
+    public record UpdateMember(Set<Role> roles, Boolean active, String password) {
     }
 
     public record UpdateUser(String displayName,

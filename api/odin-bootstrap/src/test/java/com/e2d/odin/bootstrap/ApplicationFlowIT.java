@@ -102,8 +102,8 @@ class ApplicationFlowIT extends AbstractIT {
     @Order(5)
     void deletedAuthorStillNamedInSearchHit() throws InterruptedException {
         ApiClient api = new ApiClient(port);
-        Reply admin = api.post("/v1/admin/companies/" + companyA + "/users", map("displayName", "Carla Autora",
-                "email", "carla@ejemplo.test", "role", "COMPANY_ADMIN", "password", ADMIN_PASSWORD),
+        Reply admin = api.post("/v1/admin/companies/" + companyA + "/members", map("displayName", "Carla Autora",
+                "email", "carla@ejemplo.test", "roles", List.of("COMPANY_ADMIN"), "password", ADMIN_PASSWORD),
                 "Cookie", adminCookie);
         assertThat(admin.status()).isEqualTo(201);
         Reply login = api.post("/v1/admin/session", map("email", "carla@ejemplo.test", "password", ADMIN_PASSWORD));
@@ -114,7 +114,8 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(upload.status()).isEqualTo(201);
         awaitReady(api, upload.json().get("document").get("id").asString());
 
-        assertThat(api.delete("/v1/admin/users/" + admin.json().get("id").asString(), "Cookie", adminCookie)
+        assertThat(api.delete("/v1/admin/users/" + admin.json().get("member").get("userId").asString(), "Cookie",
+                adminCookie)
                 .status()).isEqualTo(204);
 
         Reply found = api.post("/v1/search", map("queries", List.of("revisión caldera octubre")),
@@ -147,6 +148,68 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(filtered.status()).isEqualTo(404);
     }
 
+    @Test
+    @Order(7)
+    void samePersonInTwoCompaniesSeesEachCompanyWithItsOwnKey() throws InterruptedException {
+        ApiClient api = new ApiClient(port);
+        Reply inA = addWorker(api, companyA, "doble@ejemplo.test");
+        Reply inB = addWorker(api, companyB, "doble@ejemplo.test");
+        assertThat(inA.json().get("alreadyExisted").asBoolean()).isFalse();
+        assertThat(inB.json().get("alreadyExisted").asBoolean()).isTrue();
+        String userId = inA.json().get("member").get("userId").asString();
+        assertThat(inB.json().get("member").get("userId").asString()).isEqualTo(userId);
+        String personalKeyA = issueKey(api, companyA, userId);
+        String personalKeyB = issueKey(api, companyB, userId);
+        Reply upload = api.upload("/v1/admin/companies/" + companyB + "/documents", "extintores.txt",
+                "El extintor ficticio de la nave se revisa cada septiembre.".getBytes(StandardCharsets.UTF_8),
+                "Cookie", adminCookie);
+        assertThat(upload.status()).isEqualTo(201);
+        awaitReady(api, upload.json().get("document").get("id").asString());
+
+        assertThat(found(api, personalKeyA, "contrato mantenimiento ascensor")).isTrue();
+        assertThat(found(api, personalKeyA, "extintor nave septiembre")).isFalse();
+        assertThat(found(api, personalKeyB, "extintor nave septiembre")).isTrue();
+        assertThat(found(api, personalKeyB, "contrato mantenimiento ascensor")).isFalse();
+    }
+
+    @Test
+    @Order(8)
+    void adminWhoAlsoWorksReviewsOwnCard() {
+        ApiClient api = new ApiClient(port);
+        Reply added = api.post("/v1/admin/companies/" + companyA + "/members", map("displayName", "Dora Doble",
+                "email", "dora@ejemplo.test", "roles", List.of("COMPANY_ADMIN", "WORKER"),
+                "password", ADMIN_PASSWORD), "Cookie", adminCookie);
+        assertThat(added.status()).isEqualTo(201);
+        String userId = added.json().get("member").get("userId").asString();
+        String ownKey = issueKey(api, companyA, userId);
+        String ownCookie = api.post("/v1/admin/session", map("email", "dora@ejemplo.test", "password",
+                ADMIN_PASSWORD)).setCookie().split(";")[0];
+
+        Reply saved = api.post("/v1/cards", map("title", "Revisión de la caldera",
+                "body", "Se revisa cada octubre."), "Authorization", ownKey);
+        assertThat(saved.status()).isEqualTo(201);
+        Reply review = api.post("/v1/admin/cards/" + saved.json().get("id").asString() + "/review",
+                map("decision", "APPROVE"), "Cookie", ownCookie);
+
+        assertThat(review.status()).isEqualTo(200);
+        assertThat(review.json().get("authorId").asString()).isEqualTo(userId);
+        assertThat(review.json().get("review").get("reviewerId").asString()).isEqualTo(userId);
+    }
+
+    private Reply addWorker(ApiClient api, String company, String email) {
+        Reply added = api.post("/v1/admin/companies/" + company + "/members",
+                map("displayName", "Doble Persona", "email", email, "roles", List.of("WORKER")), "Cookie",
+                adminCookie);
+        assertThat(added.status()).isEqualTo(201);
+        return added;
+    }
+
+    private boolean found(ApiClient api, String key, String query) {
+        Reply found = api.post("/v1/search", map("queries", List.of(query)), "Authorization", key);
+        assertThat(found.status()).isEqualTo(200);
+        return !found.json().get("noSource").asBoolean();
+    }
+
     private void setUpAndLogIn(ApiClient api) {
         Reply setup = api.post("/v1/setup", map("setupToken", SETUP_TOKEN, "groupName", "Grupo Ejemplo",
                 "adminName", "Admin", "adminEmail", ADMIN_EMAIL, "password", ADMIN_PASSWORD));
@@ -167,10 +230,15 @@ class ApplicationFlowIT extends AbstractIT {
     }
 
     private String workerKey(ApiClient api, String company) {
-        Reply user = api.post("/v1/admin/companies/" + company + "/users",
-                map("displayName", "Persona " + company.substring(0, 4), "role", "WORKER"), "Cookie", adminCookie);
-        assertThat(user.status()).isEqualTo(201);
-        Reply key = api.post("/v1/admin/users/" + user.json().get("id").asString() + "/keys",
+        Reply member = api.post("/v1/admin/companies/" + company + "/members",
+                map("displayName", "Persona " + company.substring(0, 4), "roles", List.of("WORKER")), "Cookie",
+                adminCookie);
+        assertThat(member.status()).isEqualTo(201);
+        return issueKey(api, company, member.json().get("member").get("userId").asString());
+    }
+
+    private String issueKey(ApiClient api, String company, String userId) {
+        Reply key = api.post("/v1/admin/companies/" + company + "/members/" + userId + "/keys",
                 map("label", "portatil"), "Cookie", adminCookie);
         assertThat(key.status()).isEqualTo(201);
         return "Bearer " + key.json().get("key").asString();

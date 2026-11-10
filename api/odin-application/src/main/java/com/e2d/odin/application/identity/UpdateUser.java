@@ -6,12 +6,15 @@ import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
-import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
+import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
+import java.util.List;
 import java.util.Optional;
 
+/** Cambia a la persona: nombre, correo y si está activa. Lo que toca a una empresa vive en {@link UpdateMember}. */
 public class UpdateUser {
 
     private final UserRepository users;
@@ -24,42 +27,56 @@ public class UpdateUser {
         this.sessions = sessions;
     }
 
-    public UserSummary execute(Actor actor, UserId id, UserChanges changes) {
-        UserSummary target = UserAdministration.loadAdministrable(users, memberships, actor, id);
-        User user = target.user();
-        boolean active = changes.active().orElse(target.active());
-        if (!active && actor.userId().equals(id)) {
-            throw new ValidationException("No puedes desactivarte a ti mismo");
-        }
-        String name = changes.displayName().map(n -> Validation.requireText(n, "el nombre"))
-                .orElse(user.displayName());
-        Optional<String> email = changes.email().map(e -> newEmail(target, e)).orElse(user.email());
-        UserSummary updated = save(target, name, email, active);
-        if (target.active() && !active) {
+    public User execute(Actor actor, UserId id, UserChanges changes) {
+        List<Membership> theirMemberships = memberships.listByUser(id);
+        requireMayEdit(actor, theirMemberships);
+        User user = users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        boolean active = changes.active().orElse(user.active());
+        requireMayChangeActive(actor, user, active);
+        String name = changes.displayName().map(n -> Validation.requireText(n, "el nombre")).orElse(user.displayName());
+        Optional<String> email = changes.email().map(e -> newEmail(user, theirMemberships, e)).orElse(user.email());
+        User updated = user.updated(name, email, active);
+        users.save(updated);
+        if (user.active() && !active) {
             sessions.closeAllOf(id);
         }
         return updated;
     }
 
-    /** Activar o desactivar afecta a la pertenencia; solo en el administrador del grupo, sin ella, a la persona. */
-    private UserSummary save(UserSummary target, String name, Optional<String> email, boolean active) {
-        User user = target.user();
-        User updated = user.updated(name, email, user.groupAdmin() ? active : user.active());
-        users.save(updated);
-        Optional<Membership> membership = target.membership().map(m -> m.withActive(active));
-        membership.ifPresent(memberships::save);
-        return new UserSummary(updated, membership);
+    /** El administrador del grupo edita a cualquiera; el de empresa, solo a quien no está en otras empresas. */
+    private static void requireMayEdit(Actor actor, List<Membership> theirMemberships) {
+        if (actor.isGroupAdmin()) {
+            return;
+        }
+        if (theirMemberships.stream().noneMatch(m -> actor.administers(m.companyId()))) {
+            throw new ForbiddenException("No tienes permiso sobre esta empresa");
+        }
+        if (!theirMemberships.stream().allMatch(m -> actor.administers(m.companyId()))) {
+            throw new ForbiddenException("Solo el administrador del grupo edita a una persona que está en varias empresas");
+        }
     }
 
-    private Optional<String> newEmail(UserSummary target, String raw) {
+    private static void requireMayChangeActive(Actor actor, User user, boolean active) {
+        if (active == user.active()) {
+            return;
+        }
+        if (!actor.isGroupAdmin()) {
+            throw new ForbiddenException("Solo el administrador del grupo activa o desactiva a una persona");
+        }
+        if (!active && actor.userId().equals(user.id())) {
+            throw new ValidationException("No puedes desactivarte a ti mismo");
+        }
+    }
+
+    private Optional<String> newEmail(User user, List<Membership> theirMemberships, String raw) {
         if (raw.isBlank()) {
-            if (target.role() != Role.WORKER) {
-                throw new ValidationException("El administrador necesita correo");
+            if (user.groupAdmin() || theirMemberships.stream().anyMatch(Membership::isCompanyAdmin)) {
+                throw new ValidationException(UserAdministration.ADMINISTRATOR_NEEDS_EMAIL);
             }
             return Optional.empty();
         }
         String email = Validation.normalizeEmail(raw);
-        UserAdministration.requireEmailFree(users, email, Optional.of(target.user().id()));
+        UserAdministration.requireEmailFree(users, email, Optional.of(user.id()));
         return Optional.of(email);
     }
 }

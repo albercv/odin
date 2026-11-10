@@ -4,15 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
+import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
+import com.e2d.odin.application.identity.MemberChanges;
+import com.e2d.odin.application.identity.MemberView;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.identity.StoredAdminSessions;
-import com.e2d.odin.application.identity.UpdateUser;
-import com.e2d.odin.application.identity.UserChanges;
-import com.e2d.odin.application.identity.UserSummary;
+import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.shared.AccessKeyId;
@@ -154,9 +155,9 @@ class MigrationFromPhaseOneIT {
                 .isInstanceOf(UnauthorizedException.class);
 
         try {
-            UserSummary updated = new UpdateUser(users, memberships, sessions).execute(
-                    Actors.companyAdmin(new CompanyId(COMPANY)), worker,
-                    new UserChanges(Optional.empty(), Optional.empty(), Optional.of(true)));
+            MemberView updated = new UpdateMember(users, memberships, new FakePasswordHasher(), sessions).execute(
+                    Actors.companyAdmin(new CompanyId(COMPANY)), new CompanyId(COMPANY), worker,
+                    new MemberChanges(Optional.empty(), Optional.of(true), Optional.empty()));
 
             assertThat(updated.active()).isTrue();
             assertThat(resolve.fromAccessKey("odin_inact123_clave").userId()).isEqualTo(worker);

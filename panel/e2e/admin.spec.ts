@@ -87,13 +87,13 @@ async function giveKeyShownOnce(page: Page): Promise<void> {
   console.log('✓ Admin 6: clave personal entregada una sola vez');
 }
 
-async function deleteWorkerAndReuseEmail(page: Page): Promise<void> {
+async function removeWorkerAndAddThemBack(page: Page): Promise<void> {
   const users = usersSection(page);
-  await users.getByRole('button', { name: `Borrar ${WORKER.renamed}` }).click();
+  await users.getByRole('button', { name: `Quitar ${WORKER.renamed}` }).click();
   await expect(row(users, WORKER.renamed)).toHaveCount(0);
-  await createUser(page, { name: 'Otro trabajador E2E', email: WORKER.email });
-  await expect(row(users, 'Otro trabajador E2E')).toContainText(WORKER.email);
-  console.log('✓ Admin 7: trabajador borrado y su correo se puede volver a usar');
+  await createUser(page, { name: 'Otro nombre E2E', email: WORKER.email });
+  await expect(row(users, WORKER.renamed)).toContainText(WORKER.email);
+  console.log('✓ Admin 7: trabajador quitado de la empresa y vuelto a añadir por su correo, con su nombre de siempre');
 }
 
 async function projectLifecycle(page: Page): Promise<void> {
@@ -153,7 +153,7 @@ test('administración del panel de extremo a extremo', async ({ page, context })
   await deactivateAndActivate(page);
   await editNameAndEmail(page);
   await giveKeyShownOnce(page);
-  await deleteWorkerAndReuseEmail(page);
+  await removeWorkerAndAddThemBack(page);
   await projectLifecycle(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);

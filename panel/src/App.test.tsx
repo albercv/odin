@@ -35,10 +35,10 @@ test('groupAdminSeesCompaniesAndCapabilities', async () => {
 
 test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
   mockFetch({
-    'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1' }),
+    'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] }),
     'GET /v1/admin/companies': () => [company],
     'GET /v1/admin/companies/c1/projects': () => [],
-    'GET /v1/admin/companies/c1/users': () => [],
+    'GET /v1/admin/companies/c1/members': () => [],
   });
   render(<App />);
   expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
@@ -49,10 +49,10 @@ test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
 
 test('failedIssueKeepsTheLabel', async () => {
   mockFetch({
-    'GET /v1/admin/users/u1/keys': () => [],
-    'POST /v1/admin/users/u1/keys': () => ({ status: 400, body: { detail: 'Etiqueta no válida' } }),
+    'GET /v1/admin/companies/c1/members/u1/keys': () => [],
+    'POST /v1/admin/companies/c1/members/u1/keys': () => ({ status: 400, body: { detail: 'Etiqueta no válida' } }),
   });
-  render(<Keys userId="u1" />);
+  render(<Keys companyId="c1" userId="u1" />);
   await userEvent.type(await screen.findByLabelText('Etiqueta de la clave'), 'portátil');
   await userEvent.click(screen.getByRole('button', { name: 'Dar clave' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Etiqueta no válida');
@@ -60,8 +60,8 @@ test('failedIssueKeepsTheLabel', async () => {
 });
 
 test('revokeButtonCarriesTheKeyLabel', async () => {
-  mockFetch({ 'GET /v1/admin/users/u1/keys': () => [{ id: 'k1', label: 'portátil', prefix: 'odin_ab' }] });
-  render(<Keys userId="u1" />);
+  mockFetch({ 'GET /v1/admin/companies/c1/members/u1/keys': () => [{ id: 'k1', label: 'portátil', prefix: 'odin_ab' }] });
+  render(<Keys companyId="c1" userId="u1" />);
   expect(await screen.findByRole('button', { name: 'Revocar portátil' })).toBeInTheDocument();
 });
 
@@ -69,10 +69,10 @@ test('issuedKeyShownOnceWithCopy', async () => {
   const writeText = vi.fn(async () => {});
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   mockFetch({
-    'GET /v1/admin/users/u1/keys': () => [],
-    'POST /v1/admin/users/u1/keys': () => ({ status: 201, body: { id: 'k1', prefix: 'odin_ab', key: 'odin_ab.SECRETO' } }),
+    'GET /v1/admin/companies/c1/members/u1/keys': () => [],
+    'POST /v1/admin/companies/c1/members/u1/keys': () => ({ status: 201, body: { id: 'k1', prefix: 'odin_ab', key: 'odin_ab.SECRETO' } }),
   });
-  render(<Keys userId="u1" />);
+  render(<Keys companyId="c1" userId="u1" />);
   await userEvent.type(await screen.findByLabelText('Etiqueta de la clave'), 'portátil');
   await userEvent.click(screen.getByRole('button', { name: 'Dar clave' }));
   expect(await screen.findByText('odin_ab.SECRETO')).toBeInTheDocument();

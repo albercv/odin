@@ -25,10 +25,12 @@ import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
-import com.e2d.odin.application.identity.ListUsers;
+import com.e2d.odin.application.identity.ListMembers;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
-import com.e2d.odin.application.identity.RegisterUser;
+import com.e2d.odin.application.identity.AddMember;
+import com.e2d.odin.application.identity.RemoveMember;
+import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.identity.StoredAdminSessions;
@@ -136,12 +138,20 @@ public class TestWiring {
         return new DeleteProject(orgs, clock);
     }
 
-    @Bean RegisterUser registerUser() {
-        return new RegisterUser(users, memberships, orgs, passwords, ids);
+    @Bean AddMember addMember() {
+        return new AddMember(users, memberships, orgs, passwords, ids);
     }
 
-    @Bean ListUsers listUsers() {
-        return new ListUsers(users, memberships);
+    @Bean ListMembers listMembers() {
+        return new ListMembers(users, memberships);
+    }
+
+    @Bean UpdateMember updateMember() {
+        return new UpdateMember(users, memberships, passwords, adminSessions());
+    }
+
+    @Bean RemoveMember removeMember() {
+        return new RemoveMember(memberships, adminSessions(), clock);
     }
 
     @Bean UpdateUser updateUser() {
@@ -165,7 +175,7 @@ public class TestWiring {
     }
 
     @Bean ListAccessKeys listAccessKeys() {
-        return new ListAccessKeys(keys, users, memberships);
+        return new ListAccessKeys(keys, memberships);
     }
 
     @Bean RevokeAccessKey revokeAccessKey() {

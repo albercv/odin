@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { mockFetch } from '../mockApi';
 
-const me = { userId: 'u1', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1' };
+const me = { userId: 'u1', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] };
 const put = 'PUT /v1/admin/users/u1/password';
 
 function routes(passwordReply: { status: number; body?: unknown }) {
@@ -14,7 +14,7 @@ function routes(passwordReply: { status: number; body?: unknown }) {
     'DELETE /v1/admin/session': () => { loggedIn = false; return { status: 204 }; },
     'GET /v1/admin/companies': () => [],
     'GET /v1/admin/companies/c1/projects': () => [],
-    'GET /v1/admin/companies/c1/users': () => [],
+    'GET /v1/admin/companies/c1/members': () => [],
     [put]: () => {
       if (passwordReply.status === 204) loggedIn = false;
       return passwordReply;
