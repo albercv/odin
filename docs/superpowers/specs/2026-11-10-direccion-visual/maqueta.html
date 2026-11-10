@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="es" data-theme="light" data-brand="e2d">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odín · maqueta de dirección visual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- shortcut: solo en la maqueta; el panel real sirve las fuentes desde la instalación, sin red -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------- Marca: lo único que cambia de un cliente a otro ---------- */
+[data-brand="e2d"] {
+  --brand-on-light: #03797c;      /* ≥4,55:1 sobre blanco, fondo, gris y tinte */
+  --brand-on-light-fg: #ffffff;
+  --brand-on-dark: #05b4b9;       /* 5,24:1 sobre #283039 */
+  --brand-on-dark-fg: #172026;
+  --brand-base: #283039;          /* pizarra del logo */
+  --brand-base-deep: #151b20;
+}
+[data-brand="cliente"] {
+  --brand-on-light: #a33a4b;
+  --brand-on-light-fg: #ffffff;
+  --brand-on-dark: #e58a99;
+  --brand-on-dark-fg: #24161a;
+  --brand-base: #2e2427;
+  --brand-base-deep: #1c1517;
+}
+
+/* ---------- Tema claro y oscuro, derivados de la marca ---------- */
+:root {
+  --font: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+}
+[data-theme="light"] {
+  --bg: #f3f6f7; --surface: #ffffff; --surface-2: #eef2f4; --line: #dbe2e6; --line-strong: #c3ced4;
+  --text: #1d252c; --muted: #56636d;
+  --accent: var(--brand-on-light); --accent-fg: var(--brand-on-light-fg);
+  --accent-soft: color-mix(in srgb, var(--brand-on-light) 10%, transparent);
+  --pending-fg: #8a4b00; --pending-bg: #fdf1dc;
+  --danger: #b42318; --danger-soft: #fdecea;
+  --side-bg: var(--brand-base); --side-fg: #c5ced4; --side-strong: #ffffff; --side-accent: var(--brand-on-dark);
+  --shadow: 0 1px 2px rgba(20, 30, 38, .06), 0 8px 24px -12px rgba(20, 30, 38, .18);
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #1b2229; --surface: #232c34; --surface-2: #2a343d; --line: #34404a; --line-strong: #46535e;
+  --text: #e8eef1; --muted: #9fb0bb;
+  --accent: var(--brand-on-dark); --accent-fg: var(--brand-on-dark-fg);
+  --accent-soft: color-mix(in srgb, var(--brand-on-dark) 14%, transparent);
+  --pending-fg: #f2b85b; --pending-bg: rgba(242, 184, 91, .12);
+  --danger: #f97066; --danger-soft: rgba(249, 112, 102, .12);
+  --side-bg: var(--brand-base-deep); --side-fg: #b8c4cb; --side-strong: #ffffff; --side-accent: var(--brand-on-dark);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -16px rgba(0, 0, 0, .6);
+  color-scheme: dark;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 15px/1.55 var(--font); -webkit-font-smoothing: antialiased;
+  transition: background-color .2s, color .2s;
+}
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.012em; line-height: 1.2; }
+h1 { font-size: 26px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+p { margin: 0; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--muted); }
+
+/* ---------- Botones y campos ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px;
+  border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--surface);
+  font-weight: 500; cursor: pointer; white-space: nowrap;
+  transition: transform .1s var(--ease-out), background-color .15s, border-color .15s;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn-primary:hover { border-color: var(--accent); filter: brightness(1.06); }
+.btn-danger { color: var(--danger); }
+.btn-ghost { border-color: transparent; background: transparent; }
+.btn-ghost:hover { background: var(--surface-2); border-color: transparent; }
+.btn-icon { width: 34px; height: 34px; padding: 0; justify-content: center; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 14px; font-weight: 500; }
+.input, .textarea {
+  width: 100%; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--surface); padding: 9px 12px; transition: border-color .15s, box-shadow .15s;
+}
+.input:focus, .textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.textarea { min-height: 190px; resize: vertical; line-height: 1.6; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.pill-ok { background: var(--accent-soft); color: var(--accent); }
+.pill-off { background: var(--surface-2); color: var(--muted); }
+.pill-pending { background: var(--pending-bg); color: var(--pending-fg); }
+.pill .i { width: 14px; height: 14px; }
+
+/* ---------- Pantallas ---------- */
+.screen { display: none; min-height: 100vh; }
+.screen.is-active { display: flex; }
+
+/* ---------- Entrada ---------- */
+.login { background: var(--bg); }
+.login-brand {
+  position: relative; flex: 1 1 56%; min-height: 100vh; overflow: hidden; color: #e8eef1;
+  background: radial-gradient(ellipse 70% 60% at 40% 45%, color-mix(in srgb, var(--brand-on-dark) 22%, var(--brand-base)) 0%, var(--brand-base) 55%, var(--brand-base-deep) 100%);
+  display: flex; flex-direction: column; justify-content: space-between; padding: 40px 48px 96px;
+}
+.login-brand canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.login-brand::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(to top, var(--brand-base-deep) 0%, color-mix(in srgb, var(--brand-base-deep) 70%, transparent) 28%, transparent 55%); }
+.login-brand > :not(canvas) { position: relative; z-index: 2; }
+.brandmark { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 17px; }
+.brandmark img, .brandmark .mono-logo { width: 40px; height: 40px; border-radius: 50%; }
+.mono-logo { display: none; place-items: center; background: var(--brand-on-dark); color: var(--brand-on-dark-fg); font-weight: 600; font-size: 15px; }
+[data-brand="cliente"] .brandmark img { display: none; }
+[data-brand="cliente"] .mono-logo { display: grid; }
+.brandmark small { display: block; font-size: 13px; font-weight: 400; color: #b8c4cb; }
+.login-claim { max-width: 36rem; }
+.login-claim h1 { font-size: clamp(30px, 3.4vw, 44px); line-height: 1.1; letter-spacing: -.02em; max-width: 14ch; }
+.login-claim p { margin-top: 16px; color: #c5ced4; max-width: 42ch; font-size: 16px; }
+.login-form-wrap { flex: 1 1 44%; display: grid; place-items: center; padding: 40px 24px; }
+.login-form { width: 100%; max-width: 360px; display: grid; gap: 20px; }
+.login-form h2 { font-size: 24px; }
+.login-form .btn-primary { height: 44px; justify-content: center; width: 100%; font-size: 16px; }
+.login-help { font-size: 14px; }
+
+/* ---------- Portada de la demo ---------- */
+.demo {
+  position: relative; overflow: hidden; color: #e8eef1; flex-direction: column; justify-content: space-between; padding: 40px 48px 104px;
+  background: radial-gradient(ellipse 60% 55% at 50% 42%, color-mix(in srgb, var(--brand-on-dark) 20%, var(--brand-base)) 0%, var(--brand-base) 55%, var(--brand-base-deep) 100%);
+}
+.demo canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.demo::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(to top, var(--brand-base-deep) 0%, color-mix(in srgb, var(--brand-base-deep) 75%, transparent) 30%, transparent 52%); }
+.demo > :not(canvas) { position: relative; z-index: 2; }
+.demo-claim { text-align: center; display: grid; gap: 14px; justify-items: center; }
+.demo-claim h1 { font-size: clamp(34px, 4vw, 56px); letter-spacing: -.025em; }
+.demo-claim p { color: #c5ced4; font-size: 18px; max-width: 46ch; }
+.demo-claim small { color: #9fb0bb; font-size: 14px; }
+.demo .btn-primary { background: var(--brand-on-dark); border-color: var(--brand-on-dark); color: var(--brand-on-dark-fg); height: 44px; padding: 0 22px; font-size: 16px; }
+
+/* ---------- Estructura del panel ---------- */
+.app { align-items: stretch; }
+.side {
+  width: 248px; flex: none; background: var(--side-bg); color: var(--side-fg);
+  display: flex; flex-direction: column; padding: 20px 14px; gap: 18px; position: sticky; top: 0; height: 100vh;
+}
+.side .brandmark { color: var(--side-strong); padding: 0 6px; font-size: 16px; }
+.side .brandmark img, .side .brandmark .mono-logo { width: 34px; height: 34px; }
+.switcher {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
+  padding: 10px 12px; border-radius: var(--r-md); cursor: pointer; text-align: left;
+  border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .05); color: var(--side-strong);
+}
+.switcher small { display: block; color: var(--side-fg); font-size: 12.5px; }
+.nav { display: grid; gap: 2px; }
+.nav a {
+  display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: var(--r-sm);
+  color: var(--side-fg); text-decoration: none; font-weight: 500; position: relative;
+  transition: background-color .15s, color .15s;
+}
+.nav a:hover { background: rgba(255, 255, 255, .06); color: var(--side-strong); }
+.nav a[aria-current="page"] { background: rgba(255, 255, 255, .08); color: var(--side-strong); }
+.nav a[aria-current="page"]::before {
+  content: ""; position: absolute; left: -14px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--side-accent);
+}
+.nav a[aria-current="page"] .i { color: var(--side-accent); }
+.nav .count { margin-left: auto; min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--side-accent); color: var(--brand-on-dark-fg); font-size: 12.5px; text-align: center; font-weight: 600; }
+.side-foot { margin-top: auto; display: grid; gap: 2px; border-top: 1px solid rgba(255, 255, 255, .1); padding-top: 14px; }
+.who { display: flex; align-items: center; gap: 10px; padding: 6px 12px 10px; color: var(--side-strong); font-weight: 500; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .12); font-size: 12.5px; font-weight: 600; }
+
+.main { flex: 1; min-width: 0; padding: 36px 44px 64px; }
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.page-head p { margin-top: 6px; color: var(--muted); max-width: 64ch; }
+.section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); margin-bottom: 24px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px 14px; }
+.section-head p { color: var(--muted); font-size: 14px; margin-top: 2px; }
+
+.caps { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.switch { display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 14px; }
+.switch input { appearance: none; width: 34px; height: 20px; border-radius: 999px; background: var(--line-strong); position: relative; margin: 0; cursor: pointer; transition: background-color .2s; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .2s var(--ease-out); }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(14px); }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 13px; font-weight: 500; color: var(--muted); padding: 10px 22px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-2); }
+td { padding: 13px 22px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tbody tr { transition: background-color .12s; }
+tbody tr:hover { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+.cell-person strong { display: block; font-weight: 500; }
+.cell-person span { font-size: 14px; color: var(--muted); }
+.who-sees { display: inline-flex; align-items: center; gap: 8px; }
+.who-sees .i { color: var(--muted); }
+.who-sees.is-restricted .i { color: var(--accent); }
+.td-actions { text-align: right; white-space: nowrap; width: 1%; }
+.keys { font-variant-numeric: tabular-nums; }
+
+/* ---------- Revisión ---------- */
+.review { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 24px; align-items: start; }
+.queue { list-style: none; margin: 0; padding: 6px; display: grid; gap: 2px; }
+.queue li { overflow: hidden; transition: opacity .2s var(--ease-out), max-height .25s var(--ease-out), margin .25s var(--ease-out); max-height: 140px; }
+.queue li.is-leaving { opacity: 0; max-height: 0; }
+.queue button {
+  width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer;
+  padding: 12px 14px; border-radius: var(--r-md); display: grid; gap: 4px; transition: background-color .15s;
+}
+.queue button:hover { background: var(--surface-2); }
+.queue button[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.queue strong { font-weight: 500; line-height: 1.35; }
+.queue span { font-size: 13.5px; color: var(--muted); }
+.detail { padding: 26px 30px 28px; }
+.detail.is-swapping { animation: swap .22s var(--ease-out); }
+@keyframes swap { from { opacity: 0; transform: translateY(4px); } }
+.detail-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.origin { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.origin .i { color: var(--accent); }
+.detail h2 { font-size: 22px; margin-bottom: 6px; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 14px 0 22px; padding: 0; }
+.facts div { display: grid; }
+.facts dt { font-size: 13px; color: var(--muted); }
+.facts dd { margin: 0; font-weight: 500; }
+.generated { border-left: 3px dashed var(--accent); padding-left: 16px; }
+.edited-note { display: none; align-items: center; gap: 10px; margin-top: 10px; font-size: 14px; color: var(--muted); }
+.edited-note.is-on { display: flex; }
+.edited-note button { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+.original { display: none; margin-top: 10px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--muted); font-size: 14px; white-space: pre-wrap; }
+.original.is-on { display: block; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.reject { display: none; margin-top: 16px; padding: 16px; border-radius: var(--r-md); background: var(--danger-soft); gap: 10px; }
+.reject.is-on { display: grid; }
+.empty { padding: 56px 32px; text-align: center; display: grid; gap: 8px; justify-items: center; }
+.empty .i { width: 32px; height: 32px; color: var(--accent); }
+
+/* ---------- Aviso ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: 84px; z-index: 30; display: flex; align-items: center; gap: 10px;
+  padding: 11px 18px; border-radius: var(--r-md); background: var(--text); color: var(--bg); font-weight: 500;
+  box-shadow: var(--shadow); opacity: 0; transform: translate(-50%, 10px); pointer-events: none;
+  transition: opacity .2s var(--ease-out), transform .2s var(--ease-out);
+}
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+.toast .i { color: var(--brand-on-dark); }
+
+/* ---------- Barra de la maqueta (no es parte del diseño) ---------- */
+.mock-bar {
+  position: fixed; left: 0; right: 0; bottom: 16px; margin: 0 auto; width: fit-content; z-index: 40;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; border-radius: 12px;
+  background: rgba(15, 18, 20, .88); color: #e8eef1; font: 500 13px/1 system-ui, sans-serif;
+  backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0, 0, 0, .35); max-width: calc(100vw - 24px);
+}
+.mock-bar span { padding: 0 8px; color: #9aa7af; }
+.mock-bar button { border: 0; border-radius: 8px; padding: 8px 10px; background: transparent; color: inherit; cursor: pointer; }
+.mock-bar button[aria-pressed="true"] { background: #e8eef1; color: #111; }
+.mock-sep { width: 1px; height: 20px; background: rgba(255, 255, 255, .15); }
+
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; animation-timing-function: ease-out; }
+
+/* ---------- Pantallas estrechas ---------- */
+@media (max-width: 900px) {
+  .login { flex-direction: column; }
+  .login-brand { min-height: 300px; flex: none; padding: 28px 24px; }
+  .app { flex-direction: column; }
+  .side { width: auto; height: auto; position: static; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; gap: 10px; }
+  .side .switcher { width: auto; }
+  .nav { grid-auto-flow: column; overflow-x: auto; }
+  .nav a[aria-current="page"]::before { display: none; }
+  .side-foot { display: none; }
+  .main { padding: 24px 16px 96px; }
+  .page-head { flex-direction: column; }
+  .review { grid-template-columns: 1fr; }
+  td, th { padding-left: 14px; padding-right: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M9 7h.01M15 7h.01M9 11h.01M15 11h.01M9 15h.01M15 15h.01M10 21v-3h4v3"/></symbol>
+  <symbol id="i-buildings" viewBox="0 0 24 24"><rect x="3" y="8" width="9" height="13" rx="1.2"/><path d="M12 21V4.5A1.5 1.5 0 0 1 13.5 3h6A1.5 1.5 0 0 1 21 4.5V21M6.5 12h2M6.5 16h2M15.5 7h2M15.5 11h2M15.5 15h2"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.4A6.5 6.5 0 0 1 21.5 20"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l2.5 2.5M14 9l2 2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3c.5 4.5 2.5 6.5 7 7-4.5.5-6.5 2.5-7 7-.5-4.5-2.5-6.5-7-7 4.5-.5 6.5-2.5 7-7z"/><path d="M19 15.5c.2 1.6.9 2.3 2.5 2.5-1.6.2-2.3.9-2.5 2.5-.2-1.6-.9-2.3-2.5-2.5 1.6-.2 2.3-.9 2.5-2.5z"/></symbol>
+  <symbol id="i-done" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+</svg>
+
+<!-- ======================= PORTADA DE LA DEMO ======================= -->
+<section class="screen demo" id="s-demo" aria-label="Portada de la demo">
+  <canvas id="demo-net" aria-hidden="true"></canvas>
+  <div class="brandmark">
+    <img src="e2d_logo.webp" alt="E2D">
+    <span class="mono-logo" aria-hidden="true">FR</span>
+    <span>Odín<small class="brand-owner">de E2D</small></span>
+  </div>
+  <div class="demo-claim">
+    <h1>Odín, el cerebro digital del despacho</h1>
+    <p>Lo que tu despacho ya resolvió, al alcance de cada persona y siempre con su fuente.</p>
+    <small>Demostración con un despacho y casos ficticios</small>
+    <button class="btn btn-primary" type="button" data-go="login">Empezar la demostración</button>
+  </div>
+</section>
+
+<!-- ======================= ENTRADA ======================= -->
+<section class="screen login is-active" id="s-login" aria-label="Entrada">
+  <div class="login-brand">
+    <canvas id="net" aria-hidden="true"></canvas>
+    <div class="brandmark">
+      <img src="e2d_logo.webp" alt="E2D">
+      <span class="mono-logo" aria-hidden="true">FR</span>
+      <span>Odín<small class="brand-owner">de E2D</small></span>
+    </div>
+    <div class="login-claim">
+      <h1>Cómo se resolvió, y dónde consta.</h1>
+      <p>Odín guarda los documentos y las fichas de la empresa y responde a la IA de cada persona citando la fuente.</p>
+    </div>
+  </div>
+  <div class="login-form-wrap">
+    <form class="login-form" onsubmit="event.preventDefault(); go('company')">
+      <h2>Entra en el panel</h2>
+      <div class="field"><label for="email">Correo</label><input class="input" id="email" type="email" value="marta@fincasrivera.example" autocomplete="username"></div>
+      <div class="field"><label for="pw">Contraseña</label><input class="input" id="pw" type="password" value="maqueta-de-prueba" autocomplete="current-password"></div>
+      <button class="btn btn-primary" type="submit">Entrar</button>
+      <p class="login-help muted">¿Has olvidado la contraseña? Pide a quien administra el grupo que te la restablezca.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ======================= PANEL ======================= -->
+<div class="screen app" id="s-app">
+  <aside class="side">
+    <div class="brandmark">
+      <img src="e2d_logo.webp" alt="E2D">
+      <span class="mono-logo" aria-hidden="true">FR</span>
+      <span>Odín</span>
+    </div>
+    <button class="switcher" type="button" aria-label="Cambiar de empresa">
+      <span><span>Fincas Rivera</span><small>Grupo Rivera</small></span>
+      <svg class="i"><use href="#i-down"/></svg>
+    </button>
+    <nav class="nav" aria-label="Principal">
+      <a href="#" data-go="company"><svg class="i"><use href="#i-buildings"/></svg>Empresas</a>
+      <a href="#" data-go="company" data-nav="company"><svg class="i"><use href="#i-building"/></svg>Empresa</a>
+      <a href="#" data-go="company"><svg class="i"><use href="#i-file"/></svg>Documentos</a>
+      <a href="#" data-go="review" data-nav="review"><svg class="i"><use href="#i-check"/></svg>Revisión<span class="count" id="nav-count">4</span></a>
+    </nav>
+    <div class="side-foot nav">
+      <div class="who"><span class="avatar">MI</span>Marta Ibáñez</div>
+      <a href="#"><svg class="i"><use href="#i-user"/></svg>Mi cuenta</a>
+      <a href="#" data-go="login"><svg class="i"><use href="#i-out"/></svg>Salir</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- -------- Empresa -------- -->
+    <div id="p-company">
+      <header class="page-head">
+        <div>
+          <h1>Fincas Rivera</h1>
+          <div class="caps" aria-label="Qué puede hacer la IA en esta empresa">
+            <label class="switch"><input type="checkbox" checked>Buscar conocimiento</label>
+            <label class="switch"><input type="checkbox" checked>Guardar fichas</label>
+          </div>
+        </div>
+        <button class="btn btn-primary" type="button"><svg class="i"><use href="#i-plus"/></svg>Añadir persona</button>
+      </header>
+
+      <section class="section" aria-labelledby="h-projects">
+        <div class="section-head">
+          <div><h2 id="h-projects">Proyectos</h2><p>Toda la empresa ve cada proyecto, salvo los restringidos.</p></div>
+          <button class="btn" type="button"><svg class="i"><use href="#i-plus"/></svg>Nuevo proyecto</button>
+        </div>
+        <table>
+          <thead><tr><th>Proyecto</th><th>Quién lo ve</th><th><span class="sr">Acciones</span></th></tr></thead>
+          <tbody>
+            <tr><td>Comunidad Calle Mayor 12</td><td><span class="who-sees"><svg class="i"><use href="#i-people"/></svg>Toda la empresa</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Comunidad Calle Mayor 12"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+            <tr><td>Residencial Los Pinos</td><td><span class="who-sees"><svg class="i"><use href="#i-people"/></svg>Toda la empresa</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Residencial Los Pinos"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+            <tr><td>Edificio Atalaya</td><td><span class="who-sees is-restricted"><svg class="i"><use href="#i-lock"/></svg>Solo sus 2 miembros</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Edificio Atalaya"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+            <tr><td>Garajes Plaza Sol</td><td><span class="who-sees"><svg class="i"><use href="#i-people"/></svg>Toda la empresa</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Garajes Plaza Sol"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" aria-labelledby="h-people">
+        <div class="section-head">
+          <div><h2 id="h-people">Personas</h2><p>Cada persona usa Odín desde su IA con su clave personal.</p></div>
+        </div>
+        <table>
+          <thead><tr><th>Persona</th><th>Papel</th><th>Claves</th><th>Acceso</th><th><span class="sr">Acciones</span></th></tr></thead>
+          <tbody>
+            <tr><td class="cell-person"><strong>Marta Ibáñez</strong><span>marta@fincasrivera.example</span></td><td>Administrador y trabajador</td><td class="keys">1</td><td><span class="pill pill-ok">Activo</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Claves de Marta Ibáñez"><svg class="i"><use href="#i-key"/></svg></button><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Marta Ibáñez"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+            <tr><td class="cell-person"><strong>Jorge Salas</strong><span>jorge@fincasrivera.example</span></td><td>Trabajador</td><td class="keys">1</td><td><span class="pill pill-ok">Activo</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Claves de Jorge Salas"><svg class="i"><use href="#i-key"/></svg></button><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Jorge Salas"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+            <tr><td class="cell-person"><strong>Lucía Martín</strong><span>lucia@fincasrivera.example</span></td><td>Trabajador</td><td class="keys">2</td><td><span class="pill pill-ok">Activo</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Claves de Lucía Martín"><svg class="i"><use href="#i-key"/></svg></button><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Lucía Martín"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+            <tr><td class="cell-person"><strong>Andrés Pardo</strong><span>Sin correo</span></td><td>Trabajador</td><td class="keys">0</td><td><span class="pill pill-off">Desactivado</span></td><td class="td-actions"><button class="btn btn-ghost btn-icon" aria-label="Claves de Andrés Pardo"><svg class="i"><use href="#i-key"/></svg></button><button class="btn btn-ghost btn-icon" aria-label="Más acciones de Andrés Pardo"><svg class="i"><use href="#i-more"/></svg></button></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- -------- Revisión -------- -->
+    <div id="p-review" hidden>
+      <header class="page-head">
+        <div>
+          <h1>Revisión de fichas</h1>
+          <p id="review-sub">Las fichas que la gente guarda desde su IA esperan aquí. Cuando apruebas una, la IA de la empresa ya puede citarla.</p>
+        </div>
+      </header>
+      <div class="review" id="review">
+        <section class="section" aria-label="Fichas pendientes"><ul class="queue" id="queue"></ul></section>
+        <section class="section detail" id="detail" aria-live="polite"></section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status"><svg class="i"><use href="#i-done"/></svg><span></span></div>
+
+<div class="mock-bar" role="toolbar" aria-label="Controles de la maqueta">
+  <span>Maqueta</span>
+  <button type="button" data-screen="demo" aria-pressed="false">Demo</button>
+  <button type="button" data-screen="login" aria-pressed="true">Entrada</button>
+  <button type="button" data-screen="company" aria-pressed="false">Empresa</button>
+  <button type="button" data-screen="review" aria-pressed="false">Revisión</button>
+  <i class="mock-sep"></i>
+  <button type="button" data-theme-set="light" aria-pressed="true">Claro</button>
+  <button type="button" data-theme-set="dark" aria-pressed="false">Oscuro</button>
+  <i class="mock-sep"></i>
+  <button type="button" data-brand-set="e2d" aria-pressed="true">Marca E2D</button>
+  <button type="button" data-brand-set="cliente" aria-pressed="false">Marca de un cliente</button>
+</div>
+
+<script>
+const root = document.documentElement;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+
+/* ---------- Navegación de la maqueta ---------- */
+function render(screen) {
+  $('#s-demo').classList.toggle('is-active', screen === 'demo');
+  $('#s-login').classList.toggle('is-active', screen === 'login');
+  $('#s-app').classList.toggle('is-active', screen === 'company' || screen === 'review');
+  $('#p-company').hidden = screen !== 'company';
+  $('#p-review').hidden = screen !== 'review';
+  $$('.nav a[data-nav]').forEach(a => a.dataset.nav === screen ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  $$('[data-screen]').forEach(b => b.setAttribute('aria-pressed', b.dataset.screen === screen));
+  if (screen === 'login') net.start(); else net.stop();
+  if (screen === 'demo') demoBrain.start(); else demoBrain.stop();
+}
+function go(screen) {
+  if (!document.startViewTransition || reduceMotion) return render(screen);
+  document.startViewTransition(() => render(screen));
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-go],[data-screen],[data-theme-set],[data-brand-set]');
+  if (!t) return;
+  e.preventDefault();
+  if (t.dataset.go || t.dataset.screen) go(t.dataset.go || t.dataset.screen);
+  if (t.dataset.themeSet) setPref('theme', t.dataset.themeSet);
+  if (t.dataset.brandSet) setPref('brand', t.dataset.brandSet);
+});
+function setPref(kind, value) {
+  root.dataset[kind] = value;
+  $$(`[data-${kind}-set]`).forEach(b => b.setAttribute('aria-pressed', b.dataset[kind + 'Set'] === value));
+  if (kind === 'brand') {
+    $$('.brand-owner').forEach(el => el.textContent = value === 'e2d' ? 'de E2D' : 'de Fincas Rivera');
+  }
+  brains.forEach(b => b.recolor());
+}
+if (matchMedia('(prefers-color-scheme: dark)').matches) setPref('theme', 'dark');
+
+/* ---------- Revisión de fichas ---------- */
+const cards = [
+  { id: 1, title: 'Filtración en el garaje: reparto del coste con el seguro', project: 'Garajes Plaza Sol', author: 'Jorge Salas', date: '8 nov 2026',
+    body: 'La filtración venía de una bajante común, así que la reparación la asumió la comunidad.\n\nEl seguro cubrió los daños de los dos coches afectados porque la póliza incluía daños por agua. Primero se pidió el informe del perito y después se convocó junta extraordinaria para aprobar la derrama del importe no cubierto.' },
+  { id: 2, title: 'Cambio de administrador: qué pedir al anterior', project: 'Comunidad Calle Mayor 12', author: 'Lucía Martín', date: '7 nov 2026',
+    body: 'Al recibir la comunidad se pidió por escrito: libros de actas, cuentas de los últimos cinco años, contratos en vigor, pólizas y la relación de propietarios con sus deudas.\n\nLa entrega se firmó con un acta de traspaso que recoge lo que faltaba.' },
+  { id: 3, title: 'Ascensor parado: plazos con la empresa mantenedora', project: 'Residencial Los Pinos', author: 'Jorge Salas', date: '5 nov 2026',
+    body: 'El contrato de mantenimiento fija una respuesta en 24 horas para averías sin personas atrapadas. Se reclamó por escrito al tercer día y la mantenedora aplicó la penalización prevista en el contrato.' },
+  { id: 4, title: 'Junta telemática: cómo se votó', project: 'Sin proyecto', author: 'Marta Ibáñez', date: '3 nov 2026',
+    body: 'La convocatoria incluía el enlace y las instrucciones para votar. Cada propietario votó a mano alzada en vídeo y el secretario leyó en voz alta el resultado de cada punto antes de cerrarlo.' },
+];
+let current = cards[0].id;
+
+function renderQueue() {
+  $('#queue').innerHTML = cards.map(c => `
+    <li data-id="${c.id}"><button type="button" aria-current="${c.id === current}">
+      <strong>${c.title}</strong><span>${c.project}</span><span>${c.author}, ${c.date}</span>
+    </button></li>`).join('');
+  $('#nav-count').textContent = cards.length;
+  $('#nav-count').hidden = cards.length === 0;
+}
+function renderDetail(animate) {
+  const d = $('#detail');
+  const c = cards.find(x => x.id === current);
+  if (!c) {
+    d.innerHTML = `<div class="empty"><svg class="i"><use href="#i-done"/></svg><h2>No quedan fichas por revisar</h2>
+      <p class="muted">Las nuevas aparecerán aquí cuando alguien guarde una desde su IA.</p></div>`;
+    return;
+  }
+  d.innerHTML = `
+    <div class="detail-top">
+      <span class="pill pill-pending">Pendiente de revisión</span>
+      <span class="origin"><svg class="i"><use href="#i-spark"/></svg>Ficha generada desde la IA de ${c.author}</span>
+    </div>
+    <h2>${c.title}</h2>
+    <dl class="facts">
+      <div><dt>Proyecto</dt><dd>${c.project}</dd></div>
+      <div><dt>Guardada por</dt><dd>${c.author}</dd></div>
+      <div><dt>Fecha</dt><dd>${c.date}</dd></div>
+    </dl>
+    <div class="generated field">
+      <label for="body">Texto de la ficha</label>
+      <textarea class="textarea" id="body">${c.body}</textarea>
+      <div class="edited-note" id="edited"><span>Has cambiado el texto.</span><button type="button" id="show-orig">Ver el original</button></div>
+      <div class="original" id="orig">${c.body}</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" type="button" id="approve">Aprobar</button>
+      <button class="btn" type="button" id="correct" disabled>Corregir y aprobar</button>
+      <button class="btn btn-ghost btn-danger" type="button" id="reject-open">Rechazar</button>
+    </div>
+    <div class="reject" id="reject">
+      <div class="field"><label for="note">Motivo del rechazo</label><input class="input" id="note" placeholder="Lo verá quien guardó la ficha"></div>
+      <div><button class="btn btn-danger" type="button" id="reject-send" disabled>Rechazar la ficha</button></div>
+    </div>`;
+  if (animate && !reduceMotion) { d.classList.remove('is-swapping'); void d.offsetWidth; d.classList.add('is-swapping'); }
+  const body = $('#body'), note = $('#note');
+  body.addEventListener('input', () => {
+    const changed = body.value.trim() !== c.body.trim();
+    $('#correct').disabled = !changed;
+    $('#edited').classList.toggle('is-on', changed);
+  });
+  $('#show-orig').addEventListener('click', () => $('#orig').classList.toggle('is-on'));
+  $('#reject-open').addEventListener('click', () => { $('#reject').classList.add('is-on'); note.focus(); });
+  note.addEventListener('input', () => $('#reject-send').disabled = !note.value.trim());
+  $('#approve').addEventListener('click', () => resolve(c, 'Ficha aprobada'));
+  $('#correct').addEventListener('click', () => resolve(c, 'Ficha corregida y aprobada'));
+  $('#reject-send').addEventListener('click', () => resolve(c, 'Ficha rechazada'));
+}
+function resolve(card, message) {
+  toast(message);
+  const li = $(`#queue li[data-id="${card.id}"]`);
+  const idx = cards.indexOf(card);
+  cards.splice(idx, 1);
+  current = (cards[idx] || cards[idx - 1] || {}).id;
+  const finish = () => { renderQueue(); renderDetail(true); };
+  if (!li || reduceMotion) return finish();
+  li.classList.add('is-leaving');
+  setTimeout(finish, 240);
+}
+$('#queue').addEventListener('click', e => {
+  const li = e.target.closest('li'); if (!li) return;
+  current = Number(li.dataset.id); renderQueue(); renderDetail(true);
+});
+let toastTimer;
+function toast(text) {
+  const t = $('#toast'); $('span', t).textContent = text; t.classList.add('is-on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('is-on'), 2600);
+}
+renderQueue(); renderDetail(false);
+
+/* ---------- Cerebro con sinapsis (3D proyectado en canvas 2D, sin librerías) ---------- */
+function createBrain(canvas, place) {
+  const ctx = canvas.getContext('2d');
+  const lowPower = (navigator.hardwareConcurrency || 4) <= 2 || navigator.connection?.saveData;
+  const animated = !reduceMotion && !lowPower;
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pts = [];
+
+  // Hemisferios: elipsoide con cara interna plana, base aplanada y circunvoluciones
+  function hemisphere(side, count) {
+    for (let i = 0; i < count; i++) {
+      const v = 1 - (i + 0.5) / count * 2, r = Math.sqrt(1 - v * v), th = i * 2.399963;
+      let lx = Math.cos(th) * r, ly = v, lz = Math.sin(th) * r;
+      const folds = 1 + 0.07 * Math.sin(9 * lz + 4 * Math.cos(5 * ly)) * Math.sin(8 * ly + 3 * lz) + 0.03 * Math.sin(17 * lz * ly);
+      if (lx * side < 0) lx *= 0.85;                    // cara interna, junto a la cisura
+      if (ly < 0) ly *= 0.7;                            // base
+      if (ly < -0.1 && lz > -0.3 && lz < 0.55) ly -= 0.12 * (1 - Math.abs(lz - 0.12) / 0.43); // lóbulo temporal
+      const width = 0.55 * (1 - 0.12 * Math.max(0, lz));
+      pts.push({ x: side * 0.5 + lx * width * folds, y: ly * 0.8 * folds + 0.1, z: lz * 1.15 * folds, part: 'cortex' });
+    }
+  }
+  hemisphere(-1, 230);
+  hemisphere(1, 230);
+  // Cerebelo, con láminas horizontales
+  for (let i = 0; i < 80; i++) {
+    const v = 1 - (i + 0.5) / 80 * 2, r = Math.sqrt(1 - v * v), th = i * 2.399963;
+    const folia = 1 + 0.06 * Math.sin(22 * v);
+    pts.push({ x: Math.cos(th) * r * 0.62 * folia, y: -0.52 + v * 0.27 * folia, z: -0.78 + Math.sin(th) * r * 0.4 * folia, part: 'cerebellum' });
+  }
+  // Tronco
+  for (let i = 0; i < 28; i++) {
+    const t = i / 27, a = i * 2.399963;
+    pts.push({ x: Math.cos(a) * 0.13, y: -0.38 - t * 0.78, z: -0.3 - t * 0.12 + Math.sin(a) * 0.13, part: 'stem' });
+  }
+
+  // Conexiones: las 3 vecinas más cercanas, sin cruzar la cisura salvo por el cuerpo calloso
+  const crosses = (a, b) => a.part === 'cortex' && b.part === 'cortex' && Math.sign(a.x) !== Math.sign(b.x);
+  const edges = [], seen = new Set(), adj = pts.map(() => []);
+  const link = (i, j) => {
+    const key = Math.min(i, j) + ':' + Math.max(i, j);
+    if (seen.has(key)) return;
+    seen.add(key); edges.push([i, j]); adj[i].push(j); adj[j].push(i);
+  };
+  pts.forEach((p, i) => {
+    const best = [];
+    pts.forEach((q, j) => {
+      if (i === j || crosses(p, q)) return;
+      const d = (p.x - q.x) ** 2 + (p.y - q.y) ** 2 + (p.z - q.z) ** 2;
+      if (best.length < 3 || d < best[2][0]) { best.push([d, j]); best.sort((a, b) => a[0] - b[0]); best.length = Math.min(best.length, 3); }
+    });
+    best.forEach(([, j]) => link(i, j));
+  });
+  const medial = pts.map((p, i) => [p, i]).filter(([p]) => p.part === 'cortex' && Math.abs(p.x) < 0.12 && p.y > -0.1 && Math.abs(p.z) < 0.6);
+  medial.forEach(([p, i]) => {
+    const other = medial.filter(([q]) => Math.sign(q.x) !== Math.sign(p.x)).sort((a, b) => Math.abs(a[0].z - p.z) - Math.abs(b[0].z - p.z))[0];
+    if (other) link(i, other[1]);
+  });
+
+  let accent = '#05b4b9', w = 0, h = 0, raf = 0, last = 0, clock = 0, spawnAt = 0;
+  const pulses = [], flash = new Float32Array(pts.length);
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2), rect = canvas.getBoundingClientRect();
+    w = rect.width; h = rect.height; canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  function projectAll() {
+    const yaw = -Math.PI / 2 + 0.6 * Math.sin(clock * 0.00022), tilt = 0.22;
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), ct = Math.cos(tilt), st = Math.sin(tilt);
+    const size = Math.min(w * place.w, h * place.h), cx = w * place.x, cyy = h * place.y;
+    return pts.map(p => {
+      const x = p.x * cy - p.z * sy, z0 = p.x * sy + p.z * cy;
+      const y = p.y * ct - z0 * st, z = p.y * st + z0 * ct;
+      const s = size * 6 / (z + 6);
+      return [cx + x * s, cyy - y * s, z];
+    });
+  }
+  const rgba = a => { const n = parseInt(accent.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+  const near = z => Math.max(0, Math.min(1, (1.3 - z) / 2.6));
+  function draw() {
+    if (!w) return;
+    ctx.clearRect(0, 0, w, h);
+    const P = projectAll();
+    const buckets = [[], [], [], []];
+    for (const e of edges) buckets[Math.min(3, Math.floor(near((P[e[0]][2] + P[e[1]][2]) / 2) * 4))].push(e);
+    ctx.lineWidth = 0.8;
+    buckets.forEach((list, b) => {
+      ctx.strokeStyle = rgba(0.05 + b * 0.075);
+      ctx.beginPath();
+      for (const [a, c] of list) { ctx.moveTo(P[a][0], P[a][1]); ctx.lineTo(P[c][0], P[c][1]); }
+      ctx.stroke();
+    });
+    P.forEach((q, i) => {
+      const n = near(q[2]), f = flash[i];
+      if (f > 0.02) { ctx.fillStyle = rgba(0.32 * f); ctx.beginPath(); ctx.arc(q[0], q[1], 3 + 12 * f, 0, 7); ctx.fill(); }
+      ctx.fillStyle = f > 0.02 ? rgba(0.6 + 0.4 * f) : `rgba(232,238,241,${0.14 + n * 0.62})`;
+      ctx.beginPath(); ctx.arc(q[0], q[1], 0.7 + n * 1.6 + f * 1.4, 0, 7); ctx.fill();
+    });
+    for (const p of pulses) {
+      const a = P[p.from], b = P[p.to], x = a[0] + (b[0] - a[0]) * p.t, y = a[1] + (b[1] - a[1]) * p.t;
+      ctx.fillStyle = rgba(0.3); ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill();
+      ctx.fillStyle = rgba(1); ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 7); ctx.fill();
+    }
+  }
+  function fire(from) {
+    const options = adj[from];
+    if (options.length && pulses.length < 60) pulses.push({ from, to: options[Math.floor(rand() * options.length)], t: 0 });
+  }
+  function frame(now) {
+    raf = requestAnimationFrame(frame);
+    if (document.hidden) return;
+    const dt = Math.min(now - (last || now), 50); last = now; clock += dt;
+    if (clock > spawnAt) { fire(Math.floor(rand() * pts.length)); spawnAt = clock + 180; }
+    for (let i = pulses.length - 1; i >= 0; i--) {
+      const p = pulses[i]; p.t += dt / 380;
+      if (p.t < 1) continue;
+      pulses.splice(i, 1); flash[p.to] = 1;
+      if (rand() < 0.62) fire(p.to);                     // la señal sigue en cadena
+      if (rand() < 0.12) fire(p.to);
+    }
+    for (let i = 0; i < flash.length; i++) flash[i] *= Math.pow(0.0025, dt / 1000);
+    draw();
+  }
+  new ResizeObserver(resize).observe(canvas);
+  return {
+    start() { if (animated && !raf) { last = 0; raf = requestAnimationFrame(frame); } else draw(); },
+    stop() { cancelAnimationFrame(raf); raf = 0; },
+    recolor() { accent = getComputedStyle(root).getPropertyValue('--brand-on-dark').trim() || accent; draw(); },
+  };
+}
+const brainBuild = performance.now();
+const net = createBrain($('#net'), { x: 0.5, y: 0.36, w: 0.27, h: 0.3 });
+const demoBrain = createBrain($('#demo-net'), { x: 0.5, y: 0.31, w: 0.22, h: 0.25 });
+const brains = [net, demoBrain];
+window.brainBuildMs = (performance.now() - brainBuild) / 2;
+brains.forEach(b => b.recolor());
+requestAnimationFrame(() => net.start());
+</script>
+</body>
+</html>
