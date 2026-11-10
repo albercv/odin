@@ -598,6 +598,7 @@ export interface components {
         };
         UpdateUser: {
             displayName?: string;
+            /** @description Cadena vacía: quita el correo de un trabajador. Ausente o null: no cambia. */
             email?: string;
             active?: boolean;
         };

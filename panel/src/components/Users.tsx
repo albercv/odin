@@ -44,13 +44,17 @@ type Panel = 'edit' | 'keys' | 'password' | undefined;
 
 function UserRow({ u, canReset, onChanged }: { u: S['UserView']; canReset: boolean; onChanged: () => void }) {
   const [panel, setPanel] = useState<Panel>();
+  const [passwordReset, setPasswordReset] = useState(false);
   const { error, act } = useAction();
   const toggle = async () => (await act(() => api.setActive(u.id, !u.active))) && onChanged();
   const remove = async () => {
     if (!window.confirm(`¿Borrar a ${u.displayName}? No se puede deshacer.`)) return;
     if (await act(() => api.deleteUser(u.id))) onChanged();
   };
-  const show = (p: Panel) => setPanel(panel === p ? undefined : p);
+  const show = (p: Panel) => {
+    setPasswordReset(false);
+    setPanel(panel === p ? undefined : p);
+  };
   const isWorker = u.role === 'WORKER';
   if (panel === 'edit') return <li><EditForm user={u} onDone={(saved) => { setPanel(undefined); if (saved) onChanged(); }} /></li>;
   return (
@@ -63,7 +67,8 @@ function UserRow({ u, canReset, onChanged }: { u: S['UserView']; canReset: boole
       {isWorker && <button type="button" aria-expanded={panel === 'keys'} onClick={() => show('keys')}>Claves de {u.displayName}</button>}
       {canReset && <button type="button" aria-expanded={panel === 'password'} onClick={() => show('password')}>Restablecer contraseña de {u.displayName}</button>}
       {panel === 'keys' && <Keys userId={u.id} />}
-      {panel === 'password' && <ResetPasswordForm user={u} onDone={() => setPanel(undefined)} />}
+      {panel === 'password' && <ResetPasswordForm user={u} onDone={() => { setPanel(undefined); setPasswordReset(true); }} />}
+      {passwordReset && <span role="status">Contraseña restablecida</span>}
     </li>
   );
 }

@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.web.dto;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.organization.Capability;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -27,7 +28,9 @@ public final class Requests {
     public record CreateUser(String displayName, String email, Role role, String password) {
     }
 
-    public record UpdateUser(String displayName, String email, Boolean active) {
+    public record UpdateUser(String displayName,
+            @Schema(description = "Cadena vacía: quita el correo de un trabajador. Ausente o null: no cambia.")
+            String email, Boolean active) {
     }
 
     public record SetPassword(String currentPassword, String newPassword) {

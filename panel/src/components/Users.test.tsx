@@ -99,6 +99,15 @@ test('resetPasswordOnlyForGroupAdminOnCompanyAdmins', async () => {
     expect(calls.find((c) => c.key === 'PUT /v1/admin/users/u2/password')?.body).toEqual({ newPassword: 'otra-clave-larga-2' }));
 });
 
+test('resetPasswordShowsConfirmation', async () => {
+  show({ [list]: () => [ana, bea], 'PUT /v1/admin/users/u2/password': () => ({ status: 204 }) });
+  await userEvent.click(await screen.findByRole('button', { name: 'Restablecer contraseña de Bea' }));
+  await userEvent.type(screen.getByLabelText('Nueva contraseña'), 'otra-clave-larga-2');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar contraseña de Bea' }));
+  expect(await screen.findByRole('status')).toHaveTextContent('Contraseña restablecida');
+  expect(screen.queryByLabelText('Nueva contraseña')).toBeNull();
+});
+
 test('companyAdminDoesNotSeeResetPassword', async () => {
   show({ [list]: () => [bea] }, companyAdmin);
   await rowOf('Bea');
