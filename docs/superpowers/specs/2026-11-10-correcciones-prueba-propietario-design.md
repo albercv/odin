@@ -59,7 +59,7 @@ Lo demás del alta no cambia: correo único (409) y quién puede crear cada pape
 - **Permiso:** el mismo que hoy para desactivar (`UserAdministration.requireAdminOfUser`).
 - **`displayName`:** no puede quedar vacío (400).
 - **`email`:** se normaliza. Repetido en otro usuario no borrado: 409, «Ya existe un usuario con ese correo». Cadena vacía: quita el correo de un trabajador; en un administrador es 400, «El administrador necesita correo».
-- **`active`:** admite `true` y `false`. Nadie se desactiva a sí mismo: 400, «No puedes desactivarte a ti mismo».
+- **`active`:** admite `true` y `false`. Nadie se desactiva a sí mismo: 400, «No puedes desactivarte a ti mismo». Desactivar cierra las sesiones del panel de ese usuario (ajuste de la revisión final).
 - **Usuario de otra empresa:** 403, como hoy. **Usuario que no existe o está borrado:** 404.
 
 ### 4.3 Borrado lógico
@@ -97,6 +97,7 @@ Lo demás del alta no cambia: correo único (409) y quién puede crear cada pape
 - **Sin configurar:** si no hay administrador del grupo, 409, «La instalación no está configurada».
 - **Efecto:** cambia su contraseña, lo deja activo y cierra sus sesiones.
 - **Límite de intentos:** el mismo `LoginRateLimiter` del login, con la clave fija `setup` y la IP.
+- **Qué cuenta el límite** (ajuste de la revisión final, 2026-11-10): solo los intentos fallidos, 5 por minuto por clave y por IP, tanto en el login como aquí. Una entrada correcta no gasta intento. Cambia el spec base, que contaba todos.
 
 ## 5. Proyectos
 

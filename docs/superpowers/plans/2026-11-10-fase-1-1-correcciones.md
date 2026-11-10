@@ -113,17 +113,17 @@ Rama `task/api-central/puerto-sesion`. Refactorización: no cambia el contrato n
 - Constructores nuevos: `LogInAdmin(UserRepository, PasswordHasher, AdminSessions)`, `LogOutAdmin(AdminSessions)` y `ResolveActor(AccessKeyRepository, UserRepository, AdminSessions, SecretHasher)`.
 - `ResolveActor.fromSessionToken` sigue exigiendo que el usuario exista y esté activo.
 
-- [ ] **Paso 1:** escribe `StoredAdminSessionsTest` y comprueba que falla:
+- [x] **Paso 1:** escribe `StoredAdminSessionsTest` y comprueba que falla:
   - `openedTokenResolvesToItsUser`;
   - `unknownOrNullTokenResolvesToEmpty`;
   - `idleSessionExpiresAndIsDeleted`;
   - `resolveRenewsIdleTime`;
   - `closedTokenNoLongerResolves`;
   - `closeAllOfClosesEverySessionOfThatUserOnly`.
-- [ ] **Paso 2:** implementa el puerto, `StoredAdminSessions` y `deleteByUser` en el doble y en PostgreSQL. Añade `deleteByUserRemovesOnlyThatUsersSessions` a `PostgresIdentityRepositoriesIT`.
-- [ ] **Paso 3:** cambia `LogInAdmin`, `LogOutAdmin` y `ResolveActor` para que usen `AdminSessions`, y adapta sus pruebas y los dos ficheros de cableado. Las pruebas que ya existían siguen pasando sin cambiar lo que comprueban.
-- [ ] **Paso 4:** `make check` termina con 0. `api/openapi.json` no cambia.
-- [ ] **Paso 5:** commit «refactor: sesión del panel detrás del puerto AdminSessions».
+- [x] **Paso 2:** implementa el puerto, `StoredAdminSessions` y `deleteByUser` en el doble y en PostgreSQL. Añade `deleteByUserRemovesOnlyThatUsersSessions` a `PostgresIdentityRepositoriesIT`.
+- [x] **Paso 3:** cambia `LogInAdmin`, `LogOutAdmin` y `ResolveActor` para que usen `AdminSessions`, y adapta sus pruebas y los dos ficheros de cableado. Las pruebas que ya existían siguen pasando sin cambiar lo que comprueban.
+- [x] **Paso 4:** `make check` termina con 0. `api/openapi.json` no cambia.
+- [x] **Paso 5:** commit «refactor: sesión del panel detrás del puerto AdminSessions».
 
 ### Tarea 2: Usuarios: alta por papel, edición, activación y borrado lógico · Sonnet
 
@@ -148,17 +148,17 @@ Rama `task/api-central/usuarios-crud`. Spec 4.1, 4.2 y 4.3.
 - `findById`, `findByEmail` y `listByCompany` excluyen los borrados. `PostgresKnowledgeSearch` no se toca: su `JOIN app_user` sigue encontrando al autor borrado.
 - `UpdateUser` comprueba el correo repetido con `findByEmail` antes de guardar; el mismo usuario con su mismo correo no es conflicto.
 
-- [ ] **Paso 1:** pruebas de casos de uso; comprueba que fallan:
+- [x] **Paso 1:** pruebas de casos de uso; comprueba que fallan:
   - `RegisterUserTest`: `workerWithPasswordIsRejected`, `workerWithoutEmailIsCreated` y `deletedUsersEmailCanBeReused`;
   - `UpdateUserTest`: `changesNameAndEmail`, `duplicateEmailIsConflict`, `sameEmailOnSameUserIsNotConflict`, `blankEmailClearsWorkersEmail`, `blankEmailOnAdminIsRejected`, `deactivatesAndReactivates`, `cannotDeactivateOneself`, `adminOfAnotherCompanyIsForbidden` y `deletedUserIsNotFound`;
   - `DeleteUserTest`: `deletedUserDisappearsFromList`, `cannotDeleteOneself`, `adminOfAnotherCompanyIsForbidden` y `deletingTwiceIsNotFound`;
   - `ResolveActorTest`: `deletedWorkersKeyIsUnauthorized` y `deletedAdminsSessionIsUnauthorized`.
-- [ ] **Paso 2:** implementa los casos de uso y el doble hasta que pasen.
-- [ ] **Paso 3:** `PostgresIdentityRepositoriesIT`: `deletedUserIsExcludedFromReads`, `deletedUsersEmailIsFreeButInactiveUsersIsNot`. Escribe `V5` y adapta `PostgresUserRepository`.
-- [ ] **Paso 4:** web. En `AdminApiTest`: `patchUserUpdatesFields`, `patchUserReactivates`, `deleteUserIs204` y `workerWithPasswordIs400`. En `IsolationTest`: `otherCompanyAdminCannotPatchOrDeleteUser`. Implementa el controlador y los DTO.
-- [ ] **Paso 5:** `ApplicationFlowIT`: `deletedAuthorStillNamedInSearchHit`: un administrador sube un documento, se le borra, y la búsqueda del trabajador sigue devolviendo el resultado con `authorName`.
-- [ ] **Paso 6:** regenera el contrato y los tipos. `make check` termina con 0.
-- [ ] **Paso 7:** commit «feat: edición, activación y borrado lógico de usuarios».
+- [x] **Paso 2:** implementa los casos de uso y el doble hasta que pasen.
+- [x] **Paso 3:** `PostgresIdentityRepositoriesIT`: `deletedUserIsExcludedFromReads`, `deletedUsersEmailIsFreeButInactiveUsersIsNot`. Escribe `V5` y adapta `PostgresUserRepository`.
+- [x] **Paso 4:** web. En `AdminApiTest`: `patchUserUpdatesFields`, `patchUserReactivates`, `deleteUserIs204` y `workerWithPasswordIs400`. En `IsolationTest`: `otherCompanyAdminCannotPatchOrDeleteUser`. Implementa el controlador y los DTO.
+- [x] **Paso 5:** `ApplicationFlowIT`: `deletedAuthorStillNamedInSearchHit`: un administrador sube un documento, se le borra, y la búsqueda del trabajador sigue devolviendo el resultado con `authorName`.
+- [x] **Paso 6:** regenera el contrato y los tipos. `make check` termina con 0.
+- [x] **Paso 7:** commit «feat: edición, activación y borrado lógico de usuarios».
 
 ### Tarea 3: Contraseñas: cambio, restablecimiento y recuperación · Sonnet
 
@@ -180,15 +180,15 @@ Rama `task/api-central/contrasenas`. Spec 4.4 y 4.5.
 - `User` necesita `withPasswordHash(String)`.
 - `SetupController` pasa por `LoginRateLimiter.check("setup", ip)` antes de llamar a `RecoverGroupAdmin`. La IP se obtiene como en `SessionController`.
 
-- [ ] **Paso 1:** pruebas; comprueba que fallan:
+- [x] **Paso 1:** pruebas; comprueba que fallan:
   - `ChangePasswordTest`: `adminChangesOwnPasswordWithCurrentOne`, `wrongCurrentPasswordIsRejected`, `missingCurrentPasswordIsRejected`, `groupAdminResetsCompanyAdminWithoutCurrentOne`, `companyAdminCannotResetAnotherUser`, `workerHasNoPassword`, `shortPasswordIsRejected`, `changingPasswordClosesAllSessionsOfThatUser`, `oldPasswordNoLongerLogsIn` y `groupAdminCannotResetUserOfUnknownId`;
   - `RecoverGroupAdminTest`: `validTokenSetsPasswordReactivatesAndClosesSessions`, `invalidTokenIsForbidden`, `emptyConfiguredTokenIsForbidden`, `notConfiguredInstallationIsConflict` y `shortPasswordIsRejected`;
   - `SetUpInstallationTest` sigue pasando sin cambios.
-- [ ] **Paso 2:** implementa `InstallationToken`, los dos casos de uso, `findGroupAdmin` y `withPasswordHash`.
-- [ ] **Paso 3:** web. `AdminApiTest`: `putPasswordIs204` y `putPasswordWithWrongCurrentIs400`. `AuthenticationTest`: `recoverAdminIsPublicAndNeedsToken` y `sixthRecoverAttemptIs429`. `IsolationTest`: `companyAdminCannotResetUserOfAnotherCompany`.
-- [ ] **Paso 4:** `PostgresIdentityRepositoriesIT`: `findGroupAdminReturnsTheOnlyGroupAdmin`.
-- [ ] **Paso 5:** regenera el contrato y los tipos. `make check` termina con 0.
-- [ ] **Paso 6:** commit «feat: cambio de contraseña y recuperación del administrador del grupo».
+- [x] **Paso 2:** implementa `InstallationToken`, los dos casos de uso, `findGroupAdmin` y `withPasswordHash`.
+- [x] **Paso 3:** web. `AdminApiTest`: `putPasswordIs204` y `putPasswordWithWrongCurrentIs400`. `AuthenticationTest`: `recoverAdminIsPublicAndNeedsToken` y `sixthRecoverAttemptIs429`. `IsolationTest`: `companyAdminCannotResetUserOfAnotherCompany`.
+- [x] **Paso 4:** `PostgresIdentityRepositoriesIT`: `findGroupAdminReturnsTheOnlyGroupAdmin`.
+- [x] **Paso 5:** regenera el contrato y los tipos. `make check` termina con 0.
+- [x] **Paso 6:** commit «feat: cambio de contraseña y recuperación del administrador del grupo».
 
 ### Tarea 4: Proyectos: renombrar, borrado lógico y nombre único · Sonnet
 
@@ -210,16 +210,16 @@ Rama `task/api-central/proyectos-crud`. Spec 5.
 - El nombre repetido lo comprueban `CreateProject` y `RenameProject` con `listProjects`, sin distinguir mayúsculas y tras recortar espacios. El índice es la última barrera.
 - Renombrar un proyecto a su mismo nombre no es conflicto.
 
-- [ ] **Paso 1:** pruebas; comprueba que fallan:
+- [x] **Paso 1:** pruebas; comprueba que fallan:
   - `CreateProjectTest`: `duplicateNameInSameCompanyIsConflict`, `sameNameInAnotherCompanyIsAllowed` y `nameOfDeletedProjectCanBeReused`;
   - `RenameProjectTest`: `renames`, `duplicateNameIsConflict`, `sameNameIsNotConflict`, `blankNameIsRejected`, `projectOfAnotherCompanyIsNotFound` y `adminOfAnotherCompanyIsForbidden`;
   - `DeleteProjectTest`: `deletedProjectDisappearsFromListAndMe`, `deletingTwiceIsNotFound` y `adminOfAnotherCompanyIsForbidden`.
-- [ ] **Paso 2:** implementa los casos de uso y el doble.
-- [ ] **Paso 3:** `PostgresOrganizationRepositoryIT`: `deletedProjectIsExcludedFromReads` y `uniqueNameIndexIgnoresDeletedProjects`. Escribe `V6`.
-- [ ] **Paso 4:** web. `AdminApiTest`: `patchProjectRenames`, `deleteProjectIs204` y `duplicateProjectNameIs409`. `IsolationTest`: `otherCompanyAdminCannotRenameOrDeleteProject`.
-- [ ] **Paso 5:** `ApplicationFlowIT`: `documentOfDeletedProjectStaysSearchableAndFilterIs404`.
-- [ ] **Paso 6:** regenera el contrato y los tipos. `make check` termina con 0.
-- [ ] **Paso 7:** commit «feat: renombrar y borrar proyectos, con nombre único por empresa».
+- [x] **Paso 2:** implementa los casos de uso y el doble.
+- [x] **Paso 3:** `PostgresOrganizationRepositoryIT`: `deletedProjectIsExcludedFromReads` y `uniqueNameIndexIgnoresDeletedProjects`. Escribe `V6`.
+- [x] **Paso 4:** web. `AdminApiTest`: `patchProjectRenames`, `deleteProjectIs204` y `duplicateProjectNameIs409`. `IsolationTest`: `otherCompanyAdminCannotRenameOrDeleteProject`.
+- [x] **Paso 5:** `ApplicationFlowIT`: `documentOfDeletedProjectStaysSearchableAndFilterIs404`.
+- [x] **Paso 6:** regenera el contrato y los tipos. `make check` termina con 0.
+- [x] **Paso 7:** commit «feat: renombrar y borrar proyectos, con nombre único por empresa».
 
 ### Tarea 5: Error de arranque claro y `README` de operación · Haiku
 
@@ -241,13 +241,13 @@ Rama `task/api-central/operacion`. Spec 7.
   - el orden: primero `ALTER ROLE`, después `deploy/.env`, después `make down` y `make up`.
 - El apartado «Contraseña olvidada» lleva la orden `curl` de `POST /v1/setup/admin-password`, con la forma de la que ya hay en «Primer arranque».
 
-- [ ] **Paso 1:** escribe `DatabaseCredentialsFailureAnalyzerTest` y comprueba que falla:
+- [x] **Paso 1:** escribe `DatabaseCredentialsFailureAnalyzerTest` y comprueba que falla:
   - `wrongPasswordStateGivesActionableAnalysis`: con `new IllegalStateException(new SQLException("x", "28P01"))`, el análisis no es nulo y su acción contiene `docker volume rm odin_pgdata odin_originals`;
   - `otherSqlStatesAreIgnored`: con el estado `"08001"`, devuelve `null`.
-- [ ] **Paso 2:** implementa el analizador y regístralo.
-- [ ] **Paso 3:** escribe los cuatro apartados del `README`.
-- [ ] **Paso 4:** `make check` termina con 0.
-- [ ] **Paso 5:** commit «feat: error de arranque claro con claves rechazadas y README de operación».
+- [x] **Paso 2:** implementa el analizador y regístralo.
+- [x] **Paso 3:** escribe los cuatro apartados del `README`.
+- [x] **Paso 4:** `make check` termina con 0.
+- [x] **Paso 5:** commit «feat: error de arranque claro con claves rechazadas y README de operación».
 
 ### Tarea 6: Panel: gestión de usuarios y proyectos, y mi cuenta · Sonnet
 
@@ -268,14 +268,14 @@ Rama `task/api-central/panel-gestion`. Spec 8. Sin cambios de aspecto: mismas cl
 - Tras cambiar la contraseña propia: la aplicación vuelve a la entrada y muestra «Contraseña cambiada. Entra de nuevo.».
 - Ningún formulario se vacía si la acción falla (hoy `AddForm` y `Keys` lo hacen).
 
-- [ ] **Paso 1:** pruebas con el doble; comprueba que fallan:
+- [x] **Paso 1:** pruebas con el doble; comprueba que fallan:
   - `UserForm.test.tsx`: `workerFormHasNoPasswordAndEmailIsOptional`, `adminFormRequiresPassword` y `failedCreateKeepsTheTypedValues`;
   - `Users.test.tsx`: `rowShowsEmailRoleAndState`, `activateSendsActiveTrue`, `editSavesNameAndEmail`, `conflictShowsTheApiMessage`, `deleteAsksForConfirmationAndRemovesTheRow`, `cancelledConfirmationDeletesNothing`, `keysOnlyForWorkers` y `resetPasswordOnlyForGroupAdminOnCompanyAdmins`;
   - `Projects.test.tsx`: `renamesProject`, `deleteAsksForConfirmation` y `duplicateNameShowsTheApiMessage`;
   - `Account.test.tsx`: `changesOwnPasswordAndReturnsToLoginWithNotice` y `wrongCurrentPasswordShowsTheApiMessage`.
-- [ ] **Paso 2:** implementa los componentes hasta que pasen. Las 8 pruebas que ya existían siguen pasando.
-- [ ] **Paso 3:** `make check` termina con 0.
-- [ ] **Paso 4:** commit «feat: panel con gestión completa de usuarios y proyectos y cambio de contraseña».
+- [x] **Paso 2:** implementa los componentes hasta que pasen. Las 8 pruebas que ya existían siguen pasando.
+- [x] **Paso 3:** `make check` termina con 0.
+- [x] **Paso 4:** commit «feat: panel con gestión completa de usuarios y proyectos y cambio de contraseña».
 
 ### Tarea 7: Prueba de extremo a extremo de la administración · Sonnet
 
@@ -291,7 +291,7 @@ Rama `task/api-central/e2e-administracion`. Spec 9.
 - **Límite de intentos:** el login admite 5 por minuto y por IP. Entre los dos ficheros no puede haber más de 4 entradas por minuto: reutiliza la sesión con `storageState` y deja para el final los pasos que entran de nuevo.
 - La contraseña del administrador del grupo queda al terminar como estaba, para no romper otros pasos de la demo.
 
-- [ ] **Paso 1:** escribe `admin.spec.ts` con estos pasos, cada uno con su `console.log('✓ …')` como en `demo.spec.ts`:
+- [x] **Paso 1:** escribe `admin.spec.ts` con estos pasos, cada uno con su `console.log('✓ …')` como en `demo.spec.ts`:
   1. crea «Empresa E2E» y la abre;
   2. crea un trabajador sin correo ni contraseña y lo ve en la lista como «sin correo»;
   3. crea un administrador de empresa con correo y contraseña;
@@ -302,9 +302,9 @@ Rama `task/api-central/e2e-administracion`. Spec 9.
   8. crea un proyecto, lo renombra, comprueba que otro con el mismo nombre da «Ya existe un proyecto con ese nombre», y lo borra;
   9. restablece la contraseña del administrador de empresa, sale, y entra con él y la contraseña nueva: ve su empresa y no ve «Empresas»;
   10. en «Mi cuenta», ese administrador cambia su contraseña: vuelve a la entrada con «Contraseña cambiada. Entra de nuevo.» y entra con la nueva.
-- [ ] **Paso 2:** ejecuta `make demo`. Si un paso falla por un fallo real del panel o de la API, corrígelo con su prueba unitaria en el módulo que toque; no adaptes la prueba al fallo.
-- [ ] **Paso 3:** `make demo` y `make check` terminan con 0.
-- [ ] **Paso 4:** commit «test: prueba de extremo a extremo de la administración del panel».
+- [x] **Paso 2:** ejecuta `make demo`. Si un paso falla por un fallo real del panel o de la API, corrígelo con su prueba unitaria en el módulo que toque; no adaptes la prueba al fallo.
+- [x] **Paso 3:** `make demo` y `make check` terminan con 0.
+- [x] **Paso 4:** commit «test: prueba de extremo a extremo de la administración del panel».
 
 ## Orden y paralelismo
 
