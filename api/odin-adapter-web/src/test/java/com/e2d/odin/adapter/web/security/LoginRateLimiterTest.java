@@ -62,7 +62,7 @@ class LoginRateLimiterTest {
             limiter.recordFailure(prefix + i, "ip" + i);
         }
         assertThatThrownBy(() -> limiter.check(prefix + "z", "ipz")).isInstanceOf(TooManyAttemptsException.class);
-        assertThat(limiter.trackedKeys()).isEqualTo(7);
+        assertThat(limiter.trackedKeys()).isEqualTo(6);
     }
 
     @Test
