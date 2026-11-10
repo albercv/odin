@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
-/** 5 intentos por minuto por correo y por IP, en memoria y acotado (shortcut: se pierde al reiniciar). */
+/** 5 fallos por minuto por clave (correo) y por IP, en memoria y acotado (shortcut: se pierde al reiniciar). */
 @Component
 public class LoginRateLimiter {
 
@@ -31,12 +31,16 @@ public class LoginRateLimiter {
         this.clock = clock;
     }
 
-    public synchronized void check(String email, String ip) {
-        boolean byEmail = hit("email:" + normalize(email));
-        boolean byIp = hit("ip:" + normalize(ip));
-        if (!byEmail || !byIp) {
+    /** Rechaza si la clave o la IP acumulan 5 fallos en la ventana; no apunta nada. */
+    public synchronized void check(String key, String ip) {
+        if (isFull(keyOf("key:", key)) || isFull(keyOf("ip:", ip))) {
             throw new TooManyAttemptsException();
         }
+    }
+
+    public synchronized void recordFailure(String key, String ip) {
+        window(keyOf("key:", key)).addLast(clock.instant());
+        window(keyOf("ip:", ip)).addLast(clock.instant());
     }
 
     synchronized int trackedKeys() {
@@ -48,16 +52,20 @@ public class LoginRateLimiter {
         return text.length() > MAX_KEY_LENGTH ? text.substring(0, MAX_KEY_LENGTH) : text;
     }
 
-    private boolean hit(String key) {
-        Instant now = clock.instant();
+    private static String keyOf(String prefix, String value) {
+        return prefix + normalize(value);
+    }
+
+    private boolean isFull(String key) {
+        return window(key).size() >= MAX_ATTEMPTS;
+    }
+
+    private Deque<Instant> window(String key) {
+        Instant limit = clock.instant().minus(WINDOW);
         Deque<Instant> window = attempts.computeIfAbsent(key, k -> new ArrayDeque<>());
-        while (!window.isEmpty() && window.peekFirst().isBefore(now.minus(WINDOW))) {
+        while (!window.isEmpty() && window.peekFirst().isBefore(limit)) {
             window.pollFirst();
         }
-        if (window.size() >= MAX_ATTEMPTS) {
-            return false;
-        }
-        window.addLast(now);
-        return true;
+        return window;
     }
 }

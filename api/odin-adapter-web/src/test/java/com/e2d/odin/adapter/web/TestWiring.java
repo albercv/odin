@@ -143,7 +143,7 @@ public class TestWiring {
     }
 
     @Bean UpdateUser updateUser() {
-        return new UpdateUser(users);
+        return new UpdateUser(users, adminSessions());
     }
 
     @Bean ChangePassword changePassword() {
@@ -155,7 +155,7 @@ public class TestWiring {
     }
 
     @Bean DeleteUser deleteUser() {
-        return new DeleteUser(users, clock);
+        return new DeleteUser(users, adminSessions(), clock);
     }
 
     @Bean IssueAccessKey issueAccessKey() {

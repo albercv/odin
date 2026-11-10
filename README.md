@@ -96,7 +96,7 @@ Registrarlo en un equipo es configuración fuera del repositorio: hazlo solo con
 
 Las claves de PostgreSQL se fijan en el primer arranque, cuando se crea el volumen de datos. Editar `deploy/.env` después no las cambia: PostgreSQL sigue aceptando las antiguas y la API no arranca. El error dice «PostgreSQL rechaza la clave del usuario de la base de datos.» y explica qué hacer.
 
-Hay dos usuarios de base de datos: el propietario, cuyo nombre es `ODIN_DB_OWNER_USER` en `deploy/.env`, y el de la aplicación, que es siempre `odin_app` (clave `ODIN_DB_APP_PASSWORD`). La base se llama `ODIN_DB_NAME` (por defecto, `odin`).
+Hay dos usuarios de base de datos: el propietario, cuyo nombre es `ODIN_DB_OWNER_USER` en `deploy/.env`, y el de la aplicación, que es siempre `odin_app` (clave `ODIN_DB_APP_PASSWORD`, que solo admite letras, dígitos, `-` y `_`, como dice `deploy/.env.example`). La base se llama `ODIN_DB_NAME` (por defecto, `odin`).
 
 Para cambiar una clave sin perder datos, en este orden:
 

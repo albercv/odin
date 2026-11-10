@@ -1519,7 +1519,8 @@
             "type" : "string"
           },
           "email" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Cadena vacía: quita el correo de un trabajador. Ausente o null: no cambia."
           },
           "active" : {
             "type" : "boolean"

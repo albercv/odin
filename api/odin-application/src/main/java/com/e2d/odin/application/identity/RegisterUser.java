@@ -10,7 +10,6 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
-import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
@@ -42,11 +41,9 @@ public class RegisterUser {
             throw new ValidationException("El administrador necesita correo");
         }
         if (!admin && newUser.password().filter(p -> !p.isBlank()).isPresent()) {
-            throw new ValidationException("Un trabajador no tiene contraseña: entra con su clave personal");
+            throw new ValidationException(UserAdministration.WORKER_HAS_NO_PASSWORD);
         }
-        email.flatMap(users::findByEmail).ifPresent(existing -> {
-            throw new ConflictException("Ya existe un usuario con ese correo");
-        });
+        email.ifPresent(e -> UserAdministration.requireEmailFree(users, e, Optional.empty()));
         Optional<String> passwordHash = admin
                 ? Optional.of(passwords.hash(Validation.requirePassword(newUser.password().orElse(null))))
                 : Optional.empty();

@@ -91,7 +91,7 @@ class AuthenticationTest extends WebTestSupport {
     }
 
     @Test
-    void sixthLoginAttemptIs429() throws Exception {
+    void sixthFailedLoginIs429() throws Exception {
         String body = "{\"email\":\"limit@e.test\",\"password\":\"mala-clave-larga\"}";
         for (int i = 0; i < 5; i++) {
             mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON).content(body))
@@ -99,6 +99,29 @@ class AuthenticationTest extends WebTestSupport {
         }
         mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void successfulLoginsDoNotConsumeAttempts() throws Exception {
+        savedAdmin("many@e.test");
+        String body = "{\"email\":\"many@e.test\",\"password\":\"clave-muy-larga-1\"}";
+        for (int i = 0; i < 6; i++) {
+            mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void successAfterFailuresStillWorksBelowTheLimit() throws Exception {
+        savedAdmin("some@e.test");
+        String bad = "{\"email\":\"some@e.test\",\"password\":\"mala-clave-larga\"}";
+        for (int i = 0; i < 4; i++) {
+            mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON).content(bad))
+                    .andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"some@e.test\",\"password\":\"clave-muy-larga-1\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -118,7 +141,7 @@ class AuthenticationTest extends WebTestSupport {
     }
 
     @Test
-    void sixthRecoverAttemptIs429() throws Exception {
+    void sixthFailedRecoverIs429() throws Exception {
         String body = "{\"setupToken\":\"otro\",\"newPassword\":\"clave-nueva-1234\"}";
         for (int i = 0; i < 5; i++) {
             mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON).content(body))

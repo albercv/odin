@@ -29,7 +29,7 @@ public class ChangePassword {
         User user = users.findById(target).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         UserAdministration.requireAdminOfUser(actor, user);
         if (user.role() == Role.WORKER) {
-            throw new ValidationException("Un trabajador no tiene contraseña: entra con su clave personal");
+            throw new ValidationException(UserAdministration.WORKER_HAS_NO_PASSWORD);
         }
         requireAllowedToSet(actor, user, currentPassword);
         users.save(user.withPasswordHash(passwords.hash(Validation.requirePassword(newPassword))));

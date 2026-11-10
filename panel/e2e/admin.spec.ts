@@ -121,6 +121,7 @@ async function resetCompanyAdminPasswordAndEnter(page: Page): Promise<void> {
   await users.getByLabel('Nueva contraseña').fill(COMPANY_ADMIN.resetPassword);
   await users.getByRole('button', { name: `Guardar contraseña de ${COMPANY_ADMIN.name}` }).click();
   await expect(users.getByLabel('Nueva contraseña')).toHaveCount(0);
+  await expect(users.getByRole('status')).toHaveText('Contraseña restablecida');
   await page.getByRole('button', { name: 'Salir' }).click();
   await logIn(page, COMPANY_ADMIN.email, COMPANY_ADMIN.resetPassword);
   await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();

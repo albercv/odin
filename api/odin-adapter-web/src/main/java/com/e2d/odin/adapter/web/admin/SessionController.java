@@ -9,6 +9,7 @@ import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.NewSession;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.ValidationException;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,9 +48,18 @@ public class SessionController {
         }
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         limiter.check(email, http.getRemoteAddr());
-        NewSession session = logIn.execute(request.email(), request.password());
+        NewSession session = logInRecordingFailure(request, email, http.getRemoteAddr());
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie(session.token(), false).toString())
                 .body(new Responses.UserRef(session.userId().value()));
+    }
+
+    private NewSession logInRecordingFailure(Requests.Login request, String email, String ip) {
+        try {
+            return logIn.execute(request.email(), request.password());
+        } catch (UnauthorizedException e) {
+            limiter.recordFailure(email, ip);
+            throw e;
+        }
     }
 
     @DeleteMapping("/session")
