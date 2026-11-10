@@ -163,7 +163,7 @@ public class ListMembers  { public List<MemberView> execute(Actor actor, Company
   - 400, «Hace falta una contraseña para administrar», al dar `COMPANY_ADMIN` a quien no tiene contraseña y no llega una;
   - 400, «Una pertenencia necesita al menos un papel»;
   - 403, «Solo el administrador del grupo da o quita la administración de una empresa»;
-  - 403, «Solo el administrador del grupo edita a una persona que está en varias empresas»;
+  - 403, «Solo el administrador del grupo puede editar a esta persona»;
   - 400, «No puedes quitarte el papel con el que estás actuando».
 - Al añadir a una persona que ya existe por su correo, su nombre y su contraseña no cambian, y `alreadyExisted` es verdadero.
 - Quitar `COMPANY_ADMIN`, desactivar o borrar una pertenencia cierra las sesiones del panel de esa persona si ya no administra nada.
