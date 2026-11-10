@@ -4,7 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
+import com.e2d.odin.application.fake.FakeSecretHasher;
+import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.SequenceTokenGenerator;
+import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
+import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
@@ -22,7 +27,9 @@ import org.junit.jupiter.api.Test;
 class UpdateUserTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
-    private final UpdateUser update = new UpdateUser(users);
+    private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
+            new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
+    private final UpdateUser update = new UpdateUser(users, sessions);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
     private final UserId adminId = new UserId(UUID.randomUUID());
@@ -90,6 +97,27 @@ class UpdateUserTest {
     void deactivatesAndReactivates() {
         assertThat(update.execute(admin, workerId, active(false)).active()).isFalse();
         assertThat(update.execute(admin, workerId, active(true)).active()).isTrue();
+    }
+
+    @Test
+    void deactivatingClosesTheUsersSessions() {
+        String token = sessions.open(adminId);
+
+        update.execute(Actors.groupAdmin(), adminId, active(false));
+        update.execute(Actors.groupAdmin(), adminId, active(true));
+
+        assertThat(sessions.resolve(token)).isEmpty();
+    }
+
+    @Test
+    void companyAdminCannotUpdateTheGroupAdmin() {
+        UserId groupAdminId = new UserId(UUID.randomUUID());
+        users.save(new User(groupAdminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), true,
+                Optional.of("pw:x")));
+
+        assertThatThrownBy(() -> update.execute(admin, groupAdminId, active(false)))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(users.findById(groupAdminId).orElseThrow().active()).isTrue();
     }
 
     @Test

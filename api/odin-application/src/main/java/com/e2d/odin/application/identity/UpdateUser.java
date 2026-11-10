@@ -1,11 +1,11 @@
 package com.e2d.odin.application.identity;
 
+import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
-import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -14,9 +14,11 @@ import java.util.Optional;
 public class UpdateUser {
 
     private final UserRepository users;
+    private final AdminSessions sessions;
 
-    public UpdateUser(UserRepository users) {
+    public UpdateUser(UserRepository users, AdminSessions sessions) {
         this.users = users;
+        this.sessions = sessions;
     }
 
     public User execute(Actor actor, UserId id, UserChanges changes) {
@@ -30,6 +32,9 @@ public class UpdateUser {
                 .orElse(user.displayName());
         User updated = user.updated(name, changes.email().map(e -> newEmail(user, e)).orElse(user.email()), active);
         users.save(updated);
+        if (user.active() && !active) {
+            sessions.closeAllOf(id);
+        }
         return updated;
     }
 
@@ -41,9 +46,7 @@ public class UpdateUser {
             return Optional.empty();
         }
         String email = Validation.normalizeEmail(raw);
-        users.findByEmail(email).filter(other -> !other.id().equals(user.id())).ifPresent(other -> {
-            throw new ConflictException("Ya existe un usuario con ese correo");
-        });
+        UserAdministration.requireEmailFree(users, email, Optional.of(user.id()));
         return Optional.of(email);
     }
 }

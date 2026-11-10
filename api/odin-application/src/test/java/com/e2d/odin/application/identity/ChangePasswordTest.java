@@ -138,4 +138,15 @@ class ChangePasswordTest {
         assertThatThrownBy(() -> change.execute(Actors.groupAdmin(), new UserId(UUID.randomUUID()), Optional.empty(),
                 NEW)).isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void companyAdminCannotResetTheGroupAdmin() {
+        UserId groupAdminId = new UserId(UUID.randomUUID());
+        users.save(new User(groupAdminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), true,
+                Optional.of(passwords.hash(OLD))));
+
+        assertThatThrownBy(() -> change.execute(self, groupAdminId, Optional.empty(), NEW))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(users.findById(groupAdminId).orElseThrow().passwordHash()).contains(passwords.hash(OLD));
+    }
 }

@@ -147,8 +147,8 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateUser updateUser(UserRepository users) {
-        return new UpdateUser(users);
+    UpdateUser updateUser(UserRepository users, AdminSessions sessions) {
+        return new UpdateUser(users, sessions);
     }
 
     @Bean
@@ -163,8 +163,8 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DeleteUser deleteUser(UserRepository users, Clock clock) {
-        return new DeleteUser(users, clock);
+    DeleteUser deleteUser(UserRepository users, AdminSessions sessions, Clock clock) {
+        return new DeleteUser(users, sessions, clock);
     }
 
     @Bean
