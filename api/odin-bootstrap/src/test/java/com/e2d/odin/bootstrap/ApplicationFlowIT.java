@@ -196,6 +196,24 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(review.json().get("review").get("reviewerId").asString()).isEqualTo(userId);
     }
 
+    @Test
+    @Order(9)
+    void removedAndReAddedPersonDoesNotGetOldKeysBack() {
+        ApiClient api = new ApiClient(port);
+        Reply added = addWorker(api, companyA, "vuelve@ejemplo.test");
+        String userId = added.json().get("member").get("userId").asString();
+        String oldKey = issueKey(api, companyA, userId);
+        assertThat(api.get("/v1/me", "Authorization", oldKey).status()).isEqualTo(200);
+
+        assertThat(api.delete("/v1/admin/companies/" + companyA + "/members/" + userId, "Cookie", adminCookie)
+                .status()).isEqualTo(204);
+        Reply again = addWorker(api, companyA, "vuelve@ejemplo.test");
+
+        assertThat(again.json().get("alreadyExisted").asBoolean()).isTrue();
+        assertThat(api.get("/v1/me", "Authorization", oldKey).status()).isEqualTo(401);
+        assertThat(api.get("/v1/me", "Authorization", issueKey(api, companyA, userId)).status()).isEqualTo(200);
+    }
+
     private Reply addWorker(ApiClient api, String company, String email) {
         Reply added = api.post("/v1/admin/companies/" + company + "/members",
                 map("displayName", "Doble Persona", "email", email, "roles", List.of("WORKER")), "Cookie",

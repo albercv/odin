@@ -36,7 +36,7 @@ public class UpdateMember {
                 changes.roles().map(UserAdministration::requireValidRoles).orElse(current.roles()),
                 changes.active().orElse(current.active()));
         requireNotActingOnSelf(actor, current, updated);
-        if (current.isCompanyAdmin() != updated.isCompanyAdmin()) {
+        if (touchesAdministration(current, updated)) {
             UserAdministration.requireGroupAdminForAdministration(actor);
         }
         User user = personReadyFor(current, updated, changes.password(), userId);
@@ -45,6 +45,12 @@ public class UpdateMember {
             UserAdministration.closeSessionsIfNoLongerAdministering(memberships, sessions, userId);
         }
         return MemberView.of(user, updated);
+    }
+
+    /** Dar o quitar la administración, o activar o desactivar una pertenencia que la tiene. */
+    private static boolean touchesAdministration(Membership current, Membership updated) {
+        return current.isCompanyAdmin() != updated.isCompanyAdmin()
+                || (current.isCompanyAdmin() && current.active() != updated.active());
     }
 
     private static void requireNotActingOnSelf(Actor actor, Membership current, Membership updated) {
@@ -63,6 +69,9 @@ public class UpdateMember {
     private User personReadyFor(Membership current, Membership updated, Optional<String> password, UserId userId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         if (current.isCompanyAdmin() || !updated.isCompanyAdmin()) {
+            if (password.filter(p -> !p.isBlank()).isPresent()) {
+                throw new ValidationException(UserAdministration.WORKER_HAS_NO_PASSWORD);
+            }
             return user;
         }
         User ready = UserAdministration.readyToAdminister(user, password, passwords);

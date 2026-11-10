@@ -121,6 +121,21 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     }
 
     @Test
+    void listsOnlyTheKeysOfThatMembershipsCompany() {
+        CompanyId first = newCompany();
+        CompanyId second = newCompany();
+        UserId person = newUser(first);
+        AccessKey inFirst = key(person, first, "mem1");
+        AccessKey inSecond = key(person, second, "mem2");
+        keys.save(inFirst);
+        keys.save(inSecond);
+
+        assertThat(keys.listByMembership(person, first)).containsExactly(inFirst);
+        assertThat(keys.listByMembership(person, second)).containsExactly(inSecond);
+        assertThat(keys.listByMembership(new UserId(UUID.randomUUID()), first)).isEmpty();
+    }
+
+    @Test
     void keysAreSavedFoundByPrefixAndListedPerUser() {
         CompanyId company = newCompany();
         UserId owner = newUser(company);
@@ -131,7 +146,7 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         assertThat(keys.findById(k.id())).contains(k);
         assertThat(keys.findByPrefix("pre1")).contains(k);
         assertThat(keys.findByPrefix("nope")).isEmpty();
-        assertThat(keys.listByUser(owner)).containsExactly(k);
+        assertThat(keys.listByMembership(owner, company)).containsExactly(k);
         AccessKey revoked = new AccessKey(k.id(), owner, company, k.label(), k.prefix(), k.secretHash(), k.createdAt(),
                 Optional.of(NOW));
         keys.save(revoked);

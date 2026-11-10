@@ -98,10 +98,50 @@ class UpdateMemberTest {
 
     @Test
     void passwordOfAPersonWhoAlreadyHasOneIsNotOverwritten() {
-        update.execute(groupAdmin, company, adminId, new MemberChanges(Optional.of(Set.of(Role.COMPANY_ADMIN,
-                Role.WORKER)), Optional.empty(), Optional.of("otra-clave-1234")));
+        users.save(new com.e2d.odin.domain.identity.User(workerId, "Wanda", Optional.of("w@demo.test"), false, true,
+                Optional.of("pw:propia")));
 
-        assertThat(users.findById(adminId).orElseThrow().passwordHash()).contains("pw:x");
+        update.execute(groupAdmin, company, workerId, new MemberChanges(Optional.of(Set.of(Role.COMPANY_ADMIN)),
+                Optional.empty(), Optional.of("otra-clave-1234")));
+
+        assertThat(users.findById(workerId).orElseThrow().passwordHash()).contains("pw:propia");
+    }
+
+    @Test
+    void passwordWithoutGrantingAdministrationIsRejected() {
+        MemberChanges changes = new MemberChanges(Optional.empty(), Optional.empty(), Optional.of("clave-larga-123"));
+
+        assertThatThrownBy(() -> update.execute(groupAdmin, company, workerId, changes))
+                .isInstanceOf(ValidationException.class).hasMessage(UserAdministration.WORKER_HAS_NO_PASSWORD);
+        assertThatThrownBy(() -> update.execute(groupAdmin, company, adminId, changes))
+                .isInstanceOf(ValidationException.class).hasMessage(UserAdministration.WORKER_HAS_NO_PASSWORD);
+        assertThat(users.findById(workerId).orElseThrow().passwordHash()).isEmpty();
+    }
+
+    @Test
+    void companyAdminCannotActivateOrDeactivateAnAdminMembership() {
+        assertThatThrownBy(() -> update.execute(companyAdmin, company, adminId, active(false)))
+                .isInstanceOf(ForbiddenException.class).hasMessage(ONLY_GROUP_ADMIN);
+        update.execute(groupAdmin, company, adminId, active(false));
+
+        assertThatThrownBy(() -> update.execute(companyAdmin, company, adminId, active(true)))
+                .isInstanceOf(ForbiddenException.class).hasMessage(ONLY_GROUP_ADMIN);
+        assertThat(stored(adminId, company).active()).isFalse();
+    }
+
+    @Test
+    void companyAdminMayOnlyAddOrRemoveWorkerOnAnAdminMembership() {
+        update.execute(companyAdmin, company, adminId, roles(Role.COMPANY_ADMIN, Role.WORKER));
+        assertThat(stored(adminId, company).roles()).containsExactlyInAnyOrder(Role.COMPANY_ADMIN, Role.WORKER);
+
+        update.execute(companyAdmin, company, adminId, roles(Role.COMPANY_ADMIN));
+        assertThat(stored(adminId, company).roles()).containsExactly(Role.COMPANY_ADMIN);
+
+        assertThatThrownBy(() -> update.execute(companyAdmin, company, adminId, new MemberChanges(
+                Optional.of(Set.of(Role.COMPANY_ADMIN, Role.WORKER)), Optional.of(false), Optional.empty())))
+                .isInstanceOf(ForbiddenException.class).hasMessage(ONLY_GROUP_ADMIN);
+        assertThat(stored(adminId, company).roles()).containsExactly(Role.COMPANY_ADMIN);
+        assertThat(stored(adminId, company).active()).isTrue();
     }
 
     @Test

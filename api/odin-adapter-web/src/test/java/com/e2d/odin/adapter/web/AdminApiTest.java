@@ -140,6 +140,19 @@ class AdminApiTest extends WebTestSupport {
     }
 
     @Test
+    void companyAdminCannotDeactivateAColleaguesAdminMembership() throws Exception {
+        CompanyId company = newCompany();
+        User colleague = companyAdmin(company, "colega@e.test");
+        String path = "/v1/admin/companies/" + company.value() + "/members/" + colleague.id().value();
+        mvc.perform(patch(path).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company)))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail")
+                        .value("Solo el administrador del grupo da o quita la administración de una empresa"));
+        mvc.perform(patch(path).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk());
+    }
+
+    @Test
     void deleteMemberIs204AndKeepsThePerson() throws Exception {
         CompanyId company = newCompany();
         UserId worker = workerId(company);

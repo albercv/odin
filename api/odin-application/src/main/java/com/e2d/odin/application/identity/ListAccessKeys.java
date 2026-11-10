@@ -23,6 +23,6 @@ public class ListAccessKeys {
     public List<AccessKey> execute(Actor actor, CompanyId companyId, UserId userId) {
         AccessPolicy.requireAdminOf(actor, companyId);
         UserAdministration.requireMembership(memberships, companyId, userId);
-        return keys.listByUser(userId).stream().filter(key -> key.companyId().equals(companyId)).toList();
+        return keys.listByMembership(userId, companyId);
     }
 }

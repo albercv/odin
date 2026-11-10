@@ -121,7 +121,7 @@ class UpdateUserTest {
 
         assertThatThrownBy(() -> update.execute(admin, workerId, name("X")))
                 .isInstanceOf(ForbiddenException.class)
-                .hasMessage("Solo el administrador del grupo edita a una persona que está en varias empresas");
+                .hasMessage("Solo el administrador del grupo puede editar a esta persona");
         assertThat(users.findById(workerId).orElseThrow().displayName()).isEqualTo("Wanda");
         assertThat(update.execute(Actors.groupAdmin(), workerId, name("Wanda Díaz")).displayName())
                 .isEqualTo("Wanda Díaz");

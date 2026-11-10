@@ -52,7 +52,7 @@ public class UpdateUser {
             throw new ForbiddenException("No tienes permiso sobre esta empresa");
         }
         if (!theirMemberships.stream().allMatch(m -> actor.administers(m.companyId()))) {
-            throw new ForbiddenException("Solo el administrador del grupo edita a una persona que está en varias empresas");
+            throw new ForbiddenException("Solo el administrador del grupo puede editar a esta persona");
         }
     }
 

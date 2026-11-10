@@ -23,6 +23,17 @@ import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
+import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.domain.identity.AccessKey;
+import com.e2d.odin.domain.organization.Capability;
+import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.shared.AccessKeyId;
+import com.e2d.odin.domain.shared.UnauthorizedException;
+import java.time.Instant;
+import java.util.EnumSet;
 import org.junit.jupiter.api.Test;
 
 class RemoveMemberTest {
@@ -31,7 +42,8 @@ class RemoveMemberTest {
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final RemoveMember remove = new RemoveMember(memberships, sessions, new MutableClock());
+    private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
+    private final RemoveMember remove = new RemoveMember(memberships, keys, sessions, new MutableClock());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
@@ -67,7 +79,7 @@ class RemoveMemberTest {
         Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Set.of(company));
 
         assertThatThrownBy(() -> remove.execute(self, company, adminId))
-                .isInstanceOf(ValidationException.class).hasMessage("No puedes borrarte a ti mismo");
+                .isInstanceOf(ValidationException.class).hasMessage("No puedes quitarte de la empresa");
         assertThat(memberships.find(adminId, company)).isPresent();
     }
 
@@ -103,5 +115,46 @@ class RemoveMemberTest {
         assertThatThrownBy(() -> remove.execute(Actors.companyAdmin(other), other, workerId))
                 .isInstanceOf(NotFoundException.class);
         assertThat(memberships.find(workerId, company)).isPresent();
+    }
+
+    private AccessKey keyOf(UserId userId, CompanyId companyId, String prefix, String secret) {
+        AccessKey key = new AccessKey(new AccessKeyId(UUID.randomUUID()), userId, companyId, "portátil", prefix,
+                "h:" + secret, Instant.parse("2026-11-09T10:00:00Z"), Optional.empty());
+        keys.save(key);
+        return key;
+    }
+
+    @Test
+    void removingRevokesTheMembershipsKeys() {
+        memberships.save(new Membership(workerId, other, Set.of(Role.WORKER), true));
+        AccessKey inCompany = keyOf(workerId, company, "abcdefgh", "uno");
+        AccessKey inOther = keyOf(workerId, other, "ijklmnop", "dos");
+
+        remove.execute(Actors.companyAdmin(company), company, workerId);
+
+        assertThat(keys.findById(inCompany.id()).orElseThrow().revokedAt()).isPresent();
+        assertThat(keys.findById(inOther.id()).orElseThrow().revokedAt()).isEmpty();
+    }
+
+    @Test
+    void reAddedPersonDoesNotGetOldKeysBack() {
+        FakeSecretHasher secrets = new FakeSecretHasher();
+        InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
+        organizations.saveCompany(new Company(company, "A", EnumSet.allOf(Capability.class)));
+        UserId personId = new UserId(UUID.randomUUID());
+        People.member(users, memberships, personId, "Pili", Optional.of("p@demo.test"), Role.WORKER, company, true,
+                Optional.empty());
+        memberships.save(new Membership(personId, other, Set.of(Role.WORKER), true));
+        keyOf(personId, company, "abcdefgh", "uno");
+        keyOf(personId, other, "ijklmnop", "dos");
+        ResolveActor resolve = new ResolveActor(keys, users, memberships, sessions, secrets);
+
+        remove.execute(Actors.companyAdmin(company), company, personId);
+        new AddMember(users, memberships, organizations, new FakePasswordHasher(), new SequenceIdGenerator())
+                .execute(Actors.companyAdmin(company), company,
+                        new NewMember("Pili", Optional.of("p@demo.test"), Set.of(Role.WORKER), Optional.empty()));
+
+        assertThatThrownBy(() -> resolve.fromAccessKey("odin_abcdefgh_uno")).isInstanceOf(UnauthorizedException.class);
+        assertThat(resolve.fromAccessKey("odin_ijklmnop_dos").companies()).containsExactly(other);
     }
 }

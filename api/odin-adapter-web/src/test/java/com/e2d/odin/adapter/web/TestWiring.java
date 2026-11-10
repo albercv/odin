@@ -151,7 +151,7 @@ public class TestWiring {
     }
 
     @Bean RemoveMember removeMember() {
-        return new RemoveMember(memberships, adminSessions(), clock);
+        return new RemoveMember(memberships, keys, adminSessions(), clock);
     }
 
     @Bean UpdateUser updateUser() {

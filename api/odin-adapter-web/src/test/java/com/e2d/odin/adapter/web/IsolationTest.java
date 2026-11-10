@@ -81,7 +81,7 @@ class IsolationTest extends WebTestSupport {
         }
         mvc.perform(get("/v1/admin/companies/" + a.value() + "/members/" + member.value() + "/keys").cookie(other))
                 .andExpect(status().isForbidden());
-        org.assertj.core.api.Assertions.assertThat(w.keys.listByUser(member)).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(w.keys.listByMembership(member, a)).isEmpty();
     }
 
     @Test

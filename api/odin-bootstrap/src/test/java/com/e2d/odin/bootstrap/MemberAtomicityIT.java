@@ -3,6 +3,7 @@ package com.e2d.odin.bootstrap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
 import com.e2d.odin.adapter.postgres.PostgresMembershipRepository;
 import com.e2d.odin.adapter.postgres.PostgresOrganizationRepository;
 import com.e2d.odin.adapter.postgres.PostgresUserRepository;
@@ -12,15 +13,19 @@ import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.MemberChanges;
 import com.e2d.odin.application.identity.NewMember;
 import com.e2d.odin.application.identity.UpdateMember;
+import com.e2d.odin.application.identity.RemoveMember;
+import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.UserRepository;
+import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Clock;
@@ -106,6 +111,15 @@ class MemberAtomicityIT {
         };
     }
 
+    private static AccessKeyRepository failingKeySave() {
+        return new PostgresAccessKeyRepository(tx) {
+            @Override
+            public void save(AccessKey key) {
+                throw new IllegalStateException("fallo forzado");
+            }
+        };
+    }
+
     private void givenCompany() {
         organizations.saveCompany(new Company(company, "Empresa", EnumSet.allOf(Capability.class)));
     }
@@ -151,5 +165,44 @@ class MemberAtomicityIT {
         assertThatThrownBy(() -> delete.execute(GROUP_ADMIN, id)).isInstanceOf(IllegalStateException.class);
 
         assertThat(memberships.find(id, company)).isPresent();
+    }
+
+    @Test
+    void failureRevokingKeysKeepsTheMembership() {
+        givenCompany();
+        UserId id = new UserId(UUID.randomUUID());
+        users.save(new User(id, "Wanda", Optional.empty(), false, true, Optional.empty()));
+        memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
+        new PostgresAccessKeyRepository(tx).save(new AccessKey(new AccessKeyId(UUID.randomUUID()), id, company,
+                "portatil", "atomic01", "hash", Instant.now(), Optional.empty()));
+        RemoveMember remove = new UseCaseConfiguration().removeMember(memberships, failingKeySave(), NO_SESSIONS,
+                Clock.systemUTC(), transactionManager);
+
+        assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
+
+        assertThat(memberships.find(id, company)).isPresent();
+    }
+
+    @Test
+    void failureDeletingTheMembershipKeepsItsKeysValid() {
+        givenCompany();
+        UserId id = new UserId(UUID.randomUUID());
+        users.save(new User(id, "Wanda", Optional.empty(), false, true, Optional.empty()));
+        memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
+        PostgresAccessKeyRepository keys = new PostgresAccessKeyRepository(tx);
+        keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), id, company, "portatil", "atomic02", "hash",
+                Instant.now(), Optional.empty()));
+        MembershipRepository failingDelete = new PostgresMembershipRepository(tx) {
+            @Override
+            public void delete(UserId userId, CompanyId companyId, Instant at) {
+                throw new IllegalStateException("fallo forzado");
+            }
+        };
+        RemoveMember remove = new UseCaseConfiguration().removeMember(failingDelete, keys, NO_SESSIONS,
+                Clock.systemUTC(), transactionManager);
+
+        assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
+
+        assertThat(keys.listByMembership(id, company)).allSatisfy(k -> assertThat(k.revokedAt()).isEmpty());
     }
 }

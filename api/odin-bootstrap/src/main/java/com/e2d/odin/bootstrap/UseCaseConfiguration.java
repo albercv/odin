@@ -149,8 +149,15 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    RemoveMember removeMember(MembershipRepository memberships, AdminSessions sessions, Clock clock) {
-        return new RemoveMember(memberships, sessions, clock);
+    RemoveMember removeMember(MembershipRepository memberships, AccessKeyRepository keys, AdminSessions sessions,
+            Clock clock, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RemoveMember(memberships, keys, sessions, clock) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, UserId userId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, userId));
+            }
+        };
     }
 
     @Bean
