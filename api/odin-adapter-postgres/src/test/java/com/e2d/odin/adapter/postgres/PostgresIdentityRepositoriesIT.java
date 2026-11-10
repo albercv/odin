@@ -3,7 +3,10 @@ package com.e2d.odin.adapter.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.e2d.odin.application.identity.ListUsers;
 import com.e2d.odin.domain.identity.AccessKey;
+import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.AdminSession;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.AccessKeyId;
@@ -12,6 +15,7 @@ import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -53,6 +57,20 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         assertThat(users.findByEmail("ana@example.COM")).contains(u);
         users.save(inactive(u));
         assertThat(users.findById(u.id()).orElseThrow().active()).isFalse();
+    }
+
+    @Test
+    void softDeletedPersonDoesNotAppearInTheCompanyUserListing() {
+        CompanyId company = newCompany();
+        UserId kept = newUser(company);
+        UserId gone = newUser(company);
+        ListUsers list = new ListUsers(users, memberships);
+        Actor admin = new Actor(new UserId(UUID.randomUUID()), "Carlos", Role.COMPANY_ADMIN, Set.of(company));
+        assertThat(list.execute(admin, company)).extracting(s -> s.user().id()).containsExactly(kept, gone);
+
+        users.delete(gone, Instant.now());
+
+        assertThat(list.execute(admin, company)).extracting(s -> s.user().id()).containsExactly(kept);
     }
 
     @Test

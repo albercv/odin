@@ -74,14 +74,17 @@ class PostgresMembershipRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
-    void savingAgainAfterDeleteRestoresIt() {
+    void savingAfterDeleteRestoresTheMembership() {
         CompanyId company = newCompany();
         Membership m = membership(person(), company, Role.WORKER);
         memberships.save(m);
         memberships.delete(m.userId(), company, Instant.now());
-        memberships.save(m);
+        Membership again = membership(m.userId(), company, Role.COMPANY_ADMIN, Role.WORKER);
+        memberships.save(again);
 
-        assertThat(memberships.find(m.userId(), company)).contains(m);
+        assertThat(memberships.find(m.userId(), company)).contains(again);
+        assertThat(memberships.listByCompany(company)).containsExactly(again);
+        assertThat(memberships.listByUser(m.userId())).containsExactly(again);
     }
 
     @Test

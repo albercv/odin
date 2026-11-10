@@ -97,6 +97,17 @@ class ResolveActorTest {
     }
 
     @Test
+    void keyOfAnotherCompanyThanTheMembershipIsUnauthorized() {
+        givenWorker(true);
+        AccessKey key = keys.findById(keyId).orElseThrow();
+        keys.save(new AccessKey(keyId, workerId, new CompanyId(UUID.randomUUID()), key.label(), key.prefix(),
+                key.secretHash(), key.createdAt(), Optional.empty()));
+
+        assertThatThrownBy(() -> resolve.fromAccessKey(PLAIN_KEY))
+                .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
+    }
+
+    @Test
     void sessionOfUserWithoutAdminMembershipIsUnauthorized() {
         givenWorker(true);
         String token = openSession(workerId);

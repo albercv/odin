@@ -17,6 +17,9 @@ FROM app_user
 WHERE company_id IS NOT NULL
 ORDER BY seq;
 
+-- Para quien pertenece a una empresa, desactivar ya no toca a la persona sino a su pertenencia.
+UPDATE app_user SET active = true WHERE company_id IS NOT NULL;
+
 ALTER TABLE app_user ADD COLUMN group_admin boolean NOT NULL DEFAULT false;
 UPDATE app_user SET group_admin = true WHERE role = 'GROUP_ADMIN';
 
