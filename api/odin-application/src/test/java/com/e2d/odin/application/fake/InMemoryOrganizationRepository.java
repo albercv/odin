@@ -7,6 +7,7 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,5 +57,10 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     @Override
     public List<Project> listProjects(CompanyId companyId) {
         return projects.values().stream().filter(p -> p.companyId().equals(companyId)).toList();
+    }
+
+    @Override
+    public void deleteProject(CompanyId companyId, ProjectId id, Instant at) {
+        findProject(companyId, id).ifPresent(p -> projects.remove(id));
     }
 }

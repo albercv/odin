@@ -9,6 +9,7 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
+import java.util.Optional;
 
 public class CreateProject {
 
@@ -23,7 +24,9 @@ public class CreateProject {
     public Project execute(Actor actor, CompanyId companyId, String name) {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
-        Project project = new Project(new ProjectId(ids.newId()), companyId, Validation.requireText(name, "el nombre"));
+        String projectName = Validation.requireText(name, "el nombre");
+        ProjectNames.requireFree(organizations, companyId, projectName, Optional.empty());
+        Project project = new Project(new ProjectId(ids.newId()), companyId, projectName);
         organizations.saveProject(project);
         return project;
     }

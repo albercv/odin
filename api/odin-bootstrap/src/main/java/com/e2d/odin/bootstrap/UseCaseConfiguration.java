@@ -24,10 +24,12 @@ import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.organization.CreateCompany;
 import com.e2d.odin.application.organization.CreateProject;
+import com.e2d.odin.application.organization.DeleteProject;
 import com.e2d.odin.application.organization.DescribeMe;
 import com.e2d.odin.application.organization.ListCompanies;
 import com.e2d.odin.application.organization.ListProjects;
 import com.e2d.odin.application.organization.RenameCompany;
+import com.e2d.odin.application.organization.RenameProject;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
@@ -118,6 +120,16 @@ public class UseCaseConfiguration {
     @Bean
     ListProjects listProjects(OrganizationRepository organizations) {
         return new ListProjects(organizations);
+    }
+
+    @Bean
+    RenameProject renameProject(OrganizationRepository organizations) {
+        return new RenameProject(organizations);
+    }
+
+    @Bean
+    DeleteProject deleteProject(OrganizationRepository organizations, Clock clock) {
+        return new DeleteProject(organizations, clock);
     }
 
     @Bean

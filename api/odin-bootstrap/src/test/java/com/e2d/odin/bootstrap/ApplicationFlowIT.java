@@ -124,6 +124,29 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(api.get("/v1/admin/me", "Cookie", authorCookie).status()).isEqualTo(401);
     }
 
+    @Test
+    @Order(6)
+    void documentOfDeletedProjectStaysSearchableAndFilterIs404() throws InterruptedException {
+        ApiClient api = new ApiClient(port);
+        String project = api.post("/v1/admin/companies/" + companyA + "/projects", map("name", "Obra vieja"),
+                "Cookie", adminCookie).json().get("id").asString();
+        Reply upload = api.upload("/v1/admin/companies/" + companyA + "/documents?projectId=" + project,
+                "obra.txt", "El andamio ficticio de la obra vieja se retira en junio.".getBytes(StandardCharsets.UTF_8),
+                "Cookie", adminCookie);
+        assertThat(upload.status()).isEqualTo(201);
+        awaitReady(api, upload.json().get("document").get("id").asString());
+
+        assertThat(api.delete("/v1/admin/companies/" + companyA + "/projects/" + project, "Cookie", adminCookie)
+                .status()).isEqualTo(204);
+
+        Reply found = api.post("/v1/search", map("queries", List.of("andamio obra junio")), "Authorization", keyA);
+        assertThat(found.json().get("noSource").asBoolean()).isFalse();
+        assertThat(found.json().get("hits").get(0).get("projectId").asString()).isEqualTo(project);
+        Reply filtered = api.post("/v1/search", map("queries", List.of("andamio obra junio"), "projectId", project),
+                "Authorization", keyA);
+        assertThat(filtered.status()).isEqualTo(404);
+    }
+
     private void setUpAndLogIn(ApiClient api) {
         Reply setup = api.post("/v1/setup", map("setupToken", SETUP_TOKEN, "groupName", "Grupo Ejemplo",
                 "adminName", "Admin", "adminEmail", ADMIN_EMAIL, "password", ADMIN_PASSWORD));

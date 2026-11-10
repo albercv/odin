@@ -58,4 +58,22 @@ class IsolationTest extends WebTestSupport {
                 .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(b))).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"newPassword\":\"clave-nueva-1234\"}")).andExpect(status().isForbidden());
     }
+
+    @Test
+    void otherCompanyAdminCannotRenameOrDeleteProject() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String id = Fixtures.project(w.orgs, a).value().toString();
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        mvc.perform(patch("/v1/admin/companies/" + a.value() + "/projects/" + id).cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Mio\"}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/v1/admin/companies/" + a.value() + "/projects/" + id).cookie(other))
+                .andExpect(status().isForbidden());
+        mvc.perform(patch("/v1/admin/companies/" + b.value() + "/projects/" + id).cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Mio\"}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/v1/admin/companies/" + b.value() + "/projects/" + id).cookie(other))
+                .andExpect(status().isNotFound());
+    }
 }

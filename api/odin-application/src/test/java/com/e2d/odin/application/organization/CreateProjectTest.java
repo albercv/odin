@@ -7,7 +7,9 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,35 @@ class CreateProjectTest {
 
     @Test
     void ownCompanyAdminCreatesProject() {
+        create.execute(Actors.companyAdmin(company), company, "Obra");
+
+        assertThat(organizations.listProjects(company)).hasSize(1);
+    }
+
+    @Test
+    void duplicateNameInSameCompanyIsConflict() {
+        create.execute(Actors.companyAdmin(company), company, "Obra");
+
+        assertThatThrownBy(() -> create.execute(Actors.companyAdmin(company), company, "  OBRA "))
+                .isInstanceOf(ConflictException.class).hasMessage("Ya existe un proyecto con ese nombre");
+        assertThat(organizations.listProjects(company)).hasSize(1);
+    }
+
+    @Test
+    void sameNameInAnotherCompanyIsAllowed() {
+        CompanyId other = Fixtures.company(organizations);
+        create.execute(Actors.companyAdmin(company), company, "Obra");
+
+        create.execute(Actors.companyAdmin(other), other, "Obra");
+
+        assertThat(organizations.listProjects(other)).hasSize(1);
+    }
+
+    @Test
+    void nameOfDeletedProjectCanBeReused() {
+        Project first = create.execute(Actors.companyAdmin(company), company, "Obra");
+        organizations.deleteProject(company, first.id(), Fixtures.NOW);
+
         create.execute(Actors.companyAdmin(company), company, "Obra");
 
         assertThat(organizations.listProjects(company)).hasSize(1);
