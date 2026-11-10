@@ -27,6 +27,8 @@ import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.RegisterUser;
 import com.e2d.odin.application.identity.ResolveActor;
+import com.e2d.odin.application.identity.StoredAdminSessions;
+import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.identity.RevokeAccessKey;
 import com.e2d.odin.application.identity.SetUpInstallation;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
@@ -75,8 +77,12 @@ public class TestWiring {
         return clock;
     }
 
+    @Bean AdminSessions adminSessions() {
+        return new StoredAdminSessions(sessions, secrets, tokens, new SessionSettings(), clock);
+    }
+
     @Bean ResolveActor resolveActor() {
-        return new ResolveActor(keys, users, sessions, secrets, new SessionSettings(), clock);
+        return new ResolveActor(keys, users, adminSessions(), secrets);
     }
 
     @Bean SetUpInstallation setUpInstallation() {
@@ -84,11 +90,11 @@ public class TestWiring {
     }
 
     @Bean LogInAdmin logInAdmin() {
-        return new LogInAdmin(users, sessions, passwords, secrets, tokens, clock);
+        return new LogInAdmin(users, passwords, adminSessions());
     }
 
     @Bean LogOutAdmin logOutAdmin() {
-        return new LogOutAdmin(sessions, secrets);
+        return new LogOutAdmin(adminSessions());
     }
 
     @Bean CreateCompany createCompany() {

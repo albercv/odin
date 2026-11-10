@@ -39,4 +39,10 @@ public class PostgresAdminSessionRepository implements AdminSessionRepository {
         tx.runInScope(ALL, jdbc -> jdbc.sql("DELETE FROM admin_session WHERE token_hash = :token")
                 .param("token", tokenHash).update());
     }
+
+    @Override
+    public void deleteByUser(UserId userId) {
+        tx.runInScope(ALL, jdbc -> jdbc.sql("DELETE FROM admin_session WHERE user_id = :user")
+                .param("user", userId.value()).update());
+    }
 }
