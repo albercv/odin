@@ -110,6 +110,19 @@ class UpdateUserTest {
     }
 
     @Test
+    void adminOfAnotherCompanyCannotChangeActiveOrEmail() {
+        Actor stranger = Actors.companyAdmin(new CompanyId(UUID.randomUUID()));
+
+        assertThatThrownBy(() -> update.execute(stranger, workerId, active(false)))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> update.execute(stranger, workerId, email("otro@demo.test")))
+                .isInstanceOf(ForbiddenException.class);
+        User unchanged = users.findById(workerId).orElseThrow();
+        assertThat(unchanged.active()).isTrue();
+        assertThat(unchanged.email()).contains("w@demo.test");
+    }
+
+    @Test
     void workerCannotUpdate() {
         assertThatThrownBy(() -> update.execute(Actors.worker(company), workerId, name("X")))
                 .isInstanceOf(ForbiddenException.class);

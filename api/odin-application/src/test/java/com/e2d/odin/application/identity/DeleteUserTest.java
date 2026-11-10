@@ -59,6 +59,13 @@ class DeleteUserTest {
     }
 
     @Test
+    void workerCannotDelete() {
+        assertThatThrownBy(() -> delete.execute(Actors.worker(company), workerId))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(users.findById(workerId)).isPresent();
+    }
+
+    @Test
     void deletingTwiceIsNotFound() {
         delete.execute(Actors.companyAdmin(company), workerId);
 

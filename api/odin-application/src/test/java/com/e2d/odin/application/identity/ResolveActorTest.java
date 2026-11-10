@@ -125,7 +125,8 @@ class ResolveActorTest {
     void sessionOfDeactivatedUserIsRejected() {
         String token = givenSession();
         UserId adminId = sessions.findByTokenHash(secrets.hash(token)).orElseThrow().userId();
-        users.save(users.findById(adminId).orElseThrow().deactivated());
+        User admin = users.findById(adminId).orElseThrow();
+        users.save(admin.updated(admin.displayName(), admin.email(), false));
 
         assertThatThrownBy(() -> resolve.fromSessionToken(token))
                 .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
