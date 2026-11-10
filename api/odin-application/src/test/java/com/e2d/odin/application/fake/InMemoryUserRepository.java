@@ -4,7 +4,10 @@ import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,6 +28,11 @@ public class InMemoryUserRepository implements UserRepository {
     @Override
     public Optional<User> findByEmail(String email) {
         return users.values().stream().filter(u -> u.email().filter(email::equalsIgnoreCase).isPresent()).findFirst();
+    }
+
+    @Override
+    public List<User> findAllById(Collection<UserId> ids) {
+        return ids.stream().map(users::get).filter(Objects::nonNull).toList();
     }
 
     @Override

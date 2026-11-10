@@ -44,9 +44,11 @@ async function createCompany(name: string): Promise<string> {
   return c.id;
 }
 async function createWorker(companyId: string, name: string, email: string): Promise<{ id: string; key: string }> {
-  const u = await json<Id>(await http('POST', `/v1/admin/companies/${companyId}/users`, { displayName: name, email, role: 'WORKER' }), 201);
-  const k = await json<{ key: string }>(await http('POST', `/v1/admin/users/${u.id}/keys`, { label: 'demo' }), 201);
-  return { id: u.id, key: k.key };
+  const added = await json<{ member: { userId: string } }>(
+    await http('POST', `/v1/admin/companies/${companyId}/members`, { displayName: name, email, roles: ['WORKER'] }), 201);
+  const { userId } = added.member;
+  const k = await json<{ key: string }>(await http('POST', `/v1/admin/companies/${companyId}/members/${userId}/keys`, { label: 'demo' }), 201);
+  return { id: userId, key: k.key };
 }
 async function uploadPdf(companyId: string): Promise<string> {
   const form = new FormData();

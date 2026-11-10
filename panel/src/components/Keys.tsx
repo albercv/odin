@@ -22,14 +22,14 @@ function KeyRow({ k, onRevoke }: { k: S['KeyView']; onRevoke: () => void }) {
   );
 }
 
-export function Keys({ userId }: { userId: string }) {
-  const keys = useLoad(() => api.keys(userId), [userId]);
+export function Keys({ companyId, userId }: { companyId: string; userId: string }) {
+  const keys = useLoad(() => api.keys(companyId, userId), [companyId, userId]);
   const [label, setLabel] = useState('');
   const [issued, setIssued] = useState<S['IssuedKeyView']>();
   const { error, act } = useAction();
   const give = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(await act(async () => setIssued(await api.issueKey(userId, label))))) return;
+    if (!(await act(async () => setIssued(await api.issueKey(companyId, userId, label))))) return;
     setLabel('');
     keys.reload();
   };

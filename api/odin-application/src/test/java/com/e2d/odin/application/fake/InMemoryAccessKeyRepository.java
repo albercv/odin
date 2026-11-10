@@ -3,6 +3,7 @@ package com.e2d.odin.application.fake;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.shared.AccessKeyId;
+import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,7 +30,8 @@ public class InMemoryAccessKeyRepository implements AccessKeyRepository {
     }
 
     @Override
-    public List<AccessKey> listByUser(UserId userId) {
-        return keys.values().stream().filter(k -> k.userId().equals(userId)).toList();
+    public List<AccessKey> listByMembership(UserId userId, CompanyId companyId) {
+        return keys.values().stream().filter(k -> k.userId().equals(userId) && k.companyId().equals(companyId))
+                .toList();
     }
 }

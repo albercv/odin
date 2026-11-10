@@ -6,9 +6,9 @@ import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.identity.Actor;
-import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
@@ -29,25 +29,26 @@ public class ChangePassword {
     }
 
     public void execute(Actor actor, UserId target, Optional<String> currentPassword, String newPassword) {
-        UserSummary summary = UserAdministration.loadAdministrable(users, memberships, actor, target);
-        User user = summary.user();
-        if (summary.role() == Role.WORKER) {
+        boolean ownPassword = actor.userId().equals(target);
+        if (!ownPassword && !actor.isGroupAdmin()) {
+            throw new ForbiddenException("Solo el administrador del grupo restablece la contraseña de otro usuario");
+        }
+        User user = users.findById(target).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        if (!user.groupAdmin() && UserAdministration.companiesAdministeredBy(memberships, target).isEmpty()) {
             throw new ValidationException(UserAdministration.WORKER_HAS_NO_PASSWORD);
         }
-        requireAllowedToSet(actor, user, currentPassword);
+        if (ownPassword) {
+            requireCurrentPassword(user, currentPassword);
+        }
         users.save(user.withPasswordHash(passwords.hash(Validation.requirePassword(newPassword))));
         sessions.closeAllOf(target);
     }
 
-    private void requireAllowedToSet(Actor actor, User user, Optional<String> currentPassword) {
-        if (actor.userId().equals(user.id())) {
-            boolean correct = currentPassword.isPresent() && user.passwordHash()
-                    .filter(hash -> passwords.matches(currentPassword.get(), hash)).isPresent();
-            if (!correct) {
-                throw new ValidationException("La contraseña actual no es correcta");
-            }
-        } else if (!actor.isGroupAdmin()) {
-            throw new ForbiddenException("Solo el administrador del grupo restablece la contraseña de otro usuario");
+    private void requireCurrentPassword(User user, Optional<String> currentPassword) {
+        boolean correct = currentPassword.isPresent() && user.passwordHash()
+                .filter(hash -> passwords.matches(currentPassword.get(), hash)).isPresent();
+        if (!correct) {
+            throw new ValidationException("La contraseña actual no es correcta");
         }
     }
 }

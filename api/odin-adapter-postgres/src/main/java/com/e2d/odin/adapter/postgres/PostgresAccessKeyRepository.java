@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class PostgresAccessKeyRepository implements AccessKeyRepository {
 
@@ -48,10 +49,10 @@ public class PostgresAccessKeyRepository implements AccessKeyRepository {
     }
 
     @Override
-    public List<AccessKey> listByUser(UserId userId) {
-        return tx.inScope(ALL, jdbc -> jdbc
-                .sql("SELECT " + COLUMNS + " FROM access_key WHERE user_id = :user ORDER BY seq")
-                .param("user", userId.value()).query((rs, n) -> key(rs)).list());
+    public List<AccessKey> listByMembership(UserId userId, CompanyId companyId) {
+        return tx.inScope(new CompanyScope(Set.of(companyId), false), jdbc -> jdbc.sql("SELECT " + COLUMNS
+                + " FROM access_key WHERE user_id = :user AND company_id = :company ORDER BY seq")
+                .param("user", userId.value()).param("company", companyId.value()).query((rs, n) -> key(rs)).list());
     }
 
     private static AccessKey key(ResultSet rs) throws SQLException {

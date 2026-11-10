@@ -13,6 +13,7 @@ import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -40,10 +41,12 @@ class DeleteUserTest {
     }
 
     @Test
-    void deletedUserDisappearsFromList() {
-        delete.execute(Actors.companyAdmin(company), workerId);
+    void deletedPersonLosesAllTheirMemberships() {
+        memberships.save(new Membership(workerId, new CompanyId(UUID.randomUUID()), Set.of(Role.WORKER), true));
 
-        assertThat(memberships.listByCompany(company)).isEmpty();
+        delete.execute(Actors.groupAdmin(), workerId);
+
+        assertThat(memberships.listByUser(workerId)).isEmpty();
         assertThat(users.findById(workerId)).isEmpty();
     }
 
@@ -57,6 +60,14 @@ class DeleteUserTest {
         delete.execute(Actors.groupAdmin(), adminId);
 
         assertThat(sessions.resolve(token)).isEmpty();
+    }
+
+    @Test
+    void companyAdminCannotDeleteAPerson() {
+        assertThatThrownBy(() -> delete.execute(Actors.companyAdmin(company), workerId))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(users.findById(workerId)).isPresent();
+        assertThat(memberships.find(workerId, company)).isPresent();
     }
 
     @Test
@@ -74,7 +85,7 @@ class DeleteUserTest {
         UserId adminId = new UserId(UUID.randomUUID());
         People.member(users, memberships, adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company,
                 true, Optional.of("pw:x"));
-        Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Set.of(company));
+        Actor self = new Actor(adminId, "Carlos", Role.GROUP_ADMIN, Set.of());
 
         assertThatThrownBy(() -> delete.execute(self, adminId))
                 .isInstanceOf(ValidationException.class).hasMessage("No puedes borrarte a ti mismo");
@@ -98,9 +109,9 @@ class DeleteUserTest {
 
     @Test
     void deletingTwiceIsNotFound() {
-        delete.execute(Actors.companyAdmin(company), workerId);
+        delete.execute(Actors.groupAdmin(), workerId);
 
-        assertThatThrownBy(() -> delete.execute(Actors.companyAdmin(company), workerId))
+        assertThatThrownBy(() -> delete.execute(Actors.groupAdmin(), workerId))
                 .isInstanceOf(NotFoundException.class);
     }
 }

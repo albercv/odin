@@ -7,7 +7,10 @@ import com.e2d.odin.domain.shared.UserId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class PostgresUserRepository implements UserRepository {
 
@@ -41,6 +44,17 @@ public class PostgresUserRepository implements UserRepository {
         return tx.inScope(ALL, jdbc -> jdbc
                 .sql("SELECT " + COLUMNS + " FROM app_user WHERE lower(email) = lower(:email) AND deleted_at IS NULL")
                 .param("email", email).query((rs, n) -> user(rs)).optional());
+    }
+
+    @Override
+    public List<User> findAllById(Collection<UserId> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        String joined = ids.stream().map(id -> id.value().toString()).collect(Collectors.joining(","));
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT " + COLUMNS
+                + " FROM app_user WHERE id = ANY (CAST(string_to_array(:ids, ',') AS uuid[])) AND deleted_at IS NULL")
+                .param("ids", joined).query((rs, n) -> user(rs)).list());
     }
 
     @Override

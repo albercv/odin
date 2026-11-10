@@ -3,10 +3,10 @@ import { api, type S } from '../api/client';
 import { Notice } from './Notice';
 import { useAction } from './useLoad';
 
-type Role = S['CreateUser']['role'];
+type Role = 'WORKER' | 'COMPANY_ADMIN';
 
-function newUserBody(name: string, email: string, role: Role, password: string): S['CreateUser'] {
-  const body: S['CreateUser'] = { displayName: name, role };
+function newMemberBody(name: string, email: string, role: Role, password: string): S['AddMember'] {
+  const body: S['AddMember'] = { displayName: name, roles: [role] };
   if (email) body.email = email;
   if (role === 'COMPANY_ADMIN') body.password = password;
   return body;
@@ -36,7 +36,7 @@ export function UserForm({ companyId, onDone }: { companyId: string; onDone: () 
   const isAdmin = role === 'COMPANY_ADMIN';
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(await act(() => api.createUser(companyId, newUserBody(name, email, role, password))))) return;
+    if (!(await act(() => api.addMember(companyId, newMemberBody(name, email, role, password))))) return;
     setName('');
     setEmail('');
     setPassword('');

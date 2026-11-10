@@ -1,5 +1,6 @@
 package com.e2d.odin.adapter.web;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -73,12 +74,12 @@ class AdminApiTest extends WebTestSupport {
         CompanyId company = newCompany();
         Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
         UserId worker = workerId(company);
-        var issued = mvc.perform(post("/v1/admin/users/" + worker.value() + "/keys").cookie(admin)
+        var issued = mvc.perform(post("/v1/admin/companies/" + company.value() + "/members/" + worker.value() + "/keys").cookie(admin)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"movil\"}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.key").value(startsWith("odin_")))
                 .andExpect(jsonPath("$.prefix").isNotEmpty()).andReturn();
         String key = com.jayway.jsonpath.JsonPath.read(issued.getResponse().getContentAsString(), "$.key");
-        String listing = mvc.perform(get("/v1/admin/users/" + worker.value() + "/keys").cookie(admin))
+        String listing = mvc.perform(get("/v1/admin/companies/" + company.value() + "/members/" + worker.value() + "/keys").cookie(admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].key").doesNotExist()).andReturn().getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(listing).doesNotContain(key.substring(key.lastIndexOf('_') + 1))
@@ -87,19 +88,96 @@ class AdminApiTest extends WebTestSupport {
     }
 
     @Test
-    void userListingHasNoHashes() throws Exception {
+    void addMemberReturns201AndListingHasNoHashes() throws Exception {
         CompanyId company = newCompany();
         Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
-        mvc.perform(post("/v1/admin/companies/" + company.value() + "/users").cookie(group)
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/members").cookie(group)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Cora\",\"email\":\"cora@e.test\",\"role\":\"COMPANY_ADMIN\","
-                        + "\"password\":\"clave-muy-larga-1\"}")).andExpect(status().isCreated())
-                .andExpect(jsonPath("$.password").doesNotExist());
-        String listing = mvc.perform(get("/v1/admin/companies/" + company.value() + "/users").cookie(group))
-                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1))).andReturn().getResponse()
-                .getContentAsString();
+                .content("{\"displayName\":\"Cora\",\"email\":\"cora@e.test\",\"roles\":[\"COMPANY_ADMIN\","
+                        + "\"WORKER\"],\"password\":\"clave-muy-larga-1\"}")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.alreadyExisted").value(false))
+                .andExpect(jsonPath("$.member.displayName").value("Cora"))
+                .andExpect(jsonPath("$.member.roles", containsInAnyOrder("COMPANY_ADMIN", "WORKER")))
+                .andExpect(jsonPath("$.member.active").value(true)).andExpect(jsonPath("$.password").doesNotExist());
+        String listing = mvc.perform(get("/v1/admin/companies/" + company.value() + "/members").cookie(group))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].userId").isNotEmpty()).andExpect(jsonPath("$[0].email").value("cora@e.test"))
+                .andReturn().getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(listing).doesNotContainIgnoringCase("hash")
                 .doesNotContain("clave-muy-larga-1");
+    }
+
+    @Test
+    void addingAnExistingEmailReportsAlreadyExisted() throws Exception {
+        CompanyId first = newCompany();
+        CompanyId second = newCompany();
+        companyAdmin(first, "dup@e.test");
+        mvc.perform(post("/v1/admin/companies/" + second.value() + "/members")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(second))).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Otro\",\"email\":\"dup@e.test\",\"roles\":[\"WORKER\"]}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.alreadyExisted").value(true))
+                .andExpect(jsonPath("$.member.displayName").value("Carlos"));
+        mvc.perform(post("/v1/admin/companies/" + second.value() + "/members")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(second))).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Otro\",\"email\":\"dup@e.test\",\"roles\":[\"WORKER\"]}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Esa persona ya pertenece a esta empresa"));
+    }
+
+    @Test
+    void patchMemberChangesRolesAndActive() throws Exception {
+        CompanyId company = newCompany();
+        UserId worker = workerId(company);
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        mvc.perform(patch("/v1/admin/companies/" + company.value() + "/members/" + worker.value()).cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(worker.value().toString()))
+                .andExpect(jsonPath("$.roles", containsInAnyOrder("WORKER"))).andExpect(jsonPath("$.active").value(false));
+        mvc.perform(patch("/v1/admin/companies/" + company.value() + "/members/" + worker.value())
+                .cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"active\":true,\"roles\":[\"WORKER\"]}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+    }
+
+    @Test
+    void companyAdminCannotDeactivateAColleaguesAdminMembership() throws Exception {
+        CompanyId company = newCompany();
+        User colleague = companyAdmin(company, "colega@e.test");
+        String path = "/v1/admin/companies/" + company.value() + "/members/" + colleague.id().value();
+        mvc.perform(patch(path).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company)))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail")
+                        .value("Solo el administrador del grupo da o quita la administración de una empresa"));
+        mvc.perform(patch(path).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteMemberIs204AndKeepsThePerson() throws Exception {
+        CompanyId company = newCompany();
+        UserId worker = workerId(company);
+        mvc.perform(delete("/v1/admin/companies/" + company.value() + "/members/" + worker.value())
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company)))).andExpect(status().isNoContent());
+        org.assertj.core.api.Assertions.assertThat(w.memberships.find(worker, company)).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(worker)).isPresent();
+    }
+
+    @Test
+    void adminMeListsTheCompaniesTheAdminAdministers() throws Exception {
+        CompanyId first = newCompany();
+        CompanyId second = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(first));
+        UserId id = w.memberships.listByCompany(first).get(0).userId();
+        w.memberships.save(new com.e2d.odin.domain.identity.Membership(id, second,
+                java.util.Set.of(Role.COMPANY_ADMIN, Role.WORKER), true));
+
+        mvc.perform(get("/v1/admin/me").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("COMPANY_ADMIN"))
+                .andExpect(jsonPath("$.companies", hasSize(2)))
+                .andExpect(jsonPath("$.companies[*].id", containsInAnyOrder(first.value().toString(),
+                        second.value().toString())))
+                .andExpect(jsonPath("$.companies[0].name").isNotEmpty())
+                .andExpect(jsonPath("$.companyId").doesNotExist());
     }
 
     @Test
@@ -109,7 +187,7 @@ class AdminApiTest extends WebTestSupport {
         UserId worker = w.memberships.listByCompany(company).get(0).userId();
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.active").value(false));
+                .andExpect(jsonPath("$.userId").value(worker.value().toString()));
         mvc.perform(get("/v1/me").header("Authorization", key)).andExpect(status().isUnauthorized());
     }
 
@@ -120,8 +198,12 @@ class AdminApiTest extends WebTestSupport {
         UserId worker = w.memberships.listByCompany(company).get(0).userId();
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"Nuevo\",\"email\":\"N@e.test\"}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.displayName").value("Nuevo"))
-                .andExpect(jsonPath("$.email").value("n@e.test")).andExpect(jsonPath("$.active").value(true));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.userId").value(worker.value().toString()));
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(worker).orElseThrow())
+                .satisfies(u -> {
+                    org.assertj.core.api.Assertions.assertThat(u.displayName()).isEqualTo("Nuevo");
+                    org.assertj.core.api.Assertions.assertThat(u.email()).contains("n@e.test");
+                });
     }
 
     @Test
@@ -131,9 +213,11 @@ class AdminApiTest extends WebTestSupport {
         UserId worker = w.memberships.listByCompany(company).get(0).userId();
         Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(group).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"active\":false}")).andExpect(jsonPath("$.active").value(false));
+                .content("{\"active\":false}")).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(worker).orElseThrow().active()).isFalse();
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(group).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"active\":true}")).andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
+                .content("{\"active\":true}")).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(worker).orElseThrow().active()).isTrue();
     }
 
     @Test
@@ -181,9 +265,9 @@ class AdminApiTest extends WebTestSupport {
     @Test
     void workerWithPasswordIs400() throws Exception {
         CompanyId company = newCompany();
-        mvc.perform(post("/v1/admin/companies/" + company.value() + "/users")
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/members")
                 .cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty())).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Wanda\",\"role\":\"WORKER\",\"password\":\"clave-muy-larga-1\"}"))
+                .content("{\"displayName\":\"Wanda\",\"roles\":[\"WORKER\"],\"password\":\"clave-muy-larga-1\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Un trabajador no tiene contraseña: entra con su clave personal"));
     }

@@ -4,16 +4,18 @@ import { afterEach, vi } from 'vitest';
 import { Users } from './Users';
 import { mockFetch, type Routes } from '../mockApi';
 
+type Me = Parameters<typeof Users>[0]['me'];
+
 afterEach(() => vi.restoreAllMocks());
 
-const ana = { id: 'u1', displayName: 'Ana', email: 'ana@acme.test', role: 'WORKER', companyId: 'c1', active: true };
-const bea = { id: 'u2', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', active: false, email: 'bea@acme.test' };
-const worker = { id: 'u3', displayName: 'Raúl', role: 'WORKER', companyId: 'c1', active: true };
-const list = 'GET /v1/admin/companies/c1/users';
-const groupAdmin = { userId: 'g', displayName: 'Ada', role: 'GROUP_ADMIN' } as const;
-const companyAdmin = { userId: 'u2', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1' } as const;
+const ana = { userId: 'u1', displayName: 'Ana', email: 'ana@acme.test', roles: ['WORKER'], active: true };
+const bea = { userId: 'u2', displayName: 'Bea', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test' };
+const worker = { userId: 'u3', displayName: 'Raúl', roles: ['WORKER'], active: true };
+const list = 'GET /v1/admin/companies/c1/members';
+const groupAdmin: Me = { userId: 'g', displayName: 'Ada', role: 'GROUP_ADMIN', companies: [] };
+const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] };
 
-const show = (routes: Routes, me: Parameters<typeof Users>[0]['me'] = groupAdmin) => {
+const show = (routes: Routes, me: Me = groupAdmin) => {
   const calls = mockFetch(routes);
   render(<Users companyId="c1" me={me} />);
   return calls;
@@ -33,9 +35,9 @@ test('rowShowsEmailRoleAndState', async () => {
 });
 
 test('activateSendsActiveTrue', async () => {
-  const calls = show({ [list]: () => [bea], 'PATCH /v1/admin/users/u2': () => ({ ...bea, active: true }) });
+  const calls = show({ [list]: () => [bea], 'PATCH /v1/admin/companies/c1/members/u2': () => ({ ...bea, active: true }) });
   await userEvent.click(await screen.findByRole('button', { name: 'Activar Bea' }));
-  await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u2')?.body).toEqual({ active: true }));
+  await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/companies/c1/members/u2')?.body).toEqual({ active: true }));
 });
 
 test('editSavesNameAndEmail', async () => {
@@ -66,20 +68,20 @@ test('deleteAsksForConfirmationAndRemovesTheRow', async () => {
   let users = [ana];
   const calls = show({
     [list]: () => users,
-    'DELETE /v1/admin/users/u1': () => { users = []; return { status: 204 }; },
+    'DELETE /v1/admin/companies/c1/members/u1': () => { users = []; return { status: 204 }; },
   });
-  await userEvent.click(await screen.findByRole('button', { name: 'Borrar Ana' }));
-  expect(confirm).toHaveBeenCalledWith('¿Borrar a Ana? No se puede deshacer.');
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Borrar Ana' })).toBeNull());
-  expect(calls.some((c) => c.key === 'DELETE /v1/admin/users/u1')).toBe(true);
+  await userEvent.click(await screen.findByRole('button', { name: 'Quitar Ana' }));
+  expect(confirm).toHaveBeenCalledWith('¿Quitar a Ana de la empresa?');
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Quitar Ana' })).toBeNull());
+  expect(calls.some((c) => c.key === 'DELETE /v1/admin/companies/c1/members/u1')).toBe(true);
 });
 
 test('cancelledConfirmationDeletesNothing', async () => {
   vi.spyOn(window, 'confirm').mockReturnValue(false);
   const calls = show({ [list]: () => [ana] });
-  await userEvent.click(await screen.findByRole('button', { name: 'Borrar Ana' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Quitar Ana' }));
   expect(calls.some((c) => c.key.startsWith('DELETE'))).toBe(false);
-  expect(screen.getByRole('button', { name: 'Borrar Ana' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Quitar Ana' })).toBeInTheDocument();
 });
 
 test('keysOnlyForWorkers', async () => {

@@ -3,6 +3,8 @@ package com.e2d.odin.application.port;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository {
@@ -12,6 +14,9 @@ public interface UserRepository {
     Optional<User> findById(UserId id);
 
     Optional<User> findByEmail(String email);
+
+    /** Las personas que existen entre las pedidas, en una sola consulta. */
+    List<User> findAllById(Collection<UserId> ids);
 
     Optional<User> findGroupAdmin();
 
