@@ -17,5 +17,7 @@ public interface UserRepository {
 
     List<User> listByCompany(CompanyId companyId);
 
+    Optional<User> findGroupAdmin();
+
     void delete(UserId id, Instant at);
 }

@@ -55,6 +55,13 @@ public class PostgresUserRepository implements UserRepository {
     }
 
     @Override
+    public Optional<User> findGroupAdmin() {
+        return tx.inScope(ALL, jdbc -> jdbc
+                .sql("SELECT " + COLUMNS + " FROM app_user WHERE role = 'GROUP_ADMIN' AND deleted_at IS NULL LIMIT 1")
+                .query((rs, n) -> user(rs)).optional());
+    }
+
+    @Override
     public void delete(UserId id, Instant at) {
         tx.runInScope(ALL, jdbc -> jdbc.sql("UPDATE app_user SET deleted_at = :at WHERE id = :id AND deleted_at IS NULL")
                 .param("id", id.value()).param("at", Sql.ts(at)).update());

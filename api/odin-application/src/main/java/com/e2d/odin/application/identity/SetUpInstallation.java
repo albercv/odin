@@ -5,13 +5,12 @@ import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.InstallationSettings;
-import com.e2d.odin.application.shared.SecretComparison;
+import com.e2d.odin.application.shared.InstallationToken;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.shared.ConflictException;
-import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.GroupId;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.Optional;
@@ -35,7 +34,7 @@ public class SetUpInstallation {
 
     public UserId execute(String setupToken, String groupName, String adminName, String adminEmail,
             String password) {
-        requireValidToken(setupToken);
+        InstallationToken.require(settings, setupToken);
         if (organizations.findGroup().isPresent()) {
             throw new ConflictException("La instalación ya está configurada");
         }
@@ -47,13 +46,5 @@ public class SetUpInstallation {
         users.save(new User(id, Validation.requireText(adminName, "el nombre"), Optional.of(email),
                 Role.GROUP_ADMIN, Optional.empty(), true, Optional.of(passwords.hash(password))));
         return id;
-    }
-
-    private void requireValidToken(String setupToken) {
-        boolean valid = setupToken != null && !setupToken.isEmpty() && !settings.setupToken().isEmpty()
-                && SecretComparison.equal(setupToken, settings.setupToken());
-        if (!valid) {
-            throw new ForbiddenException("Código de instalación no válido");
-        }
     }
 }

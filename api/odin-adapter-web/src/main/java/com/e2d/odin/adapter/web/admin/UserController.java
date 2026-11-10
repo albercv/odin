@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.web.admin;
 import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
+import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -38,16 +40,19 @@ public class UserController {
     private final ListUsers listUsers;
     private final UpdateUser updateUser;
     private final DeleteUser deleteUser;
+    private final ChangePassword changePassword;
     private final IssueAccessKey issueKey;
     private final ListAccessKeys listKeys;
     private final RevokeAccessKey revokeKey;
 
     public UserController(RegisterUser registerUser, ListUsers listUsers, UpdateUser updateUser,
-            DeleteUser deleteUser, IssueAccessKey issueKey, ListAccessKeys listKeys, RevokeAccessKey revokeKey) {
+            DeleteUser deleteUser, ChangePassword changePassword, IssueAccessKey issueKey, ListAccessKeys listKeys,
+            RevokeAccessKey revokeKey) {
         this.registerUser = registerUser;
         this.listUsers = listUsers;
         this.updateUser = updateUser;
         this.deleteUser = deleteUser;
+        this.changePassword = changePassword;
         this.issueKey = issueKey;
         this.listKeys = listKeys;
         this.revokeKey = revokeKey;
@@ -83,6 +88,14 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID userId) {
         deleteUser.execute(actor, new UserId(userId));
+    }
+
+    @PutMapping("/v1/admin/users/{userId}/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setPassword(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID userId,
+            @RequestBody Requests.SetPassword request) {
+        changePassword.execute(actor, new UserId(userId), Optional.ofNullable(request.currentPassword()),
+                request.newPassword());
     }
 
     @GetMapping("/v1/admin/users/{userId}/keys")

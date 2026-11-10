@@ -19,7 +19,9 @@ import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
+import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
+import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListUsers;
@@ -132,6 +134,14 @@ public class TestWiring {
 
     @Bean UpdateUser updateUser() {
         return new UpdateUser(users);
+    }
+
+    @Bean ChangePassword changePassword() {
+        return new ChangePassword(users, passwords, adminSessions());
+    }
+
+    @Bean RecoverGroupAdmin recoverGroupAdmin() {
+        return new RecoverGroupAdmin(users, passwords, adminSessions(), new InstallationSettings("setup-secret"));
     }
 
     @Bean DeleteUser deleteUser() {

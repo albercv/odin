@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.web;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.e2d.odin.application.fake.Fixtures;
@@ -43,5 +44,18 @@ class IsolationTest extends WebTestSupport {
         mvc.perform(patch("/v1/admin/users/" + id).cookie(other).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"active\":false}")).andExpect(status().isForbidden());
         mvc.perform(delete("/v1/admin/users/" + id).cookie(other)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void companyAdminCannotResetUserOfAnotherCompany() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        var victim = new com.e2d.odin.domain.identity.User(new com.e2d.odin.domain.shared.UserId(
+                java.util.UUID.randomUUID()), "Ana", Optional.of("ana@e.test"), Role.COMPANY_ADMIN, Optional.of(a),
+                true, Optional.of(w.passwords.hash("clave-muy-larga-1")));
+        w.users.save(victim);
+        mvc.perform(put("/v1/admin/users/" + victim.id().value() + "/password")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(b))).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"newPassword\":\"clave-nueva-1234\"}")).andExpect(status().isForbidden());
     }
 }

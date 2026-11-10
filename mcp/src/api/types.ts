@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/v1/admin/users/{userId}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/capabilities": {
         parameters: {
             query?: never;
@@ -30,6 +46,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["setup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/setup/admin-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recoverAdmin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -376,6 +408,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        SetPassword: {
+            currentPassword?: string;
+            newPassword?: string;
+        };
         Capabilities: {
             capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
         };
@@ -395,6 +431,10 @@ export interface components {
         UserRef: {
             /** Format: uuid */
             userId: string;
+        };
+        RecoverAdmin: {
+            setupToken?: string;
+            newPassword?: string;
         };
         SearchRequest: {
             queries?: string[];
@@ -606,6 +646,30 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    setPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPassword"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     capabilities: {
         parameters: {
             query?: never;
@@ -653,6 +717,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UserRef"];
                 };
+            };
+        };
+    };
+    recoverAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoverAdmin"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

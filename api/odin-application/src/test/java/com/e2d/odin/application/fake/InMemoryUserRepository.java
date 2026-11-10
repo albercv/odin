@@ -1,6 +1,7 @@
 package com.e2d.odin.application.fake;
 
 import com.e2d.odin.application.port.UserRepository;
+import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
@@ -27,6 +28,11 @@ public class InMemoryUserRepository implements UserRepository {
     @Override
     public Optional<User> findByEmail(String email) {
         return users.values().stream().filter(u -> u.email().filter(email::equalsIgnoreCase).isPresent()).findFirst();
+    }
+
+    @Override
+    public Optional<User> findGroupAdmin() {
+        return users.values().stream().filter(u -> u.role() == Role.GROUP_ADMIN).findFirst();
     }
 
     @Override
