@@ -122,7 +122,7 @@ async function prepare(): Promise<void> {
   check(page.status === 404, 'Paso 6b: el trabajador de B no puede leer la página del PDF de A (404)');
   const saved = await withMcp(wa.key, (call) => call('saveKnowledgeCard', CARD));
   check(saved.includes('PENDING') && saved.includes('Ficha guardada; queda pendiente de revisión.'), 'Paso 7: MCP de A guarda la ficha, queda PENDING');
-  writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN }));
+  writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie }));
 }
 
 async function confirm(): Promise<void> {

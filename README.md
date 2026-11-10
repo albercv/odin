@@ -31,7 +31,7 @@ Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplo
 | `make up` | Construye y arranca la instalación con Docker Compose |
 | `make down` | La para |
 | `make check` | Pruebas, Checkstyle, ArchUnit, ESLint y tipos de los tres proyectos |
-| `make demo` | Demostración de cierre de principio a fin, en una pila desechable aparte |
+| `make demo` | Demostración de cierre y prueba de extremo a extremo de la administración del panel, en una pila desechable aparte |
 
 ## Primer arranque
 
