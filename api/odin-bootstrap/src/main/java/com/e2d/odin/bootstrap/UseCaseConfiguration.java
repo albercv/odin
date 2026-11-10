@@ -5,7 +5,9 @@ import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
+import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListUsers;
@@ -135,6 +137,17 @@ public class UseCaseConfiguration {
     @Bean
     UpdateUser updateUser(UserRepository users) {
         return new UpdateUser(users);
+    }
+
+    @Bean
+    ChangePassword changePassword(UserRepository users, PasswordHasher passwords, AdminSessions sessions) {
+        return new ChangePassword(users, passwords, sessions);
+    }
+
+    @Bean
+    RecoverGroupAdmin recoverGroupAdmin(UserRepository users, PasswordHasher passwords, AdminSessions sessions,
+            InstallationSettings installationSettings) {
+        return new RecoverGroupAdmin(users, passwords, sessions, installationSettings);
     }
 
     @Bean

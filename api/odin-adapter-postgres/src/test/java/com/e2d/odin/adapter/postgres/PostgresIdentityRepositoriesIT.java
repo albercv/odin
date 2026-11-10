@@ -159,4 +159,16 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         return new AccessKey(new AccessKeyId(UUID.randomUUID()), owner, "portatil", prefix, "secret-hash", Instant.parse(
                 "2026-11-09T10:00:00Z"), Optional.empty());
     }
+
+    @Test
+    void findGroupAdminReturnsTheOnlyGroupAdmin() {
+        assertThat(users.findGroupAdmin()).isEmpty();
+        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.of("gema@x.com"), Role.GROUP_ADMIN,
+                Optional.empty(), true, Optional.of("hash"));
+        users.save(user("c@x.com", Optional.of(newCompany())));
+        users.save(admin);
+        assertThat(users.findGroupAdmin()).contains(admin);
+        users.delete(admin.id(), Instant.now());
+        assertThat(users.findGroupAdmin()).isEmpty();
+    }
 }

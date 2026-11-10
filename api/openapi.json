@@ -5,6 +5,36 @@
     "version" : "v0"
   },
   "paths" : {
+    "/v1/admin/users/{userId}/password" : {
+      "put" : {
+        "tags" : [ "user-controller" ],
+        "operationId" : "setPassword",
+        "parameters" : [ {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetPassword"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/capabilities" : {
       "put" : {
         "tags" : [ "company-controller" ],
@@ -66,6 +96,27 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/setup/admin-password" : {
+      "post" : {
+        "tags" : [ "setup-controller" ],
+        "operationId" : "recoverAdmin",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RecoverAdmin"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
           }
         }
       }
@@ -936,6 +987,17 @@
   },
   "components" : {
     "schemas" : {
+      "SetPassword" : {
+        "type" : "object",
+        "properties" : {
+          "currentPassword" : {
+            "type" : "string"
+          },
+          "newPassword" : {
+            "type" : "string"
+          }
+        }
+      },
       "Capabilities" : {
         "type" : "object",
         "properties" : {
@@ -999,6 +1061,17 @@
           }
         },
         "required" : [ "userId" ]
+      },
+      "RecoverAdmin" : {
+        "type" : "object",
+        "properties" : {
+          "setupToken" : {
+            "type" : "string"
+          },
+          "newPassword" : {
+            "type" : "string"
+          }
+        }
       },
       "SearchRequest" : {
         "type" : "object",

@@ -7,11 +7,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import jakarta.servlet.http.Cookie;
@@ -143,6 +145,38 @@ class AdminApiTest extends WebTestSupport {
         mvc.perform(get("/v1/me").header("Authorization", key)).andExpect(status().isUnauthorized());
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(group).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"active\":true}")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void putPasswordIs204() throws Exception {
+        CompanyId company = newCompany();
+        User target = companyAdmin(company, "c1@e.test");
+        mvc.perform(put("/v1/admin/users/" + target.id().value() + "/password")
+                .cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"newPassword\":\"clave-nueva-1234\"}")).andExpect(status().isNoContent());
+        mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"c1@e.test\",\"password\":\"clave-nueva-1234\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void putPasswordWithWrongCurrentIs400() throws Exception {
+        CompanyId company = newCompany();
+        User self = companyAdmin(company, "c2@e.test");
+        var login = mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"c2@e.test\",\"password\":\"clave-muy-larga-1\"}")).andReturn();
+        mvc.perform(put("/v1/admin/users/" + self.id().value() + "/password")
+                .cookie(login.getResponse().getCookie("odin_session")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"equivocada-12345\",\"newPassword\":\"clave-nueva-1234\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("La contraseña actual no es correcta"));
+    }
+
+    private User companyAdmin(CompanyId company, String email) {
+        User user = new User(new UserId(UUID.randomUUID()), "Carlos", Optional.of(email), Role.COMPANY_ADMIN,
+                Optional.of(company), true, Optional.of(w.passwords.hash("clave-muy-larga-1")));
+        w.users.save(user);
+        return user;
     }
 
     @Test

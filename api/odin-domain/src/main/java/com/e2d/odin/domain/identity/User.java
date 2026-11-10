@@ -10,4 +10,8 @@ public record User(UserId id, String displayName, Optional<String> email, Role r
     public User updated(String newName, Optional<String> newEmail, boolean newActive) {
         return new User(id, newName, newEmail, role, companyId, newActive, passwordHash);
     }
+
+    public User withPasswordHash(String newPasswordHash) {
+        return new User(id, displayName, email, role, companyId, active, Optional.of(newPasswordHash));
+    }
 }

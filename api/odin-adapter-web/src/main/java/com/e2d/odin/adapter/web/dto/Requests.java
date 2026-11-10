@@ -30,6 +30,12 @@ public final class Requests {
     public record UpdateUser(String displayName, String email, Boolean active) {
     }
 
+    public record SetPassword(String currentPassword, String newPassword) {
+    }
+
+    public record RecoverAdmin(String setupToken, String newPassword) {
+    }
+
     public record KeyLabel(String label) {
     }
 

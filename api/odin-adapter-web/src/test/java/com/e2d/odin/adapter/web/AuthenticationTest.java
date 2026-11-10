@@ -101,6 +101,33 @@ class AuthenticationTest extends WebTestSupport {
                 .andExpect(status().isTooManyRequests());
     }
 
+    @Test
+    void recoverAdminIsPublicAndNeedsToken() throws Exception {
+        savedAdmin("recover@e.test");
+        String email = w.users.findGroupAdmin().orElseThrow().email().orElseThrow();
+        mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"setupToken\":\"otro\",\"newPassword\":\"clave-nueva-1234\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Código de instalación no válido"));
+        mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"setupToken\":\"setup-secret\",\"newPassword\":\"clave-nueva-1234\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"clave-nueva-1234\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void sixthRecoverAttemptIs429() throws Exception {
+        String body = "{\"setupToken\":\"otro\",\"newPassword\":\"clave-nueva-1234\"}";
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isTooManyRequests());
+    }
+
     private void savedAdmin(String email) {
         w.users.save(new User(new UserId(UUID.randomUUID()), "Gema", Optional.of(email), Role.GROUP_ADMIN,
                 Optional.empty(), true, Optional.of(w.passwords.hash("clave-muy-larga-1"))));
