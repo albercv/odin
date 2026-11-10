@@ -65,14 +65,17 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
 
 | Acción | Administrador del grupo | Administrador de la empresa |
 |---|---|---|
-| Añadir o quitar la pertenencia a una empresa | Sí | Solo en la suya |
+| Añadir una pertenencia a una empresa | Sí | Solo en la suya |
+| Quitar una pertenencia | Sí | Solo en la suya, y solo si esa pertenencia no administra la empresa |
 | Cambiar los papeles de una pertenencia | Sí | Solo `WORKER`, en la suya |
 | Dar o quitar `COMPANY_ADMIN` | Sí | No |
-| Activar o desactivar una pertenencia | Sí | Solo en la suya |
+| Activar o desactivar una pertenencia | Sí | Solo en la suya, y solo si esa pertenencia no administra la empresa |
 | Editar nombre y correo de la persona | Sí | Solo si la persona no pertenece a ninguna otra empresa |
 | Desactivar o borrar a la persona entera | Sí | No |
 
 - **Quitar el último papel** de una pertenencia no vale: se borra la pertenencia.
+- **Quitar a una persona de una empresa revoca sus claves de esa empresa.** Si se la vuelve a añadir, necesita claves nuevas. Desactivar y reactivar la pertenencia conserva las claves.
+- **Una pertenencia que administra la empresa** solo la activa, la desactiva o la quita el administrador del grupo (ajuste de la revisión de la tarea 2): reactivarla equivale a dar la administración.
 - **Nadie se quita a sí mismo** el papel con el que está actuando, ni se desactiva ni se borra.
 - **Un administrador de empresa** solo ve, de cada persona, lo que toca a su empresa: no ve en qué otras empresas está.
 
