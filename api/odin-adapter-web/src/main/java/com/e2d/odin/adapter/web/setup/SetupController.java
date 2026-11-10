@@ -5,6 +5,7 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.LoginRateLimiter;
 import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.SetUpInstallation;
+import com.e2d.odin.domain.shared.ForbiddenException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,7 +36,13 @@ public class SetupController {
     @PostMapping("/v1/setup/admin-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void recoverAdmin(@RequestBody Requests.RecoverAdmin request, HttpServletRequest http) {
-        limiter.check("setup", http.getRemoteAddr());
-        recoverGroupAdmin.execute(request.setupToken(), request.newPassword());
+        String ip = http.getRemoteAddr();
+        limiter.check("setup", ip);
+        try {
+            recoverGroupAdmin.execute(request.setupToken(), request.newPassword());
+        } catch (ForbiddenException e) {
+            limiter.recordFailure("setup", ip);
+            throw e;
+        }
     }
 }
