@@ -15,3 +15,5 @@ data/
 api/.m2/
 test-results/
 playwright-report/
+# copias de trabajo de git para desarrollar en paralelo
+.worktrees/

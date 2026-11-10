@@ -7,3 +7,4 @@ api/.m2
 **/.env.*
 data/
 .superpowers/
+.worktrees
