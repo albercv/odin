@@ -112,7 +112,7 @@ Un directorio con `brand.json` y un logo. Ejemplo de E2D:
 
 ### 7.2 Dónde vive
 
-- La marca por defecto, E2D, está en el repositorio como datos, en `panel/brand/e2d/`, y la imagen del panel la incluye en `/brand/`.
+- La marca por defecto, E2D, está en el repositorio como datos, en `panel/public/brand/`, y la imagen del panel la sirve en `/brand/`. Las respuestas de `/brand/` llevan `Cache-Control: no-cache` (un cambio de marca se ve al recargar) y una política de seguridad que impide ejecutar código, por si el logo es un SVG con scripts.
 - Cada instalación puede montar su propio directorio en `/brand/` del contenedor del panel, por configuración de Compose (`ODIN_BRAND_DIR` en `deploy/.env`). Sin esa variable, se usa la de E2D.
 - El panel lee `/brand/brand.json` al arrancar, antes de pintar. Si el fichero falta o no es válido, el panel arranca con un tema neutro sin marca, avisa en la consola y funciona igual.
 - Un `brand.json` no válido no rompe nada: se valida (colores en hexadecimal de 6 cifras, logo con extensión admitida, textos con longitud máxima) y, si falla, se usa el tema neutro.
