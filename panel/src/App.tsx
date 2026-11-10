@@ -53,11 +53,11 @@ export function App() {
   const [notice, setNotice] = useState<string>();
   const refresh = () => api.me().then(setMe, () => setMe(null));
   useEffect(() => {
-    setUnauthorizedHandler(() => setMe(null));
+    setUnauthorizedHandler(() => { setNotice(undefined); setMe(null); });
     refresh();
   }, []);
   if (me === undefined) return <p>Cargando…</p>;
-  if (me === null) return <Login onLoggedIn={refresh} notice={notice} />;
+  if (me === null) return <Login onLoggedIn={() => { setNotice(undefined); refresh(); }} notice={notice} />;
   const passwordChanged = () => { setNotice('Contraseña cambiada. Entra de nuevo.'); setMe(null); };
-  return <Shell me={me} onLogout={() => api.logout().finally(() => setMe(null))} onPasswordChanged={passwordChanged} />;
+  return <Shell me={me} onLogout={() => api.logout().finally(() => { setNotice(undefined); setMe(null); })} onPasswordChanged={passwordChanged} />;
 }

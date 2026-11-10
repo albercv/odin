@@ -37,7 +37,9 @@ export function UserForm({ companyId, onDone }: { companyId: string; onDone: () 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!(await act(() => api.createUser(companyId, newUserBody(name, email, role, password))))) return;
-    [setName, setEmail, setPassword].forEach((reset) => reset(''));
+    setName('');
+    setEmail('');
+    setPassword('');
     onDone();
   };
   return (

@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { Projects } from './Projects';
 import { mockFetch, type Routes } from '../mockApi';
+
+afterEach(() => vi.restoreAllMocks());
 
 const obra = { id: 'p1', name: 'Obra' };
 const list = 'GET /v1/admin/companies/c1/projects';

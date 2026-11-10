@@ -1,8 +1,10 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { Users } from './Users';
 import { mockFetch, type Routes } from '../mockApi';
+
+afterEach(() => vi.restoreAllMocks());
 
 const ana = { id: 'u1', displayName: 'Ana', email: 'ana@acme.test', role: 'WORKER', companyId: 'c1', active: true };
 const bea = { id: 'u2', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', active: false, email: 'bea@acme.test' };
