@@ -17,7 +17,7 @@ function IssuedKey({ issued, onClose }: { issued: S['IssuedKeyView']; onClose: (
 function KeyRow({ k, onRevoke }: { k: S['KeyView']; onRevoke: () => void }) {
   return (
     <li>
-      {k.label} ({k.prefix}) {k.revokedAt ? '· revocada' : <button type="button" onClick={onRevoke}>Revocar</button>}
+      {k.label} ({k.prefix}) {k.revokedAt ? '· revocada' : <button type="button" onClick={onRevoke}>Revocar {k.label}</button>}
     </li>
   );
 }
@@ -29,7 +29,7 @@ export function Keys({ userId }: { userId: string }) {
   const { error, act } = useAction();
   const give = async (e: React.FormEvent) => {
     e.preventDefault();
-    await act(async () => setIssued(await api.issueKey(userId, label)));
+    if (!(await act(async () => setIssued(await api.issueKey(userId, label))))) return;
     setLabel('');
     keys.reload();
   };

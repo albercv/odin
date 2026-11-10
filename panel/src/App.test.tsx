@@ -47,6 +47,24 @@ test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
   expect(screen.queryByRole('link', { name: 'Empresas' })).toBeNull();
 });
 
+test('failedIssueKeepsTheLabel', async () => {
+  mockFetch({
+    'GET /v1/admin/users/u1/keys': () => [],
+    'POST /v1/admin/users/u1/keys': () => ({ status: 400, body: { detail: 'Etiqueta no válida' } }),
+  });
+  render(<Keys userId="u1" />);
+  await userEvent.type(await screen.findByLabelText('Etiqueta de la clave'), 'portátil');
+  await userEvent.click(screen.getByRole('button', { name: 'Dar clave' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Etiqueta no válida');
+  expect(screen.getByLabelText('Etiqueta de la clave')).toHaveValue('portátil');
+});
+
+test('revokeButtonCarriesTheKeyLabel', async () => {
+  mockFetch({ 'GET /v1/admin/users/u1/keys': () => [{ id: 'k1', label: 'portátil', prefix: 'odin_ab' }] });
+  render(<Keys userId="u1" />);
+  expect(await screen.findByRole('button', { name: 'Revocar portátil' })).toBeInTheDocument();
+});
+
 test('issuedKeyShownOnceWithCopy', async () => {
   const writeText = vi.fn(async () => {});
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
