@@ -1,19 +1,15 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AccessKeyRepository;
-import com.e2d.odin.application.port.AdminSessionRepository;
+import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.SecretComparison;
-import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
-import com.e2d.odin.domain.identity.AdminSession;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.UnauthorizedException;
-import java.time.Clock;
-import java.time.Instant;
 
 public class ResolveActor {
 
@@ -25,19 +21,15 @@ public class ResolveActor {
 
     private final AccessKeyRepository keys;
     private final UserRepository users;
-    private final AdminSessionRepository sessions;
+    private final AdminSessions sessions;
     private final SecretHasher secrets;
-    private final SessionSettings settings;
-    private final Clock clock;
 
-    public ResolveActor(AccessKeyRepository keys, UserRepository users, AdminSessionRepository sessions,
-            SecretHasher secrets, SessionSettings settings, Clock clock) {
+    public ResolveActor(AccessKeyRepository keys, UserRepository users, AdminSessions sessions,
+            SecretHasher secrets) {
         this.keys = keys;
         this.users = users;
         this.sessions = sessions;
         this.secrets = secrets;
-        this.settings = settings;
-        this.clock = clock;
     }
 
     public Actor fromAccessKey(String plainKey) {
@@ -50,19 +42,8 @@ public class ResolveActor {
     }
 
     public Actor fromSessionToken(String token) {
-        if (token == null) {
-            throw unauthorized();
-        }
-        String hash = secrets.hash(token);
-        AdminSession session = sessions.findByTokenHash(hash).orElseThrow(ResolveActor::unauthorized);
-        Instant now = clock.instant();
-        if (session.lastSeenAt().plus(settings.idleTimeout()).isBefore(now)) {
-            sessions.delete(hash);
-            throw unauthorized();
-        }
-        User user = users.findById(session.userId()).filter(User::active).orElseThrow(ResolveActor::unauthorized);
-        sessions.save(session.seenAt(now));
-        return toActor(user);
+        return sessions.resolve(token).flatMap(users::findById).filter(User::active).map(ResolveActor::toActor)
+                .orElseThrow(ResolveActor::unauthorized);
     }
 
     private AccessKey findKey(String plainKey) {

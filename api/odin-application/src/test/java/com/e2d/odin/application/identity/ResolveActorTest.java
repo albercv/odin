@@ -8,6 +8,7 @@ import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
@@ -33,8 +34,9 @@ class ResolveActorTest {
     private final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     private final FakeSecretHasher secrets = new FakeSecretHasher();
     private final MutableClock clock = new MutableClock();
-    private final ResolveActor resolve = new ResolveActor(keys, users, sessions, secrets,
-            new SessionSettings(Duration.ofHours(8)), clock);
+    private final ResolveActor resolve = new ResolveActor(keys, users,
+            new StoredAdminSessions(sessions, secrets, new SequenceTokenGenerator(),
+                    new SessionSettings(Duration.ofHours(8)), clock), secrets);
     private final UserId workerId = new UserId(UUID.randomUUID());
     private final AccessKeyId keyId = new AccessKeyId(UUID.randomUUID());
 

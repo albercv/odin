@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.application.fake.SequenceTokenGenerator;
+import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.AdminSession;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
@@ -14,7 +17,8 @@ class LogOutAdminTest {
 
     private final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     private final FakeSecretHasher secrets = new FakeSecretHasher();
-    private final LogOutAdmin logOut = new LogOutAdmin(sessions, secrets);
+    private final LogOutAdmin logOut = new LogOutAdmin(new StoredAdminSessions(sessions, secrets,
+            new SequenceTokenGenerator(), new SessionSettings(), new MutableClock()));
 
     private void givenSession(String token) {
         Instant now = Instant.parse("2026-11-09T10:00:00Z");

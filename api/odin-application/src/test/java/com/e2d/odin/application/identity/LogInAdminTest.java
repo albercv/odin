@@ -9,6 +9,7 @@ import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
+import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -23,8 +24,9 @@ class LogInAdminTest {
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     private final FakeSecretHasher secrets = new FakeSecretHasher();
-    private final LogInAdmin logIn = new LogInAdmin(users, sessions, new FakePasswordHasher(), secrets,
-            new SequenceTokenGenerator(), new MutableClock());
+    private final LogInAdmin logIn = new LogInAdmin(users, new FakePasswordHasher(),
+            new StoredAdminSessions(sessions, secrets, new SequenceTokenGenerator(), new SessionSettings(),
+                    new MutableClock()));
     private final UserId adminId = new UserId(UUID.randomUUID());
 
     LogInAdminTest() {

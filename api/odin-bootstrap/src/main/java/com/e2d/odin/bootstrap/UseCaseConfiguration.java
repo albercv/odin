@@ -13,6 +13,7 @@ import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.RegisterUser;
 import com.e2d.odin.application.identity.ResolveActor;
+import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.identity.RevokeAccessKey;
 import com.e2d.odin.application.identity.SetUpInstallation;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
@@ -27,6 +28,7 @@ import com.e2d.odin.application.organization.RenameCompany;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
+import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
@@ -60,30 +62,29 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class UseCaseConfiguration {
 
     @Bean
-    ResolveActor resolveActor(
-            AccessKeyRepository keys,
-            UserRepository users,
-            AdminSessionRepository sessions,
-            SecretHasher secrets,
-            SessionSettings sessionSettings,
-            Clock clock) {
-        return new ResolveActor(keys, users, sessions, secrets, sessionSettings, clock);
-    }
-
-    @Bean
-    LogInAdmin logInAdmin(
-            UserRepository users,
-            AdminSessionRepository sessions,
-            PasswordHasher passwords,
+    AdminSessions adminSessions(
+            AdminSessionRepository repository,
             SecretHasher secrets,
             TokenGenerator tokens,
+            SessionSettings sessionSettings,
             Clock clock) {
-        return new LogInAdmin(users, sessions, passwords, secrets, tokens, clock);
+        return new StoredAdminSessions(repository, secrets, tokens, sessionSettings, clock);
     }
 
     @Bean
-    LogOutAdmin logOutAdmin(AdminSessionRepository sessions, SecretHasher secrets) {
-        return new LogOutAdmin(sessions, secrets);
+    ResolveActor resolveActor(
+            AccessKeyRepository keys, UserRepository users, AdminSessions sessions, SecretHasher secrets) {
+        return new ResolveActor(keys, users, sessions, secrets);
+    }
+
+    @Bean
+    LogInAdmin logInAdmin(UserRepository users, PasswordHasher passwords, AdminSessions sessions) {
+        return new LogInAdmin(users, passwords, sessions);
+    }
+
+    @Bean
+    LogOutAdmin logOutAdmin(AdminSessions sessions) {
+        return new LogOutAdmin(sessions);
     }
 
     @Bean

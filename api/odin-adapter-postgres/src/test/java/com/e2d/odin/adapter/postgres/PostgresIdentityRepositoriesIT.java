@@ -97,6 +97,21 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         assertThat(sessions.findByTokenHash("tok")).isEmpty();
     }
 
+    @Test
+    void deleteByUserRemovesOnlyThatUsersSessions() {
+        UserId company = newUser(newCompany());
+        UserId other = newUser(newCompany());
+        sessions.save(new AdminSession("a", company, NOW, NOW));
+        sessions.save(new AdminSession("b", company, NOW, NOW));
+        sessions.save(new AdminSession("c", other, NOW, NOW));
+
+        sessions.deleteByUser(company);
+
+        assertThat(sessions.findByTokenHash("a")).isEmpty();
+        assertThat(sessions.findByTokenHash("b")).isEmpty();
+        assertThat(sessions.findByTokenHash("c")).isPresent();
+    }
+
     private static AccessKey key(UserId owner, String prefix) {
         return new AccessKey(new AccessKeyId(UUID.randomUUID()), owner, "portatil", prefix, "secret-hash", Instant.parse(
                 "2026-11-09T10:00:00Z"), Optional.empty());

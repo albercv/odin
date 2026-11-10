@@ -1,21 +1,16 @@
 package com.e2d.odin.application.identity;
 
-import com.e2d.odin.application.port.AdminSessionRepository;
-import com.e2d.odin.application.port.SecretHasher;
+import com.e2d.odin.application.port.AdminSessions;
 
 public class LogOutAdmin {
 
-    private final AdminSessionRepository sessions;
-    private final SecretHasher secrets;
+    private final AdminSessions sessions;
 
-    public LogOutAdmin(AdminSessionRepository sessions, SecretHasher secrets) {
+    public LogOutAdmin(AdminSessions sessions) {
         this.sessions = sessions;
-        this.secrets = secrets;
     }
 
     public void execute(String token) {
-        if (token != null) {
-            sessions.delete(secrets.hash(token));
-        }
+        sessions.close(token);
     }
 }
