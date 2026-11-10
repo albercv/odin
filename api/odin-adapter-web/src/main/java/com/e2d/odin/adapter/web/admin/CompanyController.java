@@ -5,16 +5,20 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.organization.CreateCompany;
 import com.e2d.odin.application.organization.CreateProject;
+import com.e2d.odin.application.organization.DeleteProject;
 import com.e2d.odin.application.organization.ListCompanies;
 import com.e2d.odin.application.organization.ListProjects;
 import com.e2d.odin.application.organization.RenameCompany;
+import com.e2d.odin.application.organization.RenameProject;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,15 +40,20 @@ public class CompanyController {
     private final SetCompanyCapabilities setCapabilities;
     private final CreateProject createProject;
     private final ListProjects listProjects;
+    private final RenameProject renameProject;
+    private final DeleteProject deleteProject;
 
     public CompanyController(CreateCompany createCompany, ListCompanies listCompanies, RenameCompany renameCompany,
-            SetCompanyCapabilities setCapabilities, CreateProject createProject, ListProjects listProjects) {
+            SetCompanyCapabilities setCapabilities, CreateProject createProject, ListProjects listProjects,
+            RenameProject renameProject, DeleteProject deleteProject) {
         this.createCompany = createCompany;
         this.listCompanies = listCompanies;
         this.renameCompany = renameCompany;
         this.setCapabilities = setCapabilities;
         this.createProject = createProject;
         this.listProjects = listProjects;
+        this.renameProject = renameProject;
+        this.deleteProject = deleteProject;
     }
 
     @GetMapping
@@ -87,5 +96,19 @@ public class CompanyController {
     public Responses.ProjectView createProject(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestBody Requests.Name request) {
         return Responses.ProjectView.from(createProject.execute(actor, new CompanyId(companyId), request.name()));
+    }
+
+    @PatchMapping("/{companyId}/projects/{projectId}")
+    public Responses.ProjectView renameProject(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID projectId, @RequestBody Requests.Name request) {
+        return Responses.ProjectView.from(renameProject.execute(actor, new CompanyId(companyId),
+                new ProjectId(projectId), request.name()));
+    }
+
+    @DeleteMapping("/{companyId}/projects/{projectId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProject(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID companyId,
+            @PathVariable UUID projectId) {
+        deleteProject.execute(actor, new CompanyId(companyId), new ProjectId(projectId));
     }
 }

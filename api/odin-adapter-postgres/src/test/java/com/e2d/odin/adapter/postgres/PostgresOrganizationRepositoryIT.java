@@ -9,6 +9,7 @@ import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.GroupId;
 import com.e2d.odin.domain.shared.ProjectId;
 import java.sql.Connection;
@@ -72,5 +73,35 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
         assertThat(orgs.listProjects(a)).containsExactly(p1, p2);
         assertThat(orgs.findProject(a, p1.id())).contains(p1);
         assertThat(orgs.findProject(b, p1.id())).isEmpty();
+    }
+
+    @Test
+    void deletedProjectIsExcludedFromReads() {
+        CompanyId a = newCompany();
+        Project p1 = new Project(new ProjectId(UUID.randomUUID()), a, "P1");
+        Project p2 = new Project(new ProjectId(UUID.randomUUID()), a, "P2");
+        orgs.saveProject(p1);
+        orgs.saveProject(p2);
+
+        orgs.deleteProject(a, p1.id(), NOW);
+
+        assertThat(orgs.listProjects(a)).containsExactly(p2);
+        assertThat(orgs.findProject(a, p1.id())).isEmpty();
+    }
+
+    @Test
+    void uniqueNameIndexIgnoresDeletedProjects() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Project first = new Project(new ProjectId(UUID.randomUUID()), a, "Obra");
+        orgs.saveProject(first);
+
+        assertThatThrownBy(() -> orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), a, "OBRA")))
+                .isInstanceOf(ConflictException.class);
+        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), b, "Obra"));
+        orgs.deleteProject(a, first.id(), NOW);
+        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), a, "Obra"));
+
+        assertThat(orgs.listProjects(a)).extracting(Project::name).containsExactly("Obra");
     }
 }

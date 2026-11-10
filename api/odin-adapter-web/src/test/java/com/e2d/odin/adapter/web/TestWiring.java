@@ -39,10 +39,12 @@ import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.organization.CreateCompany;
 import com.e2d.odin.application.organization.CreateProject;
+import com.e2d.odin.application.organization.DeleteProject;
 import com.e2d.odin.application.organization.DescribeMe;
 import com.e2d.odin.application.organization.ListCompanies;
 import com.e2d.odin.application.organization.ListProjects;
 import com.e2d.odin.application.organization.RenameCompany;
+import com.e2d.odin.application.organization.RenameProject;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
@@ -122,6 +124,14 @@ public class TestWiring {
 
     @Bean ListProjects listProjects() {
         return new ListProjects(orgs);
+    }
+
+    @Bean RenameProject renameProject() {
+        return new RenameProject(orgs);
+    }
+
+    @Bean DeleteProject deleteProject() {
+        return new DeleteProject(orgs, clock);
     }
 
     @Bean RegisterUser registerUser() {

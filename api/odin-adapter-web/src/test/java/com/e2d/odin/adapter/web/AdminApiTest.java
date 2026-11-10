@@ -212,6 +212,46 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(status().isNotFound());
     }
 
+    private String createProject(Cookie admin, CompanyId company, String name) throws Exception {
+        var created = mvc.perform(post("/v1/admin/companies/" + company.value() + "/projects").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + name + "\"}")).andReturn();
+        return com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void patchProjectRenames() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String id = createProject(admin, company, "Obra");
+        mvc.perform(patch("/v1/admin/companies/" + company.value() + "/projects/" + id).cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Reforma\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Reforma"));
+    }
+
+    @Test
+    void deleteProjectIs204() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String id = createProject(admin, company, "Obra");
+        mvc.perform(delete("/v1/admin/companies/" + company.value() + "/projects/" + id).cookie(admin))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/projects").cookie(admin))
+                .andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(delete("/v1/admin/companies/" + company.value() + "/projects/" + id).cookie(admin))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void duplicateProjectNameIs409() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        createProject(admin, company, "Obra");
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/projects").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"obra\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Ya existe un proyecto con ese nombre"));
+    }
+
     private static org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder upload(
             CompanyId company, Cookie admin, byte[] bytes) {
         return multipart("/v1/admin/companies/" + company.value() + "/documents")

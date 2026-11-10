@@ -6,6 +6,7 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,4 +27,6 @@ public interface OrganizationRepository {
     Optional<Project> findProject(CompanyId companyId, ProjectId id);
 
     List<Project> listProjects(CompanyId companyId);
+
+    void deleteProject(CompanyId companyId, ProjectId id, Instant at);
 }

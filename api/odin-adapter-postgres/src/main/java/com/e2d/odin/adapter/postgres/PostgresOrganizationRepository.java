@@ -9,6 +9,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.GroupId;
 import com.e2d.odin.domain.shared.ProjectId;
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +78,7 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     @Override
     public Optional<Project> findProject(CompanyId companyId, ProjectId id) {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc
-                .sql("SELECT id, company_id, name FROM project WHERE id = :id AND company_id = :company")
+                .sql("SELECT id, company_id, name FROM project WHERE id = :id AND company_id = :company AND deleted_at IS NULL")
                 .param("id", id.value()).param("company", companyId.value())
                 .query((rs, n) -> project(rs)).optional());
     }
@@ -85,7 +86,7 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     @Override
     public List<Project> listProjects(CompanyId companyId) {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc
-                .sql("SELECT id, company_id, name FROM project WHERE company_id = :company ORDER BY seq")
+                .sql("SELECT id, company_id, name FROM project WHERE company_id = :company AND deleted_at IS NULL ORDER BY seq")
                 .param("company", companyId.value()).query((rs, n) -> project(rs)).list());
     }
 
@@ -99,5 +100,13 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     private static Project project(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new Project(new ProjectId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
                 rs.getString("name"));
+    }
+
+    @Override
+    public void deleteProject(CompanyId companyId, ProjectId id, Instant at) {
+        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
+                UPDATE project SET deleted_at = :at
+                WHERE id = :id AND company_id = :company AND deleted_at IS NULL""")
+                .param("at", Sql.ts(at)).param("id", id.value()).param("company", companyId.value()).update());
     }
 }
