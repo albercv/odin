@@ -56,6 +56,11 @@ La contraseña necesita al menos 12 caracteres.
 
 Desde el panel se crean las empresas, los trabajadores y sus claves personales, se suben documentos y se revisan las fichas.
 
+## Quién entra dónde
+
+- Los administradores entran en el panel con su correo y su contraseña.
+- Los trabajadores no entran en el panel. Usan Odín desde su IA, por MCP, con su clave personal (`odin_...`), que un administrador les da desde el panel.
+
 ## MCP por stdio (IA de escritorio)
 
 Compila el servidor:
@@ -86,6 +91,45 @@ Registrarlo en un equipo es configuración fuera del repositorio: hazlo solo con
 ## MCP por HTTP
 
 `make up` también arranca el MCP por Streamable HTTP en `http://127.0.0.1:8090/mcp`. Cada petición lleva la clave personal en `Authorization: Bearer odin_...`; una sesión abierta con una clave no acepta otra.
+
+## Claves de la base de datos
+
+Las claves de PostgreSQL se fijan en el primer arranque, cuando se crea el volumen de datos. Editar `deploy/.env` después no las cambia: PostgreSQL sigue aceptando las antiguas y la API no arranca. El error dice «PostgreSQL rechaza la clave del usuario de la base de datos.» y explica qué hacer.
+
+Hay dos usuarios de base de datos: el propietario, cuyo nombre es `ODIN_DB_OWNER_USER` en `deploy/.env`, y el de la aplicación, que es siempre `odin_app` (clave `ODIN_DB_APP_PASSWORD`). La base se llama `ODIN_DB_NAME` (por defecto, `odin`).
+
+Para cambiar una clave sin perder datos, en este orden:
+
+1. Cambia la clave en PostgreSQL con la instalación en marcha. Conéctate siempre como el propietario, tanto para `odin_app` como para el propio propietario:
+
+   ```sh
+   docker compose -f deploy/compose.yaml --env-file deploy/.env exec postgres psql -U <usuario> -d <base> -c "ALTER ROLE <rol> PASSWORD '<clave nueva>'"
+   ```
+
+2. Pon la misma clave nueva en `deploy/.env`.
+3. Reinicia la instalación con `make down` y `make up`.
+
+Borra los volúmenes (`make down; docker volume rm odin_pgdata odin_originals`) solo en una instalación nueva sin datos: se pierden todos los documentos y las fichas.
+
+## Contraseña olvidada
+
+Si olvidas la contraseña del administrador del grupo, restablécela con el token de instalación de `deploy/.env`. Quien tiene ese fichero ya controla la base de datos, así que esta orden no abre nada nuevo.
+
+```sh
+set -a; . deploy/.env; set +a
+curl -X POST http://127.0.0.1:8080/v1/setup/admin-password -H 'Content-Type: application/json' -d "{
+  \"setupToken\": \"$ODIN_SETUP_TOKEN\",
+  \"newPassword\": \"una-clave-nueva-de-12-o-mas\"
+}"
+```
+
+Responde 204: la contraseña queda cambiada, el administrador vuelve a estar activo y sus sesiones del panel se cierran. Si el token no vale responde 403; si la instalación aún no está configurada, 409. Tiene el mismo límite de intentos que el login.
+
+## Sesión del panel
+
+Hoy el panel usa un token aleatorio y opaco, en una cookie `HttpOnly` con `SameSite=Strict`. En la base solo se guarda su huella, nunca el token. La sesión caduca por inactividad y se revoca al cerrarla o al cambiar la contraseña.
+
+Esa lógica está detrás del puerto `AdminSessions` (`api/odin-application/src/main/java/com/e2d/odin/application/port/AdminSessions.java`), implementado por `StoredAdminSessions`. Para pasar a JWT bastará con escribir otra clase que implemente `AdminSessions` y cambiar una línea en `UseCaseConfiguration`. `closeAllOf` exigirá entonces una versión de sesión por usuario, para seguir cerrando todas las sesiones de una persona sin consultar cada token.
 
 ## Fuera de la fase 1
 
