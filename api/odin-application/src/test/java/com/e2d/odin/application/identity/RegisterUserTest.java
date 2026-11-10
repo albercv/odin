@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
@@ -26,7 +27,8 @@ class RegisterUserTest {
 
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
-    private final RegisterUser register = new RegisterUser(users, organizations, new FakePasswordHasher(),
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final RegisterUser register = new RegisterUser(users, memberships, organizations, new FakePasswordHasher(),
             new SequenceIdGenerator());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
@@ -90,28 +92,30 @@ class RegisterUserTest {
     void workerWithoutEmailIsCreated() {
         NewUser worker = new NewUser("Wanda", Optional.empty(), Role.WORKER, Optional.of(" "));
 
-        User user = register.execute(Actors.companyAdmin(company), company, worker);
+        UserSummary summary = register.execute(Actors.companyAdmin(company), company, worker);
 
-        assertThat(user.passwordHash()).isEmpty();
-        assertThat(user.email()).isEmpty();
-        assertThat(user.active()).isTrue();
-        assertThat(user.companyId()).contains(company);
+        assertThat(summary.user().passwordHash()).isEmpty();
+        assertThat(summary.user().email()).isEmpty();
+        assertThat(summary.active()).isTrue();
+        assertThat(summary.role()).isEqualTo(Role.WORKER);
+        assertThat(summary.companyId()).contains(company);
+        assertThat(memberships.find(summary.user().id(), company)).isPresent();
     }
 
     @Test
     void deletedUsersEmailCanBeReused() {
         Actor groupAdmin = Actors.groupAdmin();
-        User first = register.execute(groupAdmin, company, admin("p@demo.test", "clave-larga-123"));
+        User first = register.execute(groupAdmin, company, admin("p@demo.test", "clave-larga-123")).user();
         users.delete(first.id(), java.time.Instant.now());
 
-        User second = register.execute(groupAdmin, company, admin("p@demo.test", "clave-larga-123"));
+        User second = register.execute(groupAdmin, company, admin("p@demo.test", "clave-larga-123")).user();
 
         assertThat(second.id()).isNotEqualTo(first.id());
     }
 
     @Test
     void registersCompanyAdminWithHashedPassword() {
-        User user = register.execute(Actors.groupAdmin(), company, admin("p@demo.test", "clave-larga-123"));
+        User user = register.execute(Actors.groupAdmin(), company, admin("p@demo.test", "clave-larga-123")).user();
 
         assertThat(user.passwordHash()).contains("pw:clave-larga-123");
         assertThat(users.findById(user.id())).contains(user);

@@ -27,7 +27,7 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class RowLevelSecurityIT extends AbstractPostgresIT {
 
-    private static final List<String> TABLES = List.of("company", "project", "document", "document_page",
+    private static final List<String> TABLES = List.of("company", "project", "membership", "document", "document_page",
             "knowledge_card", "question_record");
 
     private CompanyId a;

@@ -6,12 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UserId;
@@ -22,16 +23,17 @@ import org.junit.jupiter.api.Test;
 class LogInAdminTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     private final FakeSecretHasher secrets = new FakeSecretHasher();
-    private final LogInAdmin logIn = new LogInAdmin(users, new FakePasswordHasher(),
+    private final LogInAdmin logIn = new LogInAdmin(users, memberships, new FakePasswordHasher(),
             new StoredAdminSessions(sessions, secrets, new SequenceTokenGenerator(), new SessionSettings(),
                     new MutableClock()));
     private final UserId adminId = new UserId(UUID.randomUUID());
 
     LogInAdminTest() {
-        users.save(new User(adminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), true,
-                Optional.of("pw:una-clave-larga-1")));
+        People.groupAdmin(users, adminId, "Gema", Optional.of("g@demo.test"), true,
+                Optional.of("pw:una-clave-larga-1"));
     }
 
     @Test
@@ -53,8 +55,8 @@ class LogInAdminTest {
 
     @Test
     void inactiveAdminCannotLogIn() {
-        users.save(new User(adminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), false,
-                Optional.of("pw:una-clave-larga-1")));
+        People.groupAdmin(users, adminId, "Gema", Optional.of("g@demo.test"), false,
+                Optional.of("pw:una-clave-larga-1"));
 
         assertThatThrownBy(() -> logIn.execute("g@demo.test", "una-clave-larga-1"))
                 .isInstanceOf(UnauthorizedException.class).hasMessage("Credenciales no válidas");
@@ -62,8 +64,8 @@ class LogInAdminTest {
 
     @Test
     void workerCannotLogIn() {
-        users.save(new User(new UserId(UUID.randomUUID()), "Wanda", Optional.of("w@demo.test"), Role.WORKER,
-                Optional.of(new CompanyId(UUID.randomUUID())), true, Optional.of("pw:una-clave-larga-1")));
+        People.member(users, memberships, new UserId(UUID.randomUUID()), "Wanda", Optional.of("w@demo.test"),
+                Role.WORKER, new CompanyId(UUID.randomUUID()), true, Optional.of("pw:una-clave-larga-1"));
 
         assertThatThrownBy(() -> logIn.execute("w@demo.test", "una-clave-larga-1"))
                 .isInstanceOf(UnauthorizedException.class).hasMessage("Credenciales no válidas");

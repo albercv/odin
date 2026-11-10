@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.postgres;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.organization.Capability;
@@ -23,6 +24,7 @@ abstract class AbstractPostgresIT {
     final ScopedTransactions tx = new ScopedTransactions(Db.app());
     final PostgresOrganizationRepository orgs = new PostgresOrganizationRepository(tx);
     final PostgresUserRepository users = new PostgresUserRepository(tx);
+    final PostgresMembershipRepository memberships = new PostgresMembershipRepository(tx);
     final PostgresDocumentRepository docs = new PostgresDocumentRepository(tx);
     final PostgresKnowledgeCardRepository cards = new PostgresKnowledgeCardRepository(tx);
 
@@ -39,7 +41,8 @@ abstract class AbstractPostgresIT {
 
     UserId newUser(CompanyId company) {
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Persona", Optional.empty(), Role.WORKER, Optional.of(company), true, Optional.empty()));
+        users.save(new User(id, "Persona", Optional.empty(), false, true, Optional.empty()));
+        memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         return id;
     }
 

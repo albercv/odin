@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.Optional;
 import java.util.UUID;
@@ -152,8 +152,8 @@ class AuthenticationTest extends WebTestSupport {
     }
 
     private void savedAdmin(String email) {
-        w.users.save(new User(new UserId(UUID.randomUUID()), "Gema", Optional.of(email), Role.GROUP_ADMIN,
-                Optional.empty(), true, Optional.of(w.passwords.hash("clave-muy-larga-1"))));
+        People.groupAdmin(w.users, new UserId(UUID.randomUUID()), "Gema", Optional.of(email), true,
+                Optional.of(w.passwords.hash("clave-muy-larga-1")));
     }
 
     private static String login(String email) {

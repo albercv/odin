@@ -1,12 +1,14 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.IdGenerator;
+import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -15,23 +17,26 @@ import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
+import java.util.Set;
 
 public class RegisterUser {
 
     private final UserRepository users;
+    private final MembershipRepository memberships;
     private final OrganizationRepository organizations;
     private final PasswordHasher passwords;
     private final IdGenerator ids;
 
-    public RegisterUser(UserRepository users, OrganizationRepository organizations, PasswordHasher passwords,
-            IdGenerator ids) {
+    public RegisterUser(UserRepository users, MembershipRepository memberships, OrganizationRepository organizations,
+            PasswordHasher passwords, IdGenerator ids) {
         this.users = users;
+        this.memberships = memberships;
         this.organizations = organizations;
         this.passwords = passwords;
         this.ids = ids;
     }
 
-    public User execute(Actor actor, CompanyId companyId, NewUser newUser) {
+    public UserSummary execute(Actor actor, CompanyId companyId, NewUser newUser) {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         requireAllowedRole(actor, newUser.role());
@@ -48,9 +53,11 @@ public class RegisterUser {
                 ? Optional.of(passwords.hash(Validation.requirePassword(newUser.password().orElse(null))))
                 : Optional.empty();
         User user = new User(new UserId(ids.newId()), Validation.requireText(newUser.displayName(), "el nombre"),
-                email, newUser.role(), Optional.of(companyId), true, passwordHash);
+                email, false, true, passwordHash);
+        Membership membership = new Membership(user.id(), companyId, Set.of(newUser.role()), true);
         users.save(user);
-        return user;
+        memberships.save(membership);
+        return new UserSummary(user, Optional.of(membership));
     }
 
     private static void requireAllowedRole(Actor actor, Role role) {

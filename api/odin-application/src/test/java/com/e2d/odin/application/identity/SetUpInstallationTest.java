@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.shared.InstallationSettings;
-import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -22,6 +22,7 @@ class SetUpInstallationTest {
 
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final SetUpInstallation setUp = new SetUpInstallation(organizations, users, new FakePasswordHasher(),
             new SequenceIdGenerator(), new InstallationSettings("token-secreto"));
 
@@ -31,8 +32,8 @@ class SetUpInstallationTest {
 
         User admin = users.findById(id).orElseThrow();
         assertThat(organizations.findGroup()).get().extracting("name").isEqualTo("Grupo Demo");
-        assertThat(admin.role()).isEqualTo(Role.GROUP_ADMIN);
-        assertThat(admin.companyId()).isEmpty();
+        assertThat(admin.groupAdmin()).isTrue();
+        assertThat(memberships.listByUser(id)).isEmpty();
         assertThat(admin.email()).contains("gema@demo.test");
         assertThat(admin.passwordHash()).contains("pw:" + PASSWORD);
     }
