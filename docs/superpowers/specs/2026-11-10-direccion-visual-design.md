@@ -98,7 +98,7 @@ Un directorio con `brand.json` y un logo. Ejemplo de E2D:
   "colors": { "accent": "#05b4b9", "base": "#283039" },
   "cover": {
     "title": "Odín, el cerebro digital del despacho",
-    "subtitle": "Lo que tu despacho ya resolvió, al alcance de cada persona y siempre con su fuente.",
+    "subtitle": "Lo que tu despacho ya resolvió, al alcance de cada persona y con su fuente.",
     "note": "Demostración con un despacho y casos ficticios"
   }
 }
