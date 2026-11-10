@@ -620,6 +620,24 @@
       }
     },
     "/v1/admin/users/{userId}" : {
+      "delete" : {
+        "tags" : [ "user-controller" ],
+        "operationId" : "delete",
+        "parameters" : [ {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
       "patch" : {
         "tags" : [ "user-controller" ],
         "operationId" : "update",
@@ -636,7 +654,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/UserActive"
+                "$ref" : "#/components/schemas/UpdateUser"
               }
             }
           },
@@ -1350,9 +1368,15 @@
         },
         "required" : [ "decision", "reviewedAt", "reviewerId" ]
       },
-      "UserActive" : {
+      "UpdateUser" : {
         "type" : "object",
         "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
           "active" : {
             "type" : "boolean"
           }

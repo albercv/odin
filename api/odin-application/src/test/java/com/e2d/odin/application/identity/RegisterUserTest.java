@@ -78,14 +78,35 @@ class RegisterUserTest {
     }
 
     @Test
-    void registersWorkerWithoutPassword() {
+    void workerWithPasswordIsRejected() {
         NewUser worker = new NewUser("Wanda", Optional.empty(), Role.WORKER, Optional.of("ignorada-123456"));
+
+        assertThatThrownBy(() -> register.execute(Actors.companyAdmin(company), company, worker))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("Un trabajador no tiene contraseña: entra con su clave personal");
+    }
+
+    @Test
+    void workerWithoutEmailIsCreated() {
+        NewUser worker = new NewUser("Wanda", Optional.empty(), Role.WORKER, Optional.of(" "));
 
         User user = register.execute(Actors.companyAdmin(company), company, worker);
 
         assertThat(user.passwordHash()).isEmpty();
+        assertThat(user.email()).isEmpty();
         assertThat(user.active()).isTrue();
         assertThat(user.companyId()).contains(company);
+    }
+
+    @Test
+    void deletedUsersEmailCanBeReused() {
+        Actor groupAdmin = Actors.groupAdmin();
+        User first = register.execute(groupAdmin, company, admin("p@demo.test", "clave-larga-123"));
+        users.delete(first.id(), java.time.Instant.now());
+
+        User second = register.execute(groupAdmin, company, admin("p@demo.test", "clave-larga-123"));
+
+        assertThat(second.id()).isNotEqualTo(first.id());
     }
 
     @Test

@@ -61,6 +61,29 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     }
 
     @Test
+    void deletedUserIsExcludedFromReads() {
+        CompanyId company = newCompany();
+        User u = user("gone@x.com", Optional.of(company));
+        users.save(u);
+        users.delete(u.id(), Instant.now());
+        assertThat(users.findById(u.id())).isEmpty();
+        assertThat(users.findByEmail("gone@x.com")).isEmpty();
+        assertThat(users.listByCompany(company)).isEmpty();
+    }
+
+    @Test
+    void deletedUsersEmailIsFreeButInactiveUsersIsNot() {
+        User deleted = user("free@x.com", Optional.empty());
+        User inactive = user("busy@x.com", Optional.empty());
+        users.save(deleted);
+        users.save(inactive.deactivated());
+        users.delete(deleted.id(), Instant.now());
+        users.save(user("free@x.com", Optional.empty()));
+        assertThatThrownBy(() -> users.save(user("busy@x.com", Optional.empty())))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
     void keysAreSavedFoundByPrefixAndListedPerUser() {
         UserId owner = newUser(newCompany());
         UserId other = newUser(newCompany());

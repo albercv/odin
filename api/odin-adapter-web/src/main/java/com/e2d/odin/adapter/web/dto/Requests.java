@@ -27,7 +27,7 @@ public final class Requests {
     public record CreateUser(String displayName, String email, Role role, String password) {
     }
 
-    public record UserActive(Boolean active) {
+    public record UpdateUser(String displayName, String email, Boolean active) {
     }
 
     public record KeyLabel(String label) {

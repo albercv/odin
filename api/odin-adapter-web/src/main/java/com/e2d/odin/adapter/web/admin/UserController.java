@@ -3,13 +3,15 @@ package com.e2d.odin.adapter.web.admin;
 import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
-import com.e2d.odin.application.identity.DeactivateUser;
+import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListUsers;
 import com.e2d.odin.application.identity.NewUser;
 import com.e2d.odin.application.identity.RegisterUser;
 import com.e2d.odin.application.identity.RevokeAccessKey;
+import com.e2d.odin.application.identity.UpdateUser;
+import com.e2d.odin.application.identity.UserChanges;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -34,16 +36,18 @@ public class UserController {
 
     private final RegisterUser registerUser;
     private final ListUsers listUsers;
-    private final DeactivateUser deactivateUser;
+    private final UpdateUser updateUser;
+    private final DeleteUser deleteUser;
     private final IssueAccessKey issueKey;
     private final ListAccessKeys listKeys;
     private final RevokeAccessKey revokeKey;
 
-    public UserController(RegisterUser registerUser, ListUsers listUsers, DeactivateUser deactivateUser,
-            IssueAccessKey issueKey, ListAccessKeys listKeys, RevokeAccessKey revokeKey) {
+    public UserController(RegisterUser registerUser, ListUsers listUsers, UpdateUser updateUser,
+            DeleteUser deleteUser, IssueAccessKey issueKey, ListAccessKeys listKeys, RevokeAccessKey revokeKey) {
         this.registerUser = registerUser;
         this.listUsers = listUsers;
-        this.deactivateUser = deactivateUser;
+        this.updateUser = updateUser;
+        this.deleteUser = deleteUser;
         this.issueKey = issueKey;
         this.listKeys = listKeys;
         this.revokeKey = revokeKey;
@@ -69,11 +73,16 @@ public class UserController {
 
     @PatchMapping("/v1/admin/users/{userId}")
     public Responses.UserView update(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @PathVariable UUID userId, @RequestBody Requests.UserActive request) {
-        if (!Boolean.FALSE.equals(request.active())) {
-            throw new ValidationException("Solo se puede desactivar un usuario");
-        }
-        return Responses.UserView.from(deactivateUser.execute(actor, new UserId(userId)));
+            @PathVariable UUID userId, @RequestBody Requests.UpdateUser request) {
+        UserChanges changes = new UserChanges(Optional.ofNullable(request.displayName()),
+                Optional.ofNullable(request.email()), Optional.ofNullable(request.active()));
+        return Responses.UserView.from(updateUser.execute(actor, new UserId(userId), changes));
+    }
+
+    @DeleteMapping("/v1/admin/users/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID userId) {
+        deleteUser.execute(actor, new UserId(userId));
     }
 
     @GetMapping("/v1/admin/users/{userId}/keys")

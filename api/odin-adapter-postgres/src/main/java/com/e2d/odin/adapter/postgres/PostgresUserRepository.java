@@ -8,6 +8,7 @@ import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,22 +36,28 @@ public class PostgresUserRepository implements UserRepository {
 
     @Override
     public Optional<User> findById(UserId id) {
-        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT " + COLUMNS + " FROM app_user WHERE id = :id")
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT " + COLUMNS + " FROM app_user WHERE id = :id AND deleted_at IS NULL")
                 .param("id", id.value()).query((rs, n) -> user(rs)).optional());
     }
 
     @Override
     public Optional<User> findByEmail(String email) {
         return tx.inScope(ALL, jdbc -> jdbc
-                .sql("SELECT " + COLUMNS + " FROM app_user WHERE lower(email) = lower(:email)")
+                .sql("SELECT " + COLUMNS + " FROM app_user WHERE lower(email) = lower(:email) AND deleted_at IS NULL")
                 .param("email", email).query((rs, n) -> user(rs)).optional());
     }
 
     @Override
     public List<User> listByCompany(CompanyId companyId) {
         return tx.inScope(ALL, jdbc -> jdbc
-                .sql("SELECT " + COLUMNS + " FROM app_user WHERE company_id = :company ORDER BY seq")
+                .sql("SELECT " + COLUMNS + " FROM app_user WHERE company_id = :company AND deleted_at IS NULL ORDER BY seq")
                 .param("company", companyId.value()).query((rs, n) -> user(rs)).list());
+    }
+
+    @Override
+    public void delete(UserId id, Instant at) {
+        tx.runInScope(ALL, jdbc -> jdbc.sql("UPDATE app_user SET deleted_at = :at WHERE id = :id")
+                .param("id", id.value()).param("at", Sql.ts(at)).update());
     }
 
     private static User user(ResultSet rs) throws SQLException {

@@ -45,6 +45,10 @@ final class ApiClient {
                 .PUT(BodyPublishers.ofString(MAPPER.writeValueAsString(body))), headers);
     }
 
+    Reply delete(String path, String... headers) {
+        return send(HttpRequest.newBuilder(URI.create(base + path)).DELETE(), headers);
+    }
+
     Reply upload(String path, String filename, byte[] content, String... headers) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.writeBytes(("--" + BOUNDARY + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\""

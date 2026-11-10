@@ -5,7 +5,7 @@ import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.UploadDocument;
-import com.e2d.odin.application.identity.DeactivateUser;
+import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListUsers;
@@ -15,6 +15,7 @@ import com.e2d.odin.application.identity.RegisterUser;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.identity.RevokeAccessKey;
+import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.SetUpInstallation;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
 import com.e2d.odin.application.knowledge.ReviewCard;
@@ -132,8 +133,13 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DeactivateUser deactivateUser(UserRepository users) {
-        return new DeactivateUser(users);
+    UpdateUser updateUser(UserRepository users) {
+        return new UpdateUser(users);
+    }
+
+    @Bean
+    DeleteUser deleteUser(UserRepository users, Clock clock) {
+        return new DeleteUser(users, clock);
     }
 
     @Bean

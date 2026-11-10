@@ -130,4 +130,22 @@ class ResolveActorTest {
         assertThatThrownBy(() -> resolve.fromSessionToken(token))
                 .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
     }
+
+    @Test
+    void deletedWorkersKeyIsUnauthorized() {
+        givenWorker(true);
+        users.delete(workerId, clock.instant());
+
+        assertThatThrownBy(() -> resolve.fromAccessKey(PLAIN_KEY))
+                .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
+    }
+
+    @Test
+    void deletedAdminsSessionIsUnauthorized() {
+        String token = givenSession();
+        users.delete(sessions.findByTokenHash(secrets.hash(token)).orElseThrow().userId(), clock.instant());
+
+        assertThatThrownBy(() -> resolve.fromSessionToken(token))
+                .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
+    }
 }

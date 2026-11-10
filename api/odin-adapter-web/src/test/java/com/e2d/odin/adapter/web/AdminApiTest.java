@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -107,6 +108,51 @@ class AdminApiTest extends WebTestSupport {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
         mvc.perform(get("/v1/me").header("Authorization", key)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void patchUserUpdatesFields() throws Exception {
+        CompanyId company = newCompany();
+        workerKey(company);
+        UserId worker = w.users.listByCompany(company).get(0).id();
+        mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"Nuevo\",\"email\":\"N@e.test\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.displayName").value("Nuevo"))
+                .andExpect(jsonPath("$.email").value("n@e.test")).andExpect(jsonPath("$.active").value(true));
+    }
+
+    @Test
+    void patchUserReactivates() throws Exception {
+        CompanyId company = newCompany();
+        workerKey(company);
+        UserId worker = w.users.listByCompany(company).get(0).id();
+        Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+        mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"active\":false}")).andExpect(jsonPath("$.active").value(false));
+        mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"active\":true}")).andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
+    }
+
+    @Test
+    void deleteUserIs204() throws Exception {
+        CompanyId company = newCompany();
+        String key = workerKey(company);
+        UserId worker = w.users.listByCompany(company).get(0).id();
+        Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+        mvc.perform(delete("/v1/admin/users/" + worker.value()).cookie(group)).andExpect(status().isNoContent());
+        mvc.perform(get("/v1/me").header("Authorization", key)).andExpect(status().isUnauthorized());
+        mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"active\":true}")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void workerWithPasswordIs400() throws Exception {
+        CompanyId company = newCompany();
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/users")
+                .cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Wanda\",\"role\":\"WORKER\",\"password\":\"clave-muy-larga-1\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Un trabajador no tiene contraseña: entra con su clave personal"));
     }
 
     @Test
