@@ -92,4 +92,65 @@ Son de negocio y condicionan la fase 2. Ninguna bloquea la fase 1.1.
 
 ## 7. Resultado de la fase 1.1
 
-Pendiente: se rellena al terminar las tareas.
+Terminada el 2026-11-10. `feature/api-central` queda en 895c8b2 más la rama de este cierre. No está en `develop`: el paso lo aprueba el propietario. Sin push.
+
+### 7.1 Verificado ejecutando
+
+Lo ejecutó el CTO sobre 895c8b2:
+
+| Comprobación | Resultado |
+|---|---|
+| `make check` | Código de salida 0. API: 354 pruebas, 0 fallos. MCP: 16. Panel: 30 |
+| `make demo` | Código de salida 0. Pasan los 9 pasos de la fase 1 y los 10 pasos nuevos de administración, contra la API real |
+| Error de arranque con la clave de la base cambiada, en una pila desechable | Sale el texto nuevo, que dice qué hacer, y ninguna línea de traza |
+| Cambio de claves de la base siguiendo el `README`, en una pila desechable | La API arranca con las claves nuevas y conserva los datos |
+| Instalación de prueba del propietario, actualizada con `make up` | Arranca, aplica las migraciones V5 y V6 y conserva sus 3 usuarios, su empresa, su proyecto y su clave |
+
+Los 10 pasos de administración de `make demo` recorren lo que falló en la prueba del propietario: crear un trabajador sin correo ni contraseña, darle su clave, desactivarlo y activarlo, editarlo, borrarlo y volver a usar su correo; renombrar y borrar un proyecto; restablecer y cambiar contraseñas.
+
+**No probado:**
+- El panel a mano por una persona: lo recorre Playwright, no un administrador real.
+- Con Claude Desktop ni con otra IA real, igual que en la fase 1.
+- La recuperación de la contraseña del administrador del grupo en la instalación del propietario: solo en las pruebas.
+
+### 7.2 Cómo se hizo
+
+- 7 tareas en serie, cada una con su subagente (6 con Sonnet y 1 con Haiku) y su revisión independiente antes del merge.
+- Las revisiones por tarea devolvieron dos tareas con fallos:
+  - en usuarios, código muerto y un borrado que podía pisar la fecha del primero;
+  - en el panel, un formulario que se vaciaba al fallar y un aviso que reaparecía en entradas posteriores.
+- La revisión final de toda la rama, con Opus, encontró dos fallos importantes que ninguna revisión por tarea había visto, y se corrigieron:
+  - desactivar a un administrador no cerraba sus sesiones del panel, que volvían a valer al reactivarlo;
+  - el límite de intentos contaba también las entradas correctas. La demo quedaba justo en el límite y una oficina detrás de un proxy habría compartido 5 entradas por minuto.
+
+### 7.3 Decisiones del CTO durante la ejecución
+
+| Decisión | Motivo | Coste si es errónea |
+|---|---|---|
+| El límite de intentos cuenta solo los fallos | Lo anterior | Volver a una sola operación en el limitador |
+| Un solo método `User.updated(...)` en lugar de los tres del plan | Hace lo mismo con menos código | Un renombrado mecánico |
+| No se limita el cambio de la propia contraseña | Exige ya una sesión válida y el cifrado es lento a propósito | Una llamada más |
+| Un identificador que no existe da 404 y uno de otra empresa da 403 | Los identificadores son aleatorios y todos los casos de uso siguen ese orden | Reordenar las comprobaciones |
+| La recuperación usa una clave de límite común a todos | Con el límite contando solo fallos, solo bloquea mientras alguien falla el token desde el propio equipo | Una clave por IP |
+| En la tarea 2 no quedó registrada la fase roja de TDD | No se puede rehacer; el revisor no encontró código sin prueba. Desde la tarea 3 se exigió la evidencia | Ninguno funcional |
+
+### 7.4 Avisos menores que quedan
+
+Ninguno bloquea. Los clasificó la revisión final:
+- Dos altas simultáneas de un proyecto con el mismo nombre: la segunda recibe un mensaje genérico de duplicado, con el código 409 correcto.
+- Una ráfaga de intentos simultáneos puede pasar de 5 por ventana, acotada por el coste del cifrado.
+- Guardar la desactivación y cerrar las sesiones son dos pasos sin transacción común.
+- La migración V6 fallaría en una base que tuviera dos proyectos de la misma empresa con nombres iguales salvo por las mayúsculas. La del propietario no los tiene.
+- Detalles de estilo en pruebas e imports.
+
+### 7.5 Respuestas del CEO (D-038) y lo que sigue
+
+El CEO respondió a las cuatro preguntas del apartado 5 el mismo día:
+- proyectos abiertos por defecto, con la opción de restringir uno a sus miembros;
+- una identidad por persona, con una pertenencia y una clave por empresa;
+- un mismo usuario puede ser administrador y trabajador;
+- la marca del panel se configura en cada instalación; en la nuestra, E2D Projects.
+
+No cambian la fase 1.1. Marcan las dos fases siguientes:
+1. **Fase 2a:** identidad con pertenencias y proyectos restringidos. Diseño en `docs/superpowers/specs/2026-11-10-identidad-pertenencias-design.md`, en la rama `feature/identidad-pertenencias`.
+2. **Fase 2b:** rediseño visual del panel con la marca configurable.
