@@ -5,20 +5,25 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.shared.ValidationException;
+import java.time.Clock;
 
-public class DeactivateUser {
+public class DeleteUser {
 
     private final UserRepository users;
+    private final Clock clock;
 
-    public DeactivateUser(UserRepository users) {
+    public DeleteUser(UserRepository users, Clock clock) {
         this.users = users;
+        this.clock = clock;
     }
 
-    public User execute(Actor actor, UserId id) {
+    public void execute(Actor actor, UserId id) {
         User user = users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         UserAdministration.requireAdminOfUser(actor, user);
-        User deactivated = user.deactivated();
-        users.save(deactivated);
-        return deactivated;
+        if (actor.userId().equals(id)) {
+            throw new ValidationException("No puedes borrarte a ti mismo");
+        }
+        users.delete(id, clock.instant());
     }
 }

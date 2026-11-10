@@ -41,6 +41,9 @@ public class RegisterUser {
         if (admin && email.isEmpty()) {
             throw new ValidationException("El administrador necesita correo");
         }
+        if (!admin && newUser.password().filter(p -> !p.isBlank()).isPresent()) {
+            throw new ValidationException("Un trabajador no tiene contraseña: entra con su clave personal");
+        }
         email.flatMap(users::findByEmail).ifPresent(existing -> {
             throw new ConflictException("Ya existe un usuario con ese correo");
         });

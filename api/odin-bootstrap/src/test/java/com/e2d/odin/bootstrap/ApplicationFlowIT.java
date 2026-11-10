@@ -98,6 +98,32 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(big.contentType()).startsWith("application/problem+json");
     }
 
+    @Test
+    @Order(5)
+    void deletedAuthorStillNamedInSearchHit() throws InterruptedException {
+        ApiClient api = new ApiClient(port);
+        Reply admin = api.post("/v1/admin/companies/" + companyA + "/users", map("displayName", "Carla Autora",
+                "email", "carla@ejemplo.test", "role", "COMPANY_ADMIN", "password", ADMIN_PASSWORD),
+                "Cookie", adminCookie);
+        assertThat(admin.status()).isEqualTo(201);
+        Reply login = api.post("/v1/admin/session", map("email", "carla@ejemplo.test", "password", ADMIN_PASSWORD));
+        String authorCookie = login.setCookie().split(";")[0];
+        Reply upload = api.upload("/v1/admin/companies/" + companyA + "/documents", "revision.txt",
+                "La revisión de la caldera ficticia se hace cada octubre.".getBytes(StandardCharsets.UTF_8),
+                "Cookie", authorCookie);
+        assertThat(upload.status()).isEqualTo(201);
+        awaitReady(api, upload.json().get("document").get("id").asString());
+
+        assertThat(api.delete("/v1/admin/users/" + admin.json().get("id").asString(), "Cookie", adminCookie)
+                .status()).isEqualTo(204);
+
+        Reply found = api.post("/v1/search", map("queries", List.of("revisión caldera octubre")),
+                "Authorization", keyA);
+        assertThat(found.json().get("noSource").asBoolean()).isFalse();
+        assertThat(found.json().get("hits").get(0).get("authorName").asString()).isEqualTo("Carla Autora");
+        assertThat(api.get("/v1/admin/me", "Cookie", authorCookie).status()).isEqualTo(401);
+    }
+
     private void setUpAndLogIn(ApiClient api) {
         Reply setup = api.post("/v1/setup", map("setupToken", SETUP_TOKEN, "groupName", "Grupo Ejemplo",
                 "adminName", "Admin", "adminEmail", ADMIN_EMAIL, "password", ADMIN_PASSWORD));

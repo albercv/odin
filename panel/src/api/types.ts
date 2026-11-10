@@ -222,7 +222,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["delete"];
         options?: never;
         head?: never;
         patch: operations["update"];
@@ -540,7 +540,9 @@ export interface components {
             reviewedAt: string;
             note?: string;
         };
-        UserActive: {
+        UpdateUser: {
+            displayName?: string;
+            email?: string;
             active?: boolean;
         };
         Me: {
@@ -1072,6 +1074,26 @@ export interface operations {
             };
         };
     };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     update: {
         parameters: {
             query?: never;
@@ -1083,7 +1105,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserActive"];
+                "application/json": components["schemas"]["UpdateUser"];
             };
         };
         responses: {

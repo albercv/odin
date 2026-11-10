@@ -19,13 +19,14 @@ import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
-import com.e2d.odin.application.identity.DeactivateUser;
+import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListUsers;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.RegisterUser;
+import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.port.AdminSessions;
@@ -129,8 +130,12 @@ public class TestWiring {
         return new ListUsers(users);
     }
 
-    @Bean DeactivateUser deactivateUser() {
-        return new DeactivateUser(users);
+    @Bean UpdateUser updateUser() {
+        return new UpdateUser(users);
+    }
+
+    @Bean DeleteUser deleteUser() {
+        return new DeleteUser(users, clock);
     }
 
     @Bean IssueAccessKey issueAccessKey() {

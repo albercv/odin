@@ -26,6 +26,26 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
                 true, Optional.of("hash"));
     }
 
+    private static User inactive(User u) {
+        return u.updated(u.displayName(), u.email(), false);
+    }
+
+    @Test
+    void secondDeleteKeepsFirstTimestamp() throws Exception {
+        User u = user("twice@x.com", Optional.empty());
+        users.save(u);
+        Instant first = Instant.parse("2026-11-01T10:00:00Z");
+        users.delete(u.id(), first);
+        users.delete(u.id(), Instant.parse("2026-11-02T10:00:00Z"));
+        try (var c = Db.owner().getConnection(); var st = c.prepareStatement(
+                "SELECT deleted_at FROM app_user WHERE id = ?")) {
+            st.setObject(1, u.id().value());
+            var rs = st.executeQuery();
+            rs.next();
+            assertThat(rs.getTimestamp(1).toInstant()).isEqualTo(first);
+        }
+    }
+
     @Test
     void savesFindsAndUpdatesUsers() {
         CompanyId company = newCompany();
@@ -33,7 +53,7 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         users.save(u);
         assertThat(users.findById(u.id())).contains(u);
         assertThat(users.findByEmail("ana@example.COM")).contains(u);
-        users.save(u.deactivated());
+        users.save(inactive(u));
         assertThat(users.findById(u.id()).orElseThrow().active()).isFalse();
     }
 
@@ -57,6 +77,29 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         users.save(user(null, Optional.empty()));
         users.save(user(null, Optional.empty()));
         assertThatThrownBy(() -> users.save(user("DUP@x.com", Optional.empty())))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void deletedUserIsExcludedFromReads() {
+        CompanyId company = newCompany();
+        User u = user("gone@x.com", Optional.of(company));
+        users.save(u);
+        users.delete(u.id(), Instant.now());
+        assertThat(users.findById(u.id())).isEmpty();
+        assertThat(users.findByEmail("gone@x.com")).isEmpty();
+        assertThat(users.listByCompany(company)).isEmpty();
+    }
+
+    @Test
+    void deletedUsersEmailIsFreeButInactiveUsersIsNot() {
+        User deleted = user("free@x.com", Optional.empty());
+        User inactive = user("busy@x.com", Optional.empty());
+        users.save(deleted);
+        users.save(inactive(inactive));
+        users.delete(deleted.id(), Instant.now());
+        users.save(user("free@x.com", Optional.empty()));
+        assertThatThrownBy(() -> users.save(user("busy@x.com", Optional.empty())))
                 .isInstanceOf(ConflictException.class);
     }
 
