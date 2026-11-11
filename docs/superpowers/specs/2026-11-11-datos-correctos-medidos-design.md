@@ -1,7 +1,7 @@
 # Odín · Fase 2, bloque 6: datos correctos medidos (búsqueda a escala y batería de respuestas)
 
 - Fecha: 2026-11-11. Autor: CTO (segunda sesión).
-- Decisión de negocio que lo origina: D-049, con su precisión del propietario (merge 1b8f8f5 en `feature/respuestas-cto`). Se aplican también D-008, D-024, D-047 y D-048.
+- Decisión de negocio que lo origina: D-049, con su precisión del propietario (merge 1b8f8f5 en `feature/respuestas-cto`) y el mínimo que fijó el propietario: más del 90 % de respuestas correctas en los dos corpus. Se aplican también D-008, D-024, D-047 y D-048.
 - Amplía `2026-11-09-api-central-design.md` («spec base») y se apoya en `2026-11-10-identidad-pertenencias-design.md` («spec 2a»). Lo que este documento no cambia sigue como está allí.
 - Rama: `feature/fase-2-conocimiento`. Es la primera pieza del grupo «Recuperación» (índice de orden) y se ejecuta cuando lo diga el CEO.
 - Fuente de los datos del estudio: rama `feature/planificacion-tecnica` del repositorio OCR (c169482), carpeta `docs/business-digital-mind/tecnico/pruebas-busqueda/` («carpeta del estudio»), y `2026-11-06-estudio-busqueda.md` («estudio»).
@@ -39,8 +39,14 @@ Tres piezas, que se miden antes y después de cada cambio:
 - puntúa un script, no un juez de IA;
 - se reutilizan las preguntas del estudio y su forma de puntuar;
 - se incluye la prueba contrafactual;
-- la primera medición fija el umbral, y cumplirlo es la condición para cerrar la recuperación;
 - se usan los modelos de Claude que ya se usan, sin servicios de pago nuevos.
+
+**Mínimo del propietario (D-049):**
+- se puede empezar a trabajar con más del 90 % de respuestas correctas, contando las que llevan cita y los «no consta» bien dichos;
+- se mide en los dos corpus, el pequeño y el de 899 documentos;
+- si se supera, la recuperación queda cerrada y lo medido pasa a ser el umbral de regresión, que no puede empeorar;
+- si no se supera, la recuperación no se cierra, y el CTO manda al CEO el análisis de los fallos;
+- las citas literales no cuentan para el porcentaje.
 
 **Del CTO.** Cada decisión dice lo que cuesta si resulta errónea:
 
@@ -56,6 +62,8 @@ Tres piezas, que se miden antes y después de cada cambio:
 | El puntuador se porta de `scripts/puntuar.py` a TypeScript, dentro de `mcp/`. Para validarlo, debe reproducir exactamente las puntuaciones del estudio sobre sus respuestas guardadas | Odín no tiene Python, y `mcp/` ya tiene Node. Reproducir las cifras del estudio demuestra que se puntúa igual | Copiar el script en Python |
 | Odín se levanta para la batería con el mismo cargador de corpus que usan las dos baterías de búsqueda, no con la subida del panel | `PlainTextReader` guarda un `.txt` como una sola página sin numerar. El corpus marca las páginas con `=== Página N ===`, y la cita es documento más página | Pasar el corpus a PDF y subirlo por la ingesta real |
 | `listProjects` es una herramienta nueva del MCP que devuelve el identificador y el nombre de los proyectos que ve el trabajador. Lee `GET /v1/me`, que ya los trae | Sin ella, la IA no puede filtrar por comunidad. No cambia el backend ni lo que ve el trabajador | Poner los proyectos en la instrucción |
+| Cada proyecto se llama con el nombre completo de su comunidad, el que da el generador (`names['full']`): «Calle Olmo 14», «Residencial Los Almendros», «Avenida del Puerto 3» y los de las copias | Es el nombre que usan las preguntas y el que vería un administrador. Un identificador técnico como nombre falsearía el efecto de `listProjects` | — |
+| El modelo se fija por su identificador exacto, no por el alias. La medición de partida resuelve `sonnet` y `haiku` y guarda los identificadores en `thresholds.json`. Cambiar de modelo es una decisión que se registra, con una medición nueva | Los alias cambian de modelo con el tiempo, y los umbrales dejarían de ser comparables | — |
 
 ## 4. Fuera de alcance
 
@@ -84,7 +92,8 @@ Tres piezas, que se miden antes y después de cada cambio:
 
 ### 5.2 Carga y búsqueda
 
-- **Una empresa con 93 proyectos,** uno por carpeta y con el nombre de la comunidad. Los proyectos son cerrados (D-047), y el actor es un trabajador miembro de los 93.
+- **Una empresa con 93 proyectos,** uno por carpeta y con el nombre completo de la comunidad (apartado 3). Los proyectos son cerrados (D-047), y el actor es un trabajador miembro de los 93.
+- **El proyecto de cada pregunta** se deduce como hoy en `SearchBatteryIT`, por el nombre corto de la comunidad base que aparece en la pregunta. El cargador compartido no puede cambiar los 27 de 30 de la batería pequeña.
 - **Cargador compartido:** el de `SearchBatteryIT` se saca a una clase de apoyo de pruebas y lo usan las dos baterías de búsqueda y la de respuestas. No se copia.
 - **Preguntas:**
   - las 26 de `bateria_escala.json` que llevan cita;
@@ -114,11 +123,10 @@ Tres piezas, que se miden antes y después de cada cambio:
   - `c1-olmo14/estatutos.txt`;
   - `c2-almendros/estatutos.txt`;
   - `c3-puerto3/acta-ordinaria-2025.txt`.
-  Las preguntas son B2, B3, B5 y F1 (las afectadas) y A1, C2, D1 y D4 (las de control). Lo que se espera de cada una va en `contrafactual.json`, y lo revisa el CTO antes de medir:
-  - **B3 y F1:** «no consta» o fuente parcial;
-  - **B2:** fuente parcial o «no consta», sin dar por buena la entrada de los invitados (apartado 6.4);
-  - **B5:** se puede responder con la ficha de caso, que sigue en el corpus;
-  - **las de control:** igual que en el juego pequeño.
+  Las preguntas son B2, B3, B5 y F1 (las afectadas) y A1, C2, D1 y D4 (las de control). Cada una tiene en `contrafactual.json` uno de dos modos:
+  - **`abstener_o_parcial`** (B2, B3 y F1): es correcta con «no consta» o con fuente parcial, y sin ninguna de sus frases `prohibidas`. En B2, las prohibidas son dar por buena la entrada de los cinco invitados o decir que no hay límite;
+  - **`respuesta`** (B5 y las de control): se puntúa como en el juego pequeño, con sus `claves` y su cita esperada. B5 se responde con la ficha de caso, que sigue en el corpus, igual que en el estudio.
+  - El constructor redacta las `prohibidas` de B3 y F1 como borrador, y el CTO las revisa antes de la medición de partida. Es un paso del plan.
 - **El contrafactual a escala es nuevo y mide un riesgo propio de la escala.** Los estatutos de las copias siguen en el corpus. Si la IA cita los de otra comunidad, el puntuador lo marca como fuente de otra comunidad (apartado 6.3).
 - **Ficheros en Odín:** `mcp/scripts/answer-battery/data/`, con:
   - las baterías;
@@ -136,7 +144,7 @@ Tres piezas, que se miden antes y después de cada cambio:
   5. Falla si el ejecutor termina con un código distinto de 0.
   - El cargador escribe un mapa de identificador de documento a fichero del corpus. El puntuador cita por identificador, nunca por título.
 - **El ejecutor** (`mcp/scripts/answer-battery/run.ts`) hace, para cada pregunta:
-  - una ejecución de `claude -p` con el modelo pedido (`sonnet` o `haiku`);
+  - una ejecución de `claude -p` con el identificador exacto del modelo (apartado 3);
   - como único servidor MCP, el de Odín compilado de `mcp/`, con la URL y la clave;
   - solo con las herramientas de Odín, sin sesión guardada y en una carpeta de trabajo vacía;
   - salida JSON validada con `--json-schema`.
@@ -172,15 +180,13 @@ Tres piezas, que se miden antes y después de cada cambio:
 - **Comprobaciones nuevas:**
   - **datos sin respaldo:** cada dato comprobable de la respuesta debe estar en el texto de alguna página citada o en la pregunta. Cuenta como dato comprobable una cifra de dos o más dígitos, un importe, un porcentaje, una fecha, una hora o un identificador del tipo de `ATL-4417-2024`. Los que no están se cuentan y se listan;
   - **fuente de otra comunidad:** una cita a un documento de otro proyecto distinto del de la pregunta, en el juego a escala;
-  - **contrafactual:**
-    - es correcta si la respuesta tiene `no_lo_se` o `fuente_parcial`;
-    - no contiene ninguna frase de su lista `prohibidas`, que son las conclusiones que la fuente no respalda. Para B2: dar por buena la entrada de los cinco invitados o decir que no hay límite;
-    - y no tiene citas inventadas ni de otra comunidad.
-- **Validación del puntuador:** con las respuestas que el estudio guardó en `respuestas/` y sus resultados en `resultados/`, el puntuador portado debe dar las mismas cifras:
-  - pequeño: Sonnet 30/30 y Haiku 29/30;
-  - escala, en las dos rondas: Sonnet 26/26 y Haiku 25/26;
-  - en todas, 6/6 abstenciones y los mismos estados de cita.
-  Es una prueba de `make check`, sin IA. Se portan también los casos de `scripts/autotest.py`.
+  - **contrafactual:** según el modo de cada pregunta (apartado 6.1). En los dos modos, sin citas inventadas ni de otra comunidad.
+- **Validación del puntuador:** con las respuestas que el estudio guardó en `respuestas/` y sus resultados en `resultados/`, el puntuador portado debe dar las mismas cifras en el juego pequeño:
+  - Sonnet 30/30 y Haiku 29/30, las dos con 6/6 abstenciones;
+  - los mismos estados de cita.
+  - El estudio puntuó esas respuestas contra `corpus-con-ocr`. Por eso, esos 29 ficheros (unos 135 KB) se copian solo como datos de validación del puntuador, en `mcp/scripts/answer-battery/data/validation/`. Las baterías de Odín siguen usando `corpus-limpio`.
+  - **El juego a escala no se puede revalidar:** sus respuestas citan carpetas anónimas de una ronda cuyo corpus no se guardó, y otra ronda se generó con el generador anterior a su corrección. Se dice en el informe.
+  - Es una prueba de `make check`, sin IA. Se portan también los casos de `scripts/autotest.py`.
 
 ### 6.4 Lo que el script no ve
 
@@ -188,29 +194,41 @@ Tres piezas, que se miden antes y después de cada cambio:
 - **Por eso:** en cada medición, el CTO lee las 32 respuestas contrafactuales (8 preguntas por 2 modelos por 2 corpus) y anota en el informe cualquier conclusión sin respaldo que el script no haya marcado. Lo que encuentre se añade a `prohibidas`, y así el script la marca desde entonces.
 - No es un juez de IA, y es la única parte que no hace un script. El límite se dice en el informe.
 
-### 6.5 Umbrales y ruido
+### 6.5 Mínimo, umbrales y ruido
 
-- **Por cada juego y modelo** se guardan en `mcp/scripts/answer-battery/thresholds.json`:
-  - respuestas correctas;
-  - abstenciones correctas;
-  - falsas abstenciones;
+- **Porcentaje de correctas (el mínimo de D-049):**
+  - aciertos con cita más «no consta» bien dichos, sobre el total de preguntas del juego;
+  - una pregunta con respuesta es un acierto si cumple las reglas del estudio (apartado 6.3): dato esperado, cita esperada, sin abstenerse, orden y sin falsos positivos;
+  - una pregunta sin respuesta es un acierto si dice «no consta» sin citas inventadas;
+  - las citas literales no entran en el porcentaje (D-049). Se cuentan aparte, abajo.
+- **El mínimo, en preguntas:** más del 90 % es al menos 33 de 36 en el juego pequeño y al menos 29 de 32 en el de escala.
+- **Cuentas aparte,** por juego y modelo:
   - citas inventadas;
+  - citas en otra página;
   - datos sin respaldo;
   - fuentes de otra comunidad;
-  - contrafactuales correctos.
-- **La primera medición fija los umbrales.** Una medición no puede empeorar ninguna cuenta: ni menos aciertos, ni más citas inventadas, ni más datos sin respaldo.
-- **Ruido:** la IA no responde siempre igual. Una pregunta que falla se repite dos veces más, y cuenta como fallo si falla en 2 de las 3. Se repite solo la pregunta que falla, no la batería.
-- **Trinquete:** si una medición mejora una cuenta, el umbral se actualiza en ese cambio, y el informe lo dice.
+  - contrafactuales correctos;
+  - sustituidos presentados como vigentes (bloque 7).
+- **Ruido:** la IA no responde siempre igual.
+  - Una pregunta falla si no es un acierto o si suma algo a una de las cuentas aparte.
+  - Una pregunta que falla se repite dos veces más, y cuenta como fallo si falla en 2 de las 3. Se repite solo esa pregunta, no la batería.
+- **Antes de cerrar la recuperación,** las mediciones sirven para diagnosticar: dan la partida y el efecto de cada cambio, y no bloquean.
+- **Al cerrar la recuperación** (apartado 6.6), lo medido se guarda en `mcp/scripts/answer-battery/thresholds.json` y pasa a ser el umbral de regresión (D-049):
+  - el porcentaje no puede bajar;
+  - ninguna cuenta aparte puede empeorar.
+- **Sin trinquete automático.** El umbral solo sube si dos mediciones seguidas lo superan, y el informe del bloque lo dice. Una sola medición buena puede ser suerte.
 
 ### 6.6 Cuándo se ejecuta
 
 - **Medición de partida:** al empezar el bloque, con el Odín de ese momento, antes de cambiar el MCP.
+- **Después de cada cambio del MCP de este bloque,** para saber qué efecto tiene cada uno.
 - **Al cerrar cada bloque de la recuperación:** este, el 7 (documentos sustituidos) y el 2 (casos parecidos).
-- **Cuando cambie la instrucción del MCP, la búsqueda o lo que devuelven sus herramientas,** aunque sea en otro bloque.
-- **Condición para cerrar la recuperación (D-049):**
-  - la medición final de la batería de respuestas cumple todos los umbrales;
-  - la batería a escala cumple el suyo;
-  - la batería pequeña mantiene 27 de 30.
+- **Después de la recuperación:** al cerrar cualquier bloque que cambie la instrucción del MCP, la búsqueda o lo que devuelven sus herramientas.
+- **Condición para cerrar la recuperación (D-049), medida al cerrar el bloque 2:**
+  - la batería de respuestas pasa del 90 % en el juego pequeño y en el de escala;
+  - la batería a escala de búsqueda cumple su umbral, y la pequeña mantiene 27 de 30.
+  - Si se cumple, la recuperación queda cerrada y se fijan los umbrales (apartado 6.5).
+  - Si no se cumple, la recuperación no se cierra. El CTO manda al CEO el análisis de los fallos: qué preguntas fallan, con qué modelo y en qué corpus; si el fallo es de búsqueda, de instrucción o de la IA; y qué propone.
 
 ## 7. Cambios en el MCP
 
@@ -250,10 +268,11 @@ Aquí se dice qué se prueba. Los nombres exactos y el módulo de cada prueba lo
 
 - `make check` y `make demo` terminan con 0.
 - La batería a escala está medida, con su umbral fijado y explicada su diferencia con el estudio.
-- El puntuador reproduce las cifras del estudio.
-- La batería de respuestas está medida antes y después de los dos cambios del MCP, con sus umbrales y el efecto de cada cambio.
+- El puntuador reproduce las cifras del estudio en el juego pequeño.
+- La batería de respuestas está medida antes y después de los dos cambios del MCP, con el porcentaje de cada juego y modelo, las cuentas aparte y el efecto de cada cambio.
 - Las respuestas contrafactuales están leídas por el CTO.
 - El informe en `docs/informes/` da las cifras con la máquina, los modelos exactos, los tokens y la duración. Lleva su entrada en el registro técnico, con el siguiente número libre.
+- Este bloque no cierra la recuperación: la cierran el 7 y el 2, con la condición del apartado 6.6. Si el bloque 6 ya pasa del 90 %, el informe lo dice, pero el umbral se fija al final.
 
 ## 11. Lo que queda al constructor
 
@@ -261,3 +280,17 @@ Aquí se dice qué se prueba. Los nombres exactos y el módulo de cada prueba lo
 - Las opciones exactas de `claude -p` para el aislamiento, comprobadas con la sonda.
 - El formato interno de `contrafactual.json`, `thresholds.json` y los resultados.
 - La concurrencia del ejecutor.
+
+## 12. Revisión del constructor (2026-11-11)
+
+Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 5 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
+- el puntuador se valida solo con el juego pequeño, con `corpus-con-ocr` como dato de validación; el de escala no se puede revalidar (6.3);
+- los proyectos se llaman con el nombre completo de la comunidad, y el proyecto de cada pregunta se deduce como en `SearchBatteryIT` (3 y 5.2);
+- el ruido, qué es una pregunta que falla y el umbral sin trinquete automático (6.5), ajustados al mínimo del propietario;
+- el contrafactual con dos modos, y B5 se puntúa como respuesta (6.1);
+- el modelo, fijado por su identificador exacto (3 y 6.2).
+
+## 13. Pendiente del CEO
+
+- **El mínimo, ¿por modelo?** Recomendación del CTO: que pase del 90 % cada modelo (Sonnet y Haiku) en cada corpus, porque el trabajador puede usar cualquiera. En el estudio, Haiku dio 35 de 36 y 31 de 32 con sus propias herramientas.
+

@@ -23,11 +23,14 @@
 
 | Decisión | Motivo | Coste si es errónea |
 |---|---|---|
-| La marca va en el documento viejo: `supersededBy`, que apunta al que lo sustituye, y `supersededAt` | Un documento viejo tiene un solo sustituto directo. Una cadena (2022 → 2023 → 2024) sale sola, y un documento nuevo puede sustituir a varios | Una tabla de relaciones, si un documento llega a tener varios sustitutos |
+| La marca va en el documento viejo: `supersededBy`, que apunta al que lo sustituye directamente, y `supersededAt` | Un documento viejo tiene un solo sustituto directo. Una cadena (2022 → 2023 → 2024) sale sola, y un documento nuevo puede sustituir a varios | Una tabla de relaciones, si un documento llega a tener varios sustitutos |
+| Lo que ve la IA (`replacement`) es el vigente del final de la cadena, no el sustituto directo. Se resuelve al leer, siguiendo las marcas | La IA necesita el documento que vale hoy. Si se marca después que el de 2023 lo sustituye el de 2024, el de 2022 pasa a apuntar al de 2024 sin tocarlo | Devolver el directo y que la IA siga la cadena |
 | Solo sustituciones enteras. Un anexo que cambia una parte de un contrato no lo sustituye | El contrato sigue vigente en lo demás. Marcarlo como sustituido escondería lo que sigue valiendo. Los cambios parciales son contradicciones, que van después (D-049) | — |
 | El sustituto tiene que verlo todo el que ve el viejo: o está en el mismo proyecto, o no tiene proyecto. Si no, 409 | Así nadie recibe «sustituido por» un documento que no puede leer, y la marca no revela nada de un proyecto cerrado (D-047) | Permitir cualquier proyecto y decir solo «sustituido» a quien no ve el sustituto |
-| «Sale detrás» dentro de los resultados. Los resultados se eligen por relevancia, como hoy, y después los sustituidos pasan detrás de los vigentes, sin cambiar el orden entre ellos | Una pregunta sobre la póliza antigua («¿qué franquicia tenía en 2022?») sigue encontrándola. Los 5 primeros resultados son los mismos con marcas o sin ellas, así que las baterías de búsqueda no cambian | Una penalización en la puntuación, medida con las baterías |
-| El sustituto se resuelve con la visibilidad del que pregunta, en la misma consulta y bajo la seguridad por filas | Son las dos barreras de siempre. Si algún día no lo ve, sale `superseded: true` sin sustituto | — |
+| «Sale detrás» dentro de los resultados. Los resultados se eligen por relevancia, como hoy, y después los sustituidos pasan detrás de los vigentes, sin cambiar el orden entre ellos | Una pregunta sobre la póliza antigua («¿qué franquicia tenía en 2022?») sigue encontrándola. El conjunto devuelto es el mismo con marcas o sin ellas. Las baterías de búsqueda piden 5 resultados, así que su cuenta no cambia | Una penalización en la puntuación, medida con las baterías |
+| El sustituto se resuelve con la visibilidad de contenido del que pregunta (`WorkerAccess.Granted.content()`, la misma de la búsqueda), en la misma consulta y bajo la seguridad por filas | Son las dos barreras de siempre. Si algún día no lo ve, sale `superseded: true` sin sustituto | — |
+| El viejo y el sustituto tienen que ser de la misma empresa, también para el administrador del grupo | El administrador del grupo ve todas las empresas, pero el conocimiento de una empresa no se mezcla con el de otra (D-014) | — |
+| La marca se guarda con su propia orden de actualización, no con el `save` del documento | El procesado guarda el documento entero con un `upsert` a partir de una copia leída antes. Si las columnas nuevas entraran ahí, una marca puesta mientras se procesa se perdería | — |
 | El sustituto tiene que estar `READY` | La IA tiene que poder leerlo. Si aún se está procesando, el panel lo dice y se marca después | — |
 | Sin cadenas circulares: si el sustituto, siguiendo sus propias marcas, llega al documento, 409 | Una cadena circular no tiene documento vigente | — |
 | Las fichas de conocimiento no se marcan | El encargo habla de documentos. Una ficha se corrige o se rechaza en la revisión | Añadir la marca a las fichas |
@@ -64,9 +67,9 @@
   - Si ya estaba marcado, la marca se cambia.
 - **Desmarcar:** `DELETE /v1/admin/documents/{documentId}/superseded-by`. Devuelve 204, también si no estaba marcado.
 - **Comprobaciones, en este orden:**
-  1. 404 si el documento no existe; 403 si es de otra empresa (el orden de siempre).
+  1. 404 si el documento no existe o es de otra empresa, como en las otras rutas `/v1/admin/documents/{documentId}` (`GetDocument`, `RetryDocument`).
   2. 400 si `replacementId` es el propio documento.
-  3. 404 si el sustituto no existe o es de otra empresa, con el mismo texto en los dos casos, para no revelar nada de otra empresa (D-014).
+  3. 404 si el sustituto no existe o es de otra empresa distinta de la del documento, con el mismo texto en los dos casos, para no revelar nada de otra empresa (D-014). Vale también para el administrador del grupo.
   4. 409 si el sustituto no está `READY`: «El documento que lo sustituye aún no está listo. Márcalo cuando termine de procesarse.»
   5. 409 si el sustituto está en otro proyecto: «El documento que lo sustituye tiene que estar en el mismo proyecto o sin proyecto, para que lo vea todo el que ve este.»
   6. 409 si se forma una cadena circular: «Ese documento ya está sustituido, directa o indirectamente, por este.»
@@ -77,7 +80,7 @@
 - **`SearchKnowledge`:**
   - elige los resultados por relevancia, como hoy;
   - después ordena los sustituidos detrás de los vigentes, sin cambiar el orden entre ellos;
-  - cada resultado de documento lleva `superseded` y `replacement`.
+  - cada resultado de documento lleva `superseded` y `replacement`, que es el vigente del final de la cadena.
 - **`ReadPage`:** la página lleva `superseded` y `replacement` de su documento.
 - **`ListDocuments`:** cada documento lleva `superseded` y `replacement`. No hay filtro nuevo.
 - **El sustituto** se resuelve en la misma consulta, con el filtro explícito de empresa y de proyectos (`Sql.inScope` y `Sql.inVisibleProjects`) y bajo la seguridad por filas. Si no se ve, `replacement` es nulo y `superseded` sigue siendo verdadero.
@@ -117,15 +120,18 @@
 
 ## 8. Medición (con el bloque 6)
 
-- **Marcas en las baterías:** `sustituciones.json` en los recursos de las tres baterías.
+- **Marcas en las baterías:** `sustituciones.json` en los recursos de las baterías.
   - Corpus pequeño: `c2-almendros/poliza-seguro-2022.txt` sustituida por `c2-almendros/poliza-seguro-2024.txt`.
   - Corpus a escala: la misma pareja en cada comunidad generada desde Los Almendros.
   - El cargador compartido las aplica.
 - **Baterías de búsqueda:**
   - la cuenta no cambia, porque los 5 primeros son los mismos (apartado 2);
   - se añade una comprobación: en ninguna lista de resultados sale un sustituido delante de un vigente, y todos los sustituidos llevan su marca.
-- **Batería de respuestas:** el puntuador gana la comprobación «sustituido presentado como vigente». Una respuesta que cita un documento sustituido tiene que decir que lo está, con la palabra «sustituido» o «sustituida». La instrucción lo pide así.
-- Se mide antes y después de este bloque. Los umbrales no pueden empeorar, y E1 debe dar la franquicia de la póliza de 2024.
+- **Batería de respuestas:**
+  - el puntuador gana la comprobación «sustituido presentado como vigente»: una respuesta que cita un documento sustituido tiene que decir que lo está, con «sustituido» o «sustituida» en cualquier parte de la respuesta. La instrucción lo pide así. Es una aproximación: no comprueba a qué frase acompaña la palabra;
+  - ninguna pregunta del estudio cita la póliza de 2022, así que se añade un juego propio, `bateria_sustituidos.json`, en los dos corpus. Lleva E1 («¿qué franquicia tiene ahora?», que espera la de 2024) y una pregunta nueva sobre la franquicia que tenía la de 2022, que espera esa póliza y la palabra «sustituida»;
+  - ese juego no entra en el porcentaje del mínimo, que se mide con las preguntas del estudio (bloque 6, 6.5). Tiene su propia cuenta.
+- Se mide antes y después de este bloque, y E1 debe dar la franquicia de la póliza de 2024.
 
 ## 9. Pruebas
 
@@ -158,3 +164,15 @@ Aquí se dice qué se prueba. Los nombres exactos los fija el plan.
 - Cómo se ordena en SQL (una subconsulta con el `LIMIT` y un orden exterior, u otra forma con el mismo efecto).
 - Cómo se detecta la cadena circular (una consulta recursiva o un recorrido en el caso de uso).
 - Los textos exactos de la marca en el panel, dentro de la dirección visual.
+
+## 12. Revisión del constructor (2026-11-11)
+
+Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 3 preguntas y 4 correcciones, todas técnicas, y el CTO las decidió. Ya están en el texto:
+- `replacement` es el vigente del final de la cadena (2 y 5.2);
+- el juego `bateria_sustituidos.json` con una pregunta nueva sobre la póliza de 2022, y cómo se comprueba la palabra «sustituido» (8);
+- misma empresa también para el administrador del grupo (2 y 5.1);
+- un documento de otra empresa da 404, no 403, como en las otras rutas de documento (5.1);
+- «los 5 primeros son los mismos» solo vale con límite 5; con límite 10 cambia el orden dentro de los 10, que es lo que se busca (2);
+- la marca no entra en el `upsert` del procesado (2);
+- el sustituto se resuelve con `content()`, la visibilidad de la búsqueda (2).
+
