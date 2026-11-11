@@ -1,0 +1,13 @@
+.dialog {
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line);
+  border-radius: var(--radius-md, 12px); background: var(--surface); color: var(--text); overflow: auto;
+}
+.dialog::backdrop { background: var(--brand-base-deep); opacity: .6; }
+.dialog[open] { animation: dialog-in .22s cubic-bezier(.23, 1, .32, 1); }
+.body { padding: 20px 24px; display: grid; gap: 16px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.head h2 { margin: 0; font-size: 18px; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.message { margin: 0; overflow-wrap: anywhere; }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dialog[open] { animation: none; } }
