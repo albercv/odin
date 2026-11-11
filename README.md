@@ -54,7 +54,7 @@ La contraseña necesita al menos 12 caracteres.
 
 Ábrelo en http://127.0.0.1:8088 y entra con ese correo y esa contraseña. Usa `127.0.0.1`, no `localhost`: la API comprueba que el `Origin` sea el de `ODIN_PANEL_ORIGIN` y, con `localhost`, la entrada da 403.
 
-Desde el panel se crean las empresas, los trabajadores y sus claves personales, se suben documentos y se revisan las fichas.
+Desde el panel se crean las empresas, las personas con sus pertenencias y claves personales, los proyectos, se suben documentos y se revisan las fichas.
 
 ## Marca
 
@@ -71,8 +71,11 @@ Si `brand.json` falta o no es válido, el panel arranca con un tema neutro y avi
 
 ## Quién entra dónde
 
-- Los administradores entran en el panel con su correo y su contraseña.
-- Los trabajadores no entran en el panel. Usan Odín desde su IA, por MCP, con su clave personal (`odin_...`), que un administrador les da desde el panel.
+- Una persona tiene un nombre, unos apellidos y un código de persona al azar. En cada empresa donde está tiene una pertenencia, con su papel o sus dos papeles: administra la empresa, trabaja con su IA, o ambos. En el panel se ve como `<código de persona>-<código de la empresa>`.
+- Quien administra una empresa entra en el panel con su correo y su contraseña. Si administra varias, elige empresa en el selector de la barra lateral.
+- Quien trabaja con su IA usa Odín por MCP con su clave personal (`odin_...`), que un administrador le da desde el panel. Cada clave vale solo para la pertenencia que la recibió y da acceso a lo mismo que esa persona ve en esa empresa.
+- Los proyectos nacen cerrados: solo los ven sus miembros. Para que lo vea toda la empresa hay que marcar «Visible para toda la empresa». Un trabajador no encuentra, lista ni lee nada de un proyecto cerrado al que no está asignado.
+- Quitar a una persona de una empresa quita sus pertenencias a proyectos de esa empresa y deja de valer sus claves de ella.
 
 ## MCP por stdio (IA de escritorio)
 
@@ -147,7 +150,7 @@ Esa lógica está detrás del puerto `AdminSessions` (`api/odin-application/src/
 ## Fuera de la fase 1
 
 - El lector OCR: los PDF escaneados y las imágenes quedan en «Pendiente de lector» hasta la fase 2.
-- Lo demás de la fase 2: etiquetado por tema, casos parecidos, permisos por proyecto, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
+- Lo demás de la fase 2: etiquetado por tema, casos parecidos, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
 - Fuera de alcance: acceso desde internet, TLS y SSO.
 
 ## Datos

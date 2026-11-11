@@ -71,7 +71,7 @@ function AddMember({ companyId, project, members, reload }: WithMembers) {
 /** Who can see a closed project: the visibility box and its members, loaded only when opened. */
 export function ProjectMembers(props: Props) {
   const { companyId, project, onChanged } = props;
-  const members = useLoad(() => api.projectMembers(companyId, project.id), [companyId, project.id]);
+  const members = useLoad(() => api.projectMembers(companyId, project.id), [companyId, project.id, project.memberCount]);
   const list = useRef<HTMLUListElement>(null);
   const toast = useToast();
   const { error, act } = useAction();

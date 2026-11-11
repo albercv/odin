@@ -338,6 +338,8 @@ Rama `task/identidad-pertenencias/e2e`. Spec 10.
   4. cambiar papeles, desactivar y activar, y quitar de la empresa;
   5. el alta de una persona muestra su código completo, con el patrón `^[2-9A-HJKMNP-Z]{4}-<código de la empresa>$`;
   6. una persona dada de alta con un proyecto lo ve en sus «Accesos» y en los miembros del proyecto; quitarla desde el proyecto la quita de sus «Accesos».
+  7. ascender a una trabajadora sin contraseña a «Administra la empresa»: el panel pide la contraseña, la envía y ella entra en el panel con su correo y esa contraseña (petición del CEO, 2026-11-11);
+  8. borrar a una persona que es miembro de un proyecto: «Quién lo ve» baja en uno y deja de figurar entre sus miembros (petición del CEO, 2026-11-11).
 - `demo-client.ts` añade un paso con el MCP: el trabajador asignado encuentra el documento del proyecto y el que no está asignado recibe «No consta en los documentos de tu empresa.».
 - `README`: «Quién entra dónde» y el resto de apartados dicen personas, pertenencias y proyectos cerrados por defecto.
 

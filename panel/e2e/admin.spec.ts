@@ -1,10 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 
 const state = JSON.parse(readFileSync(process.env.DEMO_STATE ?? '', 'utf8')) as { admin: { email: string; password: string }; sessionCookie: string };
 
 const COMPANY = 'Empresa E2E';
+const COMPANY_CODE = 'E2E';
+const SECOND_COMPANY = 'Empresa E2E bis';
+const PERSON_CODE = new RegExp(`^[2-9A-HJKMNP-Z]{4}-${COMPANY_CODE}$`);
+const PROMOTED = { name: 'Ascendida E2E', email: 'e2e-promoted@demo.test', password: `clave-${randomUUID()}` };
+const CLOSED_PROJECT = 'Proyecto cerrado E2E';
+const PROJECT_PEOPLE = ['Paula Uno', 'Pedro Dos', 'Pilar Tres'];
 const WORKER = { name: 'Trabajador E2E', email: 'e2e-worker@demo.test', renamed: 'Trabajador Renombrado' };
 const COMPANY_ADMIN = { name: 'Admin E2E', email: 'e2e-admin@demo.test', password: `clave-${randomUUID()}`, newPassword: `clave-${randomUUID()}`, resetPassword: `clave-${randomUUID()}` };
 const PROJECT = { name: 'Proyecto E2E', renamed: 'Proyecto E2E renombrado' };
@@ -35,14 +41,17 @@ async function logIn(page: Page, email: string, password: string): Promise<void>
 const firstNameOf = (name: string): string => name.split(' ')[0] ?? name;
 const lastNamesOf = (name: string): string => name.split(' ').slice(1).join(' ');
 
-async function createUser(page: Page, user: { name: string; email?: string; password?: string; role?: 'WORKER' | 'COMPANY_ADMIN' }): Promise<void> {
+type NewUser = { name: string; email?: string; password?: string; role?: 'WORKER' | 'COMPANY_ADMIN'; alsoWorker?: boolean; projects?: string[] };
+
+async function createUser(page: Page, user: NewUser): Promise<void> {
   await page.getByRole('button', { name: 'Añadir persona', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Añadir persona' });
   const form = dialog.locator('form');
   if (user.role === 'COMPANY_ADMIN') {
     await form.getByLabel('Administra la empresa').check();
-    await form.getByLabel('Trabaja con su IA').uncheck();
+    if (!user.alsoWorker) await form.getByLabel('Trabaja con su IA').uncheck();
   }
+  for (const project of user.projects ?? []) await form.getByLabel(project, { exact: true }).check();
   await form.getByLabel('Nombre', { exact: true }).fill(firstNameOf(user.name));
   await form.getByLabel('Apellidos').fill(lastNamesOf(user.name));
   if (user.email) await form.getByLabel('Correo').fill(user.email);
@@ -51,21 +60,42 @@ async function createUser(page: Page, user: { name: string; email?: string; pass
   await expect(dialog).toHaveCount(0);
 }
 
-async function createCompanyAndOpenIt(page: Page): Promise<void> {
+async function openCompany(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name: `Abrir ${name}`, exact: true }).click();
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+}
+
+async function createCompany(page: Page, name: string, code: string): Promise<void> {
   await page.getByRole('button', { name: 'Nueva empresa' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nueva empresa' });
-  await dialog.getByLabel('Nombre de la empresa').fill(COMPANY);
-  await dialog.getByLabel('Código').fill('E2E');
+  await dialog.getByLabel('Nombre de la empresa').fill(name);
+  await dialog.getByLabel('Código').fill(code);
   await dialog.getByRole('button', { name: 'Crear empresa' }).click();
-  await page.getByRole('button', { name: `Abrir ${COMPANY}` }).click();
-  await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();
+}
+
+async function createCompanyAndOpenIt(page: Page): Promise<void> {
+  await createCompany(page, COMPANY, COMPANY_CODE);
+  await openCompany(page, COMPANY);
   console.log('✓ Admin 1: empresa «Empresa E2E» creada y abierta');
+}
+
+async function giveKey(page: Page, name: string, label: string): Promise<void> {
+  const users = usersSection(page);
+  await openActions(users, name);
+  await users.getByRole('button', { name: `Claves de ${name}`, exact: true }).click();
+  await users.getByLabel('Etiqueta de la clave').fill(label);
+  await users.getByRole('button', { name: 'Dar clave' }).click();
+  const issued = page.getByRole('dialog', { name: 'Clave nueva' });
+  await expect(issued.locator('code')).toContainText('odin_');
+  await issued.getByRole('button', { name: 'Entendido' }).click();
+  await expect(users.getByText(`${label} (`)).toBeVisible();
 }
 
 async function workerWithoutEmail(page: Page): Promise<void> {
   await createUser(page, { name: WORKER.name });
   await expect(row(usersSection(page), WORKER.name)).toContainText('sin correo');
-  console.log('✓ Admin 2: trabajador sin correo ni contraseña, listado como «sin correo»');
+  await expect(row(usersSection(page), WORKER.name).locator('code')).toHaveText(PERSON_CODE);
+  console.log('✓ Admin 2: trabajador sin correo ni contraseña, listado como «sin correo» y con su código completo');
 }
 
 async function companyAdminWithPassword(page: Page): Promise<void> {
@@ -164,9 +194,11 @@ async function resetCompanyAdminPasswordAndEnter(page: Page): Promise<void> {
   await expect(page.getByRole('status')).toHaveText('Contraseña restablecida');
   await page.getByRole('button', { name: 'Salir' }).click();
   await logIn(page, COMPANY_ADMIN.email, COMPANY_ADMIN.resetPassword);
-  await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Empresa' }).selectOption({ label: COMPANY });
+  await expect(page.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Empresas' })).toHaveCount(0);
-  console.log('✓ Admin 9: contraseña restablecida; el administrador de empresa entra y solo ve la suya');
+  console.log('✓ Admin 9: contraseña restablecida; quien administra dos empresas entra, ve el selector y no ve el resto del grupo');
 }
 
 async function changeOwnPassword(page: Page): Promise<void> {
@@ -176,13 +208,108 @@ async function changeOwnPassword(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
   await expect(page.getByText('Contraseña cambiada. Entra de nuevo.')).toBeVisible();
   await logIn(page, COMPANY_ADMIN.email, COMPANY_ADMIN.newPassword);
-  await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
   console.log('✓ Admin 10: contraseña propia cambiada desde «Mi cuenta» y entrada con la nueva');
+}
+
+
+async function samePersonInSecondCompany(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Empresas' }).click();
+  await createCompany(page, SECOND_COMPANY, 'E2B');
+  await openCompany(page, SECOND_COMPANY);
+  await createUser(page, { name: COMPANY_ADMIN.name, email: COMPANY_ADMIN.email, password: COMPANY_ADMIN.password, role: 'COMPANY_ADMIN', alsoWorker: true });
+  await expect(page.getByText('Esta persona ya existía en el grupo: se ha añadido a esta empresa')).toBeVisible();
+  const person = row(usersSection(page), COMPANY_ADMIN.name);
+  await expect(person).toContainText('Administra la empresa · Trabaja con su IA');
+  await expect(person.locator('code')).toHaveText(/^[2-9A-HJKMNP-Z]{4}-E2B$/);
+  await giveKey(page, COMPANY_ADMIN.name, 'clave segunda empresa');
+  await page.getByRole('link', { name: 'Empresas' }).click();
+  await openCompany(page, COMPANY);
+  console.log('✓ Admin 11: la misma persona en una segunda empresa (aviso de que ya existía), con los dos papeles y una clave en ella');
+}
+
+async function changeRolesOfCompanyAdmin(page: Page): Promise<void> {
+  const users = usersSection(page);
+  await openActions(users, COMPANY_ADMIN.name);
+  await users.getByRole('button', { name: `Papeles de ${COMPANY_ADMIN.name}`, exact: true }).click();
+  await users.getByLabel('Trabaja con su IA').check();
+  await users.getByRole('button', { name: `Guardar papeles de ${COMPANY_ADMIN.name}`, exact: true }).click();
+  await expect(row(users, COMPANY_ADMIN.name)).toContainText('Administra la empresa · Trabaja con su IA');
+  console.log('✓ Admin 12: papeles cambiados; la persona administra y trabaja a la vez en la primera empresa');
+}
+
+async function closedProjectWithMembers(page: Page): Promise<void> {
+  const projects = projectsSection(page);
+  await projects.getByRole('button', { name: 'Nuevo proyecto' }).click();
+  await page.getByLabel('Nombre del proyecto').fill(CLOSED_PROJECT);
+  await page.getByRole('button', { name: 'Crear proyecto' }).click();
+  await expect(row(projects, CLOSED_PROJECT)).toContainText('Nadie todavía');
+  for (const name of PROJECT_PEOPLE) await createUser(page, { name, projects: [CLOSED_PROJECT] });
+  await expect(row(projects, CLOSED_PROJECT)).toContainText('3 miembros');
+  console.log('✓ Admin 13: proyecto cerrado y tres personas dadas de alta con él');
+}
+
+async function openProjectMembers(page: Page): Promise<Locator> {
+  const projects = projectsSection(page);
+  await openActions(projects, CLOSED_PROJECT);
+  const toggle = projects.getByRole('button', { name: `Miembros de ${CLOSED_PROJECT}`, exact: true });
+  if ((await toggle.getAttribute('aria-expanded')) === 'true') await toggle.click();
+  await toggle.click();
+  return page.getByRole('region', { name: `Miembros de ${CLOSED_PROJECT}` });
+}
+
+async function removeFromProjectAndSeeAccesses(page: Page): Promise<void> {
+  const [first = '', second = ''] = PROJECT_PEOPLE;
+  const users = usersSection(page);
+  await openActions(users, first);
+  await users.getByRole('button', { name: `Accesos de ${first}`, exact: true }).click();
+  await expect(page.getByRole('region', { name: `Accesos de ${first}` }).getByRole('list', { name: 'Proyectos asignados' })).toContainText(CLOSED_PROJECT);
+  await openActions(users, first);
+  await users.getByRole('button', { name: `Accesos de ${first}`, exact: true }).click();
+  const members = await openProjectMembers(page);
+  await expect(members.getByRole('list', { name: 'Miembros del proyecto' })).toContainText(second);
+  await members.getByRole('button', { name: `Quitar ${first}`, exact: true }).click();
+  await expect(row(projectsSection(page), CLOSED_PROJECT)).toContainText('2 miembros');
+  await openActions(users, first);
+  await users.getByRole('button', { name: `Accesos de ${first}`, exact: true }).click();
+  await expect(page.getByRole('region', { name: `Accesos de ${first}` })).toContainText('Sin proyectos asignados.');
+  console.log('✓ Admin 14: la persona con proyecto lo ve en sus «Accesos» y entre sus miembros; quitada desde el proyecto, desaparece de sus «Accesos»');
+}
+
+async function promoteWorkerWithoutPassword(page: Page, browser: Browser): Promise<void> {
+  await createUser(page, { name: PROMOTED.name, email: PROMOTED.email });
+  const users = usersSection(page);
+  await openActions(users, PROMOTED.name);
+  await users.getByRole('button', { name: `Papeles de ${PROMOTED.name}`, exact: true }).click();
+  await users.getByLabel('Administra la empresa').check();
+  await users.getByLabel('Contraseña', { exact: true }).fill(PROMOTED.password);
+  await users.getByRole('button', { name: `Guardar papeles de ${PROMOTED.name}`, exact: true }).click();
+  await expect(row(users, PROMOTED.name)).toContainText('Administra la empresa');
+  const context = await browser.newContext();
+  const own = await context.newPage();
+  await own.goto(process.env.DEMO_PANEL_URL ?? '');
+  await logIn(own, PROMOTED.email, PROMOTED.password);
+  await expect(own.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
+  await context.close();
+  console.log('✓ Admin 15: trabajadora sin contraseña ascendida a administradora; el panel pide la contraseña y ella entra con ella');
+}
+
+async function deleteProjectMember(page: Page): Promise<void> {
+  const second = PROJECT_PEOPLE[1] ?? '';
+  const users = usersSection(page);
+  await openActions(users, second);
+  await users.getByRole('button', { name: `Borrar ${second}`, exact: true }).click();
+  await confirmDialog(page, `¿Borrar a ${second}? Desaparece de todas las empresas y de sus proyectos, y sus claves dejan de valer. No se puede deshacer.`, 'Borrar');
+  await expect(row(users, second)).toHaveCount(0);
+  await expect(row(projectsSection(page), CLOSED_PROJECT)).toContainText('1 miembro');
+  const members = await openProjectMembers(page);
+  await expect(members.getByRole('list', { name: 'Miembros del proyecto' })).not.toContainText(second);
+  console.log('✓ Admin 16: una persona miembro de un proyecto, borrada por el administrador del grupo: «Quién lo ve» baja en uno y ya no figura');
 }
 
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
 // El administrador del grupo reutiliza la sesión de prepare (sin login) y los pasos que entran de nuevo van al final.
-test('administración del panel de extremo a extremo', async ({ page, context }) => {
+test('administración del panel de extremo a extremo', async ({ page, context, browser }) => {
   const [name, value] = state.sessionCookie.split('=');
   await context.addCookies([{ name: name ?? '', value: value ?? '', url: process.env.DEMO_PANEL_URL ?? '' }]);
   await page.goto(process.env.DEMO_PANEL_URL ?? '');
@@ -194,6 +321,12 @@ test('administración del panel de extremo a extremo', async ({ page, context })
   await giveKeyShownOnce(page);
   await removeWorkerAndAddThemBack(page);
   await projectLifecycle(page);
+  await samePersonInSecondCompany(page);
+  await changeRolesOfCompanyAdmin(page);
+  await closedProjectWithMembers(page);
+  await removeFromProjectAndSeeAccesses(page);
+  await promoteWorkerWithoutPassword(page, browser);
+  await deleteProjectMember(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);
 });

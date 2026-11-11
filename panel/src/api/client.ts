@@ -73,6 +73,7 @@ export const api = {
     request<S['MemberView']>('PATCH', `${co(id)}/members/${userId}`, changes),
   setActive: (id: string, userId: string, active: boolean) => api.updateMember(id, userId, { active }),
   removeMember: (id: string, userId: string) => request<void>('DELETE', `${co(id)}/members/${userId}`),
+  deleteUser: (userId: string) => request<void>('DELETE', `${a}/users/${userId}`),
   updateUser: (userId: string, changes: S['UpdateUser']) => request<S['UserRef']>('PATCH', `${a}/users/${userId}`, changes),
   setPassword: (userId: string, b: S['SetPassword']) => request<void>('PUT', `${a}/users/${userId}/password`, b),
   keys: (id: string, userId: string) => request<S['KeyView'][]>('GET', `${co(id)}/members/${userId}/keys`),
