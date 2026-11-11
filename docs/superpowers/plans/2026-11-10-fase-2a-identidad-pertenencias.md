@@ -1,8 +1,8 @@
-# Odín · Fase 2a: identidad con pertenencias y proyectos restringidos — Plan de implementación
+# Odín · Fase 2a: identidad con pertenencias y proyectos cerrados por defecto — Plan de implementación
 
 > **Para quien lo ejecute:** se ejecuta con `superpowers:subagent-driven-development`, tarea a tarea. Los pasos usan casillas (`- [ ]`).
 
-**Objetivo:** que una persona sea una sola identidad con una pertenencia por empresa, que pueda administrar y trabajar a la vez, y que un proyecto se pueda restringir a sus miembros (D-038).
+**Objetivo:** que una persona sea una sola identidad con una pertenencia por empresa, que pueda administrar y trabajar a la vez, y que cada trabajador vea solo los proyectos que tiene asignados (D-038, corregida por el propietario el 2026-11-11: proyectos cerrados por defecto).
 
 **Arquitectura:** la misma hexagonal. La tarea 1 cambia el modelo sin cambiar el comportamiento, con todas las pruebas que ya existen como red. Las tareas 2 a 4 añaden el comportamiento nuevo por capas de negocio. El panel y la prueba de extremo a extremo van al final.
 
@@ -29,9 +29,10 @@
 
 1. **Clave de una pertenencia que ya no vale:** si la pertenencia se desactiva, se borra o pierde el papel de trabajador, o la persona se desactiva o se borra, la clave da 401 en la siguiente petición. Pruebas en la tarea 2 (`ResolveActorTest`).
 2. **Persona en dos empresas:** con la clave de A solo ve lo de A, y el administrador de B no ve ni cambia su pertenencia a A. Pruebas en la tarea 2 (`ApplicationFlowIT` e `IsolationTest`).
-3. **Proyecto restringido ajeno:** ni la búsqueda, ni la lista, ni la lectura de una página, ni la verificación de una cita devuelven nada suyo, y filtrar por él da 404. Pruebas en la tarea 3, una por caso de uso.
-4. **Restringir un proyecto que estaba abierto:** deja de verse para todos los trabajadores en la siguiente petición. Prueba en la tarea 3.
+3. **Proyecto no asignado:** ni la búsqueda, ni la lista, ni la lectura de una página, ni la verificación de una cita devuelven nada suyo, y filtrar por él da 404. Pruebas en la tarea 3, una por caso de uso.
+4. **Quitar «Visible para toda la empresa»:** deja de verse para quien no es miembro en la siguiente petición. Prueba en la tarea 3.
 5. **Base de datos de la fase 1.1 con datos:** al migrar, cada usuario conserva su acceso y cada clave sigue funcionando. Prueba en la tarea 1 (`MigrationFromPhaseOneIT`).
+6. **Proyecto nuevo:** nace cerrado; ningún trabajador lo ve hasta que se le asigna. Prueba en la tarea 3.
 
 ---
 
@@ -54,6 +55,7 @@ public record AccessKey(AccessKeyId id, UserId userId, CompanyId companyId, Stri
 
 // domain/organization
 public record Project(ProjectId id, CompanyId companyId, String name, boolean restricted) { }
+        // restricted: verdadero por defecto; falso = visible para toda la empresa
 
 // domain/shared
 public record ProjectVisibility(boolean allProjects, Set<ProjectId> projects) {
@@ -72,7 +74,7 @@ public interface ProjectMemberRepository {
     void add(ProjectId projectId, UserId userId);
     void remove(ProjectId projectId, UserId userId);
     List<UserId> listMembers(ProjectId projectId);
-    Set<ProjectId> restrictedProjectsOf(CompanyId companyId, UserId userId);
+    Set<ProjectId> projectsOf(CompanyId companyId, UserId userId);   // de los que es miembro
 }
 ```
 
@@ -85,7 +87,8 @@ public interface ProjectMemberRepository {
 |---|---|---|---|
 | `GET /me` | — | `AdminMe` gana `companies: CompanyRef[]` (`id`, `name`): las que administra | 2 |
 | `GET /companies/{companyId}/members` | — | `MemberView[]`: `userId`, `displayName`, `email`, `roles`, `active` | 2 |
-| `POST /companies/{companyId}/members` | `AddMember { displayName, email?, roles, password? }` | 201, `MemberAdded { member, alreadyExisted }` | 2 |
+| `POST /companies/{companyId}/members` | `AddMember { displayName, email?, roles, password?, projectIds? }` | 201, `MemberAdded { member, alreadyExisted }` | 2; `projectIds`, 3 |
+| `GET /companies/{companyId}/members/{userId}/projects` | — | `ProjectView[]`: los proyectos de los que es miembro | 3 |
 | `PATCH /companies/{companyId}/members/{userId}` | `UpdateMember { roles?, active?, password? }` | `MemberView` | 2 |
 | `DELETE /companies/{companyId}/members/{userId}` | — | 204 | 2 |
 | `GET, POST /companies/{companyId}/members/{userId}/keys` | `KeyLabel` | Como hoy | 2 |
@@ -184,39 +187,47 @@ public class ListMembers  { public List<MemberView> execute(Actor actor, Company
 - [ ] **Paso 5:** regenera el contrato y los tipos; adapta el panel y la demo lo imprescindible. `make check` y `make demo` terminan con 0.
 - [ ] **Paso 6:** commit «feat: varias pertenencias por persona y papeles combinados».
 
-### Tarea 3: Proyectos restringidos y sus miembros · Sonnet
+### Tarea 3: Proyectos cerrados por defecto y sus miembros · Sonnet
 
-Rama `task/identidad-pertenencias/proyectos-restringidos`. Spec 5.4 y la primera barrera del spec 6.
+Rama `task/identidad-pertenencias/proyectos-cerrados`. Spec 5.1 (alta con proyectos), 5.4 y la primera barrera del spec 6. Corrección del propietario del 2026-11-11: los proyectos están cerrados por defecto.
 
 **Ficheros:**
-- **Crear:** `domain/shared/ProjectVisibility.java`, `application/port/ProjectMemberRepository.java`, `adapter/postgres/PostgresProjectMemberRepository.java`, el doble, `V8__restricted_projects.sql`; en `application/organization`: `UpdateProject`, `AddProjectMember`, `RemoveProjectMember`, `ListProjectMembers`, con sus pruebas.
+- **Crear:** `domain/shared/ProjectVisibility.java`, `application/port/ProjectMemberRepository.java`, `adapter/postgres/PostgresProjectMemberRepository.java`, el doble, `V8__closed_projects.sql`; en `application/organization`: `UpdateProject`, `AddProjectMember`, `RemoveProjectMember`, `ListProjectMembers` y `ListMemberProjects`, con sus pruebas.
 - **Borrar:** `RenameProject`, que pasa a `UpdateProject`.
-- **Modificar:** `Project`, `WorkerAccess`, `DescribeMe`, los casos de uso de `application/search`, `SaveKnowledgeCard`, `SearchQuery`, `PostgresKnowledgeSearch`, `PostgresDocumentRepository`, `PostgresKnowledgeCardRepository`, `CompanyController`, el contrato y los tipos.
+- **Modificar:** `Project`, `CreateProject`, `AddMember`, `WorkerAccess`, `DescribeMe`, los casos de uso de `application/search`, `SaveKnowledgeCard`, `SearchQuery`, `PostgresKnowledgeSearch`, `PostgresDocumentRepository`, `PostgresKnowledgeCardRepository`, `CompanyController`, el contrato y los tipos.
 
 **Interfaces que produce:** `ProjectVisibility`, `ProjectMemberRepository` y las rutas de la tabla marcadas con la tarea 3.
 
 **Valores:**
-- `V8`: añade `project.restricted boolean NOT NULL DEFAULT false` y crea `project_member (project_id, user_id, added_at)` con clave primaria `(project_id, user_id)`.
-- Proyectos visibles para un trabajador: los abiertos de su empresa más los restringidos de los que es miembro. `WorkerAccess` lo calcula una vez por petición y devuelve un `ProjectVisibility`.
-- Cada consulta del trabajador filtra con `project_id IS NULL OR project_id = ANY(:visibleProjects)`.
-- Un `projectId` restringido y ajeno da 404, «Proyecto no encontrado», igual que uno de otra empresa.
+- `V8`:
+  - añade `project.restricted boolean NOT NULL DEFAULT true`;
+  - crea `project_member (project_id, user_id, added_at)` con clave primaria `(project_id, user_id)`;
+  - da de alta como miembros de cada proyecto no borrado a las pertenencias de su empresa con `is_worker`, `active` y sin `deleted_at`. Así nadie pierde el acceso que tenía.
+- Un proyecto nuevo (`CreateProject`) nace con `restricted = true` y sin miembros.
+- Proyectos visibles para un trabajador: los de su empresa con `restricted = false` más aquellos de los que es miembro. `WorkerAccess` lo calcula una vez por petición y devuelve un `ProjectVisibility`.
+- Cada consulta del trabajador filtra con `project_id IS NULL OR project_id = ANY(:visibleProjects)`. Los documentos y las fichas sin proyecto los sigue viendo toda la empresa.
+- Un `projectId` que el trabajador no ve da 404, «Proyecto no encontrado», igual que uno de otra empresa.
 - Las rutas del administrador usan `ProjectVisibility.all()`.
 - Miembros: solo personas con pertenencia activa y papel `WORKER` en esa empresa; si no, 400, «Solo un trabajador de la empresa puede ser miembro».
-- Restringir un proyecto abierto no le añade miembros. Abrirlo conserva los que tenía.
+- Pasar `restricted` a falso («Visible para toda la empresa») conserva los miembros; pasarlo a verdadero no añade ni quita ninguno.
+- `AddMember` acepta `projectIds` opcional. Cada id tiene que ser un proyecto no borrado de esa empresa; si no, 404, «Proyecto no encontrado». Solo se admite con papel `WORKER`; si no, 400 con el mensaje de los miembros. La pertenencia y sus proyectos se guardan en la misma transacción: si algo falla, no queda nada.
+- `ListMemberProjects`: los proyectos de los que la persona es miembro en esa empresa (`ProjectView`, con `restricted`). Un administrador de otra empresa recibe 404.
 
 - [ ] **Paso 1:** pruebas de casos de uso; comprueba que fallan:
-  - `UpdateProjectTest`: los casos que tenía `RenameProjectTest`, más `restrictsAndOpens` y `openingKeepsMembers`;
+  - `UpdateProjectTest`: los casos que tenía `RenameProjectTest`, más `marksCompanyWideAndClosesAgain` y `companyWideKeepsMembers`;
+  - `CreateProjectTest.newProjectIsClosedWithoutMembers`;
   - `AddProjectMemberTest`: `addsWorkerOfTheCompany`, `nonWorkerOrForeignPersonIsRejected`, `addingTwiceIsIdempotent` y `adminOfAnotherCompanyIsForbidden`;
-  - `RemoveProjectMemberTest` y `ListProjectMembersTest`, con su caso de otra empresa;
-  - `DescribeMeTest`: `workerSeesOpenProjectsAndRestrictedOnesHeBelongsTo`;
-  - una prueba `restrictedProjectOfOthersIsInvisible` en cada una de `SearchKnowledgeTest`, `ListDocumentsTest`, `ReadPageTest`, `VerifyCitationTest` y `SaveKnowledgeCardTest`;
-  - `SearchKnowledgeTest.documentWithoutProjectIsVisibleToEveryWorker` y `restrictingAnOpenProjectHidesItAtOnce`.
+  - `RemoveProjectMemberTest`, `ListProjectMembersTest` y `ListMemberProjectsTest`, con su caso de otra empresa;
+  - `AddMemberTest`: `addsProjectsOnCreation`, `projectOfAnotherCompanyIsRejectedAndNothingIsSaved` y `projectsOnlyForWorkers`;
+  - `DescribeMeTest`: `workerSeesCompanyWideProjectsAndAssignedOnes` y `newProjectIsInvisibleUntilAssigned`;
+  - una prueba `unassignedProjectIsInvisible` en cada una de `SearchKnowledgeTest`, `ListDocumentsTest`, `ReadPageTest`, `VerifyCitationTest` y `SaveKnowledgeCardTest`;
+  - `SearchKnowledgeTest.documentWithoutProjectIsVisibleToEveryWorker` y `closingACompanyWideProjectHidesItAtOnce`.
 - [ ] **Paso 2:** implementa los casos de uso y los dobles.
-- [ ] **Paso 3:** PostgreSQL. `PostgresProjectMemberRepositoryIT` y, en `PostgresKnowledgeSearchIT`, `PostgresDocumentRepositoryIT` y `PostgresKnowledgeRepositoriesIT`, una prueba `filtersByVisibleProjects` cada una. Escribe `V8`.
-- [ ] **Paso 4:** web y contrato. `AdminApiTest`: una prueba por ruta. `IsolationTest`: `otherCompanyAdminCannotManageProjectMembers`. `WorkerApiTest`: `filterByForeignRestrictedProjectIs404`.
-- [ ] **Paso 5:** `ApplicationFlowIT`: `restrictedProjectIsFoundOnlyByItsMembers`: dos trabajadores de la misma empresa, un documento en un proyecto restringido; el miembro lo encuentra con su cita y el otro recibe «no consta» y un 404 al leer la página.
-- [ ] **Paso 6:** regenera el contrato y los tipos. `make check` y `make demo` terminan con 0.
-- [ ] **Paso 7:** commit «feat: proyectos restringidos a sus miembros».
+- [ ] **Paso 3:** PostgreSQL. `PostgresProjectMemberRepositoryIT` y, en `PostgresKnowledgeSearchIT`, `PostgresDocumentRepositoryIT` y `PostgresKnowledgeRepositoriesIT`, una prueba `filtersByVisibleProjects` cada una. Escribe `V8`. En la prueba de migración (`MigrationFromPhaseOneIT` o una hermana), `existingProjectsBecomeClosedWithTheirWorkersAsMembers`.
+- [ ] **Paso 4:** web y contrato. `AdminApiTest`: una prueba por ruta. `IsolationTest`: `otherCompanyAdminCannotManageProjectMembers` y `otherCompanyAdminCannotListMemberProjects`. `WorkerApiTest`: `filterByUnassignedProjectIs404`.
+- [ ] **Paso 5:** `ApplicationFlowIT`: `projectIsFoundOnlyByAssignedWorkers`: dos trabajadores de la misma empresa, uno dado de alta con el proyecto y otro sin él, y un documento en ese proyecto. El asignado lo encuentra con su cita; el otro recibe «no consta» y un 404 al leer la página.
+- [ ] **Paso 6:** regenera el contrato y los tipos. Si la demo o el extremo a extremo crean proyectos y buscan en ellos, asignan a sus trabajadores; no se marca nada como visible para toda la empresa para que pasen. `make check` y `make demo` terminan con 0.
+- [ ] **Paso 7:** commit «feat: proyectos cerrados por defecto, visibles solo para sus miembros».
 
 ### Tarea 4: Segunda barrera: seguridad por filas por proyecto · Sonnet
 
@@ -238,9 +249,9 @@ Rama `task/identidad-pertenencias/rls-proyectos`. Spec 6.
   - `noProjectVariablesMeansOnlyProjectlessRows`.
 - [ ] **Paso 2:** escribe `V9` y adapta `ScopedTransactions`.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0. La batería de búsqueda (`SearchBatteryIT`) mantiene 27 de 30.
-- [ ] **Paso 4:** commit «feat: seguridad por filas para los proyectos restringidos».
+- [ ] **Paso 4:** commit «feat: seguridad por filas para los proyectos cerrados».
 
-### Tarea 5: Panel: personas, papeles, selector de empresa y proyectos restringidos · Sonnet
+### Tarea 5: Panel: personas, papeles, accesos, selector de empresa y proyectos · Sonnet
 
 Rama `task/identidad-pertenencias/panel`. Spec 9. Sin rediseño visual.
 
@@ -255,7 +266,12 @@ Rama `task/identidad-pertenencias/panel`. Spec 9. Sin rediseño visual.
 - Tras un alta con `alreadyExisted`: «Esta persona ya existía en el grupo: se ha añadido a esta empresa», en un `role="status"`.
 - Por persona: cambiar papeles, activar o desactivar, quitar de la empresa con `window.confirm('¿Quitar a <nombre> de esta empresa? Sus claves dejarán de valer.')`, y claves si trabaja.
 - `CompanySwitcher`: un `<select>` con la etiqueta «Empresa», visible solo si `me.companies` tiene más de una.
-- Proyectos: casilla «Restringido» con `window.confirm('¿Restringir <nombre>? Solo lo verán sus miembros, y ahora no tiene ninguno.')` al marcarla sin miembros, y la lista de miembros con «Añadir» y «Quitar <nombre>».
+- Proyectos: casilla «Visible para toda la empresa», sin marcar en un proyecto nuevo. Al desmarcarla en un proyecto sin miembros, `ConfirmDialog`: «¿Cerrar <nombre>? Solo lo verán sus miembros, y ahora no tiene ninguno.». Lista de miembros con «Añadir» y «Quitar».
+- Alta (O1): con «Trabaja con su IA» marcada, casillas con los proyectos de la empresa, todas sin marcar; se envían en `projectIds`.
+- Accesos de cada persona (O1): sus proyectos (`ListMemberProjects`), con «Añadir» y «Quitar», y «Además ve los N proyectos visibles para toda la empresa». Lo que se cambia aquí y en el proyecto son los mismos miembros.
+- Claves (O2): junto a la lista, «Cada clave da acceso a lo mismo que ve <nombre> en esta empresa.».
+- Botones de fila (O3): texto visible corto («Revocar clave», «Quitar») y nombre accesible con el nombre de lo afectado, que empieza por el texto visible (`Revocar clave <etiqueta>`, `Quitar <nombre>`). Se corrige también `Keys.tsx`.
+- Confirmaciones con `ConfirmDialog` y selector de empresa con los componentes de la dirección visual (D-039), nunca `window.confirm` ni `<select>` sin estilo.
 - Se mantienen las reglas de accesibilidad y de formularios de la fase 1.1.
 
 - [ ] **Paso 1:** una prueba por acción, que compruebe la petición enviada y lo que se ve; comprueba que fallan:
@@ -265,7 +281,7 @@ Rama `task/identidad-pertenencias/panel`. Spec 9. Sin rediseño visual.
   - `ProjectMembers.test.tsx`: `restrictAsksForConfirmationWhenNoMembers`, `addsAndRemovesMembers` y `membersListOnlyForRestrictedProjects`.
 - [ ] **Paso 2:** implementa los componentes.
 - [ ] **Paso 3:** `make check` termina con 0.
-- [ ] **Paso 4:** commit «feat: panel con personas, papeles y proyectos restringidos».
+- [ ] **Paso 4:** commit «feat: panel con personas, papeles, accesos y proyectos cerrados».
 
 ### Tarea 6: Prueba de extremo a extremo y demostración · Sonnet
 
@@ -279,13 +295,13 @@ Rama `task/identidad-pertenencias/e2e`. Spec 10.
   2. una persona con los dos papeles: entra en el panel y tiene clave;
   3. el selector de empresa de quien administra dos;
   4. cambiar papeles, desactivar y activar, y quitar de la empresa;
-  5. un proyecto restringido con un miembro.
-- `demo-client.ts` añade un paso con el MCP: el trabajador miembro encuentra el documento del proyecto restringido y el que no es miembro recibe «No consta en los documentos de tu empresa.».
-- `README`: «Quién entra dónde» y el resto de apartados dicen personas, pertenencias y proyectos restringidos.
+  5. una persona dada de alta con un proyecto lo ve en sus «Accesos» y en los miembros del proyecto; quitarla desde el proyecto la quita de sus «Accesos».
+- `demo-client.ts` añade un paso con el MCP: el trabajador asignado encuentra el documento del proyecto y el que no está asignado recibe «No consta en los documentos de tu empresa.».
+- `README`: «Quién entra dónde» y el resto de apartados dicen personas, pertenencias y proyectos cerrados por defecto.
 
 - [ ] **Paso 1:** escribe los pasos nuevos y ejecuta `make demo`. Un fallo real del panel o de la API se corrige en su módulo con su prueba; la prueba no se adapta al fallo.
 - [ ] **Paso 2:** `make demo` dos veces seguidas y `make check` terminan con 0.
-- [ ] **Paso 3:** commit «test: extremo a extremo de pertenencias y proyectos restringidos».
+- [ ] **Paso 3:** commit «test: extremo a extremo de pertenencias y proyectos cerrados».
 
 ## Orden y paralelismo
 
