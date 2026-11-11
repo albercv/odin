@@ -47,7 +47,8 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
 
 | Concepto | Nombre en código | Qué tiene |
 |---|---|---|
-| Persona | `User` | Nombre, correo opcional y único, contraseña opcional, si es administrador del grupo, si está activa. Deja de tener papel y empresa |
+| Persona | `User` | Nombre y apellidos, código de persona (5.5), correo opcional y único, contraseña opcional, si es administrador del grupo, si está activa. Deja de tener papel y empresa |
+| Empresa | `Company` | Gana `code`, el código corto de la empresa (5.5) |
 | Pertenencia | `Membership` | Persona, empresa, papeles (`COMPANY_ADMIN`, `WORKER` o los dos) y si está activa. Una por persona y empresa |
 | Clave personal | `AccessKey` | Pasa a ser de una pertenencia: guarda la persona y la empresa |
 | Proyecto | `Project` | Gana `restricted`: verdadero por defecto. Falso significa «Visible para toda la empresa» |
@@ -63,7 +64,7 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
 
 ### 5.1 Personas y pertenencias
 
-- **Dar de alta en una empresa:** nombre, correo, papeles y, si hay `COMPANY_ADMIN` y la persona no tiene contraseña, contraseña. Con papel `WORKER`, además, los proyectos de esa empresa a los que accede (opcional; sin ninguno no ve ningún proyecto).
+- **Dar de alta en una empresa:** nombre, apellidos, correo, papeles y, si hay `COMPANY_ADMIN` y la persona no tiene contraseña, contraseña. Con papel `WORKER`, además, los proyectos de esa empresa a los que accede (opcional; sin ninguno no ve ningún proyecto).
   - Si ya existe una persona con ese correo, se le añade la pertenencia y no se crea otra persona. Su nombre no cambia.
   - Si la persona ya pertenece a esa empresa: 409, «Esa persona ya pertenece a esta empresa».
 - **Quién gestiona qué:**
@@ -109,6 +110,20 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
 - **Al quitar «Visible para toda la empresa»** solo lo ven sus miembros. Si no tiene ninguno, el panel lo avisa antes de confirmar.
 - **Al marcar «Visible para toda la empresa»**, sus miembros se conservan por si se vuelve a cerrar.
 
+### 5.5 Nombre, apellidos y código de persona
+
+Petición del propietario del 2026-11-11 (observación O4, preguntas P2 a P4 y formato confirmado).
+
+- **Nombre y apellidos:** dos campos, `firstName` y `lastName`, obligatorios en el alta y en la edición. El nombre que se muestra es «nombre apellidos».
+- **Código de persona** (`personCode`):
+  - uno por persona, único en todo el grupo; también lo lleva quien solo administra;
+  - 4 caracteres aleatorios de `23456789ABCDEFGHJKMNPQRSTUVWXYZ`, sin 0, O, 1, I ni L para que no se confundan; por ejemplo `7F3K`;
+  - lo genera siempre el sistema con un generador criptográfico. No sale del nombre ni del orden de alta, no se escribe a mano y no cambia nunca;
+  - si el generado ya existe, se genera otro.
+- **Código de empresa** (`Company.code`): de 2 a 6 caracteres, letras mayúsculas y cifras, único en el grupo, por ejemplo `E2D`. Lo pone el administrador del grupo al crear la empresa y solo él lo cambia.
+- **Código completo en una empresa:** `<código de persona>-<código de empresa>`, por ejemplo `7F3K-E2D`. No se guarda: se compone al mostrarlo.
+- **Dónde se ve:** solo en el panel (lista de personas, alta y ficha). No sale en el MCP, ni en las citas, ni en las fichas.
+
 ## 6. Aislamiento: dos barreras
 
 - **Primera:** cada caso de uso del trabajador calcula sus proyectos visibles y cada consulta SQL lleva el filtro explícito.
@@ -127,6 +142,9 @@ La migración conserva todo:
 - cada usuario con empresa pasa a ser una persona con una pertenencia, con el papel que tenía;
 - el administrador del grupo pasa a ser una persona con la marca de administrador del grupo;
 - cada clave pasa a la pertenencia de su usuario;
+- el nombre que ya existe pasa a «nombre» y los apellidos quedan vacíos; el panel marca «Faltan apellidos» hasta que se completan. Partirlo por el primer espacio fallaría con nombres compuestos;
+- cada persona recibe un código de persona aleatorio;
+- cada empresa recibe como código sus iniciales en mayúsculas, hasta 4, con una cifra al final si se repiten. El administrador del grupo las revisa;
 - cada proyecto queda cerrado, con todas las pertenencias activas con papel `WORKER` de su empresa como miembros: nadie pierde el acceso que tenía.
 
 ## 8. Contrato
@@ -138,7 +156,7 @@ Cambian las rutas de usuarios y se añaden las de pertenencias y miembros. Los n
 ## 9. Panel
 
 Cambios funcionales, sin rediseño (fase 2b):
-- **Personas de la empresa:** la lista muestra nombre, correo, papeles y estado de la pertenencia. Tras un alta con un correo que ya era de otra persona del grupo, el panel avisa: «Esta persona ya existía en el grupo: se ha añadido a esta empresa».
+- **Personas de la empresa:** la lista muestra código completo, nombre y apellidos, correo, papeles y estado de la pertenencia. Tras un alta con un correo que ya era de otra persona del grupo, el panel avisa: «Esta persona ya existía en el grupo: se ha añadido a esta empresa».
 - **Papeles:** casillas «Administra la empresa» y «Trabaja con su IA».
 - **Claves:** en quien tiene el papel de trabajador.
 - **Selector de empresa** para quien administra varias.
@@ -150,5 +168,5 @@ Cambios funcionales, sin rediseño (fase 2b):
 ## 10. Criterio de cierre
 
 - `make check` y `make demo` terminan con código de salida 0.
-- La prueba de extremo a extremo de la administración cubre: la misma persona en dos empresas con una clave en cada una, una persona administradora y trabajadora a la vez, un proyecto que un trabajador sin asignar no encuentra, y una persona dada de alta con ese proyecto que sí lo encuentra.
+- La prueba de extremo a extremo de la administración cubre: la misma persona en dos empresas con una clave en cada una, una persona administradora y trabajadora a la vez, un proyecto que un trabajador sin asignar no encuentra, una persona dada de alta con ese proyecto que sí lo encuentra, y el código completo de una persona nueva.
 - Una instalación de la fase 1.1 con datos arranca con el código nuevo y conserva usuarios, claves y proyectos.
