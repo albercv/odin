@@ -14,4 +14,11 @@ it('okPillDoesNotUseTheAccentAsTextColour', () => {
 it('switchTrackIsVisibleAgainstTheSurface', () => {
   expect(rule('Switch.module.css', '.switch input')).toContain('background: var(--text-muted)');
 });
+
+it('focusRingKeepsTheControlRadius', () => {
+  const focus = String(readFileSync('src/styles/global.css')).match(/:focus-visible\s*\{([^}]*)\}/)?.[1] ?? '';
+  expect(focus).toContain('outline: 3px solid var(--accent)');
+  expect(focus).not.toContain('border-radius');
+});
+
 export {};
