@@ -1,35 +1,78 @@
 import { useEffect, useState } from 'react';
 import { api, type S } from '../api/client';
+import { CardDetail } from '../components/CardDetail';
 import { Notice } from '../components/Notice';
-import { useAction, useLoad } from '../components/useLoad';
+import { useLoad } from '../components/useLoad';
+import { EmptyState } from '../ui/EmptyState';
+import { PageHeader } from '../ui/PageHeader';
+import { authorName, formatDate, projectName } from './reviewNames';
+import styles from './Review.module.css';
 
-function CardReview({ card, onDone }: { card: S['CardView']; onDone: () => void }) {
-  const [body, setBody] = useState(card.body);
-  const [note, setNote] = useState('');
-  const { error, act } = useAction();
-  const send = async (r: S['Review']) => (await act(() => api.review(card.id, r))) && onDone();
+const LEAVE_MS = 240;
+
+type Names = { members: S['MemberView'][]; projects: S['ProjectView'][] };
+
+type QueueProps = { cards: S['CardView'][]; names: Names; selectedId?: string; leavingId?: string; onSelect: (id: string) => void };
+
+function Queue({ cards, names, selectedId, leavingId, onSelect }: QueueProps) {
   return (
-    <article className="card">
-      <h2>{card.title}</h2>
-      <Notice message={error} />
-      <label>Texto corregido <textarea value={body} onChange={(e) => setBody(e.target.value)} /></label>
-      <label>Motivo del rechazo <input value={note} onChange={(e) => setNote(e.target.value)} /></label>
-      <button type="button" onClick={() => send({ decision: 'APPROVE' })}>Aprobar</button>
-      <button type="button" onClick={() => send({ decision: 'CORRECT', correctedBody: body })}>Corregir y aprobar</button>
-      <button type="button" disabled={!note.trim()} onClick={() => send({ decision: 'REJECT', note })}>Rechazar</button>
-    </article>
+    <section className={styles.panel} aria-label="Fichas pendientes">
+      <ul className={styles.queue}>
+        {cards.map((c) => (
+          <li key={c.id} className={c.id === leavingId ? styles.leaving : undefined}>
+            <button type="button" aria-current={c.id === selectedId} onClick={() => onSelect(c.id)}>
+              <strong>{c.title}</strong>
+              <span>{projectName(c.projectId, names.projects)}</span>
+              <span>{authorName(c.authorId, names.members)}, {formatDate(c.createdAt)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
+}
+
+function useResolvedCards(cards: S['CardView'][] | undefined, onPendingChanged?: (count: number) => void) {
+  const [gone, setGone] = useState<string[]>([]);
+  const [leavingId, setLeavingId] = useState<string>();
+  const [selected, setSelected] = useState<string>();
+  const visible = (cards ?? []).filter((c) => !gone.includes(c.id));
+  const current = visible.find((c) => c.id === selected) ?? visible.find((c) => c.id !== leavingId) ?? visible[0];
+  useEffect(() => { if (cards) onPendingChanged?.(visible.length); }, [cards, visible.length]);
+  const resolve = (id: string) => {
+    const index = visible.findIndex((c) => c.id === id);
+    setSelected((visible[index + 1] ?? visible[index - 1])?.id);
+    setLeavingId(id);
+    setTimeout(() => {
+      setGone((ids) => [...ids, id]);
+      setLeavingId(undefined);
+    }, LEAVE_MS);
+  };
+  return { visible, current, leavingId, setSelected, resolve };
 }
 
 export function Review({ companyId, onPendingChanged }: { companyId: string; onPendingChanged?: (count: number) => void }) {
   const list = useLoad(() => api.pendingCards(companyId), [companyId]);
-  useEffect(() => { if (list.data) onPendingChanged?.(list.data.length); }, [list.data]);
+  const members = useLoad(() => api.members(companyId), [companyId]);
+  const projects = useLoad(() => api.projects(companyId), [companyId]);
+  const { visible, current, leavingId, setSelected, resolve } = useResolvedCards(list.data, onPendingChanged);
+  const names = { members: members.data ?? [], projects: projects.data ?? [] };
+  const loaded = list.data && members.data && projects.data;
   return (
-    <section>
-      <h1>Revisión de fichas</h1>
-      <Notice message={list.error} />
-      {list.data?.length === 0 && <p>No hay fichas pendientes.</p>}
-      {list.data?.map((c) => <CardReview key={c.id} card={c} onDone={list.reload} />)}
-    </section>
+    <div>
+      <PageHeader title="Revisión de fichas"
+        description="Las fichas que la gente guarda desde su IA esperan aquí. Cuando apruebas una, la IA de la empresa ya puede citarla." />
+      <Notice message={list.error ?? members.error ?? projects.error} />
+      {visible.length === 0 && list.data && <EmptyState title="No hay fichas pendientes." description="Las nuevas aparecerán aquí cuando alguien guarde una desde su IA." />}
+      {loaded && visible.length > 0 && current && (
+        <div className={styles.review}>
+          <Queue cards={visible} names={names} selectedId={current.id} leavingId={leavingId} onSelect={setSelected} />
+          <section className={styles.panel} aria-label="Ficha seleccionada" aria-live="polite">
+            <CardDetail key={current.id} card={current} author={authorName(current.authorId, names.members)}
+              project={projectName(current.projectId, names.projects)} locked={leavingId !== undefined} onResolved={() => resolve(current.id)} />
+          </section>
+        </div>
+      )}
+    </div>
   );
 }

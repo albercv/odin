@@ -1,0 +1,15 @@
+.review { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 24px; align-items: start; }
+.panel { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+.queue { list-style: none; margin: 0; padding: 6px; display: grid; gap: 2px; }
+.queue li.leaving { overflow: hidden; animation: leave .25s cubic-bezier(.23, 1, .32, 1) forwards; }
+@keyframes leave { from { max-height: 240px; opacity: 1; } to { max-height: 0; opacity: 0; } }
+.queue button {
+  display: grid; gap: 2px; width: 100%; height: auto; margin: 0; padding: 12px 14px; text-align: left; cursor: pointer;
+  border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text); font: inherit;
+}
+.queue button:hover { background: var(--surface-muted); }
+.queue button[aria-current='true'] { background: var(--accent-tint); box-shadow: inset 3px 0 0 var(--accent); }
+.queue strong { font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
+.queue span { font-size: 14px; color: var(--text-muted); overflow-wrap: anywhere; }
+@media (max-width: 900px) { .review { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .queue li.leaving { animation: none; opacity: 0; } }

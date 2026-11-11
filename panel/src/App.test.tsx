@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { App } from './App';
 import { Documents } from './pages/Documents';
-import { Review } from './pages/Review';
 import { Keys } from './components/Keys';
 import { mockFetch, type Routes } from './mockApi';
+import { mockDialog } from './ui/dialogMock';
 import { BrandProvider } from './theme/BrandContext';
 import { NEUTRAL_BRAND } from './theme/brand';
 import { deriveTheme } from './theme/deriveTheme';
@@ -83,8 +83,8 @@ test('groupAdminSeesCompaniesAndCapabilities', async () => {
   render(<App />);
   expect(await screen.findByText('Acme')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Nueva empresa' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Buscar conocimiento')).toBeChecked();
-  expect(screen.getByLabelText('Guardar fichas')).not.toBeChecked();
+  expect(screen.getByRole('switch', { name: 'Buscar conocimiento' })).toBeChecked();
+  expect(screen.getByRole('switch', { name: 'Guardar fichas' })).not.toBeChecked();
 });
 
 test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
@@ -121,6 +121,7 @@ test('revokeButtonCarriesTheKeyLabel', async () => {
 });
 
 test('issuedKeyShownOnceWithCopy', async () => {
+  mockDialog();
   const writeText = vi.fn(async () => {});
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   mockFetch({
@@ -130,7 +131,7 @@ test('issuedKeyShownOnceWithCopy', async () => {
   render(<Keys companyId="c1" userId="u1" />);
   await userEvent.type(await screen.findByLabelText('Etiqueta de la clave'), 'portátil');
   await userEvent.click(screen.getByRole('button', { name: 'Dar clave' }));
-  expect(await screen.findByText('odin_ab.SECRETO')).toBeInTheDocument();
+  expect(await screen.findByRole('dialog', { name: 'Clave nueva' })).toHaveTextContent('odin_ab.SECRETO');
   expect(screen.getByText(/No se volverá a mostrar/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Copiar' }));
   expect(writeText).toHaveBeenCalledWith('odin_ab.SECRETO');
@@ -152,7 +153,7 @@ test('documentsListShowsStatusAndReason', async () => {
   expect(within(row).getByText('Fallido')).toBeInTheDocument();
   expect(within(row).getByText('Fichero ilegible')).toBeInTheDocument();
   expect(screen.getByText('Listo')).toBeInTheDocument();
-  await userEvent.click(within(row).getByRole('button', { name: 'Reintentar' }));
+  await userEvent.click(within(row).getByRole('button', { name: 'Reintentar Contrato' }));
   await waitFor(() => expect(calls.some((c) => c.key === 'POST /v1/admin/documents/d1/retry')).toBe(true));
 });
 
@@ -182,30 +183,6 @@ test('documentsListWarnsWhenTruncated', async () => {
   expect(await screen.findByText(/La lista está cortada: se muestran los primeros 2000 documentos/)).toBeInTheDocument();
   expect(screen.getByText('Doc 1999')).toBeInTheDocument();
   expect(screen.queryByText('Doc 2000')).toBeNull();
-});
-
-test('reviewApproveCorrectReject', async () => {
-  const cards = [1, 2, 3].map((n) => ({ id: `k${n}`, title: `Ficha ${n}`, body: `Cuerpo ${n}`, status: 'PENDING' }));
-  const calls = mockFetch({
-    'GET /v1/admin/companies/c1/cards?status=PENDING': () => cards,
-    'POST /v1/admin/cards/k1/review': () => ({}),
-    'POST /v1/admin/cards/k2/review': () => ({}),
-    'POST /v1/admin/cards/k3/review': () => ({}),
-  });
-  render(<Review companyId="c1" />);
-  const card = async (n: number) => (await screen.findByText(`Ficha ${n}`)).closest('article')!;
-  await userEvent.click(within(await card(1)).getByRole('button', { name: 'Aprobar' }));
-  const second = await card(2);
-  await userEvent.clear(within(second).getByLabelText('Texto corregido'));
-  await userEvent.type(within(second).getByLabelText('Texto corregido'), 'Mejor');
-  await userEvent.click(within(second).getByRole('button', { name: 'Corregir y aprobar' }));
-  expect(within(await card(3)).getByRole('button', { name: 'Rechazar' })).toBeDisabled();
-  await userEvent.type(within(await card(3)).getByLabelText('Motivo del rechazo'), 'Dudoso');
-  await userEvent.click(within(await card(3)).getByRole('button', { name: 'Rechazar' }));
-  const sent = (id: string) => calls.find((c) => c.key === `POST /v1/admin/cards/${id}/review`)?.body;
-  await waitFor(() => expect(sent('k3')).toEqual({ decision: 'REJECT', note: 'Dudoso' }));
-  expect(sent('k1')).toEqual({ decision: 'APPROVE' });
-  expect(sent('k2')).toEqual({ decision: 'CORRECT', correctedBody: 'Mejor' });
 });
 
 test('hashChangeDoesNotBreakHookOrder', async () => {

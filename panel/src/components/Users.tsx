@@ -1,5 +1,15 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
+import { Button } from '../ui/Button';
+import { useConfirm } from '../ui/ConfirmDialog';
+import { Field } from '../ui/Field';
+import form from '../ui/Form.module.css';
+import { FormDialog } from '../ui/FormDialog';
+import { RowActions } from '../ui/RowActions';
+import { Section } from '../ui/Section';
+import { StatusPill } from '../ui/StatusPill';
+import { Table, tableStyles } from '../ui/Table';
+import { useToast } from '../ui/Toast';
 import { Keys } from './Keys';
 import { Notice } from './Notice';
 import { UserForm } from './UserForm';
@@ -14,12 +24,14 @@ function EditForm({ user, onDone }: { user: S['MemberView']; onDone: (saved: boo
     if (await act(() => api.updateUser(user.userId, { displayName: name, email }))) onDone(true);
   };
   return (
-    <form onSubmit={submit}>
+    <form className={form.form} onSubmit={submit}>
       <Notice message={error} />
-      <label>Nombre <input required value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <label>Correo <input type="email" required={user.roles.includes('COMPANY_ADMIN')} value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-      <button type="submit">Guardar {user.displayName}</button>
-      <button type="button" onClick={() => onDone(false)}>Cancelar {user.displayName}</button>
+      <Field label="Nombre"><input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
+      <Field label="Correo"><input type="email" required={user.roles.includes('COMPANY_ADMIN')} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+      <div className={form.buttons}>
+        <Button type="submit" variant="primary">Guardar {user.displayName}</Button>
+        <Button onClick={() => onDone(false)}>Cancelar {user.displayName}</Button>
+      </div>
     </form>
   );
 }
@@ -32,10 +44,10 @@ function ResetPasswordForm({ user, onDone }: { user: S['MemberView']; onDone: ()
     if (await act(() => api.setPassword(user.userId, { newPassword: password }))) onDone();
   };
   return (
-    <form onSubmit={submit}>
+    <form className={form.form} onSubmit={submit}>
       <Notice message={error} />
-      <label>Nueva contraseña <input type="password" required minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-      <button type="submit">Guardar contraseña de {user.displayName}</button>
+      <Field label="Nueva contraseña"><input type="password" required minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
+      <div><Button type="submit" variant="primary">Guardar contraseña de {user.displayName}</Button></div>
     </form>
   );
 }
@@ -47,51 +59,79 @@ function roleLabel(roles: S['MemberView']['roles']) {
 
 type Panel = 'edit' | 'keys' | 'password' | undefined;
 
-function UserRow({ companyId, u, canReset, onChanged }: { companyId: string; u: S['MemberView']; canReset: boolean; onChanged: () => void }) {
-  const [panel, setPanel] = useState<Panel>();
-  const [passwordReset, setPasswordReset] = useState(false);
+function UserPanel({ companyId, u, panel, onDone, onReset }: {
+  companyId: string; u: S['MemberView']; panel: Panel; onDone: (saved: boolean) => void; onReset: () => void;
+}) {
+  if (panel === 'edit') return <EditForm user={u} onDone={onDone} />;
+  if (panel === 'keys') return <Keys companyId={companyId} userId={u.userId} />;
+  return <ResetPasswordForm user={u} onDone={onReset} />;
+}
+
+type RowProps = { companyId: string; u: S['MemberView']; canReset: boolean; onChanged: () => void };
+
+function UserActions({ companyId, u, canReset, onChanged, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
   const { error, act } = useAction();
+  const confirm = useConfirm();
   const toggle = async () => (await act(() => api.setActive(companyId, u.userId, !u.active))) && onChanged();
   const remove = async () => {
-    if (!window.confirm(`¿Quitar a ${u.displayName} de la empresa?`)) return;
+    if (!(await confirm({ message: `¿Quitar a ${u.displayName} de la empresa?`, confirmLabel: 'Quitar', danger: true }))) return;
     if (await act(() => api.removeMember(companyId, u.userId))) onChanged();
   };
-  const show = (p: Panel) => {
-    setPasswordReset(false);
-    setPanel(panel === p ? undefined : p);
-  };
-  const isWorker = u.roles.includes('WORKER');
-  if (panel === 'edit') return <li><EditForm user={u} onDone={(saved) => { setPanel(undefined); if (saved) onChanged(); }} /></li>;
   return (
-    <li>
-      {u.displayName} · {u.email ?? 'sin correo'} · {roleLabel(u.roles)} · {u.active ? 'activo' : 'desactivado'}
+    <>
+      <RowActions label={`Más acciones de ${u.displayName}`}>
+        <Button variant="ghost" onClick={toggle}>{u.active ? 'Desactivar' : 'Activar'} {u.displayName}</Button>
+        <Button variant="ghost" onClick={() => show('edit')}>Editar {u.displayName}</Button>
+        <Button variant="danger" onClick={remove}>Quitar {u.displayName}</Button>
+        {u.roles.includes('WORKER') && <Button variant="ghost" aria-expanded={panel === 'keys'} onClick={() => show('keys')}>Claves de {u.displayName}</Button>}
+        {canReset && <Button variant="ghost" aria-expanded={panel === 'password'} onClick={() => show('password')}>Restablecer contraseña de {u.displayName}</Button>}
+      </RowActions>
       <Notice message={error} />
-      <button type="button" onClick={toggle}>{u.active ? 'Desactivar' : 'Activar'} {u.displayName}</button>
-      <button type="button" onClick={() => show('edit')}>Editar {u.displayName}</button>
-      <button type="button" onClick={remove}>Quitar {u.displayName}</button>
-      {isWorker && <button type="button" aria-expanded={panel === 'keys'} onClick={() => show('keys')}>Claves de {u.displayName}</button>}
-      {canReset && <button type="button" aria-expanded={panel === 'password'} onClick={() => show('password')}>Restablecer contraseña de {u.displayName}</button>}
-      {panel === 'keys' && <Keys companyId={companyId} userId={u.userId} />}
-      {panel === 'password' && <ResetPasswordForm user={u} onDone={() => { setPanel(undefined); setPasswordReset(true); }} />}
-      {passwordReset && <span role="status">Contraseña restablecida</span>}
-    </li>
+    </>
   );
 }
 
-export function Users({ companyId, me }: { companyId: string; me: S['AdminMe'] }) {
+function UserRow(props: RowProps) {
+  const { companyId, u, onChanged } = props;
+  const [panel, setPanel] = useState<Panel>();
+  const toast = useToast();
+  const show = (p: Panel) => setPanel(panel === p ? undefined : p);
+  const closed = (saved: boolean) => { setPanel(undefined); if (saved) onChanged(); };
+  return (
+    <>
+      <tr>
+        <td className={tableStyles.person}><strong>{u.displayName}</strong><span>{u.email ?? 'Sin correo'}</span></td>
+        <td>{roleLabel(u.roles)}</td>
+        <td><StatusPill tone={u.active ? 'ok' : 'off'}>{u.active ? 'Activo' : 'Desactivado'}</StatusPill></td>
+        <td className={tableStyles.actions}><UserActions {...props} panel={panel} show={show} /></td>
+      </tr>
+      {panel && (
+        <tr className={tableStyles.panelRow}>
+          <td colSpan={4}>
+            <UserPanel companyId={companyId} u={u} panel={panel} onDone={closed} onReset={() => { setPanel(undefined); toast('Contraseña restablecida'); }} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+type Props = { companyId: string; me: S['AdminMe']; addOpen?: boolean; onAddClose?: () => void };
+
+export function Users({ companyId, me, addOpen = false, onAddClose = () => undefined }: Props) {
   const list = useLoad(() => api.members(companyId), [companyId]);
   const isGroup = me.role === 'GROUP_ADMIN';
   return (
-    <section>
-      <h2>Usuarios</h2>
+    <Section title="Personas" description="Cada persona usa Odín desde su IA con su clave personal.">
       <Notice message={list.error} />
-      <ul>
+      <Table columns={['Persona', 'Papel', 'Acceso']}>
         {list.data?.map((u) => (
-          <UserRow key={u.userId} companyId={companyId} u={u} canReset={isGroup && u.roles.includes('COMPANY_ADMIN')}
-            onChanged={list.reload} />
+          <UserRow key={u.userId} companyId={companyId} u={u} canReset={isGroup && u.roles.includes('COMPANY_ADMIN')} onChanged={list.reload} />
         ))}
-      </ul>
-      <UserForm companyId={companyId} onDone={list.reload} />
-    </section>
+      </Table>
+      <FormDialog title="Añadir persona" open={addOpen} onClose={onAddClose}>
+        <UserForm companyId={companyId} onDone={() => { onAddClose(); list.reload(); }} />
+      </FormDialog>
+    </Section>
   );
 }

@@ -15,6 +15,7 @@ test('paso 8: el administrador ve la ficha pendiente en Revisión y la aprueba',
   await page.getByRole('link', { name: 'Revisión' }).click();
   await expect(page.getByRole('heading', { name: state.cardTitle })).toBeVisible();
   await page.getByRole('button', { name: 'Aprobar', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Ficha aprobada');
   await expect(page.getByText('No hay fichas pendientes.')).toBeVisible();
   console.log('✓ Paso 8: el administrador aprobó la ficha desde Revisión en el panel');
 });

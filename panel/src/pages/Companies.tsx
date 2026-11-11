@@ -1,80 +1,51 @@
 import { useState } from 'react';
-import { api, type Capability, type S } from '../api/client';
+import { api, type S } from '../api/client';
+import { Capabilities } from '../components/Capabilities';
+import { NameDialog } from '../components/NameDialog';
 import { Notice } from '../components/Notice';
+import { RenameForm } from '../components/RenameForm';
 import { useAction, useLoad } from '../components/useLoad';
-
-const CAPABILITIES = [
-  ['SEARCH_KNOWLEDGE', 'Buscar conocimiento'],
-  ['SAVE_KNOWLEDGE_CARD', 'Guardar fichas'],
-] as const;
-
-function Capabilities({ c, onChange }: { c: S['CompanyView']; onChange: (caps: Capability[]) => void }) {
-  const has: Capability[] = c.capabilities;
-  const toggle = (cap: Capability) => onChange(has.includes(cap) ? has.filter((x) => x !== cap) : [...has, cap]);
-  return (
-    <fieldset>
-      <legend>Capacidades de {c.name}</legend>
-      {CAPABILITIES.map(([cap, text]) => (
-        <label key={cap}><input type="checkbox" checked={has.includes(cap)} onChange={() => toggle(cap)} /> {text}</label>
-      ))}
-    </fieldset>
-  );
-}
-
-function Rename({ c, onSave }: { c: S['CompanyView']; onSave: (name: string) => void }) {
-  const [name, setName] = useState(c.name);
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave(name); }}>
-      <label>Nombre de {c.name} <input required value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <button type="submit">Renombrar</button>
-    </form>
-  );
-}
+import { Button } from '../ui/Button';
+import { PageHeader } from '../ui/PageHeader';
+import { RowActions } from '../ui/RowActions';
+import { Section } from '../ui/Section';
+import { Table, tableStyles } from '../ui/Table';
 
 function CompanyRow({ c, onOpen, onDone }: { c: S['CompanyView']; onOpen: () => void; onDone: () => void }) {
+  const [renaming, setRenaming] = useState(false);
   const { error, act } = useAction();
   const run = async (fn: () => Promise<unknown>) => (await act(fn)) && onDone();
   return (
-    <li className="card">
-      <h2>{c.name}</h2>
-      <Notice message={error} />
-      <button type="button" onClick={onOpen}>Abrir {c.name}</button>
-      <Rename c={c} onSave={(n) => run(() => api.renameCompany(c.id, n))} />
-      <Capabilities c={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} />
-    </li>
-  );
-}
-
-function NewCompany({ onDone }: { onDone: () => void }) {
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState('');
-  const { error, act } = useAction();
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (await act(() => api.createCompany(name))) {
-      setName('');
-      setAdding(false);
-      onDone();
-    }
-  };
-  if (!adding) return <button type="button" onClick={() => setAdding(true)}>Nueva empresa</button>;
-  return (
-    <form onSubmit={create}>
-      <Notice message={error} />
-      <label>Nombre de la empresa <input required autoFocus value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <button type="submit">Crear empresa</button>
-    </form>
+    <tr>
+      <td>
+        {renaming
+          ? <RenameForm name={c.name} label={`Nombre de ${c.name}`} onSave={(n) => api.renameCompany(c.id, n)} onSaved={() => { setRenaming(false); onDone(); }} onCancel={() => setRenaming(false)} />
+          : <strong>{c.name}</strong>}
+        <Notice message={error} />
+      </td>
+      <td><Capabilities company={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} /></td>
+      <td className={tableStyles.actions}>
+        <Button onClick={onOpen}>Abrir {c.name}</Button>
+        <RowActions label={`Más acciones de ${c.name}`}><Button variant="ghost" onClick={() => setRenaming(true)}>Renombrar {c.name}</Button></RowActions>
+      </td>
+    </tr>
   );
 }
 
 export function Companies({ onOpen }: { onOpen: (id: string, name: string) => void }) {
   const list = useLoad(api.companies, []);
+  const [adding, setAdding] = useState(false);
   return (
-    <section>
-      <h1>Empresas</h1>
+    <div>
+      <PageHeader title="Empresas" actions={<Button variant="primary" icon="plus" onClick={() => setAdding(true)}>Nueva empresa</Button>} />
       <Notice message={list.error} />
-      <NewCompany onDone={list.reload} />
-      <ul>{list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}</ul>
-    </section>
+      <Section title="Empresas del grupo">
+        <Table columns={['Empresa', 'Capacidades']}>
+          {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}
+        </Table>
+      </Section>
+      <NameDialog title="Nueva empresa" label="Nombre de la empresa" submitLabel="Crear empresa" open={adding}
+        onSubmit={api.createCompany} onClose={() => setAdding(false)} onDone={list.reload} />
+    </div>
   );
 }

@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
+import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
+import form from '../ui/Form.module.css';
 import { Notice } from './Notice';
 import { useAction } from './useLoad';
 
@@ -13,17 +16,17 @@ function newMemberBody(name: string, email: string, role: Role, password: string
 }
 
 function PasswordField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return <label>Contraseña <input type="password" required minLength={12} value={value} onChange={(e) => onChange(e.target.value)} /></label>;
+  return <Field label="Contraseña"><input type="password" required minLength={12} value={value} onChange={(e) => onChange(e.target.value)} /></Field>;
 }
 
 function RoleSelect({ value, onChange }: { value: Role; onChange: (r: Role) => void }) {
   return (
-    <label>Rol
+    <Field label="Rol">
       <select value={value} onChange={(e) => onChange(e.target.value as Role)}>
         <option value="WORKER">Trabajador</option>
         <option value="COMPANY_ADMIN">Administrador de empresa</option>
       </select>
-    </label>
+    </Field>
   );
 }
 
@@ -43,13 +46,13 @@ export function UserForm({ companyId, onDone }: { companyId: string; onDone: () 
     onDone();
   };
   return (
-    <form onSubmit={submit}>
+    <form className={form.form} onSubmit={submit}>
       <Notice message={error} />
-      <label>Nombre <input required value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <label>Correo <input type="email" required={isAdmin} value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+      <Field label="Nombre"><input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
+      <Field label="Correo"><input type="email" required={isAdmin} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
       {isAdmin && <PasswordField value={password} onChange={setPassword} />}
       <RoleSelect value={role} onChange={setRole} />
-      <button type="submit">Crear usuario</button>
+      <div><Button type="submit" variant="primary">Crear usuario</Button></div>
     </form>
   );
 }

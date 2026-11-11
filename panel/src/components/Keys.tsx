@@ -1,23 +1,31 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
+import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
+import form from '../ui/Form.module.css';
+import { FormDialog } from '../ui/FormDialog';
 import { Notice } from './Notice';
 import { useAction, useLoad } from './useLoad';
+import styles from './Keys.module.css';
 
-function IssuedKey({ issued, onClose }: { issued: S['IssuedKeyView']; onClose: () => void }) {
+function IssuedKeyDialog({ issued, onClose }: { issued: S['IssuedKeyView']; onClose: () => void }) {
   return (
-    <div className="issued" role="status">
+    <FormDialog title="Clave nueva" open dismissible={false} onClose={onClose}>
       <p><strong>No se volverá a mostrar.</strong> Guárdala ahora.</p>
-      <code>{issued.key}</code>
-      <button type="button" onClick={() => navigator.clipboard.writeText(issued.key)}>Copiar</button>
-      <button type="button" onClick={onClose}>Entendido</button>
-    </div>
+      <code className={styles.key}>{issued.key}</code>
+      <div className={form.buttons}>
+        <Button onClick={() => navigator.clipboard.writeText(issued.key)}>Copiar</Button>
+        <Button variant="primary" onClick={onClose}>Entendido</Button>
+      </div>
+    </FormDialog>
   );
 }
 
 function KeyRow({ k, onRevoke }: { k: S['KeyView']; onRevoke: () => void }) {
   return (
-    <li>
-      {k.label} ({k.prefix}) {k.revokedAt ? '· revocada' : <button type="button" onClick={onRevoke}>Revocar {k.label}</button>}
+    <li className={styles.item}>
+      <span>{k.label} ({k.prefix})</span>
+      {k.revokedAt ? <span className={styles.revoked}>Revocada</span> : <Button variant="danger" onClick={onRevoke}>Revocar {k.label}</Button>}
     </li>
   );
 }
@@ -37,13 +45,13 @@ export function Keys({ companyId, userId }: { companyId: string; userId: string 
     if (await act(() => api.revokeKey(id))) keys.reload();
   };
   return (
-    <section aria-label="Claves">
+    <section aria-label="Claves" className={form.form}>
       <Notice message={error ?? keys.error} />
-      {issued && <IssuedKey issued={issued} onClose={() => setIssued(undefined)} />}
-      <ul>{keys.data?.map((k) => <KeyRow key={k.id} k={k} onRevoke={() => revoke(k.id)} />)}</ul>
-      <form onSubmit={give}>
-        <label>Etiqueta de la clave <input required value={label} onChange={(e) => setLabel(e.target.value)} /></label>
-        <button type="submit">Dar clave</button>
+      {issued && <IssuedKeyDialog key={issued.id} issued={issued} onClose={() => setIssued(undefined)} />}
+      <ul className={styles.list}>{keys.data?.map((k) => <KeyRow key={k.id} k={k} onRevoke={() => revoke(k.id)} />)}</ul>
+      <form className={form.form} onSubmit={give}>
+        <Field label="Etiqueta de la clave"><input required value={label} onChange={(e) => setLabel(e.target.value)} /></Field>
+        <div><Button type="submit" variant="primary">Dar clave</Button></div>
       </form>
     </section>
   );
