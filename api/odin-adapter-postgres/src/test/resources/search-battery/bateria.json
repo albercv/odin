@@ -1,0 +1,593 @@
+[
+ {
+  "id": "A1",
+  "categoria": "exacta",
+  "pregunta": "¿Qué franquicia tiene la póliza ATL-4417-2024 para daños por agua?",
+  "citas": [
+   [
+    "c2-almendros/poliza-seguro-2024.txt",
+    "franquicia de 150 euros por siniestro"
+   ]
+  ],
+  "claves": [
+   [
+    "150"
+   ]
+  ]
+ },
+ {
+  "id": "A2",
+  "categoria": "exacta",
+  "pregunta": "¿A qué comunidad pertenece la póliza ATL-4471-2023?",
+  "citas": [
+   [
+    "c1-olmo14/poliza-seguro-2023.txt",
+    "ATL-4471-2023"
+   ]
+  ],
+  "claves": [
+   [
+    "olmo"
+   ]
+  ]
+ },
+ {
+  "id": "A3",
+  "categoria": "tabla",
+  "pregunta": "¿Cuánto se presupuestó para el seguro comunitario en Avenida del Puerto 3 en 2025?",
+  "citas": [
+   [
+    "c3-puerto3/acta-ordinaria-2025.txt",
+    "| Seguro comunitario | 1.980 euros |"
+   ],
+   [
+    "c3-puerto3/poliza-seguro-2024.txt",
+    "1.980 euros"
+   ]
+  ],
+  "claves": [
+   [
+    "1980"
+   ]
+  ]
+ },
+ {
+  "id": "A4",
+  "categoria": "vigencia",
+  "pregunta": "¿Cuál es la cuota mensual actual del mantenimiento del ascensor de Calle Olmo 14?",
+  "citas": [
+   [
+    "c1-olmo14/anexo-1-contrato-ascensor.txt",
+    "pasa a ser de 210 euros"
+   ]
+  ],
+  "claves": [
+   [
+    "210"
+   ]
+  ],
+  "prohibidas": [
+   "185"
+  ]
+ },
+ {
+  "id": "A5",
+  "categoria": "exacta",
+  "pregunta": "¿De cuánto fue la derrama para la fachada de Calle Olmo 14 y en cuántas cuotas se paga?",
+  "citas": [
+   [
+    "c1-olmo14/acta-extraordinaria-2025-fachada.txt",
+    "derrama extraordinaria de 48.000 euros"
+   ]
+  ],
+  "claves": [
+   [
+    "48000"
+   ],
+   [
+    "12"
+   ]
+  ]
+ },
+ {
+  "id": "A6",
+  "categoria": "exacta",
+  "pregunta": "¿Qué número tiene el caso de la filtración desde la cubierta en Avenida del Puerto 3?",
+  "citas": [
+   [
+    "c3-puerto3/caso-2025-004-filtracion-cubierta.txt",
+    "Caso 2025-004"
+   ]
+  ],
+  "claves": [
+   [
+    "2025-004"
+   ]
+  ]
+ },
+ {
+  "id": "B1",
+  "categoria": "parafrasis",
+  "pregunta": "Se me ha mojado el techo por una fuga del piso de arriba en Calle Olmo 14, ¿lo cubre el seguro y cuánto me toca pagar?",
+  "citas": [
+   [
+    "c1-olmo14/poliza-seguro-2023.txt",
+    "franquicia de 300 euros por siniestro"
+   ]
+  ],
+  "claves": [
+   [
+    "300"
+   ]
+  ]
+ },
+ {
+  "id": "B2",
+  "categoria": "parafrasis",
+  "pregunta": "¿Puedo llevar a mis cinco primos a la piscina de Los Almendros?",
+  "citas": [
+   [
+    "c2-almendros/estatutos.txt",
+    "máximo de 4 personas por día"
+   ]
+  ],
+  "claves": [
+   [
+    "4",
+    "cuatro"
+   ]
+  ]
+ },
+ {
+  "id": "B3",
+  "categoria": "parafrasis",
+  "pregunta": "Quiero poner el aire acondicionado en el balcón que da a la calle en Olmo 14, ¿puedo hacerlo sin más?",
+  "citas": [
+   [
+    "c1-olmo14/estatutos.txt",
+    "Artículo 9. Queda prohibida la instalación de aparatos de aire acondicionado"
+   ]
+  ],
+  "claves": [
+   [
+    "junta"
+   ]
+  ]
+ },
+ {
+  "id": "B4",
+  "categoria": "parafrasis",
+  "pregunta": "¿Los dueños de las tiendas de abajo pagan el ascensor nuevo en Avenida del Puerto 3?",
+  "citas": [
+   [
+    "c3-puerto3/acta-extraordinaria-2025-ascensor.txt",
+    "quedan exentos de esta derrama"
+   ],
+   [
+    "c3-puerto3/estatutos.txt",
+    "Artículo 14. Los locales comerciales"
+   ]
+  ],
+  "claves": [
+   [
+    "exent",
+    "exime",
+    "exenc",
+    "no pagan",
+    "no particip"
+   ]
+  ]
+ },
+ {
+  "id": "B5",
+  "categoria": "parafrasis",
+  "pregunta": "¿A qué hora cierran la piscina en Los Almendros?",
+  "citas": [
+   [
+    "c2-almendros/estatutos.txt",
+    "en horario de 11:00 a 21:00"
+   ]
+  ],
+  "claves": [
+   [
+    "21"
+   ]
+  ]
+ },
+ {
+  "id": "B6",
+  "categoria": "vigencia",
+  "pregunta": "Si alguien se queda encerrado en el ascensor de Olmo 14, ¿cuánto puede tardar como máximo el técnico?",
+  "citas": [
+   [
+    "c1-olmo14/anexo-1-contrato-ascensor.txt",
+    "el plazo máximo de respuesta será de 4 horas"
+   ]
+  ],
+  "claves": [
+   [
+    "4 horas",
+    "cuatro horas"
+   ]
+  ],
+  "prohibidas": [
+   "24 horas"
+  ]
+ },
+ {
+  "id": "B7",
+  "categoria": "parafrasis",
+  "pregunta": "¿Quién se encarga de limpiar la escalera en Avenida del Puerto 3 y cuántos días viene?",
+  "citas": [
+   [
+    "c3-puerto3/contrato-limpieza.txt",
+    "limpieza de zonas comunes dos días por semana"
+   ]
+  ],
+  "claves": [
+   [
+    "brillo"
+   ],
+   [
+    "dos",
+    "2"
+   ]
+  ]
+ },
+ {
+  "id": "B8",
+  "categoria": "frontera",
+  "pregunta": "¿Se puede grabar con cámaras en el garaje de Los Almendros? ¿Se votó algo y con qué resultado?",
+  "citas": [
+   [
+    "c2-almendros/acta-ordinaria-2025.txt",
+    "quedando aprobada la instalación de cuatro cámaras"
+   ]
+  ],
+  "claves": [
+   [
+    "38"
+   ]
+  ]
+ },
+ {
+  "id": "C1",
+  "categoria": "negacion",
+  "pregunta": "¿Qué daños por agua NO cubre la póliza de Avenida del Puerto 3?",
+  "citas": [
+   [
+    "c3-puerto3/poliza-seguro-2024.txt",
+    "Quedan excluidos los daños por agua procedentes de tuberías"
+   ]
+  ],
+  "claves": [
+   [
+    "privativ"
+   ]
+  ]
+ },
+ {
+  "id": "C2",
+  "categoria": "negacion",
+  "pregunta": "¿Hay algún tipo de humedad que no cubra el seguro de Calle Olmo 14?",
+  "citas": [
+   [
+    "c1-olmo14/poliza-seguro-2023.txt",
+    "humedades producidas por condensación"
+   ]
+  ],
+  "claves": [
+   [
+    "condensacion"
+   ]
+  ]
+ },
+ {
+  "id": "C3",
+  "categoria": "negacion",
+  "pregunta": "¿Qué gastos del ascensor no pagan los locales comerciales en Avenida del Puerto 3?",
+  "citas": [
+   [
+    "c3-puerto3/estatutos.txt",
+    "no participarán en los gastos de conservación, reparación ni sustitución del ascensor"
+   ]
+  ],
+  "claves": [
+   [
+    "conservacion"
+   ],
+   [
+    "sustitucion"
+   ]
+  ]
+ },
+ {
+  "id": "D1",
+  "categoria": "casi_duplicado",
+  "pregunta": "¿Quién fue elegido presidente de Calle Olmo 14 en la junta de 2025?",
+  "citas": [
+   [
+    "c1-olmo14/acta-ordinaria-2025.txt",
+    "Se elige presidente de la Comunidad a D. Luis Ferrer Montoya"
+   ]
+  ],
+  "claves": [
+   [
+    "ferrer"
+   ]
+  ],
+  "prohibidas": [
+   "quiroga"
+  ]
+ },
+ {
+  "id": "D2",
+  "categoria": "casi_duplicado",
+  "pregunta": "¿Quién fue elegida presidenta de Calle Olmo 14 en la junta de 2024?",
+  "citas": [
+   [
+    "c1-olmo14/acta-ordinaria-2024.txt",
+    "presidenta de la Comunidad a Dña. Marta Quiroga Ferrán"
+   ]
+  ],
+  "claves": [
+   [
+    "quiroga"
+   ]
+  ]
+ },
+ {
+  "id": "D3",
+  "categoria": "casi_duplicado",
+  "pregunta": "Según su contrato de limpieza, ¿cuántos días por semana se limpian las zonas comunes de Los Almendros?",
+  "citas": [
+   [
+    "c2-almendros/contrato-limpieza.txt",
+    "limpieza de zonas comunes tres días por semana"
+   ]
+  ],
+  "claves": [
+   [
+    "tres",
+    "3"
+   ]
+  ]
+ },
+ {
+  "id": "D4",
+  "categoria": "casi_duplicado",
+  "pregunta": "¿Qué empresa mantiene el ascensor de Avenida del Puerto 3?",
+  "citas": [
+   [
+    "c3-puerto3/contrato-ascensor.txt",
+    "Elevadores Bahía S.L."
+   ]
+  ],
+  "claves": [
+   [
+    "bahia"
+   ]
+  ],
+  "prohibidas": [
+   "ascensores norte"
+  ]
+ },
+ {
+  "id": "D5",
+  "categoria": "casi_duplicado",
+  "pregunta": "¿Qué franquicia por daños por agua tiene la póliza de Avenida del Puerto 3?",
+  "citas": [
+   [
+    "c3-puerto3/poliza-seguro-2024.txt",
+    "franquicia de 250 euros por siniestro"
+   ]
+  ],
+  "claves": [
+   [
+    "250"
+   ]
+  ]
+ },
+ {
+  "id": "E1",
+  "categoria": "vigencia",
+  "pregunta": "¿Qué franquicia por daños por agua tiene ahora mismo la póliza de Los Almendros?",
+  "citas": [
+   [
+    "c2-almendros/poliza-seguro-2024.txt",
+    "franquicia de 150 euros por siniestro"
+   ]
+  ],
+  "claves": [
+   [
+    "150"
+   ]
+  ]
+ },
+ {
+  "id": "E2",
+  "categoria": "vigencia",
+  "pregunta": "¿Cuántos días por semana se limpian actualmente las zonas comunes de Los Almendros?",
+  "citas": [
+   [
+    "c2-almendros/acta-ordinaria-2025.txt",
+    "ampliar la limpieza de zonas comunes a cinco días por semana"
+   ]
+  ],
+  "claves": [
+   [
+    "cinco",
+    "5"
+   ]
+  ]
+ },
+ {
+  "id": "E3",
+  "categoria": "contradiccion",
+  "pregunta": "¿Qué límite de responsabilidad civil cubre el uso de la piscina de Los Almendros?",
+  "citas": [
+   [
+    "c2-almendros/poliza-seguro-2024.txt",
+    "incluida la derivada del uso de la piscina"
+   ]
+  ],
+  "claves": [
+   [
+    "300000"
+   ]
+  ],
+  "bonus": [
+   "600000"
+  ]
+ },
+ {
+  "id": "F1",
+  "categoria": "tabla",
+  "pregunta": "¿Cuál es el total del presupuesto de 2025 de Avenida del Puerto 3?",
+  "citas": [
+   [
+    "c3-puerto3/acta-ordinaria-2025.txt",
+    "| Total | 14.850 euros |"
+   ]
+  ],
+  "claves": [
+   [
+    "14850"
+   ]
+  ]
+ },
+ {
+  "id": "G1",
+  "categoria": "casos_parecidos",
+  "pregunta": "Tenemos una filtración de agua desde la azotea o la cubierta al techo de un piso. ¿Cómo se resolvieron casos parecidos y qué resultado dio cada solución?",
+  "citas": [
+   [
+    "c1-olmo14/caso-2024-017-filtracion-azotea.txt",
+    "Se dio parte a Seguros Atalaya con cargo a la póliza ATL-4471-2023"
+   ],
+   [
+    "c3-puerto3/caso-2025-004-filtracion-cubierta.txt",
+    "sin dar parte al seguro"
+   ]
+  ],
+  "claves": [
+   [
+    "2024-017"
+   ],
+   [
+    "2025-004"
+   ]
+  ],
+  "todas_las_citas": true
+ },
+ {
+  "id": "G2",
+  "categoria": "casos_parecidos",
+  "pregunta": "Hay una fuga de agua en las zonas comunes de Los Almendros. ¿Cómo se resolvió la última vez algo parecido?",
+  "citas": [
+   [
+    "c2-almendros/caso-2025-011-fuga-riego.txt",
+    "Caso 2025-011"
+   ]
+  ],
+  "claves": [
+   [
+    "2025-011"
+   ]
+  ]
+ },
+ {
+  "id": "H1",
+  "categoria": "agregada",
+  "pregunta": "¿Cuántas derramas extraordinarias se aprobaron en 2025 sumando todas las comunidades, y de qué importe fue cada una?",
+  "citas": [
+   [
+    "c1-olmo14/acta-extraordinaria-2025-fachada.txt",
+    "derrama extraordinaria de 48.000 euros"
+   ],
+   [
+    "c3-puerto3/acta-extraordinaria-2025-ascensor.txt",
+    "derrama extraordinaria de 36.000 euros"
+   ]
+  ],
+  "claves": [
+   [
+    "48000"
+   ],
+   [
+    "36000"
+   ]
+  ],
+  "prohibidas": [
+   "22500"
+  ],
+  "todas_las_citas": true
+ },
+ {
+  "id": "H2",
+  "categoria": "agregada",
+  "pregunta": "¿Qué comunidades tienen contratada la limpieza con Limpiezas Brillo S.L.?",
+  "citas": [
+   [
+    "c1-olmo14/contrato-limpieza.txt",
+    "Limpiezas Brillo S.L."
+   ],
+   [
+    "c2-almendros/contrato-limpieza.txt",
+    "Limpiezas Brillo S.L."
+   ],
+   [
+    "c3-puerto3/contrato-limpieza.txt",
+    "Limpiezas Brillo S.L."
+   ]
+  ],
+  "claves": [
+   [
+    "olmo"
+   ],
+   [
+    "almendros"
+   ],
+   [
+    "puerto"
+   ]
+  ],
+  "todas_las_citas": true
+ },
+ {
+  "id": "I1",
+  "categoria": "sin_respuesta",
+  "pregunta": "¿Qué empresa hace el mantenimiento del ascensor de Los Almendros?",
+  "abstener": true
+ },
+ {
+  "id": "I2",
+  "categoria": "sin_respuesta",
+  "pregunta": "¿Cuánto costó la derrama de la fachada de Avenida del Puerto 3?",
+  "abstener": true
+ },
+ {
+  "id": "I3",
+  "categoria": "premisa_falsa",
+  "pregunta": "¿Por qué se rechazó la derrama del ascensor en Calle Olmo 14?",
+  "abstener": true
+ },
+ {
+  "id": "I4",
+  "categoria": "sin_respuesta",
+  "pregunta": "¿Qué se acordó en la junta de 2023 de Los Almendros?",
+  "abstener": true
+ },
+ {
+  "id": "I5",
+  "categoria": "sin_respuesta",
+  "pregunta": "¿Cubre la póliza de Los Almendros los daños por terremoto?",
+  "abstener": true
+ },
+ {
+  "id": "I6",
+  "categoria": "sin_respuesta",
+  "pregunta": "¿Cuál es el teléfono de urgencias de Seguros Atalaya?",
+  "abstener": true
+ }
+]

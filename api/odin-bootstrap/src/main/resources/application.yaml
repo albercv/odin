@@ -1,0 +1,28 @@
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+spring:
+  datasource:
+    url: ${ODIN_DB_URL}
+    username: ${ODIN_DB_APP_USER}
+    password: ${ODIN_DB_APP_PASSWORD}
+  flyway:
+    url: ${ODIN_DB_URL}
+    user: ${ODIN_DB_OWNER_USER}
+    password: ${ODIN_DB_OWNER_PASSWORD}
+    placeholders:
+      appPassword: ${ODIN_DB_APP_PASSWORD}
+  servlet:
+    multipart:
+      max-file-size: ${odin.upload-max-bytes}B
+      max-request-size: ${odin.upload-max-bytes}B
+
+odin:
+  setup-token: ${ODIN_SETUP_TOKEN:}
+  panel-origin: ${ODIN_PANEL_ORIGIN:}
+  originals-dir: ${ODIN_ORIGINALS_DIR}
+  upload-max-bytes: ${ODIN_UPLOAD_MAX_BYTES:52428800}
+
+springdoc:
+  default-produces-media-type: application/json

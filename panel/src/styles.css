@@ -1,0 +1,14 @@
+:root { font-family: system-ui, sans-serif; color: #1a1a1a; background: #fafafa; }
+body { margin: 0 auto; max-width: 56rem; padding: 1rem; }
+nav { display: flex; gap: 1rem; align-items: center; padding-bottom: .5rem; border-bottom: 1px solid #888; }
+nav a[aria-current='page'] { font-weight: bold; }
+label { display: block; margin: .5rem 0; }
+input, select, textarea { display: block; font: inherit; padding: .3rem; min-width: 18rem; }
+button { font: inherit; padding: .3rem .8rem; margin: .2rem .4rem .2rem 0; cursor: pointer; }
+.card { border: 1px solid #888; border-radius: .4rem; padding: .5rem 1rem; margin: 1rem 0; list-style: none; background: #fff; }
+.error { color: #9b1c1c; font-weight: bold; }
+.issued { border: 2px solid #1e5a9b; padding: .5rem; background: #eef5ff; }
+code { word-break: break-all; display: block; margin: .5rem 0; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; border-bottom: 1px solid #ccc; padding: .3rem; }
+:focus-visible { outline: 3px solid #1e5a9b; outline-offset: 2px; }

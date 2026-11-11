@@ -1,0 +1,75 @@
+name: odin
+
+services:
+  postgres:
+    image: postgres:17.10
+    environment:
+      POSTGRES_USER: ${ODIN_DB_OWNER_USER:?falta ODIN_DB_OWNER_USER en deploy/.env}
+      POSTGRES_PASSWORD: ${ODIN_DB_OWNER_PASSWORD:?falta ODIN_DB_OWNER_PASSWORD en deploy/.env}
+      POSTGRES_DB: ${ODIN_DB_NAME:-odin}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ODIN_DB_URL: jdbc:postgresql://postgres:5432/${ODIN_DB_NAME:-odin}
+      # fijo: la migración V4 crea siempre el rol odin_app
+      ODIN_DB_APP_USER: odin_app
+      ODIN_DB_APP_PASSWORD: ${ODIN_DB_APP_PASSWORD:?falta ODIN_DB_APP_PASSWORD en deploy/.env}
+      ODIN_DB_OWNER_USER: ${ODIN_DB_OWNER_USER:?falta ODIN_DB_OWNER_USER en deploy/.env}
+      ODIN_DB_OWNER_PASSWORD: ${ODIN_DB_OWNER_PASSWORD:?falta ODIN_DB_OWNER_PASSWORD en deploy/.env}
+      ODIN_SETUP_TOKEN: ${ODIN_SETUP_TOKEN:?falta ODIN_SETUP_TOKEN en deploy/.env}
+      ODIN_PANEL_ORIGIN: ${ODIN_PANEL_ORIGIN:?falta ODIN_PANEL_ORIGIN en deploy/.env}
+      ODIN_ORIGINALS_DIR: /var/lib/odin/originals
+      ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:?falta ODIN_UPLOAD_MAX_BYTES en deploy/.env}
+    volumes:
+      - originals:/var/lib/odin/originals
+    ports:
+      - "127.0.0.1:${ODIN_API_PORT:-8080}:8080"
+    healthcheck:
+      # la imagen JRE no trae curl: bash con /dev/tcp
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /v1/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  panel:
+    build:
+      context: ..
+      dockerfile: deploy/panel.Dockerfile
+    depends_on:
+      - api
+    environment:
+      ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:?falta ODIN_UPLOAD_MAX_BYTES en deploy/.env}
+    ports:
+      - "127.0.0.1:${ODIN_PANEL_PORT:-8088}:80"
+
+  mcp-http:
+    build:
+      context: ..
+      dockerfile: deploy/mcp.Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8090"
+      ODIN_API_URL: http://api:8080
+    ports:
+      - "127.0.0.1:${ODIN_MCP_PORT:-8090}:8090"
+
+volumes:
+  pgdata:
+  originals:

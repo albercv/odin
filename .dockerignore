@@ -1,0 +1,10 @@
+**/node_modules
+**/target
+**/dist
+api/.m2
+**/.env
+.git
+**/.env.*
+data/
+.superpowers/
+.worktrees
