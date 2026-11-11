@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, type S } from '../api/client';
 import { Notice } from '../components/Notice';
 import { useAction, useLoad } from '../components/useLoad';
@@ -21,8 +21,9 @@ function CardReview({ card, onDone }: { card: S['CardView']; onDone: () => void 
   );
 }
 
-export function Review({ companyId }: { companyId: string }) {
+export function Review({ companyId, onPendingChanged }: { companyId: string; onPendingChanged?: (count: number) => void }) {
   const list = useLoad(() => api.pendingCards(companyId), [companyId]);
+  useEffect(() => { if (list.data) onPendingChanged?.(list.data.length); }, [list.data]);
   return (
     <section>
       <h1>Revisión de fichas</h1>

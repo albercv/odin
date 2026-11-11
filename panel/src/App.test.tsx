@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { App } from './App';
@@ -6,6 +6,17 @@ import { Documents } from './pages/Documents';
 import { Review } from './pages/Review';
 import { Keys } from './components/Keys';
 import { mockFetch, type Routes } from './mockApi';
+import { BrandProvider } from './theme/BrandContext';
+import { NEUTRAL_BRAND } from './theme/brand';
+import { deriveTheme } from './theme/deriveTheme';
+
+vi.mock('./brain/BrainCanvas', () => ({ BrainCanvas: () => <div data-testid="brain" /> }));
+
+const unauthorized = { 'GET /v1/admin/me': () => ({ status: 401, body: { detail: 'Sesión caducada' } }) };
+const renderWith = (cover?: { title: string; subtitle: string; note: string }) => {
+  const brand = { ...NEUTRAL_BRAND, cover };
+  return render(<BrandProvider brand={brand} theme={deriveTheme(brand.colors)}><App /></BrandProvider>);
+};
 
 const company = { id: 'c1', name: 'Acme', capabilities: ['SEARCH_KNOWLEDGE'] };
 
@@ -19,6 +30,49 @@ test('loginShowsErrorOnBadCredentials', async () => {
   await userEvent.type(screen.getByLabelText('Contraseña'), 'mala');
   await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos');
+});
+
+test('loginStillLogsIn', async () => {
+  const calls = mockFetch({
+    ...unauthorized,
+    'POST /v1/admin/session': () => ({ status: 204 }),
+  });
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText('Correo'), 'a@b.c');
+  await userEvent.type(screen.getByLabelText('Contraseña'), 'buena');
+  await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+  await waitFor(() => expect(calls.some((c) => c.key === 'POST /v1/admin/session')).toBe(true));
+  expect(calls.find((c) => c.key === 'POST /v1/admin/session')?.body).toEqual({ email: 'a@b.c', password: 'buena' });
+});
+
+test('coverHashShowsCoverThenLogin', async () => {
+  location.hash = '#cover';
+  mockFetch(unauthorized);
+  renderWith({ title: 'Titular', subtitle: 'Sub', note: 'Nota' });
+  await userEvent.click(await screen.findByRole('button', { name: 'Empezar la demostración' }));
+  expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
+  expect(location.hash).toBe('');
+});
+
+test('coverHashWithoutCoverShowsLogin', async () => {
+  location.hash = '#cover';
+  mockFetch(unauthorized);
+  renderWith();
+  expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Empezar la demostración' })).toBeNull();
+  location.hash = '';
+});
+
+test('shellShowsPendingCountAndCompanyName', async () => {
+  mockFetch({
+    'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] }),
+    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [{ id: 'k1', title: 'F', body: 'B', status: 'PENDING' }],
+    'GET /v1/admin/companies/c1/projects': () => [],
+    'GET /v1/admin/companies/c1/members': () => [],
+  });
+  render(<App />);
+  expect(await screen.findByRole('link', { name: /Revisión/ })).toHaveTextContent('1');
 });
 
 test('groupAdminSeesCompaniesAndCapabilities', async () => {
@@ -39,6 +93,7 @@ test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
     'GET /v1/admin/companies': () => [company],
     'GET /v1/admin/companies/c1/projects': () => [],
     'GET /v1/admin/companies/c1/members': () => [],
+    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
   });
   render(<App />);
   expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
@@ -151,4 +206,20 @@ test('reviewApproveCorrectReject', async () => {
   await waitFor(() => expect(sent('k3')).toEqual({ decision: 'REJECT', note: 'Dudoso' }));
   expect(sent('k1')).toEqual({ decision: 'APPROVE' });
   expect(sent('k2')).toEqual({ decision: 'CORRECT', correctedBody: 'Mejor' });
+});
+
+test('hashChangeDoesNotBreakHookOrder', async () => {
+  location.hash = '';
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  mockFetch(unauthorized);
+  renderWith({ title: 'Titular', subtitle: 'Sub', note: 'Nota' });
+  expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
+  location.hash = '#cover';
+  act(() => { window.dispatchEvent(new HashChangeEvent('hashchange')); });
+  expect(await screen.findByRole('button', { name: 'Empezar la demostración' })).toBeInTheDocument();
+  location.hash = '';
+  act(() => { window.dispatchEvent(new HashChangeEvent('hashchange')); });
+  expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
 });

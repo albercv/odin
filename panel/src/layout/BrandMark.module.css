@@ -1,0 +1,4 @@
+.mark { display: flex; align-items: center; gap: 12px; min-width: 0; font-weight: 600; font-size: 17px; color: inherit; }
+.logo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.initials { display: grid; place-items: center; background: var(--brand-accent-on-dark); color: var(--brand-accent-on-dark-text); font-size: 15px; font-weight: 600; }
+.owner { display: block; font-size: 13px; font-weight: 400; color: var(--side-text); overflow-wrap: anywhere; }
