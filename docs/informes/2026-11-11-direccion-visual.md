@@ -51,4 +51,6 @@ Pruebas de `panel/e2e/visual.spec.ts`, todas pasadas en las dos ejecuciones:
 
 ## Tamaños
 
-De la tarea 3 (`npm run build`): `dist/` 660 KB (`du -sk`), con 8 ficheros woff2 y 8 woff de fuente.
+De la tarea 3 (`npm run build`): `dist/` pasó de 312 KB a 624 KB; CSS 4,24 kB; JS 243,51 kB; 16 ficheros de fuente (8 woff2 y 8 woff, unos 290 KB en total; woff2 unos 148 KB: Sans 400 22,6 y 16,0 kB, 500 24,2 y 16,5, 600 24,3 y 16,4; Mono 14,7 y 13,3 kB).
+
+Medido en esta tarea, con todo el sistema visual construido (`make check`): CSS 18,95 kB (4,49 kB gzip); JS 270,16 kB (84,98 kB gzip); `dist/` 660 KB (`du -sk`), con 8 ficheros woff2 y 8 woff de fuente.
