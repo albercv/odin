@@ -16,7 +16,7 @@ function hueAndSaturated(hex: string): { h: number; s: number } {
 
 function textPairs(t: ModeTokens, sidebarBackground: string): [string, string, string][] {
   return [
-    ['text', t.text, t.background], ['text', t.text, t.surface], ['text', t.text, t.surfaceMuted],
+    ['text', t.text, t.background], ['text', t.text, t.surface], ['text', t.text, t.surfaceMuted], ['text', t.text, t.accentTint],
     ['textMuted', t.textMuted, t.surface], ['textMuted', t.textMuted, t.surfaceMuted],
     ['pending', t.pendingText, t.pendingBackground], ['danger', t.danger, t.surface], ['danger', t.danger, t.dangerBackground],
     ['accentText', t.accentText, t.accent], ['sidebarText', t.sidebarText, sidebarBackground],

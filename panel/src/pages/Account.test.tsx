@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { mockFetch } from '../mockApi';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, vi } from 'vitest';
 
 vi.mock('../brain/BrainCanvas', () => ({ BrainCanvas: () => null }));
 
@@ -78,4 +78,37 @@ test('themeChoiceIsSaved', async () => {
   await userEvent.click(screen.getByRole('radio', { name: 'Oscuro' }));
   expect(screen.getByRole('radio', { name: 'Oscuro' })).toBeChecked();
   expect(localStorage.getItem('odin.colorPreference')).toBe('dark');
+});
+
+describe('colorModeAtTheRoot', () => {
+  let systemDark = false;
+  let listeners: (() => void)[] = [];
+  beforeEach(() => {
+    systemDark = false; listeners = [];
+    vi.stubGlobal('matchMedia', () => ({
+      get matches() { return systemDark; },
+      addEventListener: (_: string, l: () => void) => listeners.push(l),
+      removeEventListener: (_: string, l: () => void) => { listeners = listeners.filter((x) => x !== l); },
+    }));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  test('rootFollowsTheSystemOnTheLoginScreen', async () => {
+    mockFetch({ 'GET /v1/admin/me': () => ({ status: 401, body: { detail: 'x' } }) });
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+    systemDark = true;
+    act(() => listeners.forEach((l) => l()));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  test('accountChoiceAppliesAtOnceWithASingleListener', async () => {
+    routes({ status: 204 });
+    await openAccount();
+    expect(listeners).toHaveLength(1);
+    await userEvent.click(screen.getByRole('radio', { name: 'Oscuro' }));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    await userEvent.click(screen.getByRole('radio', { name: 'Como el sistema' }));
+    expect(listeners).toHaveLength(1);
+  });
 });

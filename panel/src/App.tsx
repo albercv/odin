@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, setUnauthorizedHandler, type S } from './api/client';
 import { AppShell } from './layout/AppShell';
 import { Cover } from './pages/Cover';
 import { Login } from './pages/Login';
 import { useBrand } from './theme/BrandContext';
+import { ColorModeContext } from './theme/ColorModeContext';
+import { useColorMode } from './theme/useColorMode';
 import { ConfirmProvider } from './ui/ConfirmDialog';
 import { ToastProvider } from './ui/Toast';
 
@@ -35,6 +37,12 @@ function Panel() {
   return <AppShell me={me} onLogout={logout} onPasswordChanged={passwordChanged} />;
 }
 
+function ColorModeRoot({ children }: { children: React.ReactNode }) {
+  const { preference, setPreference } = useColorMode();
+  const value = useMemo(() => ({ preference, setPreference }), [preference, setPreference]);
+  return <ColorModeContext.Provider value={value}>{children}</ColorModeContext.Provider>;
+}
+
 export function App() {
-  return <ToastProvider><ConfirmProvider><Panel /></ConfirmProvider></ToastProvider>;
+  return <ColorModeRoot><ToastProvider><ConfirmProvider><Panel /></ConfirmProvider></ToastProvider></ColorModeRoot>;
 }
