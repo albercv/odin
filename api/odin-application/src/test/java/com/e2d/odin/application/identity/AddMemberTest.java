@@ -138,6 +138,34 @@ class AddMemberTest {
         assertThat(memberships.find(carlos.id(), other)).isPresent();
     }
 
+    private User existingGroupAdmin() {
+        return People.groupAdmin(users, new UserId(UUID.randomUUID()), "Gema", Optional.of("g@demo.test"), true,
+                Optional.of(passwords.hash("clave-de-gema-12")));
+    }
+
+    @Test
+    void groupAdminCanBeAddedAsAWorkerByEmail() {
+        User gema = existingGroupAdmin();
+
+        MemberAdded added = add.execute(Actors.companyAdmin(company), company,
+                member("G@demo.test", Set.of(Role.WORKER), null));
+
+        assertThat(added.alreadyExisted()).isTrue();
+        assertThat(added.user()).isEqualTo(gema);
+        assertThat(memberships.find(gema.id(), company).orElseThrow().roles()).containsExactly(Role.WORKER);
+    }
+
+    @Test
+    void groupAdminCannotGetCompanyAdminInACompany() {
+        User gema = existingGroupAdmin();
+
+        assertThatThrownBy(() -> add.execute(groupAdmin, company,
+                member("g@demo.test", Set.of(Role.COMPANY_ADMIN, Role.WORKER), null)))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("El administrador del grupo ya administra todas las empresas");
+        assertThat(memberships.find(gema.id(), company)).isEmpty();
+    }
+
     @Test
     void sameCompanyTwiceIsConflict() {
         User carlos = existingAdminOfOtherCompany();

@@ -47,7 +47,7 @@ public class UpdateMember {
         User user = personReadyFor(current, updated, changes.password(), userId);
         memberships.save(updated);
         if (losesAdministration(current, updated)) {
-            UserAdministration.closeSessionsIfNoLongerAdministering(memberships, sessions, userId);
+            UserAdministration.closeSessionsIfNoLongerAdministering(user, memberships, sessions);
         }
         return MemberView.of(user, updated, companyCode, actor);
     }

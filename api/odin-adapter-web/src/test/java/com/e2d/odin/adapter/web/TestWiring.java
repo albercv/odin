@@ -176,7 +176,7 @@ public class TestWiring {
     }
 
     @Bean RemoveMember removeMember() {
-        return new RemoveMember(memberships, keys, projectMembers, adminSessions(), clock);
+        return new RemoveMember(users, memberships, keys, projectMembers, adminSessions(), clock);
     }
 
     @Bean DescribeAdmin describeAdmin() {

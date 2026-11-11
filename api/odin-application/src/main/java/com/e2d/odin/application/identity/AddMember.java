@@ -58,7 +58,7 @@ public class AddMember {
         requireAssignableProjects(companyId, roles, newMember.projectIds());
         Optional<String> email = newMember.email().filter(e -> !e.isBlank()).map(Validation::normalizeEmail);
         Optional<User> existing = email.flatMap(users::findByEmail);
-        User person = existing.map(user -> requireJoinable(user, companyId))
+        User person = existing.map(user -> requireJoinable(user, companyId, administrator))
                 .orElseGet(() -> newPerson(newMember, email));
         User ready = administrator ? UserAdministration.readyToAdminister(person, newMember.password(), passwords)
                 : person;
@@ -90,9 +90,9 @@ public class AddMember {
         }
     }
 
-    private User requireJoinable(User user, CompanyId companyId) {
-        if (user.groupAdmin()) {
-            throw new ValidationException("El administrador del grupo no pertenece a ninguna empresa");
+    private User requireJoinable(User user, CompanyId companyId, boolean administrator) {
+        if (user.groupAdmin() && administrator) {
+            throw new ValidationException("El administrador del grupo ya administra todas las empresas");
         }
         if (memberships.find(user.id(), companyId).isPresent()) {
             throw new ConflictException("Esa persona ya pertenece a esta empresa");

@@ -77,11 +77,11 @@ final class UserAdministration {
         return user.withPasswordHash(passwords.hash(Validation.requirePassword(plain)));
     }
 
-    /** Si la persona ya no administra ninguna empresa, sus sesiones del panel dejan de valer. */
-    static void closeSessionsIfNoLongerAdministering(MembershipRepository memberships, AdminSessions sessions,
-            UserId userId) {
-        if (companiesAdministeredBy(memberships, userId).isEmpty()) {
-            sessions.closeAllOf(userId);
+    /** Si la persona ya no administra ninguna empresa (y no es la administradora del grupo), sus sesiones del panel dejan de valer. */
+    static void closeSessionsIfNoLongerAdministering(User user, MembershipRepository memberships,
+            AdminSessions sessions) {
+        if (!user.groupAdmin() && companiesAdministeredBy(memberships, user.id()).isEmpty()) {
+            sessions.closeAllOf(user.id());
         }
     }
 }
