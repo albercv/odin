@@ -11,6 +11,7 @@ import { widelyVisible } from './widelyVisible';
 
 const NO_ROLE = 'Elige al menos un papel';
 const ALREADY_EXISTED = 'Esta persona ya existía en el grupo: se ha añadido a esta empresa';
+const KEPT_PASSWORD = ' Conserva su contraseña.';
 
 type Draft = { firstName: string; lastName: string; email: string; password: string; projectIds: string[] };
 const EMPTY: Draft = { firstName: '', lastName: '', email: '', password: '', projectIds: [] };
@@ -69,7 +70,7 @@ export function MemberForm({ companyId, isGroupAdmin, onDone }: Props) {
     let added: S['MemberAdded'] | undefined;
     if (!(await act(async () => { added = await api.addMember(companyId, bodyOf(draft, choice)); }))) return;
     setDraft(EMPTY);
-    if (added?.alreadyExisted) toast(ALREADY_EXISTED);
+    if (added?.alreadyExisted) toast(ALREADY_EXISTED + (added.keptPassword ? `.${KEPT_PASSWORD}` : ''));
     onDone();
   };
   return (

@@ -34,7 +34,7 @@ function Panel() {
   if (me === null) return <Login onLoggedIn={() => { setNotice(undefined); refresh(); }} notice={notice} />;
   const passwordChanged = () => { setNotice('Contraseña cambiada. Entra de nuevo.'); setMe(null); };
   const logout = () => api.logout().finally(() => { setNotice(undefined); setMe(null); });
-  return <AppShell me={me} onLogout={logout} onPasswordChanged={passwordChanged} />;
+  return <AppShell me={me} onLogout={logout} onPasswordChanged={passwordChanged} onProfileChanged={refresh} />;
 }
 
 function ColorModeRoot({ children }: { children: React.ReactNode }) {

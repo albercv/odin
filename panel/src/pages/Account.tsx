@@ -7,6 +7,7 @@ import { useColorChoice } from '../theme/ColorModeContext';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
+import { useToast } from '../ui/Toast';
 import { PageHeader } from '../ui/PageHeader';
 import { Section } from '../ui/Section';
 import styles from './Account.module.css';
@@ -25,6 +26,29 @@ function ThemeChoice() {
           </label>
         ))}
       </div>
+    </Section>
+  );
+}
+
+function NamesForm({ me, onSaved }: { me: S['AdminMe']; onSaved: () => void }) {
+  const [firstName, setFirstName] = useState(me.firstName);
+  const [lastName, setLastName] = useState(me.lastName ?? '');
+  const { error, act } = useAction();
+  const toast = useToast();
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!(await act(() => api.updateUser(me.userId, { firstName, lastName })))) return;
+    toast('Datos guardados');
+    onSaved();
+  };
+  return (
+    <Section title="Mis datos">
+      <form className={`${form.form} ${styles.password}`} onSubmit={submit}>
+        <Notice message={error} />
+        <Field label="Nombre"><input required value={firstName} onChange={(e) => setFirstName(e.target.value)} /></Field>
+        <Field label="Apellidos"><input required value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>
+        <div><Button type="submit" variant="primary">Guardar mis datos</Button></div>
+      </form>
     </Section>
   );
 }
@@ -49,10 +73,13 @@ function PasswordForm({ me, onPasswordChanged }: { me: S['AdminMe']; onPasswordC
   );
 }
 
-export function Account({ me, onPasswordChanged }: { me: S['AdminMe']; onPasswordChanged: () => void }) {
+type AccountProps = { me: S['AdminMe']; onPasswordChanged: () => void; onProfileChanged: () => void };
+
+export function Account({ me, onPasswordChanged, onProfileChanged }: AccountProps) {
   return (
     <div>
       <PageHeader title="Mi cuenta" description={me.displayName} />
+      <NamesForm me={me} onSaved={onProfileChanged} />
       <PasswordForm me={me} onPasswordChanged={onPasswordChanged} />
       <ThemeChoice />
     </div>

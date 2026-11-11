@@ -10,9 +10,9 @@ const projects = [
   { id: 'p2', companyId: 'c1', name: 'Reforma', restricted: true },
   { id: 'p3', companyId: 'c1', name: 'Sala común', restricted: false },
 ];
-const created = (alreadyExisted = false) => ({
+const created = (alreadyExisted = false, keptPassword = false) => ({
   status: 201,
-  body: { member: { userId: 'u9', displayName: 'Ana Gil', roles: ['WORKER'], active: true }, alreadyExisted },
+  body: { member: { userId: 'u9', displayName: 'Ana Gil', roles: ['WORKER'], active: true }, alreadyExisted, keptPassword },
 });
 
 function show(routes: Routes, isGroupAdmin = true) {
@@ -115,6 +115,14 @@ test('alreadyExistedShowsTheNotice', async () => {
   await submit();
   expect(await screen.findByRole('status')).toHaveTextContent('Esta persona ya existía en el grupo: se ha añadido a esta empresa');
   expect(onDone).toHaveBeenCalled();
+});
+
+test('keptPasswordIsAddedToTheNotice', async () => {
+  show({ [path]: () => created(true, true) });
+  await fillNames();
+  await submit();
+  expect(await screen.findByRole('status')).toHaveTextContent(
+    'Esta persona ya existía en el grupo: se ha añadido a esta empresa. Conserva su contraseña.');
 });
 
 test('failedAddKeepsTheTypedValues', async () => {

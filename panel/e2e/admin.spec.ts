@@ -212,7 +212,6 @@ async function changeOwnPassword(page: Page): Promise<void> {
   console.log('✓ Admin 10: contraseña propia cambiada desde «Mi cuenta» y entrada con la nueva');
 }
 
-
 async function samePersonInSecondCompany(page: Page): Promise<void> {
   await page.getByRole('link', { name: 'Empresas' }).click();
   await createCompany(page, SECOND_COMPANY, 'E2B');
@@ -253,8 +252,7 @@ async function openProjectMembers(page: Page): Promise<Locator> {
   const projects = projectsSection(page);
   await openActions(projects, CLOSED_PROJECT);
   const toggle = projects.getByRole('button', { name: `Miembros de ${CLOSED_PROJECT}`, exact: true });
-  if ((await toggle.getAttribute('aria-expanded')) === 'true') await toggle.click();
-  await toggle.click();
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
   return page.getByRole('region', { name: `Miembros de ${CLOSED_PROJECT}` });
 }
 

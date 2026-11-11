@@ -9,7 +9,7 @@ import { withViewTransition } from '../ui/viewTransition';
 import { Sidebar, type Page } from './Sidebar';
 import styles from './AppShell.module.css';
 
-type Props = { me: S['AdminMe']; onLogout: () => void; onPasswordChanged: () => void };
+type Props = { me: S['AdminMe']; onLogout: () => void; onPasswordChanged: () => void; onProfileChanged: () => void };
 
 function usePendingCount(companyId: string) {
   const [pending, setPending] = useState(0);
@@ -20,7 +20,7 @@ function usePendingCount(companyId: string) {
   return [pending, setPending] as const;
 }
 
-export function AppShell({ me, onLogout, onPasswordChanged }: Props) {
+export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: Props) {
   const isGroup = me.role === 'GROUP_ADMIN';
   const [page, setPageNow] = useState<Page>(isGroup ? 'companies' : 'company');
   const [companyId, setCompanyId] = useState(me.companyId ?? (isGroup ? '' : me.companies[0]?.id ?? ''));
@@ -37,7 +37,7 @@ export function AppShell({ me, onLogout, onPasswordChanged }: Props) {
         switcher={isGroup ? undefined : { companies: me.companies, currentId: companyId, onChange: switchTo }}
         pending={pending} setPage={setPage} onLogout={onLogout} />
       <main className={styles.main}>
-        {page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} />}
+        {page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} onProfileChanged={onProfileChanged} />}
         {page === 'companies' && <Companies onOpen={open} />}
         {needsCompany && !companyId && <p>Elige primero una empresa en «Empresas».</p>}
         {needsCompany && companyId && page === 'company' && <Company key={companyId} companyId={companyId} me={me} />}

@@ -16,7 +16,7 @@ export function EditForm({ user, onDone }: { user: Member; onDone: (saved: boole
   const { error, act } = useAction();
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (await act(() => api.updateUser(user.userId, { firstName, ...(lastName !== (user.lastName ?? '') && { lastName }), email }))) onDone(true);
+    if (await act(() => api.updateUser(user.userId, { firstName, ...(lastName !== (user.lastName ?? '') && { lastName }), ...(email !== (user.email ?? '') && { email }) }))) onDone(true);
   };
   return (
     <form className={form.form} onSubmit={submit}>

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, vi } from 'vitest';
 
 vi.mock('../brain/BrainCanvas', () => ({ BrainCanvas: () => null }));
 
-const me = { userId: 'u1', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] };
+const me = { userId: 'u1', displayName: 'Bea Pérez', firstName: 'Bea', lastName: 'Pérez', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] };
 const put = 'PUT /v1/admin/users/u1/password';
 
 function routes(passwordReply: { status: number; body?: unknown }) {
@@ -18,6 +18,7 @@ function routes(passwordReply: { status: number; body?: unknown }) {
     'GET /v1/admin/companies': () => [],
     'GET /v1/admin/companies/c1/projects': () => [],
     'GET /v1/admin/companies/c1/members': () => [],
+    'PATCH /v1/admin/users/u1': () => ({ userId: 'u1' }),
     [put]: () => {
       if (passwordReply.status === 204) loggedIn = false;
       return passwordReply;
@@ -46,6 +47,19 @@ test('changesOwnPasswordAndReturnsToLoginWithNotice', async () => {
   expect(calls.find((c) => c.key === put)?.body).toEqual({
     currentPassword: 'la-clave-vieja-1', newPassword: 'la-clave-nueva-22',
   });
+});
+
+test('editsOwnNamesAndRefreshesTheHeader', async () => {
+  const calls = routes({ status: 204 });
+  await openAccount();
+  expect(screen.getByLabelText('Nombre')).toHaveValue('Bea');
+  expect(screen.getByLabelText('Apellidos')).toHaveValue('Pérez');
+  await userEvent.clear(screen.getByLabelText('Apellidos'));
+  await userEvent.type(screen.getByLabelText('Apellidos'), 'Gil Ruiz');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar mis datos' }));
+  expect(await screen.findByRole('status')).toHaveTextContent('Datos guardados');
+  expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u1')?.body).toEqual({ firstName: 'Bea', lastName: 'Gil Ruiz' });
+  expect(calls.filter((c) => c.key === 'GET /v1/admin/me').length).toBeGreaterThan(1);
 });
 
 test('wrongCurrentPasswordShowsTheApiMessage', async () => {

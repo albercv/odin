@@ -750,6 +750,8 @@ export interface components {
             /** Format: uuid */
             userId: string;
             displayName: string;
+            firstName: string;
+            lastName?: string;
             personCode: string;
             /** @enum {string} */
             role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
