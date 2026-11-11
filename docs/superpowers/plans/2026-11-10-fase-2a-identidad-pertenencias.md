@@ -33,6 +33,7 @@
 4. **Quitar «Visible para toda la empresa»:** deja de verse para quien no es miembro en la siguiente petición. Prueba en la tarea 3.
 5. **Base de datos de la fase 1.1 con datos:** al migrar, cada usuario conserva su acceso y cada clave sigue funcionando. Prueba en la tarea 1 (`MigrationFromPhaseOneIT`).
 6. **Proyecto nuevo:** nace cerrado; ningún trabajador lo ve hasta que se le asigna. Prueba en la tarea 3.
+7. **Código de persona:** aleatorio con `SecureRandom`, único también entre borradas, nunca se acepta en una petición ni cambia. Pruebas en la tarea 5.
 
 ---
 
@@ -43,6 +44,7 @@
 public enum Role { GROUP_ADMIN, COMPANY_ADMIN, WORKER }            // el papel con el que actúa una petición; no cambia
 public record User(UserId id, String displayName, Optional<String> email, boolean groupAdmin,
         boolean active, Optional<String> passwordHash) { }
+        // la tarea 5 cambia displayName por firstName, Optional<String> lastName y personCode; displayName() pasa a ser derivado
 public record Membership(UserId userId, CompanyId companyId, Set<Role> roles, boolean active) { }
         // roles: no vacío y solo COMPANY_ADMIN o WORKER
 public record Actor(UserId userId, String displayName, Role role, Set<CompanyId> companies) {
@@ -239,6 +241,7 @@ Rama `task/identidad-pertenencias/rls-proyectos`. Spec 6.
 
 **Valores:**
 - Las políticas de `document`, `document_page` y `knowledge_card` exigen, además de la empresa: `project_id IS NULL`, o `project_id = ANY` de `app.project_ids`, o `app.all_projects = 'on'`. `document_page` toma el proyecto de su documento.
+- `project_member` también lleva seguridad por filas: la política toma la empresa de su proyecto (hallazgo de la revisión de la tarea 3).
 - `ScopedTransactions` fija las dos variables en la misma transacción en la que ya fija las de empresa, a partir del `ProjectVisibility` de la consulta. Sin `ProjectVisibility`, no fija ninguna: solo se ve lo que no tiene proyecto.
 - Ninguna consulta pierde su filtro explícito de la tarea 3.
 
@@ -246,12 +249,47 @@ Rama `task/identidad-pertenencias/rls-proyectos`. Spec 6.
   - `restrictedProjectRowsAreHiddenWithoutItsIdInScope`, para las tres tablas;
   - `rowsWithoutProjectAreVisibleWithEmptyProjectScope`;
   - `allProjectsFlagShowsEverythingOfTheCompany`;
-  - `noProjectVariablesMeansOnlyProjectlessRows`.
+  - `noProjectVariablesMeansOnlyProjectlessRows`;
+  - `projectMembersOfAnotherCompanyAreHidden`.
 - [ ] **Paso 2:** escribe `V9` y adapta `ScopedTransactions`.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0. La batería de búsqueda (`SearchBatteryIT`) mantiene 27 de 30.
 - [ ] **Paso 4:** commit «feat: seguridad por filas para los proyectos cerrados».
 
-### Tarea 5: Panel: personas, papeles, accesos, selector de empresa y proyectos · Sonnet
+### Tarea 5: Nombre, apellidos y código de persona · Sonnet
+
+Rama `task/identidad-pertenencias/codigo-persona`. Spec 5.5 y 7. Petición del propietario del 2026-11-11 (O4, P2 a P4 y formato confirmado).
+
+**Ficheros:**
+- **Crear:** `application/port/PersonCodeGenerator.java` (`String next()`), su adaptador con `SecureRandom` junto al generador de ids que ya existe, un doble determinista para las pruebas, `UpdateCompany` (sustituye a `RenameCompany`) y `V10__person_names_and_codes.sql`.
+- **Borrar:** `RenameCompany`, que pasa a `UpdateCompany`.
+- **Modificar:** `User`, `Company`, `CreateCompany`, `AddMember`, `UpdateUser`, `ListMembers` y `MemberView`, `AdminMe`, `PostgresUserRepository`, `PostgresOrganizationRepository`, los controladores, el contrato, los tipos y las pruebas, la demo y el extremo a extremo que crean personas o empresas.
+
+**Valores:**
+- `User` sustituye `displayName` por `firstName`, `Optional<String> lastName` (vacío solo en personas migradas) y `personCode`. `displayName()` devuelve «firstName lastName», o solo `firstName` si faltan apellidos. `Actor` y las vistas siguen llevando `displayName`.
+- Código de persona: 4 caracteres de `23456789ABCDEFGHJKMNPQRSTUVWXYZ` con `SecureRandom`. Índice único sobre todas las filas, borradas incluidas: un código nunca se reutiliza. Si el generado existe, se genera otro, hasta 5 intentos; después, error interno con log. No se acepta en ninguna petición y no cambia nunca.
+- `Company.code`: `^[A-Z0-9]{2,6}$`; si no, 400, «El código de la empresa tiene de 2 a 6 letras mayúsculas o cifras». Único en el grupo: 409, «Ya existe una empresa con ese código». Obligatorio al crear; cambiarlo, solo el administrador del grupo.
+- `AddMember { firstName, lastName, email?, roles, password?, projectIds? }`: nombre y apellidos obligatorios; si falta alguno, 400, «Faltan el nombre o los apellidos». Si la persona ya existía en el grupo, conserva su nombre y su código (spec 5.1).
+- `UpdateUser { firstName?, lastName?, email?, active? }`: ninguno de los dos nombres puede quedar vacío.
+- `MemberView` gana `firstName`, `lastName` (null si faltan), `personCode` y `memberCode` (`<personCode>-<code de la empresa>`, por ejemplo `7F3K-E2D`), y conserva `displayName`. `CompanyView` y `CompanyRef` ganan `code`. `AdminMe` gana `personCode`.
+- `V10`:
+  - `app_user.first_name` toma `display_name`; `last_name` queda NULL; `display_name` se borra;
+  - cada persona recibe un `person_code` aleatorio y único (bloque con reintento);
+  - cada empresa recibe como `code` las iniciales de las palabras de su nombre, en mayúsculas y sin tildes, hasta 4. Si salen menos de 2, las primeras letras del nombre. Si se repite, una cifra al final;
+  - después, `NOT NULL` e índices únicos.
+- Las rutas del trabajador y las herramientas del MCP no cambian.
+
+- [ ] **Paso 1:** pruebas; comprueba que fallan:
+  - generador: `codesHaveFourCharactersOfTheAlphabet` y, con el doble, `collisionGeneratesAnotherCode` y `givesUpAfterFiveCollisions`;
+  - `AddMemberTest`: `newPersonGetsAGeneratedCode`, `existingPersonKeepsNameAndCode`, `missingFirstOrLastNameIsRejected` y `memberCodeJoinsPersonAndCompanyCodes`;
+  - `UpdateUserTest`: `editsFirstAndLastName`, `namesCannotBeCleared` y `codeNeverChanges`;
+  - `CreateCompanyTest`: `codeIsRequiredAndValidated` y `duplicateCodeIsRejected`; `UpdateCompanyTest`: los casos de `RenameCompanyTest` más `onlyGroupAdminChangesTheCode`.
+- [ ] **Paso 2:** implementa el dominio, los casos de uso y el generador.
+- [ ] **Paso 3:** PostgreSQL. `PostgresUserRepositoryIT.personCodeIsUniqueAmongDeletedToo`; en la prueba de migración, `existingPeopleKeepTheirNameAsFirstNameAndGetACode` y `existingCompaniesGetTheirInitialsAsCode`. Escribe `V10`.
+- [ ] **Paso 4:** web y contrato. `AdminApiTest`: una prueba por ruta cambiada. `IsolationTest.companyAdminCannotChangeACompanyCode`.
+- [ ] **Paso 5:** regenera el contrato y los tipos. La demo y el extremo a extremo dan apellidos a sus personas y código a sus empresas. `make check` y `make demo` terminan con 0.
+- [ ] **Paso 6:** commit «feat: nombre, apellidos y código de persona».
+
+### Tarea 6: Panel: personas, papeles, accesos, selector de empresa y proyectos · Sonnet
 
 Rama `task/identidad-pertenencias/panel`. Spec 9. Sin rediseño visual.
 
@@ -261,12 +299,13 @@ Rama `task/identidad-pertenencias/panel`. Spec 9. Sin rediseño visual.
 - **Modificar:** `Projects.tsx`, `Keys.tsx`, `pages/Company.tsx`, `App.tsx` y `api/client.ts`.
 
 **Valores:**
-- Lista de personas: nombre · correo o «sin correo» · «Administra la empresa», «Trabaja con su IA» o los dos · «activo» o «desactivado».
-- Alta: nombre, correo, las casillas «Administra la empresa» y «Trabaja con su IA» (al menos una) y, solo con la primera marcada, contraseña. «Administra la empresa» solo aparece si quien mira es el administrador del grupo.
+- Lista de personas: código completo (`7F3K-E2D`) · nombre y apellidos, o «Faltan apellidos» · correo o «sin correo» · «Administra la empresa», «Trabaja con su IA» o los dos · «activo» o «desactivado».
+- Alta: nombre, apellidos, correo, las casillas «Administra la empresa» y «Trabaja con su IA» (al menos una) y, solo con la primera marcada, contraseña. «Administra la empresa» solo aparece si quien mira es el administrador del grupo.
 - Tras un alta con `alreadyExisted`: «Esta persona ya existía en el grupo: se ha añadido a esta empresa», en un `role="status"`.
 - Por persona: cambiar papeles, activar o desactivar, quitar de la empresa con `window.confirm('¿Quitar a <nombre> de esta empresa? Sus claves dejarán de valer.')`, y claves si trabaja.
 - `CompanySwitcher`: un `<select>` con la etiqueta «Empresa», visible solo si `me.companies` tiene más de una.
 - Proyectos: casilla «Visible para toda la empresa», sin marcar en un proyecto nuevo. Al desmarcarla en un proyecto sin miembros, `ConfirmDialog`: «¿Cerrar <nombre>? Solo lo verán sus miembros, y ahora no tiene ninguno.». Lista de miembros con «Añadir» y «Quitar».
+- Empresas: campo «Código» al crear, y al editar solo para el administrador del grupo.
 - Alta (O1): con «Trabaja con su IA» marcada, casillas con los proyectos de la empresa, todas sin marcar; se envían en `projectIds`.
 - Accesos de cada persona (O1): sus proyectos (`ListMemberProjects`), con «Añadir» y «Quitar», y «Además ve los N proyectos visibles para toda la empresa». Lo que se cambia aquí y en el proyecto son los mismos miembros.
 - Claves (O2): junto a la lista, «Cada clave da acceso a lo mismo que ve <nombre> en esta empresa.».
@@ -283,7 +322,7 @@ Rama `task/identidad-pertenencias/panel`. Spec 9. Sin rediseño visual.
 - [ ] **Paso 3:** `make check` termina con 0.
 - [ ] **Paso 4:** commit «feat: panel con personas, papeles, accesos y proyectos cerrados».
 
-### Tarea 6: Prueba de extremo a extremo y demostración · Sonnet
+### Tarea 7: Prueba de extremo a extremo y demostración · Sonnet
 
 Rama `task/identidad-pertenencias/e2e`. Spec 10.
 
@@ -295,7 +334,8 @@ Rama `task/identidad-pertenencias/e2e`. Spec 10.
   2. una persona con los dos papeles: entra en el panel y tiene clave;
   3. el selector de empresa de quien administra dos;
   4. cambiar papeles, desactivar y activar, y quitar de la empresa;
-  5. una persona dada de alta con un proyecto lo ve en sus «Accesos» y en los miembros del proyecto; quitarla desde el proyecto la quita de sus «Accesos».
+  5. el alta de una persona muestra su código completo, con el patrón `^[2-9A-HJKMNP-Z]{4}-<código de la empresa>$`;
+  6. una persona dada de alta con un proyecto lo ve en sus «Accesos» y en los miembros del proyecto; quitarla desde el proyecto la quita de sus «Accesos».
 - `demo-client.ts` añade un paso con el MCP: el trabajador asignado encuentra el documento del proyecto y el que no está asignado recibe «No consta en los documentos de tu empresa.».
 - `README`: «Quién entra dónde» y el resto de apartados dicen personas, pertenencias y proyectos cerrados por defecto.
 
@@ -305,6 +345,6 @@ Rama `task/identidad-pertenencias/e2e`. Spec 10.
 
 ## Orden y paralelismo
 
-En serie: 1, 2, 3, 4, 5, 6. Cada tarea cambia el contrato o el modelo que usa la siguiente.
+En serie: 1 a 7. Cada tarea cambia el contrato o el modelo que usa la siguiente.
 
 Al terminar, revisión final de toda la rama y, después, `make check` y `make demo` ejecutados por el CTO.
