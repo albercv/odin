@@ -213,7 +213,7 @@ Rama `task/identidad-pertenencias/proyectos-cerrados`. Spec 5.1 (alta con proyec
 - Miembros: solo personas con pertenencia activa y papel `WORKER` en esa empresa; si no, 400, «Solo un trabajador de la empresa puede ser miembro».
 - Pasar `restricted` a falso («Visible para toda la empresa») conserva los miembros; pasarlo a verdadero no añade ni quita ninguno.
 - `AddMember` acepta `projectIds` opcional. Cada id tiene que ser un proyecto no borrado de esa empresa; si no, 404, «Proyecto no encontrado». Solo se admite con papel `WORKER`; si no, 400 con el mensaje de los miembros. La pertenencia y sus proyectos se guardan en la misma transacción: si algo falla, no queda nada.
-- `ListMemberProjects`: los proyectos de los que la persona es miembro en esa empresa (`ProjectView`, con `restricted`). Un administrador de otra empresa recibe 404.
+- `ListMemberProjects`: los proyectos de los que la persona es miembro en esa empresa (`ProjectView`, con `restricted`). Un administrador de otra empresa recibe 403, como el resto de rutas de administración.
 
 - [ ] **Paso 1:** pruebas de casos de uso; comprueba que fallan:
   - `UpdateProjectTest`: los casos que tenía `RenameProjectTest`, más `marksCompanyWideAndClosesAgain` y `companyWideKeepsMembers`;

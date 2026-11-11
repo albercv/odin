@@ -1,7 +1,7 @@
 # Odín · Fase 2a: identidad con pertenencias y proyectos cerrados por defecto
 
 - Fecha: 2026-11-10. Autor: CTO. Encargo 11.
-- Decisión de negocio que lo origina: D-038 (CEO y propietario, 2026-11-10). El propietario la corrigió el 2026-11-11: los proyectos están cerrados por defecto (P1 de `docs/informes/2026-11-11-observaciones-propietario-panel.md`).
+- Decisión de negocio que lo origina: D-038 (CEO y propietario, 2026-11-10). El propietario la corrigió el 2026-11-11: los proyectos están cerrados por defecto (D-047) y cada persona tiene un código de persona (D-048). Origen: `docs/informes/2026-11-11-observaciones-propietario-panel.md`.
 - Amplía `2026-11-09-api-central-design.md` («spec base») y `2026-11-10-correcciones-prueba-propietario-design.md` («spec 1.1»). Lo que este documento no cambia sigue como está allí.
 - Rama: `feature/identidad-pertenencias`, que sale de `feature/api-central`.
 
@@ -31,7 +31,7 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
 
 **Del CTO:**
 - El correo sigue siendo opcional en quien solo trabaja, y único cuando existe.
-- El administrador del grupo deja de ser un papel con empresa vacía y pasa a ser una marca de la persona.
+- El administrador del grupo deja de ser un papel con empresa vacía y pasa a ser una marca de la persona. Puede además trabajar con su IA: tener pertenencias con papel `WORKER` y claves en ellas (D-038: una misma persona administra y trabaja). `COMPANY_ADMIN` no le hace falta: ya administra todas (revisión final, 2026-11-11).
 - Quien administra varias empresas entra una sola vez en el panel y elige empresa.
 - Un proyecto que el trabajador no puede ver se comporta como si no existiera: 404, nunca 403.
 - La restricción por proyecto lleva las mismas dos barreras que la separación entre empresas: el caso de uso con su filtro SQL, y la seguridad por filas de PostgreSQL.
@@ -57,7 +57,7 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
   - Con la sesión del panel: `GROUP_ADMIN`, o `COMPANY_ADMIN` con el conjunto de empresas que administra.
   - Con una clave personal: `WORKER` en la empresa de la clave.
 - **Contraseña:** la necesita quien es administrador del grupo o tiene `COMPANY_ADMIN` en alguna pertenencia. Quien solo trabaja no tiene.
-- **Borrados:** lógicos. Borrar una pertenencia no borra a la persona. Borrar a la persona borra sus pertenencias.
+- **Borrados:** lógicos. Borrar una pertenencia no borra a la persona. Borrar a la persona borra sus pertenencias. Quitar a alguien de un proyecto también es lógico: la fila de miembro guarda cuándo se quitó, y así queda quién pudo ver cada proyecto (revisión final, 2026-11-11).
 
 ## 5. Reglas
 
@@ -144,7 +144,7 @@ La migración conserva todo:
 - el nombre que ya existe pasa a «nombre» y los apellidos quedan vacíos; el panel marca «Faltan apellidos» hasta que se completan. Partirlo por el primer espacio fallaría con nombres compuestos;
 - cada persona recibe un código de persona aleatorio;
 - cada empresa recibe como código sus iniciales en mayúsculas, hasta 4, con una cifra al final si se repiten. El administrador del grupo las revisa;
-- cada proyecto queda cerrado, con todas las pertenencias activas con papel `WORKER` de su empresa como miembros: nadie pierde el acceso que tenía.
+- cada proyecto queda cerrado, con todas las pertenencias con papel `WORKER` de su empresa (no borradas, activas o no) como miembros, también en los proyectos ya borrados: nadie pierde el acceso que tenía ni lo pierde al reactivarse, y los documentos de un proyecto borrado los sigue viendo quien los veía (regla de la fase 1.1; revisión final, 2026-11-11).
 
 ## 8. Contrato
 
