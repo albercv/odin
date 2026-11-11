@@ -98,7 +98,10 @@ public record UsageReport(YearMonth month, CompanyUsage company, List<PersonUsag
 public class ListGaps { public List<GapGroup> execute(Actor actor, CompanyId companyId, Optional<String> month); }
 
 // Tarea 2, volumen entregado
-public enum WorkerTool { SEARCH, SIMILAR_CASES, READ_PAGE, LIST_DOCUMENTS, VERIFY_CITATION }
+public enum WorkerTool { DESCRIBE_ME, SEARCH, SIMILAR_CASES, READ_PAGE, LIST_DOCUMENTS, VERIFY_CITATION,
+        SAVE_CARD, MY_CARDS, MY_QUESTIONS }
+// rutas: GET /v1/me, POST /v1/search, POST /v1/similar-cases, GET /v1/documents/{id}/pages/{n}, GET /v1/documents,
+//        POST /v1/citations/verify, POST /v1/cards, GET /v1/me/cards, GET /v1/me/questions
 public interface DeliveryMeter {
     void record(CompanyId companyId, WorkerTool tool, long bytes, Instant at);
     List<DeliveryTotal> totals(CompanyId companyId, YearMonth month);
@@ -191,12 +194,13 @@ Rama `task/fase-2-conocimiento/volumen-entregado`. Spec 5.3.
 **Valores:**
 - `V13`: `delivery_usage (company_id, month date, tool text, calls bigint, bytes bigint, PRIMARY KEY (company_id, month, tool))`, con seguridad por filas por empresa y los permisos de `odin_app` que tiene sobre `question_record`.
 - `DeliveryMeteringFilter`:
-  - va después de `ActorResolutionFilter` y solo actúa sobre las rutas del trabajador del spec 5.3;
+  - va después de `ActorResolutionFilter` y actúa sobre todas las rutas del trabajador del spec 5.3, cada una con su `WorkerTool`;
+  - una ruta del trabajador sin `WorkerTool` hace fallar una prueba (`everyWorkerRouteHasATool`), para que un bloque futuro no se quede fuera sin que nadie lo vea;
   - envuelve la salida contando bytes, sin copiar el cuerpo;
   - al terminar con 200, llama a `record(actor.requireCompany(), tool, bytes, now)`;
   - un fallo al registrar se escribe en el registro del servidor y no rompe la respuesta.
 - `record` es un `INSERT … ON CONFLICT (company_id, month, tool) DO UPDATE SET calls = delivery_usage.calls + 1, bytes = delivery_usage.bytes + :bytes`. `month` es el primer día del mes en `odin.timezone`.
-- `GetDeliveredVolume`: permisos como en la tarea 1. Devuelve las cinco herramientas, con 0 en las que no tienen filas.
+- `GetDeliveredVolume`: permisos como en la tarea 1. Devuelve todas las herramientas de `WorkerTool`, con 0 en las que no tienen filas.
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
   - `GetDeliveredVolumeTest`:
@@ -205,6 +209,7 @@ Rama `task/fase-2-conocimiento/volumen-entregado`. Spec 5.3.
     - `adminOfAnotherCompanyIsForbidden`.
   - `DeliveryMeteringFilterTest`:
     - `countsBytesOfSuccessfulSearch`;
+    - `everyWorkerRouteHasATool`;
     - `onlySuccessfulWorkerResponsesAreMetered`;
     - `adminRoutesAreNotMetered`;
     - `meterFailureDoesNotBreakResponse`.
@@ -231,7 +236,7 @@ Rama `task/fase-2-conocimiento/panel-temas`. Spec 5.1. Usa la API del bloque 3.
   - tabla «Nombre · Definición · acciones»;
   - «Añadir tema» y «Editar» abren un `FormDialog` con «Nombre» y «Definición»;
   - «Borrar» abre un `ConfirmDialog` con «¿Borrar el tema <nombre>? Dejará de verse en los documentos.»;
-  - el aviso tras añadir o editar es un `Toast`: «Los documentos de esta empresa se volverán a etiquetar».
+  - el aviso tras añadir o editar es un `Toast`: «Los documentos de esta empresa se volverán a etiquetar». Después, `TaggingBacklog` se vuelve a cargar con el recuento nuevo.
   - Sin temas, un `EmptyState`: «Sin temas no se etiqueta ningún documento».
 - **`TaggingBacklog`** (spec 5.1), encima de la tabla, con `tagging-status`:
   - con pendientes, «<N> documentos esperan a ser etiquetados. El más antiguo espera desde el <día en español>.»;
@@ -257,7 +262,7 @@ Rama `task/fase-2-conocimiento/panel-temas`. Spec 5.1. Usa la API del bloque 3.
     - `deletesAfterConfirmation`;
     - `showsApiErrorInField`;
     - `emptyStateWithoutTopics`;
-    - `noticeAfterChange`.
+    - `noticeAfterChangeAndBacklogReloads`.
   - `TaggingBacklog.test.tsx`:
     - `showsPendingCountAndOldestDay`;
     - `remindsToKeepMachineOnAfterOneDay`;
@@ -314,7 +319,9 @@ Rama `task/fase-2-conocimiento/panel-uso-huecos`. Spec 5.2 a 5.5.
 - **`Review`:** los diálogos de rechazar y de corregir muestran, encima del campo de la nota, «El autor verá esta nota tal cual. Escribe sobre el contenido de la ficha, no sobre la persona.».
   - Al rechazar, la nota sigue siendo obligatoria.
   - Al corregir, es opcional.
-- **Ningún texto** lleva `D-0` ni la palabra «consumo» o «gasto» como rótulo. Lo comprueba una prueba que recorre los textos de las tres pantallas.
+- **Ningún texto lleva `D-0`,** y ningún **rótulo** (títulos, encabezados de tabla y del menú) lleva «consumo» ni «gasto». Lo comprueba una prueba que recorre las tres pantallas.
+  - El texto fijo del volumen entregado sí dice «lo que gasta», porque lo aprobó el CEO (D-045). Por eso la prueba mira solo los rótulos.
+- **Nombres de las herramientas en la tabla:** «Perfil», «Búsqueda», «Casos parecidos», «Leer página», «Listar documentos», «Verificar cita», «Guardar ficha», «Mis fichas» y «Mis preguntas».
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
   - `Usage.test.tsx`:

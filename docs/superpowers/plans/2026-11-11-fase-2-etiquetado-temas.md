@@ -105,6 +105,8 @@ public class CreateTopic, UpdateTopic, DeleteTopic, ListTopics      // Actor adm
 public class ReviewDocumentTopics { add(Actor, DocumentId, TopicId); remove(Actor, DocumentId, TopicId); retag(Actor, DocumentId); }
 public class GetTaggingStatus { public TaggingStatusReport execute(Actor actor, CompanyId companyId); }
 public record TaggingStatusReport(TaggingBacklog backlog, TaggingWindow window) { }
+public class ListDocumentTopics { public DocumentTopicsReport execute(Actor actor, DocumentId documentId); }
+public record DocumentTopicsReport(List<DocumentTopic> topics, Optional<DocumentTagging> tagging) { }
 public final class TaggingInstructions { static String build(String companyName, List<Topic> topics, String text); }
 public final class TaggingChunks { static List<String> of(List<DocumentPage> pages, int maxCharacters); static List<String> split(String chunk); }
 public final class TopicMatcher { static Set<TopicId> match(String answer, List<Topic> topics); }
@@ -129,7 +131,13 @@ Si dudas, pon todas las que encajen: es peor que falte una etiqueta que poner un
 - `TopicMatcher`: un tema está en la respuesta si su nombre normalizado (minúsculas, sin tildes ni espacios repetidos) es parte de la respuesta normalizada, como en `clasificar.py`.
 - Versión del etiquetador: `"<modelo>; instrucciones v1"`.
 
-**Rutas:** las del spec 6. Cuerpos: `TopicRequest { name, definition }` y `TopicPatch { name?, definition? }`. Respuestas: `TopicView { id, name, definition }`, `DocumentTopicView { topicId, name, source, state, taggerVersion, decidedByName, decidedAt }`, `DocumentTopicsResponse { topics, tagging: { status, topicListVersion, failureReason } }`.
+**Rutas:** las del spec 6.
+- Cuerpos: `TopicRequest { name, definition }` y `TopicPatch { name?, definition? }`.
+- Respuestas:
+  - `TopicView { id, name, definition }`;
+  - `DocumentTopicView { topicId, name, source, state, taggerVersion, decidedByName, decidedAt }`;
+  - `DocumentTopicsResponse { topics, tagging: { status, topicListVersion, failureReason } | null }`;
+  - `TaggingStatusView { pendingDocuments, oldestPendingSince | null, window: { from: "HH:mm" | null, to: "HH:mm" | null, always }, timezone }`. Con `always`, `from` y `to` son nulos.
 
 ---
 
@@ -327,7 +335,7 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
 
 **Ficheros:**
 - **Crear:**
-  - `application/topic/ReviewDocumentTopics.java` y `GetTaggingStatus.java`, con sus pruebas;
+  - `application/topic/ReviewDocumentTopics.java`, `ListDocumentTopics.java` y `GetTaggingStatus.java`, con sus pruebas;
   - `deploy/demo/tagger-stub.mjs` y `deploy/demo/compose.tagger-stub.yaml`.
 - **Modificar:**
   - aplicación: `ListDocuments`, `DescribeMe`, `MeView`, `ListCompanyDocuments` y sus pruebas;
@@ -352,6 +360,8 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
   - responde a `/api/generate` con «agua y humedades» si el texto lleva «filtración» o «fuga», y con «otros» en caso contrario;
   - `prompt_eval_count` es 100.
 - `GetTaggingStatus`: administradores de la empresa o el del grupo, con 404 y luego 403. Ruta `GET /v1/admin/companies/{companyId}/tagging-status`.
+- `ListDocumentTopics`: los mismos permisos. Ruta `GET /v1/admin/documents/{documentId}/topics`, con `TaggingRepository.topicsOf`. Devuelve también los `REMOVED`, que el panel enseña aparte.
+- `ListCompanyDocuments`: `DocumentView` gana `taggingStatus` y los `topics` activos.
 - `run-demo.sh` usa el etiquetador de prueba con `ODIN_TAGGER_WINDOW=always`.
 - `README`, apartado de la demostración, con esta frase literal: «El etiquetador de prueba (`tagger-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el modelo real.».
 - `demo-client.ts`, paso nuevo:
@@ -369,6 +379,9 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
     - `retagRequeues`;
     - `adminOfAnotherCompanyIsForbidden`.
   - `GetTaggingStatusTest`: `returnsBacklogAndWindow`, `workerIsForbidden` y `adminOfAnotherCompanyIsForbidden`.
+  - `ListDocumentTopicsTest`: `listsActiveAndRemovedWithTaggingState` y `adminOfAnotherCompanyIsForbidden`.
+  - `ListCompanyDocumentsTest.includesTopicsAndTaggingStatus`.
+  - `AdminApiTest`: `taggingStatusViewHasWindowShape` y `documentViewIncludesTopicsAndTaggingStatus`.
   - `ListDocumentsTest`:
     - `filtersByTopicWithActiveTopicsOnly`;
     - `foreignTopicIsNotFound`;

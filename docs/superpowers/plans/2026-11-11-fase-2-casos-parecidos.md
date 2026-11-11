@@ -320,7 +320,7 @@ Rama `task/fase-2-conocimiento/casos-panel-mcp`. Spec 7, 8 y 10.
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
   - MCP:
     - `findSimilarCases.test.ts`: `registeredOnlyWithCapability`, `sendsQueriesProjectAndLimit` y `noSourceSaysNoConstan`;
-    - la prueba de `INSTRUCTIONS`, con las seis frases.
+    - la prueba de `INSTRUCTIONS`, con las siete frases del spec 7 y la frase de `KNOWLEDGE_CARD` cambiada.
   - Panel:
     - `Documents.test.tsx`:
       - `uploadSendsCaseDocument`;

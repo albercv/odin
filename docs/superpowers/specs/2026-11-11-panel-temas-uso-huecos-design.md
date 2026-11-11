@@ -76,7 +76,7 @@ Usa la API del bloque 3.
   - borrar con `ConfirmDialog`;
   - errores de la API en el campo, con los mensajes del bloque 3.
   - Si la lista está vacía, un `EmptyState` explica que sin temas no se etiqueta.
-- **Aviso al cambiar la lista:** «Los documentos de esta empresa se volverán a etiquetar», y cuántos están pendientes.
+- **Aviso al cambiar la lista:** «Los documentos de esta empresa se volverán a etiquetar». Cuántos están pendientes lo dice el estado del etiquetado, que se vuelve a cargar tras el cambio.
 - **Estado del etiquetado, siempre a la vista** (D-043, D-045), con `GET /v1/admin/companies/{companyId}/tagging-status` del bloque 3:
   - «N documentos esperan a ser etiquetados. El más antiguo espera desde el <día>»;
   - si el más antiguo lleva más de un día, añade «El etiquetado se hace entre las <hora> y las <hora>: el equipo tiene que estar encendido a esas horas», con la ventana de la instalación;
@@ -111,11 +111,16 @@ Usa la API del bloque 3.
 
 ### 5.3 Volumen entregado a la IA del trabajador (D-040, D-045)
 
-`GET /v1/admin/companies/{companyId}/delivered-volume?month=YYYY-MM`. Devuelve por herramienta (búsqueda, casos parecidos, leer página, listar documentos y verificar cita) las llamadas y los bytes de las respuestas.
+`GET /v1/admin/companies/{companyId}/delivered-volume?month=YYYY-MM`. Devuelve por herramienta (perfil, búsqueda, casos parecidos, leer página, listar documentos, verificar cita, guardar ficha, mis fichas y mis preguntas) las llamadas y los bytes de las respuestas.
 
 - **Cómo se mide:**
-  - un filtro del adaptador web cuenta los bytes de cada respuesta 200 de las rutas del trabajador y llama al puerto `DeliveryMeter`. Las rutas ya existen: `POST /v1/search`, `GET /v1/documents`, `GET /v1/documents/{documentId}/pages/{pageNumber}` y `POST /v1/citations/verify`; y `POST /v1/similar-cases`, del bloque 2;
-  - un filtro del adaptador web cuenta los bytes de cada respuesta 200 de esas rutas y llama al puerto `DeliveryMeter`. Las rutas ya existen: `POST /v1/search`, `GET /v1/documents`, `GET /v1/documents/{documentId}/pages/{pageNumber}` y `POST /v1/citations/verify`; y `POST /v1/similar-cases`, del bloque 2;
+  - un filtro del adaptador web cuenta los bytes de cada respuesta 200 de **todas las rutas del trabajador** y llama al puerto `DeliveryMeter`:
+    - `GET /v1/me`;
+    - `POST /v1/search`, `GET /v1/documents`, `GET /v1/documents/{documentId}/pages/{pageNumber}` y `POST /v1/citations/verify`;
+    - `POST /v1/similar-cases`, del bloque 2;
+    - `GET /v1/me/cards` y `GET /v1/me/questions`, del bloque 5.
+    - `POST /v1/cards` (guardar ficha) recibe texto más que entregarlo, pero su respuesta también cuenta.
+    - Una ruta del trabajador que añada un bloque futuro entra en el mismo filtro, con su herramienta;
   - cuenta el cuerpo tal como lo escribe la API, sin compresión, y la empresa sale del `Actor` de la clave, con su contexto de seguridad por filas;
   - se guarda en `delivery_usage (company_id, month, tool, calls, bytes)` con un `UPSERT` por petición.
 - **Por empresa y herramienta,** nunca por persona.
@@ -157,6 +162,8 @@ La pantalla de revisión ya existe. Cambia el diálogo de rechazar y el de corre
 
 ## 7. Pruebas y verificación
 
+Aquí se dice qué se prueba. Los nombres exactos de las pruebas, y si cada una es de caso de uso o de PostgreSQL, los fija el plan.
+
 - **Casos de uso:**
   - `UsageStatsTest`. Cubre:
     - cada recuento;
@@ -180,7 +187,7 @@ La pantalla de revisión ya existe. Cambia el diálogo de rechazar y el de corre
 - **Panel:** una prueba por acción, con la petición enviada y lo que se ve:
   - `Topics.test.tsx`: alta, edición, borrado, errores y el estado del etiquetado, con su recordatorio de más de un día;
   - `DocumentTopics.test.tsx`: añadir, quitar, recuperar y volver a etiquetar;
-  - `Usage.test.tsx`: la tabla por persona, sin ordenar por columnas, la nota sin referencias internas y el volumen entregado con su texto fijo, sin «consumo» ni «gasto»;
+  - `Usage.test.tsx`: la tabla por persona, sin ordenar por columnas, la nota sin referencias internas y el volumen entregado con su texto fijo, y ningún rótulo con «consumo» ni «gasto»;
   - `Gaps.test.tsx`: el día sin hora;
   - `Review.test.tsx`: el aviso de la nota al rechazar y al corregir;
   - y las reglas de accesibilidad de la dirección visual (axe).
