@@ -5,7 +5,7 @@ Fecha: 2026-11-11. Rama `task/identidad-pertenencias/visual-8`. Spec: sección 1
 ## Máquina y orden
 
 - Apple M3 Max, 36 GiB de memoria (38 654 705 664 bytes), macOS 27.0.1, Node v24.21.0, Playwright 1.65.0 con `channel: 'chromium'`, un solo worker.
-- Orden: `make demo` (pila Compose desechable `odin-demo`, 127.0.0.1:18080 y :18088; ejecuta `npx playwright test` sobre `panel/e2e/`). Se ejecutó dos veces seguidas; las dos terminaron con 0 (17 pruebas pasadas cada vez). `make check` también terminó con 0.
+- Orden: `make demo` (pila Compose desechable `odin-demo`, 127.0.0.1:18080 y :18088; ejecuta `npx playwright test` sobre `panel/e2e/`). Se ejecutó dos veces seguidas; las dos terminaron con 0 (17 pruebas pasadas cada vez en la primera versión; 21 tras añadir las pruebas de Revisión, con las cifras de fotograma de esta sección medidas en la primera versión; en la segunda versión la mediana fue 1,75 ms y la diferencia al escribir 14 ms). `make check` también terminó con 0.
 - Limitación de CPU: sesión CDP con `Emulation.setCPUThrottlingRate` y `rate: 4`.
 
 ## Cifras medidas
