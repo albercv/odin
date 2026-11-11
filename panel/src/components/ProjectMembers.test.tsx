@@ -50,6 +50,25 @@ test('confirmationUsesTheMemberListJustLoadedNotTheStaleCount', async () => {
   expect(calls.some((c) => c.key === patch)).toBe(false);
 });
 
+test('closingDoesNothingWhenTheMembersCannotBeLoaded', async () => {
+  const patch = `PATCH ${base}/projects/p2`;
+  let fail = false;
+  const calls = show({
+    [`GET ${base}/projects`]: () => [project('p2', 'Sala', false, 1)],
+    [`GET ${base}/projects/p2/members`]: () => (fail ? { status: 500, body: { detail: 'No se pueden cargar los miembros' } } : [raul]),
+    [`GET ${base}/members`]: () => [],
+    [patch]: () => project('p2', 'Sala', true),
+  });
+  const panel = await openMembers('Sala');
+  await within(panel).findByText('Raúl');
+  fail = true;
+  await userEvent.click(within(panel).getByLabelText('Visible para toda la empresa'));
+  expect(await within(panel).findByRole('alert')).toHaveTextContent('No se pueden cargar los miembros');
+  expect(calls.some((c) => c.key === patch)).toBe(false);
+  expect(within(panel).getByLabelText('Visible para toda la empresa')).toBeChecked();
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
 test('closingAsksForConfirmationWhenNoMembers', async () => {
   const patch = `PATCH ${base}/projects/p2`;
   const calls = show({

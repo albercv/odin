@@ -28,15 +28,16 @@ function VisibleToAll({ companyId, project, onChanged }: Props) {
   const confirm = useConfirm();
   // The list may have changed since the panel opened (e.g. from the person's «Accesos»), so ask again before deciding.
   const freshMemberCount = async () => {
-    let count = 1;
-    await act(async () => { count = (await api.projectMembers(companyId, project.id)).length; });
-    return count;
+    const found: { count?: number } = {};
+    await act(async () => { found.count = (await api.projectMembers(companyId, project.id)).length; });
+    return found.count;
   };
   const change = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const restricted = !e.target.checked;
     const message = `¿Cerrar ${project.name}? Solo lo verán sus miembros, y ahora no tiene ninguno.`;
-    const closing = restricted && (await freshMemberCount()) === 0;
-    if (closing && !(await confirm({ message, confirmLabel: 'Cerrar' }))) return;
+    const count = restricted ? await freshMemberCount() : 0;
+    if (count === undefined) return;
+    if (restricted && count === 0 && !(await confirm({ message, confirmLabel: 'Cerrar' }))) return;
     if (await act(() => api.updateProject(companyId, project.id, { restricted }))) onChanged();
   };
   return (
