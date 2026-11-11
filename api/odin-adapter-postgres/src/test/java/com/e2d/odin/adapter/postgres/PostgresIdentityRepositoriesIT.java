@@ -26,14 +26,8 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     private final PostgresAccessKeyRepository keys = new PostgresAccessKeyRepository(tx);
     private final PostgresAdminSessionRepository sessions = new PostgresAdminSessionRepository(tx);
 
-    private static int codes;
-
-    private static String nextCode() {
-        return "U" + (1000 + ++codes);
-    }
-
     private User user(String email) {
-        return new User(new UserId(UUID.randomUUID()), "Ana", Optional.of("Gil"), nextCode(),
+        return new User(new UserId(UUID.randomUUID()), "Ana", Optional.of("Gil"), uniqueCode(),
                 Optional.ofNullable(email), false, true, Optional.of("hash"));
     }
 
@@ -72,7 +66,7 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
 
     @Test
     void savesAndReadsFirstNameLastNameAndCode() {
-        User withoutSurnames = new User(new UserId(UUID.randomUUID()), "Migrada", Optional.empty(), nextCode(),
+        User withoutSurnames = new User(new UserId(UUID.randomUUID()), "Migrada", Optional.empty(), uniqueCode(),
                 Optional.empty(), false, true, Optional.empty());
         users.save(withoutSurnames);
         User complete = user("c2@x.com");
@@ -228,7 +222,7 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     @Test
     void findGroupAdminReturnsTheOnlyGroupAdmin() {
         assertThat(users.findGroupAdmin()).isEmpty();
-        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.empty(), nextCode(),
+        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.empty(), uniqueCode(),
                 Optional.of("gema@x.com"), true, true, Optional.of("hash"));
         users.save(user("c@x.com"));
         users.save(admin);

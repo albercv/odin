@@ -70,10 +70,21 @@ class UpdateMemberTest {
     }
 
     @Test
+    void unknownCompanyChangesNothing() {
+        CompanyId ghost = new CompanyId(UUID.randomUUID());
+        memberships.save(new Membership(workerId, ghost, Set.of(Role.WORKER), true));
+
+        assertThatThrownBy(() -> update.execute(groupAdmin, ghost, workerId, active(false)))
+                .isInstanceOf(NotFoundException.class).hasMessage("Empresa no encontrada");
+        assertThat(stored(workerId, ghost).active()).isTrue();
+    }
+
+    @Test
     void addsWorkerRoleToAnAdmin() {
         MemberView view = update.execute(companyAdmin, company, adminId, roles(Role.COMPANY_ADMIN, Role.WORKER));
 
         assertThat(view.roles()).containsExactlyInAnyOrder(Role.COMPANY_ADMIN, Role.WORKER);
+        assertThat(view.memberCode()).isEqualTo(users.findById(adminId).orElseThrow().personCode() + "-AAA");
         assertThat(stored(adminId, company).roles()).containsExactlyInAnyOrder(Role.COMPANY_ADMIN, Role.WORKER);
     }
 

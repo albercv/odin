@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -91,7 +92,7 @@ class AdminApiTest extends WebTestSupport {
     void addMemberReturns201AndListingHasNoHashes() throws Exception {
         CompanyId company = newCompany();
         Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
-        mvc.perform(post("/v1/admin/companies/" + company.value() + "/members").cookie(group)
+        var added = mvc.perform(post("/v1/admin/companies/" + company.value() + "/members").cookie(group)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"firstName\":\"Cora\",\"lastName\":\"Gil\",\"email\":\"cora@e.test\",\"roles\":[\"COMPANY_ADMIN\","
                         + "\"WORKER\"],\"password\":\"clave-muy-larga-1\"}")).andExpect(status().isCreated())
@@ -99,15 +100,19 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.member.displayName").value("Cora Gil"))
                 .andExpect(jsonPath("$.member.firstName").value("Cora"))
                 .andExpect(jsonPath("$.member.lastName").value("Gil"))
-                .andExpect(jsonPath("$.member.personCode").value("Q001"))
-                .andExpect(jsonPath("$.member.memberCode")
-                        .value("Q001-" + w.orgs.findCompany(company).orElseThrow().code()))
+                .andExpect(jsonPath("$.member.personCode").value(matchesPattern("[A-Z0-9]{4}")))
                 .andExpect(jsonPath("$.member.roles", containsInAnyOrder("COMPANY_ADMIN", "WORKER")))
-                .andExpect(jsonPath("$.member.active").value(true)).andExpect(jsonPath("$.password").doesNotExist());
+                .andExpect(jsonPath("$.member.active").value(true)).andExpect(jsonPath("$.password").doesNotExist())
+                .andReturn();
+        String personCode = com.jayway.jsonpath.JsonPath.read(added.getResponse().getContentAsString(),
+                "$.member.personCode");
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/members").cookie(group))
+                .andExpect(jsonPath("$[0].memberCode")
+                        .value(personCode + "-" + w.orgs.findCompany(company).orElseThrow().code()));
         String listing = mvc.perform(get("/v1/admin/companies/" + company.value() + "/members").cookie(group))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].userId").isNotEmpty()).andExpect(jsonPath("$[0].email").value("cora@e.test"))
-                .andExpect(jsonPath("$[0].personCode").value("Q001")).andExpect(jsonPath("$[0].lastName").value("Gil"))
+                .andExpect(jsonPath("$[0].personCode").value(personCode)).andExpect(jsonPath("$[0].lastName").value("Gil"))
                 .andReturn().getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(listing).doesNotContainIgnoringCase("hash")
                 .doesNotContain("clave-muy-larga-1");
@@ -138,7 +143,9 @@ class AdminApiTest extends WebTestSupport {
         mvc.perform(patch("/v1/admin/companies/" + company.value() + "/members/" + worker.value()).cookie(admin)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(worker.value().toString()))
-                .andExpect(jsonPath("$.roles", containsInAnyOrder("WORKER"))).andExpect(jsonPath("$.active").value(false));
+                .andExpect(jsonPath("$.roles", containsInAnyOrder("WORKER"))).andExpect(jsonPath("$.active").value(false))
+                .andExpect(jsonPath("$.memberCode").value(w.users.findById(worker).orElseThrow().personCode() + "-"
+                        + w.orgs.findCompany(company).orElseThrow().code()));
         mvc.perform(patch("/v1/admin/companies/" + company.value() + "/members/" + worker.value())
                 .cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty())).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"active\":true,\"roles\":[\"WORKER\"]}")).andExpect(status().isOk())

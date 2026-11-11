@@ -42,13 +42,14 @@ public class UpdateMember {
         if (touchesAdministration(current, updated)) {
             UserAdministration.requireGroupAdminForAdministration(actor);
         }
+        String companyCode = organizations.findCompany(companyId)
+                .orElseThrow(() -> new NotFoundException("Empresa no encontrada")).code();
         User user = personReadyFor(current, updated, changes.password(), userId);
         memberships.save(updated);
         if (losesAdministration(current, updated)) {
             UserAdministration.closeSessionsIfNoLongerAdministering(memberships, sessions, userId);
         }
-        return MemberView.of(user, updated, organizations.findCompany(companyId)
-                .orElseThrow(() -> new NotFoundException("Empresa no encontrada")).code());
+        return MemberView.of(user, updated, companyCode);
     }
 
     /** Dar o quitar la administración, o activar o desactivar una pertenencia que la tiene. */

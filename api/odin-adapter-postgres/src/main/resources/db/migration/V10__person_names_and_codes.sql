@@ -14,12 +14,20 @@ DECLARE
     person record;
     candidate text;
     alphabet constant text := '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+    byte int;
 BEGIN
     FOR person IN SELECT id FROM app_user ORDER BY seq LOOP
         LOOP
             candidate := '';
-            FOR n IN 1..4 LOOP
-                candidate := candidate || substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+            WHILE length(candidate) < 4 LOOP
+                -- Bytes de gen_random_uuid() (criptográfico), sin los 6 y 8 que llevan los bits fijos de la versión. Se
+                -- descartan los valores >= 248 (mayor múltiplo de 31 hasta 256) para que el resto no sesgue el alfabeto.
+                FOR byte IN SELECT get_byte(uuid_send(gen_random_uuid()), n) FROM generate_series(0, 15) AS n
+                             WHERE n NOT IN (6, 8) LOOP
+                    IF byte < 248 AND length(candidate) < 4 THEN
+                        candidate := candidate || substr(alphabet, 1 + byte % 31, 1);
+                    END IF;
+                END LOOP;
             END LOOP;
             EXIT WHEN NOT EXISTS (SELECT 1 FROM app_user WHERE person_code = candidate);
         END LOOP;

@@ -85,9 +85,10 @@ class UpdateUserTest {
 
     @Test
     void namesCannotBeCleared() {
-        assertThatThrownBy(() -> update.execute(admin, workerId, name(" "))).isInstanceOf(ValidationException.class);
+        assertThatThrownBy(() -> update.execute(admin, workerId, name(" ")))
+                .isInstanceOf(ValidationException.class).hasMessage("Falta el nombre");
         assertThatThrownBy(() -> update.execute(admin, workerId, surnames("")))
-                .isInstanceOf(ValidationException.class);
+                .isInstanceOf(ValidationException.class).hasMessage("Faltan los apellidos");
         assertThat(users.findById(workerId).orElseThrow().displayName()).isEqualTo("Wanda Pérez");
     }
 

@@ -71,6 +71,19 @@ test('editSendsTheLastNameWhenThereIsOne', async () => {
       .toEqual({ firstName: 'Cora', lastName: 'Gil Ruiz', email: 'ana@acme.test' }));
 });
 
+test('clearingTheLastNameIsSentSoTheApiRejectsIt', async () => {
+  const gil = { ...ana, userId: 'u5', displayName: 'Cora Gil', firstName: 'Cora', lastName: 'Gil' };
+  const calls = show({
+    [list]: () => [gil],
+    'PATCH /v1/admin/users/u5': () => ({ status: 400, body: { detail: 'Faltan los apellidos' } }),
+  });
+  await act('Cora Gil', 'Editar Cora Gil');
+  await userEvent.clear(screen.getByLabelText('Apellidos'));
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar Cora Gil' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Faltan los apellidos');
+  expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u5')?.body).toMatchObject({ lastName: '' });
+});
+
 test('conflictShowsTheApiMessage', async () => {
   show({
     [list]: () => [ana],
