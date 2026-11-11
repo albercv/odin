@@ -3,7 +3,7 @@
 - Fecha: 2026-11-11. Autor: CTO (segunda sesión). Encargo 11.
 - Decisiones de negocio que lo originan: D-036 y D-037.
 - Amplía `2026-11-09-api-central-design.md` («spec base»), apartados 6.8 y 13, y se apoya en `2026-11-10-identidad-pertenencias-design.md` («spec 2a»). Lo que este documento no cambia sigue como está allí.
-- Rama: `feature/fase-2-conocimiento`. Se ejecuta cuando cierre la fase 2a.
+- Rama: `feature/fase-2-conocimiento`. Se ejecuta cuando cierre la fase 2a y **después del bloque 2**, del que usa `findSimilarCases`, el filtro común de fichas y `QuestionRecord.kind`.
 
 ## 1. Por qué
 
@@ -59,6 +59,9 @@
   - Siempre con el filtro de empresa y de proyectos visibles.
 - **Resultado:** cada ficha lleva `reviewStatus`, `APPROVED` o `PENDING`.
 - **Las rechazadas** no entran nunca.
+- **Índice:** todas las fichas ya están en el índice de texto desde que se guardan, porque `knowledge_card.tsv` es una columna generada (migración V3). Basta con ampliar el filtro: no hace falta indexar nada ni migrar datos. La batería de búsqueda no tiene fichas pendientes, así que no cambia.
+- **Otras lecturas:** `verifyCitation` y `readPage` son solo para documentos (spec base 6.7 y la instrucción actual del MCP). Una ficha se cita por título, autor y fecha, y no hay otra herramienta que lea fichas. No cambian.
+- **`hitCount`** del registro de preguntas cuenta lo que recibió quien preguntó, sus fichas pendientes incluidas. Si su propia ficha pendiente respondió, esa pregunta no es un hueco para él.
 - **Instrucción del MCP:** una ficha con `reviewStatus` `PENDING` es tuya y está pendiente de revisión. Dilo al citarla y recuerda que tus compañeros todavía no la ven.
 
 ### 4.2 Mis fichas
@@ -67,8 +70,9 @@
   - **Acceso:** `WorkerAccess` con `SAVE_KNOWLEDGE_CARD`.
   - **Qué devuelve:** las fichas del actor en la empresa de su clave y en sus proyectos visibles, de la más reciente a la más antigua, hasta 100.
   - **Cada ficha:** `id`, `title`, `body`, `projectId`, `createdAt`, `status` y `review`.
-    - `review` lleva `decision`, `note` y `reviewedAt`.
-    - Si se corrigió, `body` es el texto corregido y `originalBody` el que envió el autor.
+    - `status` es el estado de la ficha: `PENDING`, `APPROVED` o `REJECTED`.
+    - `review` es nulo mientras está pendiente. Después lleva `decision` (`APPROVE`, `CORRECT` o `REJECT`, como en `ReviewDecision`), `note` y `reviewedAt`.
+    - Corregir deja la ficha `APPROVED` (spec base 6.8): `body` es el texto corregido y `originalBody` el que envió el autor.
 - **Filtro `status`:** `PENDING`, `APPROVED` o `REJECTED`.
 
 ### 4.3 Mis preguntas
@@ -138,3 +142,14 @@
 
 - Nombres internos y cómo se pasa el autor al filtro común de fichas.
 - Los textos exactos de las descripciones de las herramientas, con el sentido de los apartados 4 y 6.
+
+## 10. Revisión del constructor (2026-11-11)
+
+Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 6 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
+- las fichas pendientes ya están en el índice (4.1);
+- `verifyCitation` y `readPage` no cambian (4.1);
+- `status`, `review` y `decision` (4.2);
+- qué cuenta `hitCount` (4.1);
+- el orden respecto al bloque 2 (cabecera).
+
+Lo de las fichas de un proyecto borrado sigue la regla que ya existe: borrar un proyecto no oculta lo que tenía (fase 1.1), dentro de la visibilidad de la 2a.
