@@ -621,6 +621,7 @@ export interface components {
         MemberAdded: {
             member: components["schemas"]["MemberView"];
             alreadyExisted: boolean;
+            keptPassword: boolean;
         };
         MemberView: {
             /** Format: uuid */
@@ -708,13 +709,18 @@ export interface components {
             /** @enum {string} */
             role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
             company: components["schemas"]["MeCompany"];
-            projects: components["schemas"]["ProjectView"][];
+            projects: components["schemas"]["MeProject"][];
         };
         MeCompany: {
             /** Format: uuid */
             id: string;
             name: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
+        };
+        MeProject: {
+            /** Format: uuid */
+            id: string;
+            name: string;
         };
         Health: {
             status: string;

@@ -8,6 +8,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.knowledge.CardReview;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
@@ -46,11 +47,12 @@ public final class Responses {
     }
 
     /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
-    public record AdminMe(UUID userId, String displayName, String personCode, Role role, @Nullable UUID companyId,
-            List<CompanyRef> companies) {
-        public static AdminMe from(Actor a, String personCode, List<Company> administered) {
+    public record AdminMe(UUID userId, String displayName, String firstName, @Nullable String lastName,
+            String personCode, Role role, @Nullable UUID companyId, List<CompanyRef> companies) {
+        public static AdminMe from(Actor a, User person, List<Company> administered) {
             UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
-            return new AdminMe(a.userId().value(), a.displayName(), personCode, a.role(), onlyCompany,
+            return new AdminMe(a.userId().value(), a.displayName(), person.firstName(), person.lastName().orElse(null),
+                    person.personCode(), a.role(), onlyCompany,
                     administered.stream().map(CompanyRef::from).toList());
         }
     }

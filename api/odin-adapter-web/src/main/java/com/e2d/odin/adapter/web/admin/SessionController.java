@@ -79,7 +79,7 @@ public class SessionController {
 
     @GetMapping("/me")
     public Responses.AdminMe me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor) {
-        return Responses.AdminMe.from(actor, describeAdmin.execute(actor).personCode(), listCompanies.execute(actor));
+        return Responses.AdminMe.from(actor, describeAdmin.execute(actor), listCompanies.execute(actor));
     }
 
     private static ResponseCookie cookie(String value, boolean expire) {
