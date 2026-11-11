@@ -22,3 +22,11 @@ it('focusRingKeepsTheControlRadius', () => {
 });
 
 export {};
+
+it('dialogScrimIsNeutralAndDoesNotNeedInheritedVariables', () => {
+  expect(rule('Dialog.module.css', '.dialog::backdrop')).toContain('background: rgb(0 0 0 / .5)');
+});
+
+it('toastIconKeepsTheToastTextColour', () => {
+  expect(rule('Toast.module.css', '.toast svg')).toContain('color: currentColor');
+});
