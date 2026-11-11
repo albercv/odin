@@ -29,7 +29,7 @@ function BreakableEmail({ value }: { value: string }) {
 
 type Panel = 'edit' | 'roles' | 'keys' | 'accesses' | 'password' | undefined;
 type RowProps = {
-  companyId: string; u: Member; isGroup: boolean; onChanged: () => void; onRemoved: (announcement: string) => void; onProjectsChanged: () => void;
+  companyId: string; u: Member; isGroup: boolean; meId: string; onChanged: () => void; onRemoved: (announcement: string) => void; onProjectsChanged: () => void;
 };
 
 function MemberPanel({ companyId, u, isGroup, panel, onDone, onReset, onProjectsChanged }: RowProps & {
@@ -57,11 +57,11 @@ function useRemovals(companyId: string, u: Member, onRemoved: RowProps['onRemove
   return { remove, erase };
 }
 
-function MemberActions({ companyId, u, isGroup, onChanged, onRemoved, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
+function MemberActions({ companyId, u, isGroup, meId, onChanged, onRemoved, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
   const { error, act } = useAction();
   const worker = u.roles.includes('WORKER');
-  // The API only lets the group admin deactivate or remove a company admin (and nobody does it to themselves).
-  const mayDisable = isGroup || !u.roles.includes('COMPANY_ADMIN');
+  // The API only lets the group admin deactivate or remove a company admin, and nobody does it to themselves.
+  const mayDisable = u.userId !== meId && (isGroup || !u.roles.includes('COMPANY_ADMIN'));
   const toggle = async () => (await act(() => api.setActive(companyId, u.userId, !u.active))) && onChanged();
   const { remove, erase } = useRemovals(companyId, u, onRemoved, act);
   const open = (target: Panel, text: string, label?: string) => (
@@ -134,7 +134,7 @@ export function Members({ companyId, me, addOpen = false, onAddClose = () => und
       <section ref={region} tabIndex={-1} aria-label="Lista de personas" className={styles.region}>
         <Table columns={['Código', 'Persona', 'Papel', 'Acceso']}>
           {list.data?.map((u) => (
-            <MemberRow key={u.userId} companyId={companyId} u={u} isGroup={isGroup} onChanged={list.reload}
+            <MemberRow key={u.userId} companyId={companyId} u={u} isGroup={isGroup} meId={me.userId} onChanged={list.reload}
               onRemoved={removed} onProjectsChanged={onProjectsChanged} />
           ))}
         </Table>

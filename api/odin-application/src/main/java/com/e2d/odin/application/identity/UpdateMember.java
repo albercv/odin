@@ -35,16 +35,19 @@ public class UpdateMember {
     public MemberView execute(Actor actor, CompanyId companyId, UserId userId, MemberChanges changes) {
         AccessPolicy.requireAdminOf(actor, companyId);
         Membership current = UserAdministration.requireMembership(memberships, companyId, userId);
+        User person = users.findById(userId).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        UserAdministration.requireGroupAdminToActOn(actor, person);
         Membership updated = new Membership(userId, companyId,
                 changes.roles().map(UserAdministration::requireValidRoles).orElse(current.roles()),
                 changes.active().orElse(current.active()));
+        UserAdministration.requireNotCompanyAdminForGroupAdmin(person, updated.roles());
         requireNotActingOnSelf(actor, current, updated);
         if (touchesAdministration(current, updated)) {
             UserAdministration.requireGroupAdminForAdministration(actor);
         }
         String companyCode = organizations.findCompany(companyId)
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada")).code();
-        User user = personReadyFor(current, updated, changes.password(), userId);
+        User user = personReadyFor(person, current, updated, changes.password());
         memberships.save(updated);
         if (losesAdministration(current, updated)) {
             UserAdministration.closeSessionsIfNoLongerAdministering(user, memberships, sessions);
@@ -71,8 +74,7 @@ public class UpdateMember {
     }
 
     /** Quien pasa a administrar necesita correo y contraseña; se guarda la que llega si aún no tenía. */
-    private User personReadyFor(Membership current, Membership updated, Optional<String> password, UserId userId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+    private User personReadyFor(User user, Membership current, Membership updated, Optional<String> password) {
         boolean becomesAdministrator = !current.isCompanyAdmin() && updated.isCompanyAdmin();
         UserAdministration.requirePasswordOnlyToAdminister(password, becomesAdministrator);
         if (!becomesAdministrator) {

@@ -31,6 +31,7 @@ public class UpdateUser {
         List<Membership> theirMemberships = memberships.listByUser(id);
         requireMayEdit(actor, id, theirMemberships);
         User user = users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        UserAdministration.requireGroupAdminToActOn(actor, user);
         boolean active = changes.active().orElse(user.active());
         requireMayChangeActive(actor, user, active);
         String firstName = changes.firstName().map(UserAdministration::requireFirstName).orElse(user.firstName());

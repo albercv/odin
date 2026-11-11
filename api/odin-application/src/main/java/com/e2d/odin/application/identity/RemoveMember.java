@@ -8,7 +8,9 @@ import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Clock;
@@ -40,6 +42,8 @@ public class RemoveMember {
     public void execute(Actor actor, CompanyId companyId, UserId userId) {
         AccessPolicy.requireAdminOf(actor, companyId);
         Membership membership = UserAdministration.requireMembership(memberships, companyId, userId);
+        User person = users.findById(userId).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        UserAdministration.requireGroupAdminToActOn(actor, person);
         if (actor.userId().equals(userId)) {
             throw new ValidationException("No puedes quitarte de la empresa");
         }
@@ -51,7 +55,6 @@ public class RemoveMember {
                 .forEach(key -> keys.save(key.revoked(now)));
         projectMembers.removeAllOf(companyId, userId);
         memberships.delete(userId, companyId, now);
-        users.findById(userId).ifPresent(user ->
-                UserAdministration.closeSessionsIfNoLongerAdministering(user, memberships, sessions));
+        UserAdministration.closeSessionsIfNoLongerAdministering(person, memberships, sessions);
     }
 }

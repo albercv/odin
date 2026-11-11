@@ -146,11 +146,15 @@ class AddMemberTest {
     }
 
     @Test
-    void groupAdminCanBeAddedAsAWorkerByEmail() {
+    void onlyTheGroupAdminAddsTheGroupAdminAsAWorkerByEmail() {
         User gema = existingGroupAdmin();
 
-        MemberAdded added = add.execute(Actors.companyAdmin(company), company,
-                member("G@demo.test", Set.of(Role.WORKER), null));
+        assertThatThrownBy(() -> add.execute(Actors.companyAdmin(company), company,
+                member("G@demo.test", Set.of(Role.WORKER), null)))
+                .isInstanceOf(ForbiddenException.class).hasMessage("Solo el administrador del grupo puede editar a esta persona");
+        assertThat(memberships.find(gema.id(), company)).isEmpty();
+
+        MemberAdded added = add.execute(groupAdmin, company, member("G@demo.test", Set.of(Role.WORKER), null));
 
         assertThat(added.alreadyExisted()).isTrue();
         assertThat(added.user()).isEqualTo(gema);

@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 final class UserAdministration {
 
     static final String WORKER_HAS_NO_PASSWORD = "Un trabajador no tiene contraseña: entra con su clave personal";
+    static final String GROUP_ADMIN_ALREADY_ADMINISTERS = "El administrador del grupo ya administra todas las empresas";
     static final String ADMINISTRATOR_NEEDS_EMAIL = "El administrador necesita correo";
 
     private UserAdministration() {
@@ -81,6 +82,19 @@ final class UserAdministration {
     static void requirePasswordOnlyToAdminister(Optional<String> password, boolean administering) {
         if (!administering && password.filter(p -> !p.isBlank()).isPresent()) {
             throw new ValidationException(WORKER_HAS_NO_PASSWORD);
+        }
+    }
+
+    /** Sobre quien es el administrador del grupo solo actúa él mismo, aunque trabaje en una empresa. */
+    static void requireGroupAdminToActOn(Actor actor, User person) {
+        if (person.groupAdmin() && !actor.isGroupAdmin()) {
+            throw new ForbiddenException("Solo el administrador del grupo puede editar a esta persona");
+        }
+    }
+
+    static void requireNotCompanyAdminForGroupAdmin(User person, Set<Role> roles) {
+        if (person.groupAdmin() && roles.contains(Role.COMPANY_ADMIN)) {
+            throw new ValidationException(GROUP_ADMIN_ALREADY_ADMINISTERS);
         }
     }
 

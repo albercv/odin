@@ -235,6 +235,21 @@ class UpdateUserTest {
     }
 
     @Test
+    void companyAdminCannotRenameOrChangeTheEmailOfAGroupAdminWhoWorksInTheirCompany() {
+        UserId gemaId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gemaId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        memberships.save(new Membership(gemaId, company, Set.of(Role.WORKER), true));
+
+        assertThatThrownBy(() -> update.execute(admin, gemaId, name("Otra")))
+                .isInstanceOf(ForbiddenException.class).hasMessage("Solo el administrador del grupo puede editar a esta persona");
+        assertThatThrownBy(() -> update.execute(admin, gemaId, email("x@demo.test")))
+                .isInstanceOf(ForbiddenException.class).hasMessage("Solo el administrador del grupo puede editar a esta persona");
+        assertThat(users.findById(gemaId).orElseThrow().firstName()).isEqualTo("Gema");
+        assertThat(users.findById(gemaId).orElseThrow().email()).contains("g@demo.test");
+        assertThat(update.execute(Actors.groupAdmin(), gemaId, name("Gemma")).firstName()).isEqualTo("Gemma");
+    }
+
+    @Test
     void cannotDeactivateOneself() {
         Actor self = new Actor(adminId, "Carlos", Role.GROUP_ADMIN, Set.of());
 

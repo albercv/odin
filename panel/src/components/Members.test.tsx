@@ -396,6 +396,17 @@ test('companyAdminCannotDeactivateOrRemoveCompanyAdminsNeitherOthersNorThemselve
   }
 });
 
+test('nobodySeesDeactivateOrRemoveOnTheirOwnRow', async () => {
+  const ownRow = { ...ana, userId: 'g', displayName: 'Ada Gil', firstName: 'Ada' };
+  show({ [list]: () => [ana, ownRow] });
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Ada Gil' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Ana' }));
+  expect(screen.getByRole('button', { name: 'Quitar Ana' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Desactivar Ada Gil' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Quitar Ada Gil' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Editar Ada Gil' })).toBeInTheDocument();
+});
+
 test('groupAdminSeesDeactivateAndRemoveOnCompanyAdmins', async () => {
   show({ [list]: () => [bea] });
   await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Bea' }));

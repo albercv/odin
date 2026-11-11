@@ -124,7 +124,11 @@ class RemoveMemberTest {
         memberships.save(new Membership(gemaId, company, Set.of(Role.WORKER), true));
         String token = sessions.open(gemaId);
 
-        remove.execute(Actors.companyAdmin(company), company, gemaId);
+        assertThatThrownBy(() -> remove.execute(Actors.companyAdmin(company), company, gemaId))
+                .isInstanceOf(ForbiddenException.class).hasMessage("Solo el administrador del grupo puede editar a esta persona");
+        assertThat(memberships.find(gemaId, company)).isPresent();
+
+        remove.execute(Actors.groupAdmin(), company, gemaId);
 
         assertThat(memberships.find(gemaId, company)).isEmpty();
         assertThat(sessions.resolve(token)).isPresent();
