@@ -70,7 +70,8 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
 
     @Override
     public List<Company> listCompanies(CompanyScope scope) {
-        return tx.inScope(scope, jdbc -> jdbc.sql("SELECT id, name, code FROM company ORDER BY seq")
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql("SELECT id, name, code FROM company WHERE "
+                + Sql.inScope("id") + " ORDER BY seq"), scope)
                 .query((rs, n) -> company(jdbc, rs)).list());
     }
 

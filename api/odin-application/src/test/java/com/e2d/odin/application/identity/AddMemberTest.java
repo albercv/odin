@@ -68,6 +68,7 @@ class AddMemberTest {
                 new NewMember("Wanda", "Pérez", Optional.of(" W@Demo.test "), Set.of(Role.WORKER), Optional.empty(), Set.of()));
 
         assertThat(added.alreadyExisted()).isFalse();
+        assertThat(added.keptPassword()).isFalse();
         assertThat(added.user().displayName()).isEqualTo("Wanda Pérez");
         assertThat(added.user().email()).contains("w@demo.test");
         assertThat(added.user().groupAdmin()).isFalse();
@@ -132,6 +133,7 @@ class AddMemberTest {
                         Optional.of("otra-clave-1234"), Set.of()));
 
         assertThat(added.alreadyExisted()).isTrue();
+        assertThat(added.keptPassword()).isTrue();
         assertThat(added.user()).isEqualTo(carlos);
         assertThat(users.findById(carlos.id())).contains(carlos);
         assertThat(memberships.find(carlos.id(), company)).isPresent();
@@ -285,6 +287,7 @@ class AddMemberTest {
                 worker("c@demo.test", Set.of(obra)));
 
         assertThat(added.alreadyExisted()).isTrue();
+        assertThat(added.keptPassword()).isFalse();
         assertThat(projectMembers.projectsOf(company, added.user().id())).containsExactly(obra);
     }
 

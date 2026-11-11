@@ -50,11 +50,14 @@ public class AddMember {
         AccessPolicy.requireAdminOf(actor, companyId);
         Company company = organizations.findCompany(companyId)
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
-        requireName(newMember.firstName());
-        requireName(newMember.lastName());
+        UserAdministration.requireNameOrLastName(newMember.firstName());
+        UserAdministration.requireNameOrLastName(newMember.lastName());
         Set<Role> roles = UserAdministration.requireValidRoles(newMember.roles());
         boolean administrator = roles.contains(Role.COMPANY_ADMIN);
-        requireAllowedRoles(actor, administrator, newMember.password());
+        if (administrator) {
+            UserAdministration.requireGroupAdminForAdministration(actor);
+        }
+        UserAdministration.requirePasswordOnlyToAdminister(newMember.password(), administrator);
         requireAssignableProjects(companyId, roles, newMember.projectIds());
         Optional<String> email = newMember.email().filter(e -> !e.isBlank()).map(Validation::normalizeEmail);
         Optional<User> existing = email.flatMap(users::findByEmail);
@@ -68,7 +71,8 @@ public class AddMember {
         Membership membership = new Membership(ready.id(), companyId, roles, true);
         memberships.save(membership);
         newMember.projectIds().forEach(projectId -> projectMembers.add(companyId, projectId, ready.id()));
-        return new MemberAdded(ready, membership, company, existing.isPresent());
+        return new MemberAdded(ready, membership, company, existing.isPresent(),
+                administrator && existing.flatMap(User::passwordHash).isPresent());
     }
 
     private void requireAssignableProjects(CompanyId companyId, Set<Role> roles, Set<ProjectId> projectIds) {
@@ -82,14 +86,6 @@ public class AddMember {
         }
     }
 
-    private static void requireAllowedRoles(Actor actor, boolean administrator, Optional<String> password) {
-        if (administrator) {
-            UserAdministration.requireGroupAdminForAdministration(actor);
-        } else if (password.filter(p -> !p.isBlank()).isPresent()) {
-            throw new ValidationException(UserAdministration.WORKER_HAS_NO_PASSWORD);
-        }
-    }
-
     private User requireJoinable(User user, CompanyId companyId, boolean administrator) {
         if (user.groupAdmin() && administrator) {
             throw new ValidationException("El administrador del grupo ya administra todas las empresas");
@@ -100,16 +96,9 @@ public class AddMember {
         return user;
     }
 
-    private static String requireName(String name) {
-        if (name == null || name.isBlank()) {
-            throw new ValidationException("Faltan el nombre o los apellidos");
-        }
-        return name.trim();
-    }
-
     private User newPerson(NewMember newMember, Optional<String> email) {
-        return new User(new UserId(ids.newId()), requireName(newMember.firstName()),
-                Optional.of(requireName(newMember.lastName())), PersonCodes.next(personCodes, users), email, false,
+        return new User(new UserId(ids.newId()), UserAdministration.requireNameOrLastName(newMember.firstName()),
+                Optional.of(UserAdministration.requireNameOrLastName(newMember.lastName())), PersonCodes.next(personCodes, users), email, false,
                 true, Optional.empty());
     }
 }

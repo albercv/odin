@@ -57,6 +57,33 @@ final class UserAdministration {
         return roles;
     }
 
+    static String requireFirstName(String name) {
+        return requireText(name, "Falta el nombre");
+    }
+
+    static String requireLastName(String lastName) {
+        return requireText(lastName, "Faltan los apellidos");
+    }
+
+    /** Para el alta, que pide ambos a la vez. */
+    static String requireNameOrLastName(String value) {
+        return requireText(value, "Faltan el nombre o los apellidos");
+    }
+
+    private static String requireText(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new ValidationException(message);
+        }
+        return value.trim();
+    }
+
+    /** Una contraseña solo llega con quien pasa a administrar; un trabajador entra con su clave personal. */
+    static void requirePasswordOnlyToAdminister(Optional<String> password, boolean administering) {
+        if (!administering && password.filter(p -> !p.isBlank()).isPresent()) {
+            throw new ValidationException(WORKER_HAS_NO_PASSWORD);
+        }
+    }
+
     static void requireGroupAdminForAdministration(Actor actor) {
         if (!actor.isGroupAdmin()) {
             throw new ForbiddenException(

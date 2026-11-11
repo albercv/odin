@@ -68,6 +68,13 @@ public final class Responses {
         }
     }
 
+    /** El proyecto tal como lo ve un trabajador: solo id y nombre; si es cerrado y quién es miembro es cosa del panel. */
+    public record MeProject(UUID id, String name) {
+        public static MeProject from(Project p) {
+            return new MeProject(p.id().value(), p.name());
+        }
+    }
+
     public record ProjectView(UUID id, UUID companyId, String name, boolean restricted,
             @JsonInclude(JsonInclude.Include.NON_NULL)
             @Schema(description = "Solo en la lista de proyectos de la empresa.") @Nullable Integer memberCount) {
@@ -88,10 +95,10 @@ public final class Responses {
         }
     }
 
-    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<ProjectView> projects) {
+    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<MeProject> projects) {
         public static Me from(MeView m) {
             return new Me(m.userId().value(), m.displayName(), m.role(), MeCompany.from(m.company()),
-                    m.projects().stream().map(ProjectView::from).toList());
+                    m.projects().stream().map(MeProject::from).toList());
         }
     }
 
@@ -104,10 +111,11 @@ public final class Responses {
         }
     }
 
-    public record MemberAdded(MemberView member, boolean alreadyExisted) {
+    public record MemberAdded(MemberView member, boolean alreadyExisted, boolean keptPassword) {
         public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added, Actor viewer) {
             return new MemberAdded(MemberView.from(com.e2d.odin.application.identity.MemberView.of(added.user(),
-                    added.membership(), added.company().code(), viewer)), added.alreadyExisted());
+                    added.membership(), added.company().code(), viewer)), added.alreadyExisted(),
+                    added.keptPassword());
         }
     }
 

@@ -73,10 +73,9 @@ public class UpdateMember {
     /** Quien pasa a administrar necesita correo y contraseña; se guarda la que llega si aún no tenía. */
     private User personReadyFor(Membership current, Membership updated, Optional<String> password, UserId userId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
-        if (current.isCompanyAdmin() || !updated.isCompanyAdmin()) {
-            if (password.filter(p -> !p.isBlank()).isPresent()) {
-                throw new ValidationException(UserAdministration.WORKER_HAS_NO_PASSWORD);
-            }
+        boolean becomesAdministrator = !current.isCompanyAdmin() && updated.isCompanyAdmin();
+        UserAdministration.requirePasswordOnlyToAdminister(password, becomesAdministrator);
+        if (!becomesAdministrator) {
             return user;
         }
         User ready = UserAdministration.readyToAdminister(user, password, passwords);

@@ -30,6 +30,9 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     private final PostgresDocumentRepository ownerDocs = new PostgresDocumentRepository(ownerTx);
     private final PostgresKnowledgeCardRepository ownerCards = new PostgresKnowledgeCardRepository(ownerTx);
     private final PostgresKnowledgeSearch ownerSearch = new PostgresKnowledgeSearch(ownerTx);
+    private final PostgresProjectMemberRepository ownerProjectMembers = new PostgresProjectMemberRepository(ownerTx);
+    private final PostgresMembershipRepository ownerMemberships = new PostgresMembershipRepository(ownerTx);
+    private final PostgresOrganizationRepository ownerOrgs = new PostgresOrganizationRepository(ownerTx);
 
     private CompanyId a;
     private CompanyId b;
@@ -99,5 +102,33 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
                 .extracting(KnowledgeCard::id).doesNotContain(closedCard.id());
         assertThat(ownerSearch.search(new SearchQuery(List.of("zafiro"), scope, none, Optional.empty(), 10))
                 .hits()).isEmpty();
+    }
+
+    @Test
+    void scopeOfBSeesNeitherProjectMembersNorMembershipsOfAThroughAConnectionThatBypassesRls() {
+        ProjectId project = newProject(a, "Obra");
+        UserId wanda = newUser(a);
+        UserId pedro = newUser(a);
+        projectMembers.add(a, project, wanda);
+
+        assertThat(ownerProjectMembers.listMembers(b, project)).isEmpty();
+        assertThat(ownerProjectMembers.projectsOf(b, wanda)).isEmpty();
+        assertThat(ownerProjectMembers.deletedProjectsOf(b, wanda)).isEmpty();
+        assertThat(ownerMemberships.find(wanda, b)).isEmpty();
+        assertThat(ownerMemberships.listByCompany(b)).isEmpty();
+        ownerProjectMembers.add(b, project, pedro);
+        ownerProjectMembers.remove(b, project, wanda);
+        ownerProjectMembers.removeAllOf(b, wanda);
+        assertThat(projectMembers.listMembers(a, project)).containsExactly(wanda);
+        assertThat(ownerProjectMembers.listMembers(a, project)).containsExactly(wanda);
+        assertThat(ownerMemberships.find(wanda, a)).isPresent();
+    }
+
+    @Test
+    void listCompaniesFiltersByScopeThroughAConnectionThatBypassesRls() {
+        assertThat(ownerOrgs.listCompanies(CompanyScope.of(b))).extracting(c -> c.id()).containsExactly(b);
+        assertThat(ownerOrgs.listCompanies(CompanyScope.of(a))).extracting(c -> c.id()).containsExactly(a);
+        assertThat(ownerOrgs.listCompanies(CompanyScope.all())).extracting(c -> c.id())
+                .containsExactlyInAnyOrder(a, b);
     }
 }

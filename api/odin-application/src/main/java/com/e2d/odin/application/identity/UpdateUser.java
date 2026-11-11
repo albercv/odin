@@ -29,13 +29,13 @@ public class UpdateUser {
 
     public User execute(Actor actor, UserId id, UserChanges changes) {
         List<Membership> theirMemberships = memberships.listByUser(id);
-        requireMayEdit(actor, theirMemberships);
+        requireMayEdit(actor, id, theirMemberships);
         User user = users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         boolean active = changes.active().orElse(user.active());
         requireMayChangeActive(actor, user, active);
-        String firstName = changes.firstName().map(n -> Validation.requireText(n, "el nombre")).orElse(user.firstName());
-        Optional<String> lastName = changes.lastName().map(UpdateUser::requireLastName).or(user::lastName);
-        Optional<String> email = changes.email().map(e -> newEmail(user, theirMemberships, e)).orElse(user.email());
+        String firstName = changes.firstName().map(UserAdministration::requireFirstName).orElse(user.firstName());
+        Optional<String> lastName = changes.lastName().map(UserAdministration::requireLastName).or(user::lastName);
+        Optional<String> email = changes.email().map(e -> newEmail(actor, user, theirMemberships, e)).orElse(user.email());
         User updated = user.withNames(firstName, lastName).withEmail(email).withActive(active);
         users.save(updated);
         if (user.active() && !active) {
@@ -44,16 +44,9 @@ public class UpdateUser {
         return updated;
     }
 
-    private static String requireLastName(String lastName) {
-        if (lastName == null || lastName.isBlank()) {
-            throw new ValidationException("Faltan los apellidos");
-        }
-        return lastName.trim();
-    }
-
-    /** El administrador del grupo edita a cualquiera; el de empresa, solo a quien no está en otras empresas. */
-    private static void requireMayEdit(Actor actor, List<Membership> theirMemberships) {
-        if (actor.isGroupAdmin()) {
+    /** El administrador del grupo edita a cualquiera y cada persona a sí misma; el de empresa, solo a quien no está en otras empresas. */
+    private static void requireMayEdit(Actor actor, UserId id, List<Membership> theirMemberships) {
+        if (actor.isGroupAdmin() || actor.userId().equals(id)) {
             return;
         }
         if (theirMemberships.stream().noneMatch(m -> actor.administers(m.companyId()))) {
@@ -76,7 +69,16 @@ public class UpdateUser {
         }
     }
 
-    private Optional<String> newEmail(User user, List<Membership> theirMemberships, String raw) {
+    /** El correo es la puerta al panel: el de un administrador de empresa solo lo cambia el administrador del grupo o él mismo. */
+    private static void requireMayChangeEmail(Actor actor, User user, List<Membership> theirMemberships) {
+        if (!actor.isGroupAdmin() && !actor.userId().equals(user.id())
+                && theirMemberships.stream().anyMatch(Membership::isCompanyAdmin)) {
+            throw new ForbiddenException("Solo el administrador del grupo puede editar a esta persona");
+        }
+    }
+
+    private Optional<String> newEmail(Actor actor, User user, List<Membership> theirMemberships, String raw) {
+        requireMayChangeEmail(actor, user, theirMemberships);
         if (raw.isBlank()) {
             if (user.groupAdmin() || theirMemberships.stream().anyMatch(Membership::isCompanyAdmin)) {
                 throw new ValidationException(UserAdministration.ADMINISTRATOR_NEEDS_EMAIL);
