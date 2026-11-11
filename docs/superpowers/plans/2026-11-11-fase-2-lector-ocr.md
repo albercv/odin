@@ -59,7 +59,7 @@ El CEO aceptó el motivo (D-041). Leer esas páginas queda como primera mejora p
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V10__reader_lane.sql`. Si la 2a cerró con otra numeración, la siguiente libre.
+- **Migración:** `V11__reader_lane.sql`. La 2a llega hasta V10. Si cerró con otra numeración, la siguiente libre.
 - **Datos:** solo ficticios. Las muestras del repositorio OCR (`samples/`) son sintéticas.
 
 ## Foco de revisión
@@ -274,13 +274,13 @@ Rama `task/fase-2-conocimiento/carril-lector` (Odín). Spec 5.1 a 5.3.
 Rama `task/fase-2-conocimiento/carril-lector-postgres` (Odín). Spec 5.1 y 5.2.
 
 **Ficheros:**
-- **Crear:** `V10__reader_lane.sql`.
+- **Crear:** `V11__reader_lane.sql`.
 - **Modificar:** `PostgresDocumentRepository`, `PostgresDocumentRepositoryIT` y `MigrationFromPhaseOneIT`, o la prueba de migración que exista tras la 2a.
 
 **Interfaces que consume:** `DocumentRepository.claimNextForReader` y `Document.startReading` de la tarea 4.
 
 **Valores:**
-- `V10`:
+- `V11`:
   - `UPDATE document SET attempt_count = 0 WHERE status = 'PENDING_READER'`. La columna `status` es texto sin restricción, así que no hace falta nada para el estado nuevo;
   - `ALTER TABLE document ADD COLUMN pages_without_text integer[] NOT NULL DEFAULT '{}'`;
   - la rellena para los documentos `READY` y paginados con los números de sus páginas cuyo `btrim(text)` es vacío.
@@ -299,7 +299,7 @@ Rama `task/fase-2-conocimiento/carril-lector-postgres` (Odín). Spec 5.1 y 5.2.
   - `migrationResetsAttemptsOfDocumentsWaitingForReader`: aplica hasta la migración anterior, inserta un `PENDING_READER` con 3 intentos, migra y comprueba que tiene 0.
   - `migrationFillsPagesWithoutTextOfExistingDocuments`: un `READY` con las páginas 1 y 3 en blanco queda con `[1, 3]`.
   - `PostgresDocumentRepositoryIT.storesPagesWithoutText`.
-- [ ] **Paso 2:** escribe `V10` y `claimNextForReader`.
+- [ ] **Paso 2:** escribe `V11` y `claimNextForReader`.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0. `SearchBatteryIT` mantiene 27 de 30.
 - [ ] **Paso 4:** commit «feat: toma del carril del lector en PostgreSQL».
 
@@ -425,7 +425,7 @@ No es de un subagente: la hace el CTO. Spec 7, 8 y 9.
 1. **Arrancar el puente:** en la copia de trabajo del repositorio OCR, `make serve`.
 2. **Red:** desde un contenedor de una pila propia de Odín, distinta de la del propietario, `curl` a `http://host.docker.internal:8077/health`.
    - Se anota el resultado.
-   - Si no responde, se arranca el puente con `--host` en la interfaz de Docker Desktop y `--token-env`, y se anota en T-015.
+   - Si no responde, se arranca el puente con `--host` en la interfaz de Docker Desktop y `--token-env`, y se anota en su entrada del registro técnico.
 3. **Lectura de extremo a extremo:** pila propia de Odín con `ODIN_READER_URL`.
    - Se suben `samples/factura_scan.pdf` y `samples/long_report.pdf`, este último pasado antes a solo imagen (por ejemplo, rasterizado con pypdfium2 en un script del scratchpad), para tener un escaneado de 30 páginas.
    - El trabajador encuentra un importe de la factura con su cita y su página.
@@ -440,7 +440,7 @@ No es de un subagente: la hace el CTO. Spec 7, 8 y 9.
    - revisión final de toda la rama con Opus;
    - `make check` y `make demo`;
    - informe `docs/informes/2026-11-XX-lector-ocr.md`;
-   - T-015 en el registro técnico del repositorio OCR;
+   - su entrada en el registro técnico del repositorio OCR (el siguiente número libre al escribirla);
    - copia del informe en la carpeta de notas para el CEO.
 
 ## Orden y paralelismo

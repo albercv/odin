@@ -3,7 +3,7 @@
 - Fecha: 2026-11-11. Autor: CTO (segunda sesión). Encargo 11.
 - Decisiones de negocio que lo originan: D-021, D-026 y la definición del producto (apartados 3 y 4.3, paso 5).
 - Amplía `2026-11-09-api-central-design.md` («spec base») y se apoya en `2026-11-10-identidad-pertenencias-design.md` («spec 2a»). Lo que este documento no cambia sigue como está allí.
-- Rama: `feature/fase-2-conocimiento`. Se ejecuta cuando cierre la fase 2a.
+- Rama: `feature/fase-2-conocimiento`. Se ejecuta cuando cierre la fase 2a y después de los bloques 1, 3, 6 y 7 (D-049).
 
 ## 1. Por qué
 
@@ -17,7 +17,7 @@
 
 ## 2. Decisiones
 
-**De negocio que se aplican:** nunca inventa y cita (D-008, D-024); conocimiento, no evaluación (D-005); proyectos restringidos (D-038); fichas pendientes y rechazadas fuera de las búsquedas de los compañeros (D-036).
+**De negocio que se aplican:** nunca inventa y cita (D-008, D-024); conocimiento, no evaluación (D-005); proyectos cerrados por defecto (D-047); fichas pendientes y rechazadas fuera de las búsquedas de los compañeros (D-036).
 
 **Respuestas del CEO** (D-040 y D-042, 2026-11-11):
 
@@ -82,19 +82,20 @@
 ### 5.2 Buscar casos parecidos
 
 - **Caso de uso:** `FindSimilarCases(actor, SimilarCasesRequest(queries, projectId?, limit?))`.
-  - **Acceso:** `WorkerAccess` con `SIMILAR_CASES`. Los proyectos visibles se calculan como en la búsqueda (spec 2a, 5.4). Un proyecto restringido ajeno da 404.
+  - **Acceso:** `WorkerAccess` con `SIMILAR_CASES`. Los proyectos visibles son los de los que es miembro más los abiertos a toda la empresa (D-047), y se calculan como en la búsqueda (`WorkerAccess.require` con `ProjectMemberRepository`, y `requireProject(visibility(), projectId)` para validar el filtro). Un proyecto cerrado del que no es miembro da 404.
   - **Términos:** igual que `SearchKnowledge`. Hace falta al menos uno con texto, o da 400. La IA los saca de la ficha del caso nuevo: qué falla, dónde, la causa y sus reformulaciones.
   - **Límite:** 5 por defecto y 10 como máximo.
 - **Qué entra:**
   - las páginas de documentos `READY` con `caseDocument`;
   - las fichas `APPROVED`, que salen junto a los casos rotuladas como fichas y no cuentan como casos resueltos;
-  - siempre de la empresa del actor y de sus proyectos visibles, con el filtro SQL explícito y la seguridad por filas (spec 2a, 6). Lo que no tiene proyecto lo ve toda la empresa, como en la búsqueda (D-038).
+  - siempre de la empresa del actor y de sus proyectos visibles (miembro o abiertos a toda la empresa, D-047), con el filtro SQL explícito y la seguridad por filas (spec 2a, 6). Lo que no tiene proyecto lo ve toda la empresa, como en la búsqueda. Un proyecto cerrado del que no es miembro no aporta casos.
+  - **Sustituidos (bloque 7):** un caso de un documento sustituido sale con `superseded` y `replacement`, resueltos igual que en la búsqueda (diseño del bloque 7, 5.2), y detrás de los vigentes.
 - **Orden:**
   - se reutiliza la consulta de `PostgresKnowledgeSearch`: `odin_spanish`, `plainto_tsquery` con `|`, el canal exacto de identificadores y `ts_rank_cd`;
   - se agrupa por documento o ficha y vale su mejor página;
   - documentos y fichas van en la misma lista, sin cupos, como ya hace la búsqueda. Si la batería muestra que unos tapan a los otros, se revisa;
   - a igual puntuación, se ordena por título y después por identificador.
-  - Lo común de esa consulta se saca a un sitio compartido; no se copia.
+  - Lo común de esa consulta se saca a un sitio compartido; no se copia. Ese sitio conserva lo que añadió el bloque 7: la resolución del sustituto y el orden «sustituidos detrás de los vigentes, sin cambiar el orden entre ellos».
 - **Qué devuelve cada caso:**
   - **Documento:** sus páginas en orden, desde la primera, mientras no pasen de 3 páginas ni de 12.000 caracteres.
     - Si la página con mejor puntuación se queda fuera, se añade al final, aunque pase de los límites. Por ejemplo, las páginas 1, 2 y 5.
@@ -107,7 +108,7 @@
 
 ### 5.3 Listado de documentos
 
-- `ListDocuments` del trabajador gana el filtro opcional `caseDocument`, y cada documento lleva el campo, para que la IA pueda listar todos los casos (estudio de búsqueda, 5.1, punto 10).
+- `ListDocuments` del trabajador (que ya trae el filtro por tema del bloque 3) gana el filtro opcional `caseDocument`, y cada documento lleva el campo, para que la IA pueda listar todos los casos (estudio de búsqueda, 5.1, punto 10).
 - El filtro depende de `SEARCH_KNOWLEDGE`, como el listado, y no de `SIMILAR_CASES`.
 
 ## 6. Contrato
@@ -117,10 +118,10 @@
 | `POST /v1/similar-cases` | Trabajador | `{ queries: string[], projectId?, limit? }` → `{ cases: SimilarCaseView[], noSource }` |
 | `GET /v1/documents?caseDocument=` | Trabajador | Filtro nuevo; `WorkerDocumentView` gana `caseDocument` |
 | `POST /v1/admin/companies/{companyId}/documents` | Administradores | Campo multipart nuevo `caseDocument` |
-| `PATCH /v1/admin/documents/{documentId}` | Administradores | `{ caseDocument }` → `DocumentView`, que gana `caseDocument` |
+| `PATCH /v1/admin/documents/{documentId}` | Administradores | `{ caseDocument }` → `DocumentView`, que gana `caseDocument` (y que ya ganó `supersededBy` y `supersededAt` en el bloque 7) |
 | `POST /v1/admin/companies/{companyId}/documents/case-marks` | Administradores | `{ documentIds, caseDocument }` → `{ updated }` |
 
-`SimilarCaseView` lleva `originLabel`, que es nulo en un documento y es «Ficha aportada por un trabajador, redactada con IA» en una ficha. Además lleva: `sourceType`, `sourceId`, `title`, `projectId`, `addedAt`, `pageCount`, `pages` (`[{ number, text }]`, vacío en una ficha), `body` (solo en una ficha), `truncated`, `excerpt` y `origin`. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, con el texto de la marca.
+`SimilarCaseView` lleva `originLabel`, que es nulo en un documento y es «Ficha aportada por un trabajador, redactada con IA» en una ficha. Además lleva: `sourceType`, `sourceId`, `title`, `projectId`, `addedAt`, `pageCount`, `pages` (`[{ number, text }]`, vacío en una ficha), `body` (solo en una ficha), `truncated`, `excerpt` y `origin`. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, con el texto de la marca. Gana también `superseded` y `replacement` (`documentId` y `title`, o nulo), como los resultados de búsqueda (bloque 7).
 
 ## 7. MCP
 
@@ -155,7 +156,7 @@ La forma de medir es la misma que la de la búsqueda (T-007, T-009). No se anunc
 - **Corpus:**
   - todas las fichas de caso del mundo ficticio del estudio (`corpus-limpio`, `casos-limite` y `casos-control`), cargadas como `caseDocument`;
   - el resto de documentos del corpus limpio, cargados sin la marca, para comprobar que no salen.
-  - Todo ficticio; una empresa por comunidad, como en la batería de búsqueda.
+  - Todo ficticio. Se cargan con el cargador de corpus compartido que crea el bloque 6 (diseño del bloque 6, 5.2), no con uno propio.
 - **Casos nuevos:** 12 fichas de caso nuevas y ficticias, escritas por un subagente:
   - cada una se parece a un grupo de 1 a 3 casos del corpus y apunta cuáles son, en un fichero de claves aparte;
   - incluyen las preguntas G1 y G2 de la batería del estudio y la pareja de casos parecidos resueltos de forma distinta;
@@ -176,23 +177,26 @@ Aquí se dice qué se prueba. Los nombres exactos de las pruebas, y si cada una 
   - el recorte por páginas y por caracteres, con la mejor página siempre dentro;
   - sin autor en la respuesta;
   - capacidad desactivada, 403;
-  - proyecto restringido ajeno, invisible y 404 al filtrar;
+  - proyecto cerrado del que no es miembro, invisible y 404 al filtrar;
+  - un proyecto abierto a toda la empresa (`restricted = false`) del que no es miembro sí aporta casos;
+  - un caso de un documento sustituido sale detrás, con `superseded` y `replacement`;
   - actor de otra empresa (D-014);
   - el registro de tipo `SIMILAR_CASES`.
 - **Marcar un caso:** `UpdateDocumentTest` y `MarkCaseDocumentsTest` (todo o nada, el máximo de 500 y el identificador de otra empresa), cada uno con su caso de otra empresa.
 - **PostgreSQL:** `PostgresKnowledgeSearchIT.findsSimilarCasesGroupedByDocument` y `filtersByVisibleProjects`. La migración, con una base que ya tiene empresas.
 - **Web y contrato:** una prueba por ruta, y `IsolationTest` para el `PATCH` y la búsqueda de casos.
-- **De principio a fin:** `make demo` gana un paso.
+- **De principio a fin:** `make demo` gana un paso. El trabajador de la demo se hace miembro de los proyectos de las comunidades que hagan falta para enseñar la duda que se repite entre comunidades (`PUT /v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}`, D-047).
   1. Se suben dos fichas de caso ficticias, marcadas como caso, y un documento que no es caso.
   2. Con el MCP, `findSimilarCases` devuelve las dos con sus páginas y no el otro documento.
   3. El panel marca y desmarca un documento.
-- **Regresión:** la batería de búsqueda mantiene 27 de 30, y la de casos parecidos, el umbral que fije su primera medición.
+- **Regresión:** la batería de búsqueda mantiene 27 de 30, `SearchScaleBatteryIT` mantiene su umbral, y la de casos parecidos, el que fije su primera medición. Al cerrar el bloque se mide la batería de respuestas (diseño del bloque 6, 6.6).
 
 ## 11. Criterio de cierre
 
 - `make check` y `make demo` terminan con 0.
-- Las dos baterías, medidas, con sus cifras en el informe del bloque.
-- Decisiones registradas en el registro técnico (T-016), y respuestas del CEO aplicadas.
+- Las dos baterías, medidas, con sus cifras en el informe del bloque, y `SearchScaleBatteryIT` con su umbral.
+- La batería de respuestas, medida al cerrar el bloque, sin empeorar ningún umbral.
+- Decisiones registradas en el registro técnico (su entrada, con el siguiente número libre al escribirla), y respuestas del CEO aplicadas.
 
 ## 12. Lo que queda al constructor
 
@@ -220,3 +224,13 @@ Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 8 preguntas
 - tipos de pregunta en las estadísticas del bloque 4 (5.2);
 - fichas de la batería copiadas al repositorio de Odín (9);
 - el filtro del listado no depende de `SIMILAR_CASES` (5.3).
+
+## 15. Revisión tras la 2a y D-049 (2026-11-11)
+
+- **Orden (D-049):** va después de los bloques 3, 6 y 7. `ListDocuments` y `DescribeMe` ya traen los cambios del bloque 3 y el filtro `caseDocument` se añade encima. La migración pasa de V11 a V14.
+- **D-047:** los casos parecidos salen solo de los proyectos del trabajador (miembro o abiertos a toda la empresa) y de lo que no tiene proyecto. «Proyecto restringido ajeno» pasa a ser «proyecto cerrado del que no es miembro», y D-047 sustituye en esto a la regla anterior de proyectos restringidos. Prueba nueva: un proyecto abierto del que no es miembro sí aporta casos.
+- **Código de la 2a:** `FindSimilarCases` recibe `ProjectMemberRepository projectMembers` y llama a `WorkerAccess.require(actor, organizations, projectMembers, Capability.SIMILAR_CASES)`; valida el filtro con `requireProject(visibility(), projectId)` y consulta con `content()`.
+- **Bloque 7:** la consulta común conserva la resolución del sustituto y el orden «sustituidos detrás». `SimilarCaseView` gana `superseded` y `replacement`. El `PATCH` de este bloque sigue siendo de este bloque; el bloque 7 usa sus propias rutas `superseded-by`.
+- **Bloque 6:** la batería de casos parecidos usa el cargador de corpus compartido. La regresión incluye `SearchScaleBatteryIT` y, al cerrar el bloque, la batería de respuestas.
+- **Demo:** el trabajador de la demo se hace miembro de los proyectos que hagan falta.
+- **Registro técnico:** sin número fijo; el siguiente libre al escribirlo.

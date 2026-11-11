@@ -2,7 +2,7 @@
 
 > **Para quien lo ejecute:** se ejecuta con `superpowers:subagent-driven-development`, tarea a tarea. Los pasos usan casillas (`- [ ]`).
 
-**Objetivo:** que el trabajador pida desde su IA los casos resueltos parecidos a uno nuevo y reciba cada caso con su texto literal y sus páginas, sin autores, respetando empresas y proyectos restringidos.
+**Objetivo:** que el trabajador pida desde su IA los casos resueltos parecidos a uno nuevo y reciba cada caso con su texto literal y sus páginas, sin autores, respetando empresas y proyectos cerrados (D-047).
 
 **Arquitectura:**
 - Un caso de uso nuevo, `FindSimilarCases`, sobre el puerto `KnowledgeSearch`.
@@ -17,6 +17,10 @@
 ## Cuándo se ejecuta
 
 - Tras el cierre de la 2a, cuando lo diga el CEO.
+- Va después de los bloques 1, 3, 6 y 7 (D-049):
+  - `ListDocuments` y `DescribeMe` ya traen los cambios del bloque 3 (`topicId`, `topics`, `tagging`); el filtro `caseDocument` se añade encima;
+  - el bloque 7 ya añadió `superseded` y `replacement` a los resultados de búsqueda y el orden «sustituidos detrás» (diseño del bloque 7, 5.2), y `DocumentView` ya tiene `supersededBy` y `supersededAt`;
+  - el bloque 6 ya creó el cargador de corpus compartido (diseño del bloque 6, 5.2) y `SearchScaleBatteryIT`.
 - Antes de empezar, `feature/fase-2-conocimiento` se actualiza con la punta de `feature/identidad-pertenencias`.
 - Si las respuestas del CEO del spec 2 cambian algo, el CTO actualiza el spec y este plan antes de la tarea afectada.
 
@@ -27,24 +31,24 @@
 - **Clean Code (D-029):** métodos de 30 líneas como máximo, sin lógica duplicada y con comentarios mínimos. La consulta de casos **reutiliza** las piezas de `PostgresKnowledgeSearch` (`tsquery`, `anyMatch`, `boost`, `exactTokens`, `excerpt`); no las copia.
 - **Nombres:** identificadores en inglés, explicativos y en camelCase. Mensajes, documentación y commits en español.
 - **Aislamiento (D-014, spec 2a 6):**
-  - cada caso de uso con actor lleva una prueba con un actor de otra empresa y otra con un proyecto restringido del que no es miembro;
-  - cada consulta lleva su filtro explícito de empresa y de proyectos visibles;
+  - cada caso de uso con actor lleva una prueba con un actor de otra empresa y otra con un proyecto cerrado del que no es miembro (D-047);
+  - cada consulta lleva su filtro explícito de empresa y de proyectos visibles (miembro o abiertos a toda la empresa, más lo que no tiene proyecto);
   - la seguridad por filas es la segunda barrera.
 - **Sin autores en los casos parecidos** (spec 5.2): ni en el dominio, ni en el JSON, ni en el MCP.
 - **Contrato:** si cambia la API, en la misma tarea se regeneran `api/openapi.json` (`cd api && mvn -q verify -Dodin.updateOpenApi=true`) y los tipos (`npm run generate:types` en `panel/` y en `mcp/`).
-- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, y `SearchBatteryIT` mantiene 27 de 30.
+- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, y `SearchBatteryIT` mantiene 27 de 30 y `SearchScaleBatteryIT` su umbral.
 - **Dónde se trabaja:** en `.worktrees/fase-2`. No se ejecutan `make up` ni `make down` y no se toca `deploy/.env`.
 - **Git:**
   - cada tarea en su rama `task/fase-2-conocimiento/<tarea>`;
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V11__similar_cases.sql`, o la siguiente libre si el bloque 1 o la 2a usaron otra.
+- **Migración:** `V14__similar_cases.sql`, o la siguiente libre si otro bloque usó antes el número (el orden de D-049 la deja en V14: V11 es del bloque 1, V12 del 3 y V13 del 7).
 - **Datos:** solo ficticios.
 
 ## Foco de revisión
 
-1. **Un caso de un proyecto restringido ajeno** no aparece entre los parecidos, ni siquiera cuando es el que mejor encaja. Prueba en la tarea 2 (`restrictedProjectOfOthersIsInvisible`).
+1. **Un caso de un proyecto cerrado del que no es miembro** no aparece entre los parecidos, ni siquiera cuando es el que mejor encaja. Prueba en la tarea 2 (`restrictedProjectOfOthersIsInvisible`).
 2. **Un caso de dos páginas que coincide en las dos** sale una sola vez, con sus dos páginas. Prueba en la tarea 2 (`twoMatchingPagesGiveOneCase`).
 3. **Un caso largo cuya mejor página es la última:** salen las primeras páginas más esa, y `truncated`. Prueba en la tarea 2 (`bestPageBeyondLimitIsAppended`).
 4. **Un documento duplicado subido otra vez con otra marca de caso:** la marca no cambia. Prueba en la tarea 1 (`duplicateUploadKeepsCaseDocument`).
@@ -110,7 +114,9 @@ int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean 
 | `GET /v1/documents?caseDocument=` | — | `WorkerDocumentView` gana `caseDocument` | 2 |
 | `POST /v1/similar-cases` | `SimilarCasesRequestBody { queries, projectId?, limit? }` | `SimilarCasesResponse { cases: SimilarCaseView[], noSource }` | 2 |
 
-`SimilarCaseView` tiene los campos del spec 6. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, y `originLabel` es `null` o «Ficha aportada por un trabajador, redactada con IA» (D-040).
+El `PATCH` lo crea este bloque. El bloque 7 usa sus propias rutas (`PUT` y `DELETE .../superseded-by`), sin conflicto. Donde esta tabla dice que `DocumentView` gana `caseDocument`, ya ganó antes `supersededBy` y `supersededAt` en el bloque 7: se añade `caseDocument` a los que ya tiene.
+
+`SimilarCaseView` tiene los campos del spec 6, más `superseded` y `replacement` (bloque 7). `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, y `originLabel` es `null` o «Ficha aportada por un trabajador, redactada con IA» (D-040).
 
 | Ruta | Cuerpo | Respuesta | Tarea |
 |---|---|---|---|
@@ -124,7 +130,7 @@ Rama `task/fase-2-conocimiento/marca-de-caso`. Spec 4 y 5.1.
 
 **Ficheros:**
 - **Crear:**
-  - `V11__similar_cases.sql`;
+  - `V14__similar_cases.sql`;
   - `domain/knowledge/QuestionKind.java`;
   - `application/document/UpdateDocument.java` y `UpdateDocumentTest`;
   - `application/document/MarkCaseDocuments.java` y `MarkCaseDocumentsTest`.
@@ -138,7 +144,7 @@ Rama `task/fase-2-conocimiento/marca-de-caso`. Spec 4 y 5.1.
   - contrato y tipos.
 
 **Valores:**
-- `V11`:
+- `V14`:
   - `ALTER TABLE document ADD COLUMN case_document boolean NOT NULL DEFAULT false`;
   - `ALTER TABLE question_record ADD COLUMN kind text NOT NULL DEFAULT 'SEARCH'`;
   - `INSERT INTO company_capability (company_id, capability) SELECT id, 'SIMILAR_CASES' FROM company ON CONFLICT DO NOTHING`.
@@ -169,8 +175,8 @@ Rama `task/fase-2-conocimiento/marca-de-caso`. Spec 4 y 5.1.
 - [ ] **Paso 3:** PostgreSQL:
   - `PostgresDocumentRepositoryIT.storesAndListsCaseDocument` y `markCaseDocumentsIsAllOrNothing`;
   - `PostgresQuestionLogIT.storesKind`, o la prueba del registro que exista;
-  - `migrationGivesSimilarCasesToExistingCompanies`, en la prueba de migración: una empresa insertada antes de `V11` tiene `SIMILAR_CASES` después.
-  - Escribe `V11`.
+  - `migrationGivesSimilarCasesToExistingCompanies`, en la prueba de migración: una empresa insertada antes de `V14` tiene `SIMILAR_CASES` después.
+  - Escribe `V14`.
 - [ ] **Paso 4:** web y contrato:
   - `AdminApiTest`: `uploadAcceptsCaseDocumentField`, `patchDocumentMarksCase` y `caseMarksMarksBatch`;
   - `IsolationTest.otherCompanyAdminCannotMarkForeignDocument` y `otherCompanyAdminCannotMarkForeignBatch`.
@@ -192,12 +198,14 @@ Rama `task/fase-2-conocimiento/buscar-casos`. Spec 5.2, 5.3 y 6.
   - `WorkerController`, `Requests`, `Responses`, `UseCaseConfiguration` y `TestWiring`;
   - contrato y tipos.
 
-**Interfaces que consume:** `Document.caseDocument`, `Capability.SIMILAR_CASES` y `QuestionKind` (tarea 1). `WorkerAccess` y `ProjectVisibility` (2a).
+**Interfaces que consume:** `Document.caseDocument`, `Capability.SIMILAR_CASES` y `QuestionKind` (tarea 1). `WorkerAccess` (con `Granted(companyId, visibility, content)`), `ProjectMemberRepository` y `ProjectVisibility` (2a). `SearchHit.superseded` y `replacement`, y la consulta común con el orden «sustituidos detrás» (bloque 7).
 
 **Valores:**
 - `FindSimilarCases`:
-  - `WorkerAccess.require(actor, organizations, Capability.SIMILAR_CASES)`;
-  - proyecto como en `SearchKnowledge`, con 404 «Proyecto no encontrado» si no es visible;
+  - recibe `ProjectMemberRepository projectMembers` en el constructor, como `SearchKnowledge` y `VerifyCitation`;
+  - `var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SIMILAR_CASES)`;
+  - proyecto como en `SearchKnowledge`: `WorkerAccess.requireProject(access.visibility(), projectId)`, con 404 «Proyecto no encontrado» si no es visible (un proyecto cerrado del que no es miembro);
+  - la consulta lleva `access.content()` como visibilidad;
   - términos: al menos uno con texto, o 400 «Indica al menos una consulta con texto»;
   - límite con `WorkerAccess.cap(limit, 5, 10)`;
   - registra `QuestionRecord(kind = SIMILAR_CASES, hitCount = número de casos)`.
@@ -212,7 +220,8 @@ Rama `task/fase-2-conocimiento/buscar-casos`. Spec 5.2, 5.3 y 6.
   - ordena por `rank DESC, title, id` y aplica `LIMIT`;
   - una segunda consulta trae las páginas de los documentos elegidos, con el mismo filtro de empresa y proyectos.
   - Sin `author` en el `SELECT`.
-- `ListDocuments` gana `Optional<Boolean> caseDocument`, ligado a `SEARCH_KNOWLEDGE`.
+- `ListDocuments` gana `Optional<Boolean> caseDocument`, ligado a `SEARCH_KNOWLEDGE`, encima del filtro por tema del bloque 3.
+- Las piezas comunes que se sacan a `SearchSql` incluyen lo del bloque 7: la resolución del sustituto con el filtro de empresa y de proyectos y el orden «sustituidos detrás de los vigentes, sin cambiar el orden entre ellos». `SimilarCase` gana `superseded` y `replacement` (el mismo tipo que usa `SearchHit` tras el bloque 7) y `SimilarCaseView` los lleva igual.
 
 - [ ] **Paso 1:** pruebas de dominio y de caso de uso; comprueba que fallan:
   - `CasePageSelectionTest`:
@@ -227,7 +236,8 @@ Rama `task/fase-2-conocimiento/buscar-casos`. Spec 5.2, 5.3 y 6.
     - `blankTermsAreRejected`;
     - `capabilityDisabledIsForbidden`;
     - `adminActorIsForbidden`;
-    - `restrictedProjectFilterIsNotFound`;
+    - `restrictedProjectFilterIsNotFound`: el filtro por un proyecto cerrado del que no es miembro da 404;
+    - `openProjectOfWhichNotMemberContributesCases`: un proyecto abierto a toda la empresa (`restricted = false`) del que no es miembro sí aporta casos;
     - `recordsQuestionOfKindSimilarCases`;
     - `actorOfAnotherCompanySeesOnlyItsCompany`.
   - `ListDocumentsTest.filtersByCaseDocument`.
@@ -235,8 +245,10 @@ Rama `task/fase-2-conocimiento/buscar-casos`. Spec 5.2, 5.3 y 6.
 - [ ] **Paso 3:** PostgreSQL. Saca las piezas comunes a `SearchSql` sin cambiar `search`; `SearchBatteryIT` tiene que seguir en 27 de 30. Pruebas en `PostgresKnowledgeSearchIT`:
   - `onlyCaseDocumentsAndApprovedCardsAreCandidates`;
   - `twoMatchingPagesGiveOneCase`;
-  - `restrictedProjectOfOthersIsInvisible`;
+  - `restrictedProjectOfOthersIsInvisible`: un proyecto cerrado del que no es miembro no aporta casos;
+  - `openProjectOfOthersContributesCases`: un proyecto con `restricted = false` sí;
   - `projectlessCaseIsVisibleToEveryone`;
+  - `supersededCaseComesAfterCurrentOnesWithReplacement`;
   - `otherCompanyCasesAreNeverReturned`;
   - `noAuthorIsSelected`, que comprueba que `SimilarCase` no tiene campo de autor y que la respuesta JSON de la tarea no lo lleva;
   - `pendingAndRejectedCardsAreExcluded`.
@@ -264,10 +276,10 @@ Rama `task/fase-2-conocimiento/bateria-casos`. Spec 9.
     - `threshold.txt`.
   - `SimilarCasesBatteryIT`.
 
-**Interfaces que consume:** `PostgresKnowledgeSearch.findSimilarCases` (tarea 2).
+**Interfaces que consume:** `PostgresKnowledgeSearch.findSimilarCases` (tarea 2) y el cargador de corpus compartido del bloque 6.
 
 **Valores:**
-- **Carga:** igual que `SearchBatteryIT`: páginas separadas por `=== Página N ===`, sin pasar por los lectores, y una empresa por comunidad (`c1-olmo14`, `c2-almendros`, `c3-puerto3`). Las fichas de caso van con `case_document = true` y el resto con `false`.
+- **Carga:** con el cargador de corpus compartido que crea el bloque 6 (diseño del bloque 6, 5.2), no con uno propio: páginas separadas por `=== Página N ===`, sin pasar por los lectores. Las fichas de caso van con `case_document = true` y el resto con `false`. El actor es un miembro de los proyectos que haga falta (D-047).
 - **Casos nuevos:** 12 fichas ficticias.
   - Cada una se parece a un grupo de 1 a 3 casos del corpus por el mismo problema: qué falla, en qué elemento y por qué causa.
   - Dos de ellas reproducen G1 (esperados `caso-2024-017-filtracion-azotea` y `caso-2025-004-filtracion-cubierta`) y G2 (esperado `caso-2025-011-fuga-riego`) de `bateria.json`.
@@ -313,6 +325,7 @@ Rama `task/fase-2-conocimiento/casos-panel-mcp`. Spec 7, 8 y 10.
   - **capacidades:** «Casos parecidos».
   - Con los componentes de la dirección visual.
 - `demo-client.ts`, paso nuevo:
+  0. el trabajador de la demo se hace miembro de los proyectos de las comunidades que hagan falta para enseñar la duda que se repite entre comunidades, con `PUT /v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}` (D-047);
   1. sube los dos casos ficticios marcados como caso y uno sin marcar;
   2. `findSimilarCases` devuelve los dos con `pages` y sin `authorName`, y no el otro documento.
 - `admin.spec.ts`, contra la API real: subir dos ficheros a la vez marcados como caso, y marcar y desmarcar una selección.
@@ -341,7 +354,8 @@ Rama `task/fase-2-conocimiento/casos-panel-mcp`. Spec 7, 8 y 10.
   - ausencia de autores;
   - que la consulta común no se ha duplicado.
 - `make check` y `make demo` ejecutados por el CTO.
-- Informe del bloque con las cifras de las dos baterías, T-016 en el registro técnico y copia del informe en la carpeta de notas para el CEO.
+- Regresión: `SearchBatteryIT` en 27 de 30, `SearchScaleBatteryIT` con su umbral y, al cerrar el bloque, la batería de respuestas (diseño del bloque 6, 6.6). El bloque cambia lo que ve la IA, así que se mide.
+- Informe del bloque con las cifras de las dos baterías, su entrada en el registro técnico (el siguiente número libre al escribirla) y copia del informe en la carpeta de notas para el CEO.
 
 ## Orden y paralelismo
 
@@ -350,5 +364,5 @@ Rama `task/fase-2-conocimiento/casos-panel-mcp`. Spec 7, 8 y 10.
 
 ## Modelos de los revisores
 
-- **Opus:** tareas 1 y 2, que tocan capacidades, aislamiento y proyectos restringidos.
+- **Opus:** tareas 1 y 2, que tocan capacidades, aislamiento y proyectos cerrados.
 - **Sonnet:** tareas 3 y 4.

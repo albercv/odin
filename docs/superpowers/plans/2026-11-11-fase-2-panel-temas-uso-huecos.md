@@ -22,13 +22,14 @@
 - el de la dirección visual (`2026-11-10-direccion-visual-design.md`);
 - el del bloque 3.
 
-Quien ejecute una tarea lee el spec, el de la dirección visual y el del bloque 3.
+Se aplican D-047 y D-048. Quien ejecute una tarea lee el spec, el de la dirección visual y el del bloque 3.
 
 ## Cuándo se ejecuta
 
-- Tras el cierre de la 2a y **después de los bloques 2 y 3**, cuando lo diga el CEO.
+- Tras el cierre de la 2a y **después de todos los demás bloques de la fase 2**, cuando lo diga el CEO. En el orden de D-049 es el último: 1, 3, 6, 7, 2, 5 y este.
   - Del bloque 2 usa `question_record.kind`.
   - Del bloque 3 usa la API de temas y `tagging-status`.
+  - Del bloque 5 usa las rutas `GET /v1/me/cards` y `GET /v1/me/questions` para el volumen entregado.
 - Las respuestas y la validación del CEO (D-040, D-043, D-044 y D-045) ya están aplicadas en el spec y en este plan.
 
 ## Restricciones globales
@@ -38,7 +39,8 @@ Quien ejecute una tarea lee el spec, el de la dirección visual y el del bloque 
 - **Clean Code (D-029):** métodos de 30 líneas como máximo (Checkstyle y ESLint), sin lógica duplicada y con comentarios mínimos.
 - **Nombres:** identificadores en inglés, explicativos y en camelCase. Textos del panel, documentación y commits en español.
 - **D-005, D-036 y D-045, sin excepciones:**
-  - por persona, solo `questions` y `cardsSaved`, ordenados por nombre;
+  - por persona, solo `questions` y `cardsSaved`, ordenados por `displayName`; cada fila lleva además `userId`, `displayName` y `memberCode` (D-048);
+  - el código de persona sale solo en el panel: nunca en el MCP, ni en las citas, ni en las fichas;
   - no se ordena por cantidad en ningún sitio, ni en la API ni en el panel;
   - no hay listas de preguntas por persona;
   - los huecos van sin autor y con el día, sin la hora, también en la API;
@@ -52,14 +54,14 @@ Quien ejecute una tarea lee el spec, el de la dirección visual y el del bloque 
   - componentes de la dirección visual (`PageHeader`, `Section`, `Table`, `EmptyState`, `StatusPill`, `FormDialog`, `ConfirmDialog` y `Toast`) y sus reglas de accesibilidad;
   - ninguna acción se da por terminada sin un paso de Playwright contra la API real (regla de la fase 1.1).
 - **Contrato:** si cambia la API, en la misma tarea se regeneran `api/openapi.json` (`cd api && mvn -q verify -Dodin.updateOpenApi=true`) y los tipos (`npm run generate:types` en `panel/` y en `mcp/`).
-- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, y `SearchBatteryIT` mantiene 27 de 30.
+- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, y `SearchBatteryIT` mantiene 27 de 30 y `SearchScaleBatteryIT` su umbral.
 - **Dónde se trabaja:** en `.worktrees/fase-2`. No se ejecutan `make up` ni `make down`.
 - **Git:**
   - cada tarea en su rama `task/fase-2-conocimiento/<tarea>`;
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V13__delivered_volume.sql`, solo en la tarea 2, o la siguiente libre.
+- **Migración:** `V15__delivered_volume.sql`, solo en la tarea 2, o la siguiente libre (V15 en el orden de D-049).
 - **Datos:** solo ficticios.
 
 ## Foco de revisión
@@ -89,8 +91,8 @@ public record DocumentCounts(int uploaded, int ready, int failed, int waitingFor
 public record TaggingCounts(int tagged, int pending) { }
 public record CompanyUsage(QuestionCounts questions, int questionsWithoutResults, CardCounts cards,
         DocumentCounts documents, Optional<TaggingCounts> tagging) { }
-public record PersonUsage(Optional<UserId> userId, String displayName, int questions, int cardsSaved,
-        boolean departed) { }
+public record PersonUsage(Optional<UserId> userId, String displayName, Optional<String> memberCode, int questions,
+        int cardsSaved, boolean departed) { }  // displayName = User.displayName(); memberCode = personCode + "-" + companyCode
 public record GapGroup(String text, QuestionKind kind, int times, LocalDate lastAskedOn) { }  // día, sin hora
 public final class ReportMonth { static YearMonth resolve(Optional<String> requested, Clock clock, ZoneId zone); }
 public class GetUsageStats { public UsageReport execute(Actor actor, CompanyId companyId, Optional<String> month); }
@@ -111,7 +113,8 @@ public class GetDeliveredVolume { public DeliveredVolumeReport execute(Actor act
 public record DeliveredVolumeReport(YearMonth month, List<DeliveryTotal> totals) { }
 ```
 
-- La fila de bajas es `PersonUsage(Optional.empty(), "Personas dadas de baja", n, m, true)`.
+- La fila de bajas es `PersonUsage(Optional.empty(), "Personas dadas de baja", Optional.empty(), n, m, true)`: sin código.
+- `memberCode` se calcula como en `MemberView.of` (2a): `user.personCode() + "-" + companyCode`, con `company.code`. `peopleUsage` va ordenada por `displayName`.
 - Mensajes de `ReportMonth`:
   - 400, «El mes tiene que tener la forma AAAA-MM»;
   - 400, «Solo se pueden consultar los 12 últimos meses».
@@ -120,7 +123,7 @@ public record DeliveredVolumeReport(YearMonth month, List<DeliveryTotal> totals)
 
 | Ruta | Respuesta | Tarea |
 |---|---|---|
-| `GET /v1/admin/companies/{companyId}/usage-stats?month=` | `UsageStatsView { month, company, people }` | 1 |
+| `GET /v1/admin/companies/{companyId}/usage-stats?month=` | `UsageStatsView { month, company, people }`, con `people[] { userId, displayName, memberCode, questions, cardsSaved }` | 1 |
 | `GET /v1/admin/companies/{companyId}/gaps?month=` | `GapView[] { text, kind, times, lastAskedOn }`, con `lastAskedOn` en formato `YYYY-MM-DD` | 1 |
 | `GET /v1/admin/companies/{companyId}/delivered-volume?month=` | `DeliveredVolumeView { month, totals: [{ tool, calls, bytes }] }` | 2 |
 | `GET /v1/admin/companies/{companyId}/tagging-status` | La del bloque 3 | — |
@@ -141,6 +144,7 @@ Rama `task/fase-2-conocimiento/uso-y-huecos`. Spec 5.2, 5.4 y 6.
 
 **Valores:**
 - Todos los recuentos, por mes y con `odin.timezone` (bloque 3): `date_trunc('month', at AT TIME ZONE :zone)`.
+- **Código de persona (D-048):** la consulta une `app_user.person_code` con `company.code`. Solo la lleva `UsageStatsView`: ninguna respuesta del trabajador, del MCP, de las citas ni de las fichas la lleva.
 - **Quién sale en `peopleUsage`** (spec 5.2): las pertenencias vivas de la empresa, más los autores con preguntas o fichas en esa empresa y mes. Los que tienen `app_user.deleted_at` se suman en la fila de bajas.
 - **Huecos:**
   - `hit_count = 0`, agrupados por `regexp_replace(lower(unaccent(text)), '\s+', ' ', 'g')`;
@@ -157,7 +161,7 @@ Rama `task/fase-2-conocimiento/uso-y-huecos`. Spec 5.2, 5.4 y 6.
     - `monthOutsideLastTwelveIsRejected`;
     - `malformedMonthIsRejected`.
   - `GetUsageStatsTest`:
-    - `returnsCompanyAndPeople`;
+    - `returnsCompanyAndPeople`, con `displayName` y `memberCode` de cada persona;
     - `workerIsForbidden`;
     - `adminOfAnotherCompanyIsForbidden`;
     - `unknownCompanyIsNotFound`.
@@ -168,8 +172,9 @@ Rama `task/fase-2-conocimiento/uso-y-huecos`. Spec 5.2, 5.4 y 6.
   - `countsCardsByStatusAtCompanyLevelOnly`;
   - `countsDocumentsByStatus`;
   - `peopleAreOrderedByNameWhateverTheirCounts`;
+  - `peopleCarryMemberCodeLikeMemberView`: `personCode-companyCode`, el mismo texto que `MemberView.of`;
   - `personWithLiveMembershipAndNoActivityAppearsWithZeros`;
-  - `departedPeopleAreSummedInOneAnonymousRow`;
+  - `departedPeopleAreSummedInOneAnonymousRow`, sin código;
   - `gapsGroupIgnoringAccentsCaseAndSpaces`;
   - `gapsHaveNoAuthorAndOnlyTheDay`;
   - `nothingOfAnotherCompanyIsCounted`;
@@ -187,12 +192,12 @@ Rama `task/fase-2-conocimiento/volumen-entregado`. Spec 5.3.
 **Ficheros:**
 - **Crear:**
   - aplicación: `application/port/DeliveryMeter.java` y, en `application/usage/`, `WorkerTool`, `DeliveryTotal`, `GetDeliveredVolume` y `DeliveredVolumeReport`, con sus pruebas;
-  - PostgreSQL: `PostgresDeliveryMeter`, con su IT, y `V13__delivered_volume.sql`;
+  - PostgreSQL: `PostgresDeliveryMeter`, con su IT, y `V15__delivered_volume.sql`;
   - web: `adapter/web/security/DeliveryMeteringFilter.java`, con su prueba.
 - **Modificar:** `UsageController`, `WebConfig` (orden de filtros), el cableado, el contrato y los tipos.
 
 **Valores:**
-- `V13`: `delivery_usage (company_id, month date, tool text, calls bigint, bytes bigint, PRIMARY KEY (company_id, month, tool))`, con seguridad por filas por empresa y los permisos de `odin_app` que tiene sobre `question_record`.
+- `V15`: `delivery_usage (company_id, month date, tool text, calls bigint, bytes bigint, PRIMARY KEY (company_id, month, tool))`, con seguridad por filas por empresa y los permisos de `odin_app` que tiene sobre `question_record`.
 - `DeliveryMeteringFilter`:
   - va después de `ActorResolutionFilter` y actúa sobre todas las rutas del trabajador del spec 5.3, cada una con su `WorkerTool`;
   - una ruta del trabajador sin `WorkerTool` hace fallar una prueba (`everyWorkerRouteHasATool`), para que un bloque futuro no se quede fuera sin que nadie lo vea;
@@ -214,7 +219,7 @@ Rama `task/fase-2-conocimiento/volumen-entregado`. Spec 5.3.
     - `adminRoutesAreNotMetered`;
     - `meterFailureDoesNotBreakResponse`.
   - `PostgresDeliveryMeterIT`: `upsertSumsCallsAndBytes`, `monthUsesInstallationZone` y `rowLevelSecurityHidesOtherCompany`.
-- [ ] **Paso 2:** implementa y escribe `V13`.
+- [ ] **Paso 2:** implementa y escribe `V15`.
 - [ ] **Paso 3:** web y contrato: `AdminApiTest.deliveredVolumeRoute` e `IsolationTest.otherCompanyAdminCannotReadDeliveredVolume`.
 - [ ] **Paso 4:** regenera el contrato y los tipos. `make check` y `make demo` terminan con 0.
 - [ ] **Paso 5:** commit «feat: volumen entregado a la IA del trabajador».
@@ -302,7 +307,7 @@ Rama `task/fase-2-conocimiento/panel-uso-huecos`. Spec 5.2 a 5.5.
 - **`MonthPicker`:** un `<select>` con la etiqueta «Mes» y los 12 últimos meses en español («noviembre de 2026»).
 - **`Usage`:**
   - `Section` «Empresa», con la tabla de recuentos;
-  - `Section` «Por persona», con la tabla «Persona · Preguntas · Fichas aportadas». La tabla:
+  - `Section` «Por persona», con la tabla «Persona · Código · Preguntas · Fichas aportadas», con el nombre y apellidos en «Persona» y el `memberCode` (por ejemplo `7F3K-E2D`) en «Código». La fila «Personas dadas de baja» no lleva código. La tabla:
     - no tiene botones de orden;
     - se presenta en el orden de la API;
     - no lleva fila de total.
@@ -328,6 +333,8 @@ Rama `task/fase-2-conocimiento/panel-uso-huecos`. Spec 5.2 a 5.5.
     - `showsCompanyCounts`;
     - `peopleTableKeepsApiOrder`;
     - `peopleTableHasNoSortControls`;
+    - `peopleTableShowsNameAndMemberCode`;
+    - `departedRowHasNoCode`;
     - `showsDescriptiveNoteWithoutInternalReferences`;
     - `showsDeliveredVolumeWithFixedText`;
     - `neverLabelsItConsumptionOrSpending`;
@@ -357,7 +364,7 @@ Rama `task/fase-2-conocimiento/panel-uso-huecos`. Spec 5.2 a 5.5.
   - ningún texto cita decisiones internas.
 - **Rendimiento:** con datos ficticios a escala (10.000 preguntas y 2.000 documentos en una empresa, generados por un script del scratchpad), se miden las tres rutas. La cifra va al informe, con la máquina.
 - `make check` y `make demo` ejecutados por el CTO.
-- Informe del bloque, T-018 en el registro técnico y copia del informe en la carpeta de notas para el CEO.
+- Informe del bloque, su entrada en el registro técnico (el siguiente número libre al escribirla) y copia del informe en la carpeta de notas para el CEO.
 
 ## Orden y paralelismo
 
@@ -367,5 +374,5 @@ Rama `task/fase-2-conocimiento/panel-uso-huecos`. Spec 5.2 a 5.5.
 
 ## Modelos de los revisores
 
-- **Opus:** tareas 1 y 2 (D-005, D-036 y aislamiento) y tarea 4, por lo que se ve de las personas.
+- **Opus:** tareas 1 y 2 (D-005, D-036, D-048 y aislamiento) y tarea 4, por lo que se ve de las personas.
 - **Sonnet:** tarea 3.

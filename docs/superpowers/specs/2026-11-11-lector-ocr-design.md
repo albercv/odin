@@ -193,7 +193,7 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
 
 - En este Mac la API corre en Docker y el puente fuera, con `ODIN_READER_URL=http://host.docker.internal:8077` en `deploy/.env`.
 - **Por verificar en el plan:** que un servicio que escucha en `127.0.0.1` del Mac responde desde el contenedor por `host.docker.internal`.
-  - Si no responde, el puente escucha en la interfaz que use Docker Desktop y se arranca con el secreto compartido del apartado 4. Se anota en T-015.
+  - Si no responde, el puente escucha en la interfaz que use Docker Desktop y se arranca con el secreto compartido del apartado 4. Se anota en su entrada del registro técnico.
 - Nunca se escucha fuera de `127.0.0.1` sin ese secreto: el puente se niega a arrancar así.
 
 ## 8. Pruebas y verificación
@@ -247,7 +247,7 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
   - Con una copia de la instalación del propietario, solo si él da permiso. Lo pide el CEO, y el CTO le avisa antes de esa verificación (D-041).
   - La copia se queda en el equipo, fuera de git y con las reglas de `private/`, y se borra al terminar.
   - El informe da recuentos, nunca texto.
-- Decisiones registradas en el registro técnico (T-015).
+- Decisiones registradas en el registro técnico (su entrada, con el siguiente número libre al escribirla).
 
 ## 10. Lo que queda al constructor
 
@@ -282,3 +282,10 @@ El CEO autorizó adelantar el contrato y el puente (D-046). Su revisión final d
 - **Cuerpo con `Content-Length`.** El puente no admite el envío por trozos (*chunked*), así que el adaptador envía el cuerpo entero (plan, tarea 6).
 - **400 y 404 son fallo del cliente,** no del documento: se tratan como fallo del lector y quedan en el registro del servidor (plan, tarea 6).
 - **Tiempo máximo en `/health`.** El puente atiende una petición cada vez y, mientras lee, `/health` no responde. Por eso el adaptador fija un tiempo máximo en la petición, no solo al conectar (plan, tarea 6).
+
+## 14. Revisión tras la 2a y D-049 (2026-11-11)
+
+- **Migración:** la migración del lector pasa de V10 a `V11__reader_lane`, porque la 2a ocupa hasta V10 (`V10__person_names_and_codes`).
+- **Orden (D-049):** sigue siendo el primer bloque de la fase 2.
+- **Registro técnico:** el número fijo desaparece; se usa el siguiente libre al escribir la entrada.
+- **Visibilidad:** este bloque no lee contenido de trabajadores; no usa `WorkerAccess` y no cambia con D-047.
