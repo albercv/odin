@@ -16,7 +16,6 @@ function toRgba(hex: string, alpha: number): string {
 }
 
 class BrainDrawing {
-  private readonly ctx: CanvasRenderingContext2D;
   private readonly rand = createRandom(7);
   private readonly pulses: Pulse[] = [];
   private readonly flash: Float32Array;
@@ -26,9 +25,8 @@ class BrainDrawing {
   private clock = 0;
   private spawnAt = 0;
 
-  constructor(private readonly canvas: HTMLCanvasElement, private readonly geometry: BrainGeometry,
-    private readonly placement: BrainPlacement) {
-    this.ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  constructor(private readonly canvas: HTMLCanvasElement, private readonly ctx: CanvasRenderingContext2D,
+    private readonly geometry: BrainGeometry, private readonly placement: BrainPlacement) {
     this.flash = new Float32Array(geometry.points.length);
   }
 
@@ -147,7 +145,9 @@ class BrainDrawing {
 }
 
 export function createBrainRenderer(canvas: HTMLCanvasElement, geometry: BrainGeometry, placement: BrainPlacement) {
-  const drawing = new BrainDrawing(canvas, geometry, placement);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return undefined;
+  const drawing = new BrainDrawing(canvas, ctx, geometry, placement);
   return {
     resize: () => drawing.resize(),
     setColor: (hex: string) => drawing.setColor(hex),
