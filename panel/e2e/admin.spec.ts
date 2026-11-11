@@ -294,17 +294,17 @@ async function promoteWorkerWithoutPassword(page: Page, browser: Browser): Promi
   console.log('✓ Admin 15: trabajadora sin contraseña ascendida a administradora; el panel pide la contraseña y ella entra con ella');
 }
 
-async function removeProjectMemberFromCompany(page: Page): Promise<void> {
+async function deleteProjectMember(page: Page): Promise<void> {
   const second = PROJECT_PEOPLE[1] ?? '';
   const users = usersSection(page);
   await openActions(users, second);
-  await users.getByRole('button', { name: `Quitar ${second}`, exact: true }).click();
-  await confirmDialog(page, `¿Quitar a ${second} de esta empresa? Sus claves y sus proyectos de esta empresa dejarán de valer.`, 'Quitar');
+  await users.getByRole('button', { name: `Borrar ${second}`, exact: true }).click();
+  await confirmDialog(page, `¿Borrar a ${second}? Desaparece de todas las empresas y de sus proyectos, y sus claves dejan de valer. No se puede deshacer.`, 'Borrar');
   await expect(row(users, second)).toHaveCount(0);
   await expect(row(projectsSection(page), CLOSED_PROJECT)).toContainText('1 miembro');
   const members = await openProjectMembers(page);
   await expect(members.getByRole('list', { name: 'Miembros del proyecto' })).not.toContainText(second);
-  console.log('✓ Admin 16: una persona miembro de un proyecto, quitada de la empresa por el administrador del grupo: «Quién lo ve» baja en uno y ya no figura');
+  console.log('✓ Admin 16: una persona miembro de un proyecto, borrada por el administrador del grupo: «Quién lo ve» baja en uno y ya no figura');
 }
 
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
@@ -326,7 +326,7 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await closedProjectWithMembers(page);
   await removeFromProjectAndSeeAccesses(page);
   await promoteWorkerWithoutPassword(page, browser);
-  await removeProjectMemberFromCompany(page);
+  await deleteProjectMember(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);
 });
