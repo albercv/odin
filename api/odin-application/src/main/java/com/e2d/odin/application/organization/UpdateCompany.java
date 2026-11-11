@@ -1,0 +1,29 @@
+package com.e2d.odin.application.organization;
+
+import com.e2d.odin.application.port.OrganizationRepository;
+import com.e2d.odin.application.shared.AccessPolicy;
+import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.NotFoundException;
+
+public class UpdateCompany {
+
+    private final OrganizationRepository organizations;
+
+    public UpdateCompany(OrganizationRepository organizations) {
+        this.organizations = organizations;
+    }
+
+    public Company execute(Actor actor, CompanyId id, CompanyChanges changes) {
+        AccessPolicy.requireGroupAdmin(actor);
+        Company company = organizations.findCompany(id).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
+        Company named = changes.name().map(n -> company.withName(Validation.requireText(n, "el nombre")))
+                .orElse(company);
+        Company updated = changes.code().map(named::withCode).orElse(named);
+        CompanyCodes.requireFree(organizations, updated.code(), id);
+        organizations.saveCompany(updated);
+        return updated;
+    }
+}

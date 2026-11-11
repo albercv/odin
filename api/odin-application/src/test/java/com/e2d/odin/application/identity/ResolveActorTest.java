@@ -51,7 +51,7 @@ class ResolveActorTest {
     }
 
     private void givenWorker(boolean personActive, boolean membershipActive) {
-        users.save(new User(workerId, "Wanda", Optional.empty(), false, personActive, Optional.empty()));
+        users.save(new User(workerId, "Wanda", Optional.of("Pérez"), People.nextCode(), Optional.empty(), false, personActive, Optional.empty()));
         memberships.save(new Membership(workerId, company, Set.of(Role.WORKER), membershipActive));
         keys.save(new AccessKey(keyId, workerId, company, "portátil", "abcdefgh", "h:secreto", clock.instant(),
                 Optional.empty()));
@@ -189,7 +189,7 @@ class ResolveActorTest {
         String token = givenSession();
         UserId adminId = sessions.findByTokenHash(secrets.hash(token)).orElseThrow().userId();
         User admin = users.findById(adminId).orElseThrow();
-        users.save(admin.updated(admin.displayName(), admin.email(), false));
+        users.save(admin.withActive(false));
 
         assertThatThrownBy(() -> resolve.fromSessionToken(token))
                 .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);

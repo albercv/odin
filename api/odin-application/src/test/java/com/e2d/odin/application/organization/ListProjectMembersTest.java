@@ -38,7 +38,7 @@ class ListProjectMembersTest {
         members.add(obra, wanda);
 
         assertThat(list.execute(Actors.companyAdmin(company), company, obra))
-                .containsExactly(new ProjectMemberView(wanda, "Wanda"));
+                .containsExactly(new ProjectMemberView(wanda, "Wanda Pérez"));
     }
 
     @Test

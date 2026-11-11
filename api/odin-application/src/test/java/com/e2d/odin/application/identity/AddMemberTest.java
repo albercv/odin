@@ -12,6 +12,7 @@ import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.fake.SequencePersonCodeGenerator;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
@@ -40,19 +41,20 @@ class AddMemberTest {
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(organizations);
     private final FakePasswordHasher passwords = new FakePasswordHasher();
+    private final SequencePersonCodeGenerator codes = new SequencePersonCodeGenerator("7F3K", "9ZQ2", "K4MN");
     private final AddMember add = new AddMember(users, memberships, organizations, projectMembers,
-            passwords, new SequenceIdGenerator());
+            passwords, new SequenceIdGenerator(), codes);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final Actor groupAdmin = Actors.groupAdmin();
 
     AddMemberTest() {
-        organizations.saveCompany(new Company(company, "A", EnumSet.allOf(Capability.class)));
-        organizations.saveCompany(new Company(other, "B", EnumSet.allOf(Capability.class)));
+        organizations.saveCompany(new Company(company, "A", "E2D", EnumSet.allOf(Capability.class)));
+        organizations.saveCompany(new Company(other, "B", "BBB", EnumSet.allOf(Capability.class)));
     }
 
     private static NewMember member(String email, Set<Role> roles, String password) {
-        return new NewMember("Pepe", Optional.ofNullable(email), roles, Optional.ofNullable(password), Set.of());
+        return new NewMember("Pepe", "Gómez", Optional.ofNullable(email), roles, Optional.ofNullable(password), Set.of());
     }
 
     private User existingAdminOfOtherCompany() {
@@ -63,10 +65,10 @@ class AddMemberTest {
     @Test
     void newPersonGetsUserAndMembership() {
         MemberAdded added = add.execute(Actors.companyAdmin(company), company,
-                new NewMember("Wanda", Optional.of(" W@Demo.test "), Set.of(Role.WORKER), Optional.empty(), Set.of()));
+                new NewMember("Wanda", "Pérez", Optional.of(" W@Demo.test "), Set.of(Role.WORKER), Optional.empty(), Set.of()));
 
         assertThat(added.alreadyExisted()).isFalse();
-        assertThat(added.user().displayName()).isEqualTo("Wanda");
+        assertThat(added.user().displayName()).isEqualTo("Wanda Pérez");
         assertThat(added.user().email()).contains("w@demo.test");
         assertThat(added.user().groupAdmin()).isFalse();
         assertThat(added.membership().roles()).containsExactly(Role.WORKER);
@@ -76,11 +78,57 @@ class AddMemberTest {
     }
 
     @Test
+    void newPersonGetsAGeneratedCode() {
+        MemberAdded added = add.execute(Actors.companyAdmin(company), company,
+                member("a@demo.test", Set.of(Role.WORKER), null));
+        MemberAdded another = add.execute(Actors.companyAdmin(company), company,
+                member("b@demo.test", Set.of(Role.WORKER), null));
+
+        assertThat(added.user().personCode()).isEqualTo("7F3K");
+        assertThat(another.user().personCode()).isEqualTo("9ZQ2");
+        assertThat(users.findById(added.user().id()).orElseThrow().personCode()).isEqualTo("7F3K");
+    }
+
+    @Test
+    void existingPersonKeepsNameAndCode() {
+        User carlos = existingAdminOfOtherCompany();
+
+        MemberAdded added = add.execute(groupAdmin, company, new NewMember("Otro", "Distinto",
+                Optional.of("c@demo.test"), Set.of(Role.WORKER), Optional.empty(), Set.of()));
+
+        assertThat(added.user().firstName()).isEqualTo(carlos.firstName());
+        assertThat(added.user().lastName()).isEqualTo(carlos.lastName());
+        assertThat(added.user().personCode()).isEqualTo(carlos.personCode());
+        assertThat(codes.calls()).isZero();
+    }
+
+    @Test
+    void missingFirstOrLastNameIsRejected() {
+        for (String[] names : new String[][] {{null, "Pérez"}, {" ", "Pérez"}, {"Pepe", null}, {"Pepe", " "}}) {
+            assertThatThrownBy(() -> add.execute(Actors.companyAdmin(company), company, new NewMember(names[0],
+                    names[1], Optional.empty(), Set.of(Role.WORKER), Optional.empty(), Set.of())))
+                    .isInstanceOf(ValidationException.class).hasMessage("Faltan el nombre o los apellidos");
+        }
+        assertThat(memberships.listByCompany(company)).isEmpty();
+    }
+
+    @Test
+    void memberCodeJoinsPersonAndCompanyCodes() {
+        MemberAdded added = add.execute(Actors.companyAdmin(company), company,
+                member(null, Set.of(Role.WORKER), null));
+
+        MemberView view = MemberView.of(added.user(), added.membership(), added.company().code());
+
+        assertThat(view.memberCode()).isEqualTo("7F3K-E2D");
+        assertThat(view.personCode()).isEqualTo("7F3K");
+    }
+
+    @Test
     void existingEmailGetsSecondMembershipAndKeepsNameAndPassword() {
         User carlos = existingAdminOfOtherCompany();
 
         MemberAdded added = add.execute(groupAdmin, company,
-                new NewMember("Otro nombre", Optional.of("C@demo.test"), Set.of(Role.COMPANY_ADMIN),
+                new NewMember("Otro nombre", "Otros apellidos", Optional.of("C@demo.test"), Set.of(Role.COMPANY_ADMIN),
                         Optional.of("otra-clave-1234"), Set.of()));
 
         assertThat(added.alreadyExisted()).isTrue();
@@ -186,7 +234,7 @@ class AddMemberTest {
     }
 
     private static NewMember worker(String email, Set<ProjectId> projectIds) {
-        return new NewMember("Wanda", Optional.of(email), Set.of(Role.WORKER), Optional.empty(), projectIds);
+        return new NewMember("Wanda", "Pérez", Optional.of(email), Set.of(Role.WORKER), Optional.empty(), projectIds);
     }
 
     @Test
@@ -232,7 +280,7 @@ class AddMemberTest {
     void projectsOnlyForWorkers() {
         ProjectId obra = Fixtures.project(organizations, company);
 
-        assertThatThrownBy(() -> add.execute(groupAdmin, company, new NewMember("Carlos",
+        assertThatThrownBy(() -> add.execute(groupAdmin, company, new NewMember("Carlos", "Pérez",
                 Optional.of("c2@demo.test"), Set.of(Role.COMPANY_ADMIN), Optional.of(PASSWORD), Set.of(obra))))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("Solo un trabajador de la empresa puede ser miembro");

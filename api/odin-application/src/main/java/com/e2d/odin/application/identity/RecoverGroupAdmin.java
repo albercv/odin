@@ -29,7 +29,7 @@ public class RecoverGroupAdmin {
         User admin = users.findGroupAdmin()
                 .orElseThrow(() -> new ConflictException("La instalación no está configurada"));
         String hash = passwords.hash(Validation.requirePassword(newPassword));
-        users.save(admin.updated(admin.displayName(), admin.email(), true).withPasswordHash(hash));
+        users.save(admin.withActive(true).withPasswordHash(hash));
         sessions.closeAllOf(admin.id());
     }
 }

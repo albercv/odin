@@ -3,6 +3,7 @@ package com.e2d.odin.application.identity;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.PasswordHasher;
+import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.InstallationToken;
@@ -20,14 +21,16 @@ public class SetUpInstallation {
     private final UserRepository users;
     private final PasswordHasher passwords;
     private final IdGenerator ids;
+    private final PersonCodeGenerator personCodes;
     private final InstallationSettings settings;
 
     public SetUpInstallation(OrganizationRepository organizations, UserRepository users, PasswordHasher passwords,
-            IdGenerator ids, InstallationSettings settings) {
+            IdGenerator ids, PersonCodeGenerator personCodes, InstallationSettings settings) {
         this.organizations = organizations;
         this.users = users;
         this.passwords = passwords;
         this.ids = ids;
+        this.personCodes = personCodes;
         this.settings = settings;
     }
 
@@ -42,8 +45,9 @@ public class SetUpInstallation {
         Validation.requirePassword(password);
         organizations.saveGroup(new Group(new GroupId(ids.newId()), name));
         UserId id = new UserId(ids.newId());
-        users.save(new User(id, Validation.requireText(adminName, "el nombre"), Optional.of(email),
-                true, true, Optional.of(passwords.hash(password))));
+        users.save(new User(id, Validation.requireText(adminName, "el nombre"), Optional.empty(),
+                PersonCodes.next(personCodes, users), Optional.of(email), true, true,
+                Optional.of(passwords.hash(password))));
         return id;
     }
 }

@@ -35,8 +35,8 @@ class ApplicationFlowIT extends AbstractIT {
     void fullFlowKeepsCompaniesIsolated() throws InterruptedException {
         ApiClient api = new ApiClient(port);
         setUpAndLogIn(api);
-        companyA = createCompany(api, "Empresa A");
-        companyB = createCompany(api, "Empresa B");
+        companyA = createCompany(api, "Empresa A", "EA");
+        companyB = createCompany(api, "Empresa B", "EB");
         keyA = workerKey(api, companyA);
         keyB = workerKey(api, companyB);
 
@@ -102,7 +102,7 @@ class ApplicationFlowIT extends AbstractIT {
     @Order(5)
     void deletedAuthorStillNamedInSearchHit() throws InterruptedException {
         ApiClient api = new ApiClient(port);
-        Reply admin = api.post("/v1/admin/companies/" + companyA + "/members", map("displayName", "Carla Autora",
+        Reply admin = api.post("/v1/admin/companies/" + companyA + "/members", map("firstName", "Carla", "lastName", "Autora",
                 "email", "carla@ejemplo.test", "roles", List.of("COMPANY_ADMIN"), "password", ADMIN_PASSWORD),
                 "Cookie", adminCookie);
         assertThat(admin.status()).isEqualTo(201);
@@ -178,7 +178,7 @@ class ApplicationFlowIT extends AbstractIT {
     @Order(8)
     void adminWhoAlsoWorksReviewsOwnCard() {
         ApiClient api = new ApiClient(port);
-        Reply added = api.post("/v1/admin/companies/" + companyA + "/members", map("displayName", "Dora Doble",
+        Reply added = api.post("/v1/admin/companies/" + companyA + "/members", map("firstName", "Dora", "lastName", "Doble",
                 "email", "dora@ejemplo.test", "roles", List.of("COMPANY_ADMIN", "WORKER"),
                 "password", ADMIN_PASSWORD), "Cookie", adminCookie);
         assertThat(added.status()).isEqualTo(201);
@@ -225,7 +225,7 @@ class ApplicationFlowIT extends AbstractIT {
     }
 
     private String assignedWorkerKey(ApiClient api, String email, String project) {
-        Reply added = api.post("/v1/admin/companies/" + companyA + "/members", map("displayName", "Asignado",
+        Reply added = api.post("/v1/admin/companies/" + companyA + "/members", map("firstName", "Asignado", "lastName", "Gil",
                 "email", email, "roles", List.of("WORKER"), "projectIds", List.of(project)), "Cookie", adminCookie);
         assertThat(added.status()).isEqualTo(201);
         return issueKey(api, companyA, added.json().get("member").get("userId").asString());
@@ -270,7 +270,7 @@ class ApplicationFlowIT extends AbstractIT {
 
     private Reply addWorker(ApiClient api, String company, String email) {
         Reply added = api.post("/v1/admin/companies/" + company + "/members",
-                map("displayName", "Doble Persona", "email", email, "roles", List.of("WORKER")), "Cookie",
+                map("firstName", "Doble", "lastName", "Persona", "email", email, "roles", List.of("WORKER")), "Cookie",
                 adminCookie);
         assertThat(added.status()).isEqualTo(201);
         return added;
@@ -291,8 +291,8 @@ class ApplicationFlowIT extends AbstractIT {
         adminCookie = login.setCookie().split(";")[0];
     }
 
-    private String createCompany(ApiClient api, String name) {
-        Reply created = api.post("/v1/admin/companies", map("name", name), "Cookie", adminCookie);
+    private String createCompany(ApiClient api, String name, String code) {
+        Reply created = api.post("/v1/admin/companies", map("name", name, "code", code), "Cookie", adminCookie);
         assertThat(created.status()).isEqualTo(201);
         String id = created.json().get("id").asString();
         Reply capabilities = api.put("/v1/admin/companies/" + id + "/capabilities",
@@ -303,7 +303,7 @@ class ApplicationFlowIT extends AbstractIT {
 
     private String workerKey(ApiClient api, String company) {
         Reply member = api.post("/v1/admin/companies/" + company + "/members",
-                map("displayName", "Persona " + company.substring(0, 4), "roles", List.of("WORKER")), "Cookie",
+                map("firstName", "Persona", "lastName", company.substring(0, 4), "roles", List.of("WORKER")), "Cookie",
                 adminCookie);
         assertThat(member.status()).isEqualTo(201);
         return issueKey(api, company, member.json().get("member").get("userId").asString());

@@ -33,14 +33,22 @@ public class UpdateUser {
         User user = users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         boolean active = changes.active().orElse(user.active());
         requireMayChangeActive(actor, user, active);
-        String name = changes.displayName().map(n -> Validation.requireText(n, "el nombre")).orElse(user.displayName());
+        String firstName = changes.firstName().map(n -> Validation.requireText(n, "el nombre")).orElse(user.firstName());
+        Optional<String> lastName = changes.lastName().map(UpdateUser::requireLastName).or(user::lastName);
         Optional<String> email = changes.email().map(e -> newEmail(user, theirMemberships, e)).orElse(user.email());
-        User updated = user.updated(name, email, active);
+        User updated = user.withNames(firstName, lastName).withEmail(email).withActive(active);
         users.save(updated);
         if (user.active() && !active) {
             sessions.closeAllOf(id);
         }
         return updated;
+    }
+
+    private static String requireLastName(String lastName) {
+        if (lastName == null || lastName.isBlank()) {
+            throw new ValidationException("Faltan los apellidos");
+        }
+        return lastName.trim();
     }
 
     /** El administrador del grupo edita a cualquiera; el de empresa, solo a quien no está en otras empresas. */

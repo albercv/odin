@@ -37,15 +37,15 @@ async function json<T>(r: Response, expected: number): Promise<T> {
 }
 
 type Id = { id: string };
-async function createCompany(name: string): Promise<string> {
-  const c = await json<Id>(await http('POST', '/v1/admin/companies', { name }), 201);
+async function createCompany(name: string, code: string): Promise<string> {
+  const c = await json<Id>(await http('POST', '/v1/admin/companies', { name, code }), 201);
   const caps = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'];
   await http('PUT', `/v1/admin/companies/${c.id}/capabilities`, { capabilities: caps });
   return c.id;
 }
-async function createWorker(companyId: string, name: string, email: string): Promise<{ id: string; key: string }> {
+async function createWorker(companyId: string, firstName: string, lastName: string, email: string): Promise<{ id: string; key: string }> {
   const added = await json<{ member: { userId: string } }>(
-    await http('POST', `/v1/admin/companies/${companyId}/members`, { displayName: name, email, roles: ['WORKER'] }), 201);
+    await http('POST', `/v1/admin/companies/${companyId}/members`, { firstName, lastName, email, roles: ['WORKER'] }), 201);
   const { userId } = added.member;
   const k = await json<{ key: string }>(await http('POST', `/v1/admin/companies/${companyId}/members/${userId}/keys`, { label: 'demo' }), 201);
   return { id: userId, key: k.key };
@@ -103,10 +103,10 @@ async function prepare(): Promise<void> {
   const login = await http('POST', '/v1/admin/session', ADMIN);
   cookie = (login.headers.get('set-cookie') ?? '').split(';')[0] ?? '';
   check(login.status === 200 && cookie.startsWith('odin_session='), 'Paso 2: sesión del administrador del grupo');
-  const a = await createCompany('Empresa A');
-  const b = await createCompany('Empresa B');
-  const wa = await createWorker(a, 'Trabajadora A', 'a@demo.invalid');
-  const wb = await createWorker(b, 'Trabajador B', 'b@demo.invalid');
+  const a = await createCompany('Empresa A', 'EA');
+  const b = await createCompany('Empresa B', 'EB');
+  const wa = await createWorker(a, 'Trabajadora', 'A', 'a@demo.invalid');
+  const wb = await createWorker(b, 'Trabajador', 'B', 'b@demo.invalid');
   check(!!wa.key && !!wb.key, 'Paso 3: empresas A y B, un trabajador cada una y sus claves personales');
   const docId = await uploadPdf(a);
   await waitReady(a, docId);

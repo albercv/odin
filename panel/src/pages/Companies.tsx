@@ -44,7 +44,7 @@ export function Companies({ onOpen }: { onOpen: (id: string, name: string) => vo
           {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}
         </Table>
       </Section>
-      <NameDialog title="Nueva empresa" label="Nombre de la empresa" submitLabel="Crear empresa" open={adding}
+      <NameDialog title="Nueva empresa" label="Nombre de la empresa" submitLabel="Crear empresa" codeLabel="Código" open={adding}
         onSubmit={api.createCompany} onClose={() => setAdding(false)} onDone={list.reload} />
     </div>
   );

@@ -23,11 +23,11 @@ async function postJson<T>(request: APIRequestContext, path: string, data: unkno
 
 // Own data, so the Revisión scans do not depend on demo.spec.ts having approved the card from prepare.
 async function seedReviewData(request: APIRequestContext): Promise<void> {
-  const company = await postJson<{ id: string }>(request, '/v1/admin/companies', { name: CARD_COMPANY });
-  await postJson(request, '/v1/admin/companies', { name: EMPTY_COMPANY });
+  const company = await postJson<{ id: string }>(request, '/v1/admin/companies', { name: CARD_COMPANY, code: 'TARJ' });
+  await postJson(request, '/v1/admin/companies', { name: EMPTY_COMPANY, code: 'VACIA' });
   await request.put(`${API}/v1/admin/companies/${company.id}/capabilities`, { data: { capabilities: ['SAVE_KNOWLEDGE_CARD'] } });
   const added = await postJson<{ member: { userId: string } }>(request, `/v1/admin/companies/${company.id}/members`,
-    { displayName: 'Trabajadora Visual', email: 'visual@demo.invalid', roles: ['WORKER'] });
+    { firstName: 'Trabajadora', lastName: 'Visual', email: 'visual@demo.invalid', roles: ['WORKER'] });
   const { key } = await postJson<{ key: string }>(request, `/v1/admin/companies/${company.id}/members/${added.member.userId}/keys`, { label: 'visual' });
   await postJson(request, '/v1/cards', { title: 'Franquicia ficticia por daños de agua', body: 'La póliza ficticia aplica una franquicia de 150 euros por siniestro.' }, { Authorization: `Bearer ${key}` });
 }
@@ -124,12 +124,14 @@ async function createLongNamedData(page: Page): Promise<void> {
   await page.goto(PANEL);
   await page.getByRole('button', { name: 'Nueva empresa' }).click();
   await page.getByLabel('Nombre de la empresa').fill(LONG_COMPANY);
+  await page.getByLabel('Código').fill('LARGA');
   await page.getByRole('button', { name: 'Crear empresa' }).click();
   await page.getByRole('button', { name: `Abrir ${LONG_COMPANY}` }).click();
   await expect(page.getByRole('heading', { name: LONG_COMPANY })).toBeVisible();
   await page.getByRole('button', { name: 'Añadir persona', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Añadir persona' });
   await dialog.getByLabel('Nombre', { exact: true }).fill(LONG_PERSON);
+  await dialog.getByLabel('Apellidos').fill('Apellidos de prueba');
   await dialog.getByLabel('Correo').fill(LONG_EMAIL);
   await dialog.getByRole('button', { name: 'Crear usuario' }).click();
   await expect(dialog).toHaveCount(0);

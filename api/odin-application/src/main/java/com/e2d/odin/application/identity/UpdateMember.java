@@ -2,6 +2,7 @@ package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.MembershipRepository;
+import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
@@ -18,13 +19,15 @@ public class UpdateMember {
 
     private final UserRepository users;
     private final MembershipRepository memberships;
+    private final OrganizationRepository organizations;
     private final PasswordHasher passwords;
     private final AdminSessions sessions;
 
-    public UpdateMember(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            AdminSessions sessions) {
+    public UpdateMember(UserRepository users, MembershipRepository memberships, OrganizationRepository organizations,
+            PasswordHasher passwords, AdminSessions sessions) {
         this.users = users;
         this.memberships = memberships;
+        this.organizations = organizations;
         this.passwords = passwords;
         this.sessions = sessions;
     }
@@ -39,12 +42,14 @@ public class UpdateMember {
         if (touchesAdministration(current, updated)) {
             UserAdministration.requireGroupAdminForAdministration(actor);
         }
+        String companyCode = organizations.findCompany(companyId)
+                .orElseThrow(() -> new NotFoundException("Empresa no encontrada")).code();
         User user = personReadyFor(current, updated, changes.password(), userId);
         memberships.save(updated);
         if (losesAdministration(current, updated)) {
             UserAdministration.closeSessionsIfNoLongerAdministering(memberships, sessions, userId);
         }
-        return MemberView.of(user, updated);
+        return MemberView.of(user, updated, companyCode);
     }
 
     /** Dar o quitar la administración, o activar o desactivar una pertenencia que la tiene. */

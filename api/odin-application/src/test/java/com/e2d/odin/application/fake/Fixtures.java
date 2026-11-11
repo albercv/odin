@@ -34,8 +34,13 @@ public final class Fixtures {
 
     public static CompanyId companyWith(InMemoryOrganizationRepository orgs, Set<Capability> capabilities) {
         CompanyId id = new CompanyId(UUID.randomUUID());
-        orgs.saveCompany(new Company(id, "Empresa " + id.value(), capabilities));
+        orgs.saveCompany(new Company(id, "Empresa " + id.value(), codeOf(id), capabilities));
         return id;
+    }
+
+    /** Un código de empresa válido y distinto para cada identificador aleatorio. */
+    public static String codeOf(CompanyId id) {
+        return id.value().toString().substring(0, 6).toUpperCase();
     }
 
     /** Un proyecto cerrado, como nace: solo lo ven sus miembros. */

@@ -54,7 +54,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         assertThat(hits.get(0).sourceType()).isEqualTo(SourceType.ORIGINAL_DOCUMENT);
         assertThat(hits.get(0).pageNumber()).contains(1);
         assertThat(hits.get(0).title()).isEqualTo("Caso");
-        assertThat(hits.get(0).authorName()).isEqualTo("Persona");
+        assertThat(hits.get(0).authorName()).isEqualTo("Persona Pérez");
     }
 
     @Test

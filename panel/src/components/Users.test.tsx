@@ -9,12 +9,12 @@ type Me = Parameters<typeof Users>[0]['me'];
 
 afterEach(() => vi.restoreAllMocks());
 
-const ana = { userId: 'u1', displayName: 'Ana', email: 'ana@acme.test', roles: ['WORKER'], active: true };
-const bea = { userId: 'u2', displayName: 'Bea', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test' };
-const worker = { userId: 'u3', displayName: 'Raúl', roles: ['WORKER'], active: true };
+const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], active: true };
+const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test' };
+const worker = { userId: 'u3', displayName: 'Raúl', firstName: 'Raúl', personCode: 'RRRR', memberCode: 'RRRR-ACM', roles: ['WORKER'], active: true };
 const list = 'GET /v1/admin/companies/c1/members';
-const groupAdmin: Me = { userId: 'g', displayName: 'Ada', role: 'GROUP_ADMIN', companies: [] };
-const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] };
+const groupAdmin: Me = { userId: 'g', displayName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
+const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
 
 const show = (routes: Routes, me: Me = groupAdmin) => {
   const calls = mockFetch(routes);
@@ -55,7 +55,33 @@ test('editSavesNameAndEmail', async () => {
   await userEvent.clear(screen.getByLabelText('Correo'));
   await userEvent.click(screen.getByRole('button', { name: 'Guardar Ana' }));
   await waitFor(() =>
-    expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u1')?.body).toEqual({ displayName: 'Anita', email: '' }));
+    expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u1')?.body).toEqual({ firstName: 'Anita', email: '' }));
+});
+
+test('editSendsTheLastNameWhenThereIsOne', async () => {
+  const gil = { ...ana, userId: 'u5', displayName: 'Cora Gil', firstName: 'Cora', lastName: 'Gil' };
+  const calls = show({ [list]: () => [gil], 'PATCH /v1/admin/users/u5': () => gil });
+  await act('Cora Gil', 'Editar Cora Gil');
+  expect(screen.getByLabelText('Apellidos')).toHaveValue('Gil');
+  await userEvent.clear(screen.getByLabelText('Apellidos'));
+  await userEvent.type(screen.getByLabelText('Apellidos'), 'Gil Ruiz');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar Cora Gil' }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u5')?.body)
+      .toEqual({ firstName: 'Cora', lastName: 'Gil Ruiz', email: 'ana@acme.test' }));
+});
+
+test('clearingTheLastNameIsSentSoTheApiRejectsIt', async () => {
+  const gil = { ...ana, userId: 'u5', displayName: 'Cora Gil', firstName: 'Cora', lastName: 'Gil' };
+  const calls = show({
+    [list]: () => [gil],
+    'PATCH /v1/admin/users/u5': () => ({ status: 400, body: { detail: 'Faltan los apellidos' } }),
+  });
+  await act('Cora Gil', 'Editar Cora Gil');
+  await userEvent.clear(screen.getByLabelText('Apellidos'));
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar Cora Gil' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Faltan los apellidos');
+  expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u5')?.body).toMatchObject({ lastName: '' });
 });
 
 test('conflictShowsTheApiMessage', async () => {

@@ -16,17 +16,19 @@ import { UserForm } from './UserForm';
 import { useAction, useLoad } from './useLoad';
 
 function EditForm({ user, onDone }: { user: S['MemberView']; onDone: (saved: boolean) => void }) {
-  const [name, setName] = useState(user.displayName);
+  const [firstName, setFirstName] = useState(user.firstName);
+  const [lastName, setLastName] = useState(user.lastName ?? '');
   const [email, setEmail] = useState(user.email ?? '');
   const { error, act } = useAction();
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (await act(() => api.updateUser(user.userId, { displayName: name, email }))) onDone(true);
+    if (await act(() => api.updateUser(user.userId, { firstName, ...(lastName !== (user.lastName ?? '') && { lastName }), email }))) onDone(true);
   };
   return (
     <form className={form.form} onSubmit={submit}>
       <Notice message={error} />
-      <Field label="Nombre"><input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
+      <Field label="Nombre"><input required value={firstName} onChange={(e) => setFirstName(e.target.value)} /></Field>
+      <Field label="Apellidos"><input value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>
       <Field label="Correo"><input type="email" required={user.roles.includes('COMPANY_ADMIN')} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
       <div className={form.buttons}>
         <Button type="submit" variant="primary">Guardar {user.displayName}</Button>

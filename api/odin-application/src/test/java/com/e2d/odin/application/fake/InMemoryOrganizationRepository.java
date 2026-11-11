@@ -41,6 +41,11 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     }
 
     @Override
+    public Optional<Company> findCompanyByCode(String code) {
+        return companies.values().stream().filter(c -> c.code().equals(code)).findFirst();
+    }
+
+    @Override
     public List<Company> listCompanies(CompanyScope scope) {
         return companies.values().stream().filter(c -> scope.includes(c.id())).toList();
     }

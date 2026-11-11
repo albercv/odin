@@ -20,6 +20,8 @@ public interface OrganizationRepository {
 
     Optional<Company> findCompany(CompanyId id);
 
+    Optional<Company> findCompanyByCode(String code);
+
     List<Company> listCompanies(CompanyScope scope);
 
     void saveProject(Project project);

@@ -19,11 +19,13 @@ import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.fake.SequencePersonCodeGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
+import com.e2d.odin.application.identity.DescribeAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListMembers;
@@ -50,8 +52,8 @@ import com.e2d.odin.application.organization.ListMemberProjects;
 import com.e2d.odin.application.organization.ListProjectMembers;
 import com.e2d.odin.application.organization.ListProjects;
 import com.e2d.odin.application.organization.RemoveProjectMember;
-import com.e2d.odin.application.organization.RenameCompany;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
+import com.e2d.odin.application.organization.UpdateCompany;
 import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.search.ListDocuments;
@@ -83,6 +85,7 @@ public class TestWiring {
     final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     final MutableClock clock = new MutableClock();
     final SequenceIdGenerator ids = new SequenceIdGenerator();
+    final SequencePersonCodeGenerator personCodes = new SequencePersonCodeGenerator();
     final SequenceTokenGenerator tokens = new SequenceTokenGenerator();
     final FakeSecretHasher secrets = new FakeSecretHasher();
     final FakePasswordHasher passwords = new FakePasswordHasher();
@@ -101,7 +104,7 @@ public class TestWiring {
     }
 
     @Bean SetUpInstallation setUpInstallation() {
-        return new SetUpInstallation(orgs, users, passwords, ids, new InstallationSettings("setup-secret"));
+        return new SetUpInstallation(orgs, users, passwords, ids, personCodes, new InstallationSettings("setup-secret"));
     }
 
     @Bean LogInAdmin logInAdmin() {
@@ -120,8 +123,8 @@ public class TestWiring {
         return new ListCompanies(orgs);
     }
 
-    @Bean RenameCompany renameCompany() {
-        return new RenameCompany(orgs);
+    @Bean UpdateCompany updateCompany() {
+        return new UpdateCompany(orgs);
     }
 
     @Bean SetCompanyCapabilities setCompanyCapabilities() {
@@ -161,19 +164,23 @@ public class TestWiring {
     }
 
     @Bean AddMember addMember() {
-        return new AddMember(users, memberships, orgs, projectMembers, passwords, ids);
+        return new AddMember(users, memberships, orgs, projectMembers, passwords, ids, personCodes);
     }
 
     @Bean ListMembers listMembers() {
-        return new ListMembers(users, memberships);
+        return new ListMembers(users, memberships, orgs);
     }
 
     @Bean UpdateMember updateMember() {
-        return new UpdateMember(users, memberships, passwords, adminSessions());
+        return new UpdateMember(users, memberships, orgs, passwords, adminSessions());
     }
 
     @Bean RemoveMember removeMember() {
         return new RemoveMember(memberships, keys, projectMembers, adminSessions(), clock);
+    }
+
+    @Bean DescribeAdmin describeAdmin() {
+        return new DescribeAdmin(users);
     }
 
     @Bean UpdateUser updateUser() {

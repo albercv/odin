@@ -28,6 +28,7 @@ import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.port.PasswordHasher;
+import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
@@ -138,6 +139,11 @@ public class AdapterConfiguration {
     @Bean
     TokenGenerator tokenGenerator() {
         return new SecureRandomTokenGenerator();
+    }
+
+    @Bean
+    PersonCodeGenerator personCodeGenerator() {
+        return new SecureRandomPersonCodeGenerator();
     }
 
     @Bean

@@ -8,8 +8,8 @@ import { useAction } from './useLoad';
 
 type Role = 'WORKER' | 'COMPANY_ADMIN';
 
-function newMemberBody(name: string, email: string, role: Role, password: string): S['AddMember'] {
-  const body: S['AddMember'] = { displayName: name, roles: [role] };
+function newMemberBody(firstName: string, lastName: string, email: string, role: Role, password: string): S['AddMember'] {
+  const body: S['AddMember'] = { firstName, lastName, roles: [role] };
   if (email) body.email = email;
   if (role === 'COMPANY_ADMIN') body.password = password;
   return body;
@@ -31,7 +31,8 @@ function RoleSelect({ value, onChange }: { value: Role; onChange: (r: Role) => v
 }
 
 export function UserForm({ companyId, onDone }: { companyId: string; onDone: () => void }) {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('WORKER');
@@ -39,8 +40,9 @@ export function UserForm({ companyId, onDone }: { companyId: string; onDone: () 
   const isAdmin = role === 'COMPANY_ADMIN';
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(await act(() => api.addMember(companyId, newMemberBody(name, email, role, password))))) return;
-    setName('');
+    if (!(await act(() => api.addMember(companyId, newMemberBody(firstName, lastName, email, role, password))))) return;
+    setFirstName('');
+    setLastName('');
     setEmail('');
     setPassword('');
     onDone();
@@ -48,7 +50,8 @@ export function UserForm({ companyId, onDone }: { companyId: string; onDone: () 
   return (
     <form className={form.form} onSubmit={submit}>
       <Notice message={error} />
-      <Field label="Nombre"><input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
+      <Field label="Nombre"><input required value={firstName} onChange={(e) => setFirstName(e.target.value)} /></Field>
+      <Field label="Apellidos"><input required value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>
       <Field label="Correo"><input type="email" required={isAdmin} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
       {isAdmin && <PasswordField value={password} onChange={setPassword} />}
       <RoleSelect value={role} onChange={setRole} />
