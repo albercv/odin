@@ -1,0 +1,73 @@
+package com.e2d.odin.application.organization;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.e2d.odin.application.fake.Actors;
+import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
+import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
+import com.e2d.odin.application.fake.InMemoryUserRepository;
+import com.e2d.odin.application.fake.People;
+import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.UserId;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class RemoveProjectMemberTest {
+
+    private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
+    private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(organizations);
+    private final CompanyId company = Fixtures.company(organizations);
+    private final CompanyId other = Fixtures.company(organizations);
+    private final ProjectId obra = Fixtures.project(organizations, company);
+
+    private UserId person(String name, Role role, CompanyId in, boolean active) {
+        UserId id = new UserId(UUID.randomUUID());
+        People.member(users, memberships, id, name, Optional.empty(), role, in, active, Optional.empty());
+        return id;
+    }
+    private final RemoveProjectMember remove = new RemoveProjectMember(organizations, members);
+    private final UserId wanda = person("Wanda", Role.WORKER, company, true);
+
+    RemoveProjectMemberTest() {
+        members.add(obra, wanda);
+    }
+
+    @Test
+    void removesTheMember() {
+        remove.execute(Actors.companyAdmin(company), company, obra, wanda);
+
+        assertThat(members.listMembers(obra)).isEmpty();
+        assertThat(members.projectsOf(company, wanda)).isEmpty();
+    }
+
+    @Test
+    void removingANonMemberChangesNothing() {
+        remove.execute(Actors.companyAdmin(company), company, obra, new UserId(UUID.randomUUID()));
+
+        assertThat(members.listMembers(obra)).containsExactly(wanda);
+    }
+
+    @Test
+    void adminOfAnotherCompanyIsForbidden() {
+        assertThatThrownBy(() -> remove.execute(Actors.companyAdmin(other), company, obra, wanda))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(members.listMembers(obra)).containsExactly(wanda);
+    }
+
+    @Test
+    void projectOfAnotherCompanyIsNotFound() {
+        assertThatThrownBy(() -> remove.execute(Actors.companyAdmin(other), other, obra, wanda))
+                .isInstanceOf(NotFoundException.class);
+        assertThat(members.listMembers(obra)).containsExactly(wanda);
+    }
+}

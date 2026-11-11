@@ -8,6 +8,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -46,8 +47,9 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public Optional<Document> findById(CompanyScope scope, DocumentId id) {
-        return Optional.ofNullable(documents.get(id)).filter(d -> scope.includes(d.companyId()));
+    public Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
+        return Optional.ofNullable(documents.get(id))
+                .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId()));
     }
 
     @Override
@@ -57,19 +59,21 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public List<Document> list(CompanyScope scope, Optional<ProjectId> projectId, Optional<DocumentStatus> status,
-            int offset, int limit) {
+    public List<Document> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
+            Optional<DocumentStatus> status, int offset, int limit) {
         lastListScope = scope;
         return documents.values().stream()
-                .filter(d -> scope.includes(d.companyId()) && status.map(d.status()::equals).orElse(true))
+                .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId())
+                        && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
                 .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
                 .skip(offset).limit(limit).toList();
     }
 
     @Override
-    public Optional<DocumentPage> findPage(CompanyScope scope, DocumentId id, int pageNumber) {
-        return findById(scope, id).flatMap(d -> pagesOf(id).stream().filter(p -> p.number() == pageNumber).findFirst());
+    public Optional<DocumentPage> findPage(CompanyScope scope, ProjectVisibility visibility, DocumentId id,
+            int pageNumber) {
+        return findById(scope, visibility, id).flatMap(d -> pagesOf(id).stream().filter(p -> p.number() == pageNumber).findFirst());
     }
 
     @Override

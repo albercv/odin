@@ -37,10 +37,29 @@ public final class Fixtures {
         return id;
     }
 
+    /** Un proyecto cerrado, como nace: solo lo ven sus miembros. */
     public static ProjectId project(InMemoryOrganizationRepository orgs, CompanyId company) {
+        return project(orgs, company, true);
+    }
+
+    public static ProjectId companyWideProject(InMemoryOrganizationRepository orgs, CompanyId company) {
+        return project(orgs, company, false);
+    }
+
+    private static ProjectId project(InMemoryOrganizationRepository orgs, CompanyId company, boolean restricted) {
         ProjectId id = new ProjectId(UUID.randomUUID());
-        orgs.saveProject(new Project(id, company, "Proyecto"));
+        orgs.saveProject(new Project(id, company, "Proyecto", restricted));
         return id;
+    }
+
+    public static Document documentIn(InMemoryDocumentRepository docs, CompanyId company, ProjectId project,
+            String pageText) {
+        Document d = readyDocument(docs, company, pageText);
+        Document inProject = new Document(d.id(), company, Optional.of(project), d.title(), d.filename(), d.format(),
+                d.sha256(), d.status(), d.failureReason(), d.paginated(), d.uploadedBy(), d.uploadedAt(),
+                d.processingStartedAt(), d.attemptCount());
+        docs.save(inProject);
+        return inProject;
     }
 
     public static Document document(InMemoryDocumentRepository docs, CompanyId company, DocumentStatus status) {

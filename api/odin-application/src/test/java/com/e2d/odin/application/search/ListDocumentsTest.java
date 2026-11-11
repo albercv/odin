@@ -7,12 +7,15 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -22,7 +25,8 @@ class ListDocumentsTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
-    private final ListDocuments list = new ListDocuments(orgs, docs);
+    private final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(orgs);
+    private final ListDocuments list = new ListDocuments(orgs, members, docs);
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 
@@ -65,5 +69,31 @@ class ListDocumentsTest {
     void adminCannotUseWorkerListing() {
         assertThatThrownBy(() -> list.execute(Actors.companyAdmin(companyA), Optional.empty(), 0, Optional.empty()))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void unassignedProjectIsInvisible() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        Document inClosed = Fixtures.documentIn(docs, companyA, closed, "texto");
+        Document withoutProject = Fixtures.readyDocument(docs, companyA, "libre");
+        Actor worker = Actors.worker(companyA);
+
+        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty())).containsExactly(withoutProject);
+        assertThatThrownBy(() -> list.execute(worker, Optional.of(closed), 0, Optional.empty()))
+                .isInstanceOf(NotFoundException.class).hasMessage("Proyecto no encontrado");
+
+        members.add(closed, worker.userId());
+        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty()))
+                .containsExactlyInAnyOrder(inClosed, withoutProject);
+        assertThat(list.execute(worker, Optional.of(closed), 0, Optional.empty())).containsExactly(inClosed);
+    }
+
+    @Test
+    void companyWideProjectDocumentsAreVisibleToEveryWorker() {
+        ProjectId open = Fixtures.companyWideProject(orgs, companyA);
+        Document inOpen = Fixtures.documentIn(docs, companyA, open, "texto");
+
+        assertThat(list.execute(Actors.worker(companyA), Optional.of(open), 0, Optional.empty()))
+                .containsExactly(inOpen);
     }
 }

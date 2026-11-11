@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -19,7 +20,7 @@ class DeleteProjectTest {
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final DeleteProject delete = new DeleteProject(organizations, new MutableClock());
     private final CompanyId company = Fixtures.company(organizations);
-    private final ProjectId project = Fixtures.project(organizations, company);
+    private final ProjectId project = Fixtures.companyWideProject(organizations, company);
 
     @Test
     void deletedProjectDisappearsFromListAndMe() {
@@ -27,7 +28,7 @@ class DeleteProjectTest {
 
         assertThat(organizations.listProjects(company)).isEmpty();
         assertThat(organizations.findProject(company, project)).isEmpty();
-        assertThat(new DescribeMe(organizations)
+        assertThat(new DescribeMe(organizations, new InMemoryProjectMemberRepository(organizations))
                 .execute(Actors.worker(company)).projects()).isEmpty();
     }
 

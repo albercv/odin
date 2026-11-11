@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["add"];
+        post?: never;
+        delete: operations["remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/capabilities": {
         parameters: {
             query?: never;
@@ -189,7 +205,7 @@ export interface paths {
         };
         get: operations["list_1"];
         put?: never;
-        post: operations["add"];
+        post: operations["add_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -289,7 +305,7 @@ export interface paths {
         delete: operations["deleteProject"];
         options?: never;
         head?: never;
-        patch: operations["renameProject"];
+        patch: operations["updateProject"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}/members/{userId}": {
@@ -302,7 +318,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["remove"];
+        delete: operations["remove_1"];
         options?: never;
         head?: never;
         patch: operations["update_1"];
@@ -404,7 +420,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/companies/{companyId}/cards": {
+    "/v1/admin/companies/{companyId}/projects/{projectId}/members": {
         parameters: {
             query?: never;
             header?: never;
@@ -412,6 +428,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/members/{userId}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projects_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -549,12 +597,14 @@ export interface components {
             /** Format: uuid */
             companyId: string;
             name: string;
+            restricted: boolean;
         };
         AddMember: {
             displayName?: string;
             email?: string;
             roles?: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             password?: string;
+            projectIds?: string[];
         };
         MemberAdded: {
             member: components["schemas"]["MemberView"];
@@ -618,6 +668,11 @@ export interface components {
             email?: string;
             active?: boolean;
         };
+        UpdateProject: {
+            name?: string;
+            /** @description Verdadero: solo lo ven sus miembros. Falso: visible para toda la empresa. */
+            restricted?: boolean;
+        };
         UpdateMember: {
             roles?: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active?: boolean;
@@ -671,6 +726,11 @@ export interface components {
             id: string;
             name: string;
         };
+        ProjectMemberView: {
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+        };
         KeyView: {
             /** Format: uuid */
             id: string;
@@ -704,6 +764,50 @@ export interface operations {
                 "application/json": components["schemas"]["SetPassword"];
             };
         };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                projectId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                projectId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description No Content */
             204: {
@@ -1038,7 +1142,7 @@ export interface operations {
             };
         };
     };
-    add: {
+    add_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1299,7 +1403,7 @@ export interface operations {
             };
         };
     };
-    renameProject: {
+    updateProject: {
         parameters: {
             query?: never;
             header?: never;
@@ -1311,7 +1415,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Name"];
+                "application/json": components["schemas"]["UpdateProject"];
             };
         };
         responses: {
@@ -1326,7 +1430,7 @@ export interface operations {
             };
         };
     };
-    remove: {
+    remove_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1504,6 +1608,52 @@ export interface operations {
         };
     };
     list_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMemberView"][];
+                };
+            };
+        };
+    };
+    projects_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectView"][];
+                };
+            };
+        };
+    };
+    list_4: {
         parameters: {
             query?: {
                 status?: "PENDING" | "APPROVED" | "REJECTED";

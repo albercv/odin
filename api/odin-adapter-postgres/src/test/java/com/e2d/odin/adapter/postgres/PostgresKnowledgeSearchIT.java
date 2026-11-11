@@ -14,8 +14,11 @@ import com.e2d.odin.domain.search.SourceType;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,7 +42,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     }
 
     private List<SearchHit> find(CompanyScope scope, String... terms) {
-        return search.search(new SearchQuery(List.of(terms), scope, Optional.empty(), 5)).hits();
+        return search.search(new SearchQuery(List.of(terms), scope, ProjectVisibility.all(), Optional.empty(), 5)).hits();
     }
 
     @Test
@@ -154,5 +157,41 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         page(c, "Doc", DocumentStatus.READY, "de la el filtración");
         assertThat(find(CompanyScope.of(c), query)).isEmpty();
         assertThat(find(CompanyScope.of(c))).isEmpty();
+    }
+
+    @Test
+    void filtersByVisibleProjects() {
+        CompanyId c = newCompany();
+        ProjectId visible = newProject(c, "Visible");
+        ProjectId hidden = newProject(c, "Oculto");
+        page(c, "Libre", DocumentStatus.READY, "la franquicia del seguro");
+        inProject(page(c, "Del visible", DocumentStatus.READY, "la franquicia del seguro"), visible);
+        inProject(page(c, "Del oculto", DocumentStatus.READY, "la franquicia del seguro"), hidden);
+        cardIn(c, hidden, "Ficha oculta", "la franquicia del seguro");
+        cardIn(c, visible, "Ficha visible", "la franquicia del seguro");
+
+        assertThat(titles(c, ProjectVisibility.of(Set.of(visible)), Optional.empty()))
+                .containsExactlyInAnyOrder("Libre", "Del visible", "Ficha visible");
+        assertThat(titles(c, ProjectVisibility.of(Set.of()), Optional.empty())).containsExactly("Libre");
+        assertThat(titles(c, ProjectVisibility.all(), Optional.empty())).hasSize(5);
+        assertThat(titles(c, ProjectVisibility.of(Set.of(visible)), Optional.of(hidden))).isEmpty();
+        assertThat(titles(c, ProjectVisibility.of(Set.of(visible)), Optional.of(visible)))
+                .containsExactlyInAnyOrder("Del visible", "Ficha visible");
+    }
+
+    private List<String> titles(CompanyId company, ProjectVisibility visibility, Optional<ProjectId> project) {
+        return search.search(new SearchQuery(List.of("franquicia"), CompanyScope.of(company), visibility, project, 10))
+                .hits().stream().map(SearchHit::title).toList();
+    }
+
+    private void inProject(Document d, ProjectId project) {
+        docs.save(new Document(d.id(), d.companyId(), Optional.of(project), d.title(), d.filename(), d.format(),
+                d.sha256(), d.status(), d.failureReason(), d.paginated(), d.uploadedBy(), d.uploadedAt(),
+                d.processingStartedAt(), 0));
+    }
+
+    private void cardIn(CompanyId company, ProjectId project, String title, String body) {
+        cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.of(project), title, body,
+                Optional.empty(), newUser(company), NOW, CardStatus.APPROVED, Optional.empty()));
     }
 }

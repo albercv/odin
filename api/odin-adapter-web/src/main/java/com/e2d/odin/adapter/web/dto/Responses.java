@@ -60,9 +60,15 @@ public final class Responses {
         }
     }
 
-    public record ProjectView(UUID id, UUID companyId, String name) {
+    public record ProjectView(UUID id, UUID companyId, String name, boolean restricted) {
         public static ProjectView from(Project p) {
-            return new ProjectView(p.id().value(), p.companyId().value(), p.name());
+            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted());
+        }
+    }
+
+    public record ProjectMemberView(UUID userId, String displayName) {
+        public static ProjectMemberView from(com.e2d.odin.application.organization.ProjectMemberView m) {
+            return new ProjectMemberView(m.userId().value(), m.displayName());
         }
     }
 

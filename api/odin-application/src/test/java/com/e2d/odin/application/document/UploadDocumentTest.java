@@ -19,6 +19,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.PayloadTooLargeException;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UnsupportedFormatException;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
@@ -114,7 +115,7 @@ class UploadDocumentTest {
     void companyAdminCannotUploadToOtherCompany() {
         assertThatThrownBy(() -> send(Actors.companyAdmin(companyB), companyA, CONTENT))
                 .isInstanceOf(ForbiddenException.class);
-        assertThat(docs.list(Actors.groupAdmin().scope(), Optional.empty(), Optional.empty(), 0, 10)).isEmpty();
+        assertThat(docs.list(Actors.groupAdmin().scope(), ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10)).isEmpty();
         assertThat(store.size()).isZero();
     }
 

@@ -4,7 +4,9 @@ import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.PasswordHasher;
+import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
+import com.e2d.odin.application.organization.ProjectMembers;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.identity.Actor;
@@ -14,6 +16,7 @@ import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
@@ -24,14 +27,16 @@ public class AddMember {
     private final UserRepository users;
     private final MembershipRepository memberships;
     private final OrganizationRepository organizations;
+    private final ProjectMemberRepository projectMembers;
     private final PasswordHasher passwords;
     private final IdGenerator ids;
 
     public AddMember(UserRepository users, MembershipRepository memberships, OrganizationRepository organizations,
-            PasswordHasher passwords, IdGenerator ids) {
+            ProjectMemberRepository projectMembers, PasswordHasher passwords, IdGenerator ids) {
         this.users = users;
         this.memberships = memberships;
         this.organizations = organizations;
+        this.projectMembers = projectMembers;
         this.passwords = passwords;
         this.ids = ids;
     }
@@ -42,6 +47,7 @@ public class AddMember {
         Set<Role> roles = UserAdministration.requireValidRoles(newMember.roles());
         boolean administrator = roles.contains(Role.COMPANY_ADMIN);
         requireAllowedRoles(actor, administrator, newMember.password());
+        requireAssignableProjects(companyId, roles, newMember.projectIds());
         Optional<String> email = newMember.email().filter(e -> !e.isBlank()).map(Validation::normalizeEmail);
         Optional<User> existing = email.flatMap(users::findByEmail);
         User person = existing.map(user -> requireJoinable(user, companyId))
@@ -53,7 +59,19 @@ public class AddMember {
         }
         Membership membership = new Membership(ready.id(), companyId, roles, true);
         memberships.save(membership);
+        newMember.projectIds().forEach(projectId -> projectMembers.add(projectId, ready.id()));
         return new MemberAdded(ready, membership, existing.isPresent());
+    }
+
+    private void requireAssignableProjects(CompanyId companyId, Set<Role> roles, Set<ProjectId> projectIds) {
+        if (projectIds.isEmpty()) {
+            return;
+        }
+        ProjectMembers.requireWorker(roles);
+        for (ProjectId projectId : projectIds) {
+            organizations.findProject(companyId, projectId)
+                    .orElseThrow(() -> new NotFoundException("Proyecto no encontrado"));
+        }
     }
 
     private static void requireAllowedRoles(Actor actor, boolean administrator, Optional<String> password) {

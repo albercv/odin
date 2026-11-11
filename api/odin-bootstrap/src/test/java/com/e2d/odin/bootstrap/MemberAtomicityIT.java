@@ -6,17 +6,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
 import com.e2d.odin.adapter.postgres.PostgresMembershipRepository;
 import com.e2d.odin.adapter.postgres.PostgresOrganizationRepository;
+import com.e2d.odin.adapter.postgres.PostgresProjectMemberRepository;
 import com.e2d.odin.adapter.postgres.PostgresUserRepository;
 import com.e2d.odin.adapter.postgres.ScopedTransactions;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.MemberChanges;
 import com.e2d.odin.application.identity.NewMember;
-import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.RemoveMember;
+import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.MembershipRepository;
+import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
@@ -25,8 +27,10 @@ import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Clock;
 import java.time.Instant;
@@ -79,6 +83,7 @@ class MemberAtomicityIT {
     private static PostgresUserRepository users;
     private static PostgresMembershipRepository memberships;
     private static PostgresOrganizationRepository organizations;
+    private static PostgresProjectMemberRepository projectMembers;
     private final CompanyId company = new CompanyId(UUID.randomUUID());
 
     @BeforeAll
@@ -91,6 +96,7 @@ class MemberAtomicityIT {
         users = new PostgresUserRepository(tx);
         memberships = new PostgresMembershipRepository(tx);
         organizations = new PostgresOrganizationRepository(tx);
+        projectMembers = new PostgresProjectMemberRepository(tx);
     }
 
     private static MembershipRepository failingMemberships() {
@@ -128,13 +134,36 @@ class MemberAtomicityIT {
     void failureSavingTheMembershipLeavesNoPerson() {
         givenCompany();
         AddMember add = new UseCaseConfiguration().addMember(users, failingMemberships(), organizations,
-                new BcryptPasswordHasher(), new RandomUuidGenerator(), transactionManager);
+                projectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(), transactionManager);
 
         assertThatThrownBy(() -> add.execute(GROUP_ADMIN, company,
-                new NewMember("Wanda", Optional.of("atomica@e.test"), Set.of(Role.WORKER), Optional.empty())))
+                new NewMember("Wanda", Optional.of("atomica@e.test"), Set.of(Role.WORKER), Optional.empty(),
+                Set.of())))
                 .isInstanceOf(IllegalStateException.class);
 
         assertThat(users.findByEmail("atomica@e.test")).isEmpty();
+    }
+
+    @Test
+    void failureAssigningTheProjectLeavesNoPersonAndNoMembership() {
+        givenCompany();
+        ProjectId project = new ProjectId(UUID.randomUUID());
+        organizations.saveProject(new Project(project, company, "Obra", true));
+        ProjectMemberRepository failingProjectMembers = new PostgresProjectMemberRepository(tx) {
+            @Override
+            public void add(ProjectId projectId, UserId userId) {
+                throw new IllegalStateException("fallo forzado");
+            }
+        };
+        AddMember add = new UseCaseConfiguration().addMember(users, memberships, organizations,
+                failingProjectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(), transactionManager);
+
+        assertThatThrownBy(() -> add.execute(GROUP_ADMIN, company, new NewMember("Wanda",
+                Optional.of("proyecto@e.test"), Set.of(Role.WORKER), Optional.empty(), Set.of(project))))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(users.findByEmail("proyecto@e.test")).isEmpty();
+        assertThat(memberships.listByCompany(company)).isEmpty();
     }
 
     @Test

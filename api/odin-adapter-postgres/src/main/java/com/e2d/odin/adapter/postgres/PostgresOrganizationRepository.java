@@ -69,16 +69,16 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     @Override
     public void saveProject(Project p) {
         tx.runInScope(CompanyScope.of(p.companyId()), jdbc -> jdbc.sql("""
-                INSERT INTO project (id, company_id, name) VALUES (:id, :company, :name)
-                ON CONFLICT (id) DO UPDATE SET name = :name""")
+                INSERT INTO project (id, company_id, name, restricted) VALUES (:id, :company, :name, :restricted)
+                ON CONFLICT (id) DO UPDATE SET name = :name, restricted = :restricted""")
                 .param("id", p.id().value()).param("company", p.companyId().value()).param("name", p.name())
-                .update());
+                .param("restricted", p.restricted()).update());
     }
 
     @Override
     public Optional<Project> findProject(CompanyId companyId, ProjectId id) {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc
-                .sql("SELECT id, company_id, name FROM project WHERE id = :id AND company_id = :company AND deleted_at IS NULL")
+                .sql("SELECT id, company_id, name, restricted FROM project WHERE id = :id AND company_id = :company AND deleted_at IS NULL")
                 .param("id", id.value()).param("company", companyId.value())
                 .query((rs, n) -> project(rs)).optional());
     }
@@ -86,7 +86,7 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     @Override
     public List<Project> listProjects(CompanyId companyId) {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc
-                .sql("SELECT id, company_id, name FROM project WHERE company_id = :company AND deleted_at IS NULL ORDER BY seq")
+                .sql("SELECT id, company_id, name, restricted FROM project WHERE company_id = :company AND deleted_at IS NULL ORDER BY seq")
                 .param("company", companyId.value()).query((rs, n) -> project(rs)).list());
     }
 
@@ -99,7 +99,7 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
 
     private static Project project(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new Project(new ProjectId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
-                rs.getString("name"));
+                rs.getString("name"), rs.getBoolean("restricted"));
     }
 
     @Override

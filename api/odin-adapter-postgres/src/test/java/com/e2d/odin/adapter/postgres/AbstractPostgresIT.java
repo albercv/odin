@@ -8,8 +8,10 @@ import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
 import java.util.Optional;
@@ -27,6 +29,7 @@ abstract class AbstractPostgresIT {
     final PostgresMembershipRepository memberships = new PostgresMembershipRepository(tx);
     final PostgresDocumentRepository docs = new PostgresDocumentRepository(tx);
     final PostgresKnowledgeCardRepository cards = new PostgresKnowledgeCardRepository(tx);
+    final PostgresProjectMemberRepository projectMembers = new PostgresProjectMemberRepository(tx);
 
     @BeforeEach
     void cleanDatabase() {
@@ -43,6 +46,12 @@ abstract class AbstractPostgresIT {
         UserId id = new UserId(UUID.randomUUID());
         users.save(new User(id, "Persona", Optional.empty(), false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
+        return id;
+    }
+
+    ProjectId newProject(CompanyId company, String name) {
+        ProjectId id = new ProjectId(UUID.randomUUID());
+        orgs.saveProject(new Project(id, company, name, true));
         return id;
     }
 
