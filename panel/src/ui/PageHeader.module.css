@@ -1,0 +1,3 @@
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.description { margin-top: 6px; color: var(--text-muted); max-width: 64ch; }
+@media (max-width: 900px) { .header { flex-direction: column; } }
