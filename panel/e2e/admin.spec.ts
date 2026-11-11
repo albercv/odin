@@ -14,7 +14,7 @@ const projectsSection = (page: Page): Locator => page.locator('section', { has: 
 const row = (section: Locator, text: string): Locator => section.locator('li').filter({ hasText: text });
 
 async function logIn(page: Page, email: string, password: string): Promise<void> {
-  await expect(page.getByRole('heading', { name: 'Odín · Entrada' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible();
   await page.getByLabel('Correo').fill(email);
   await page.getByLabel('Contraseña').fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
@@ -134,7 +134,7 @@ async function changeOwnPassword(page: Page): Promise<void> {
   await page.getByLabel('Contraseña actual').fill(COMPANY_ADMIN.resetPassword);
   await page.getByLabel('Contraseña nueva').fill(COMPANY_ADMIN.newPassword);
   await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
-  await expect(page.getByRole('status')).toHaveText('Contraseña cambiada. Entra de nuevo.');
+  await expect(page.getByText('Contraseña cambiada. Entra de nuevo.')).toBeVisible();
   await logIn(page, COMPANY_ADMIN.email, COMPANY_ADMIN.newPassword);
   await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();
   console.log('✓ Admin 10: contraseña propia cambiada desde «Mi cuenta» y entrada con la nueva');

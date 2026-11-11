@@ -2,6 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { mockFetch } from '../mockApi';
+import { vi } from 'vitest';
+
+vi.mock('../brain/BrainCanvas', () => ({ BrainCanvas: () => null }));
 
 const me = { userId: 'u1', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme' }] };
 const put = 'PUT /v1/admin/users/u1/password';
@@ -24,8 +27,8 @@ function routes(passwordReply: { status: number; body?: unknown }) {
 
 async function openAccount() {
   render(<App />);
-  expect(await screen.findByRole('link', { name: /Bea/ })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('link', { name: /Bea/ }));
+  expect(await screen.findByRole('link', { name: 'Mi cuenta' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('link', { name: 'Mi cuenta' }));
 }
 
 async function changePassword(current: string) {
@@ -38,7 +41,7 @@ test('changesOwnPasswordAndReturnsToLoginWithNotice', async () => {
   const calls = routes({ status: 204 });
   await openAccount();
   await changePassword('la-clave-vieja-1');
-  expect(await screen.findByRole('status')).toHaveTextContent('Contraseña cambiada. Entra de nuevo.');
+  expect(await screen.findByText('Contraseña cambiada. Entra de nuevo.')).toHaveAttribute('role', 'status');
   expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
   expect(calls.find((c) => c.key === put)?.body).toEqual({
     currentPassword: 'la-clave-vieja-1', newPassword: 'la-clave-nueva-22',
@@ -57,11 +60,11 @@ test('noticeDisappearsAfterLoginAndDoesNotReturnOnLogout', async () => {
   routes({ status: 204 });
   await openAccount();
   await changePassword('la-clave-vieja-1');
-  expect(await screen.findByRole('status')).toBeInTheDocument();
+  expect(await screen.findByText('Contraseña cambiada. Entra de nuevo.')).toBeInTheDocument();
   await userEvent.type(screen.getByLabelText('Correo'), 'bea@acme.test');
   await userEvent.type(screen.getByLabelText('Contraseña'), 'la-clave-nueva-22');
   await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Salir' }));
   expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument();
-  expect(screen.queryByRole('status')).toBeNull();
+  expect(screen.queryByText('Contraseña cambiada. Entra de nuevo.')).toBeNull();
 });

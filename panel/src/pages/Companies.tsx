@@ -67,14 +67,14 @@ function NewCompany({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function Companies({ onOpen }: { onOpen: (id: string) => void }) {
+export function Companies({ onOpen }: { onOpen: (id: string, name: string) => void }) {
   const list = useLoad(api.companies, []);
   return (
     <section>
       <h1>Empresas</h1>
       <Notice message={list.error} />
       <NewCompany onDone={list.reload} />
-      <ul>{list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id)} onDone={list.reload} />)}</ul>
+      <ul>{list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}</ul>
     </section>
   );
 }
