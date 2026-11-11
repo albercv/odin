@@ -29,7 +29,7 @@ function BreakableEmail({ value }: { value: string }) {
 
 type Panel = 'edit' | 'roles' | 'keys' | 'accesses' | 'password' | undefined;
 type RowProps = {
-  companyId: string; u: Member; isGroup: boolean; onChanged: () => void; onRemoved: (u: Member) => void; onProjectsChanged: () => void;
+  companyId: string; u: Member; isGroup: boolean; onChanged: () => void; onRemoved: (u: Member, announcement: string) => void; onProjectsChanged: () => void;
 };
 
 function MemberPanel({ companyId, u, isGroup, panel, onDone, onReset, onProjectsChanged }: RowProps & {
@@ -42,16 +42,26 @@ function MemberPanel({ companyId, u, isGroup, panel, onDone, onReset, onProjects
   return <ResetPasswordForm user={u} onDone={onReset} />;
 }
 
-function MemberActions({ companyId, u, isGroup, onChanged, onRemoved, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
-  const { error, act } = useAction();
+function useRemovals(companyId: string, u: Member, onRemoved: RowProps['onRemoved'], act: ReturnType<typeof useAction>['act']) {
   const confirm = useConfirm();
-  const worker = u.roles.includes('WORKER');
-  const toggle = async () => (await act(() => api.setActive(companyId, u.userId, !u.active))) && onChanged();
   const remove = async () => {
     const message = `¿Quitar a ${u.displayName} de esta empresa? Sus claves y sus proyectos de esta empresa dejarán de valer.`;
     if (!(await confirm({ message, confirmLabel: 'Quitar', danger: true }))) return;
-    if (await act(() => api.removeMember(companyId, u.userId))) onRemoved(u);
+    if (await act(() => api.removeMember(companyId, u.userId))) onRemoved(u, `Se ha quitado a ${u.displayName} de esta empresa`);
   };
+  const erase = async () => {
+    const message = `¿Borrar a ${u.displayName}? Desaparece de todas las empresas y de sus proyectos, y sus claves dejan de valer. No se puede deshacer.`;
+    if (!(await confirm({ message, confirmLabel: 'Borrar', danger: true }))) return;
+    if (await act(() => api.deleteUser(u.userId))) onRemoved(u, `Se ha borrado a ${u.displayName}`);
+  };
+  return { remove, erase };
+}
+
+function MemberActions({ companyId, u, isGroup, onChanged, onRemoved, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
+  const { error, act } = useAction();
+  const worker = u.roles.includes('WORKER');
+  const toggle = async () => (await act(() => api.setActive(companyId, u.userId, !u.active))) && onChanged();
+  const { remove, erase } = useRemovals(companyId, u, onRemoved, act);
   const open = (target: Panel, text: string, label?: string) => (
     <RowAction variant="ghost" text={text} label={label} target={u.displayName} aria-expanded={panel === target} onClick={() => show(target)} />
   );
@@ -62,6 +72,7 @@ function MemberActions({ companyId, u, isGroup, onChanged, onRemoved, panel, sho
         {open('edit', 'Editar')}
         {open('roles', 'Papeles', 'Papeles de')}
         <RowAction variant="danger" text="Quitar" target={u.displayName} onClick={remove} />
+        {isGroup && <RowAction variant="danger" text="Borrar" target={u.displayName} onClick={erase} />}
         {worker && open('keys', 'Claves', 'Claves de')}
         {worker && open('accesses', 'Accesos', 'Accesos de')}
         {isGroup && u.roles.includes('COMPANY_ADMIN') && open('password', 'Restablecer contraseña', 'Restablecer contraseña de')}
@@ -109,10 +120,10 @@ export function Members({ companyId, me, addOpen = false, onAddClose = () => und
   const region = useRef<HTMLElement>(null);
   const toast = useToast();
   const isGroup = me.role === 'GROUP_ADMIN';
-  const removed = (u: Member) => {
+  const removed = (_: Member, announcement: string) => {
     list.reload();
     onProjectsChanged();
-    toast(`Se ha quitado a ${u.displayName} de esta empresa`);
+    toast(announcement);
     region.current?.focus();
   };
   return (

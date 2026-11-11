@@ -374,3 +374,26 @@ test('addingAPersonRefreshesTheProjectsTheyJoined', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Añadir persona' }));
   await waitFor(() => expect(onProjectsChanged).toHaveBeenCalledTimes(1));
 });
+
+test('onlyTheGroupAdminSeesDeleteAndItAsksFirst', async () => {
+  show({ [list]: () => [ana] }, companyAdmin);
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Ana' }));
+  expect(screen.queryByRole('button', { name: 'Borrar Ana' })).toBeNull();
+});
+
+test('deletingAPersonAsksThenDeletesAndRefreshesPeopleAndProjects', async () => {
+  let users = [ana, gil];
+  const onProjectsChanged = vi.fn();
+  const calls = show({ [list]: () => users, 'DELETE /v1/admin/users/u1': () => { users = [gil]; return { status: 204 }; } }, groupAdmin, onProjectsChanged);
+  const message = '¿Borrar a Ana? Desaparece de todas las empresas y de sus proyectos, y sus claves dejan de valer. No se puede deshacer.';
+  await act('Ana', 'Borrar Ana');
+  await userEvent.click(within(screen.getByRole('dialog', { name: message })).getByRole('button', { name: 'Cancelar' }));
+  expect(calls.some((c) => c.key.startsWith('DELETE'))).toBe(false);
+  await act('Ana', 'Borrar Ana');
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Borrar' }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Se ha borrado a Ana'));
+  expect(calls.some((c) => c.key === 'DELETE /v1/admin/users/u1')).toBe(true);
+  expect(screen.queryByRole('button', { name: 'Más acciones de Ana' })).toBeNull();
+  expect(onProjectsChanged).toHaveBeenCalled();
+  await waitFor(() => expect(screen.getByRole('region', { name: 'Lista de personas' })).toHaveFocus());
+});
