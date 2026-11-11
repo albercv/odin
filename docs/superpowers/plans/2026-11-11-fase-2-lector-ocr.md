@@ -94,7 +94,8 @@ public interface ReaderService {
     ReadResult read(byte[] content, DocumentFormat format);  // ReadResult ya existe
 }
 public class ReaderUnavailableException extends RuntimeException { }   // no responde, no conecta
-public class UnreadableDocumentException extends RuntimeException { }  // 413, 415, 422
+public class UnreadableDocumentException extends RuntimeException { }  // 415, 422
+public class DocumentTooLargeForReaderException extends RuntimeException { }  // 413: tamaño o páginas (el puente admite 200)
 public class ReaderFailedException extends RuntimeException { }        // 500, tiempo agotado, contrato roto
 // DocumentRepository gana:
 Optional<Document> claimNextForReader(Instant now, Duration staleAfter);
@@ -117,7 +118,8 @@ public record ReaderSettings(Duration readTimeout, int maxAttempts) {
 
 - **Mensajes nuevos** (constantes en `ProcessDocumentsWithReader`, texto literal del spec 5.3):
   - `READER_FAILED` = «El lector OCR no pudo leer el documento. Reinténtalo.»;
-  - `NO_TEXT_FOUND` = «El lector OCR no encontró texto en el documento.».
+  - `NO_TEXT_FOUND` = «El lector OCR no encontró texto en el documento.»;
+  - `TOO_LARGE_FOR_READER` = «El documento es demasiado grande para el lector OCR: divídelo en partes más pequeñas.».
   - `UNREADABLE` y `TOO_MANY_ATTEMPTS` se reutilizan de `ProcessPendingDocuments`.
 - **Contrato del servicio lector:** `docs/contratos/servicio-lector.openapi.yaml` (tarea 1). Es la fuente de las formas JSON en los dos repositorios.
 
@@ -235,7 +237,7 @@ Rama `task/fase-2-conocimiento/carril-lector` (Odín). Spec 5.1 a 5.3.
 
 **Ficheros:**
 - **Crear:**
-  - `application/port/ReaderService.java`, `ReaderUnavailableException.java`, `UnreadableDocumentException.java` y `ReaderFailedException.java`;
+  - `application/port/ReaderService.java`, `ReaderUnavailableException.java`, `UnreadableDocumentException.java`, `DocumentTooLargeForReaderException.java` y `ReaderFailedException.java`;
   - `application/document/DocumentPages.java` y `ProcessDocumentsWithReader.java`;
   - `application/shared/ReaderSettings.java`;
   - el doble `application/fake/ScriptedReaderService.java`;
@@ -257,6 +259,7 @@ Rama `task/fase-2-conocimiento/carril-lector` (Odín). Spec 5.1 a 5.3.
     - `readsPendingDocumentAndMarksReady`, con `pagesWithoutText` vacía;
     - `unavailableServiceKeepsDocumentWaitingWithoutSpendingAttempts`;
     - `unreadableIsFailedWithUnreadableReason`;
+    - `tooLargeForReaderIsFailedWithItsReason`, sin reintentos;
     - `readerFailureBeforeLastAttemptReturnsToQueueKeepingAttempts`;
     - `failureOnLastAttemptStoresNoPages`, que acaba en `FAILED` con `READER_FAILED`;
     - `allBlankPagesIsFailedWithNoTextFound`;
@@ -320,12 +323,14 @@ Rama `task/fase-2-conocimiento/adaptador-lector` (Odín). Spec 5.2 y 5.4.
 
 **Valores:**
 - `HttpReaderService(URI baseUrl, Duration readTimeout, Duration connectTimeout, Optional<String> token, HttpClient client)`.
-- `isAvailable()`: `GET /health` con `connectTimeout`; verdadero solo con 200 y `status: "ok"`.
+- `isAvailable()`: `GET /health` con `connectTimeout` en el cliente **y** `HttpRequest.timeout(connectTimeout)` en la petición. Mientras el puente lee, el sistema acepta la conexión igualmente y la respuesta no llega hasta que acaba la lectura (revisión final del puente). Es verdadero solo con 200 y `status: "ok"`.
 - `read`:
-  - `POST /read` multipart con el campo `file` y `filename="document"`;
+  - `POST /read` multipart con el campo `file` y `filename="document"`, con el cuerpo montado entero y enviado con `HttpRequest.BodyPublishers.ofByteArray`. El puente exige `Content-Length` y rechaza el envío por trozos (*chunked*) con 400;
   - mapeo de errores:
     - conexión rechazada o `HttpConnectTimeoutException`: `ReaderUnavailableException`;
-    - 413, 415 o 422: `UnreadableDocumentException`;
+    - 413: `DocumentTooLargeForReaderException`;
+    - 415 o 422: `UnreadableDocumentException`;
+    - 400 o 404: `ReaderFailedException`, con un aviso en el registro del servidor, porque es un fallo del cliente y no del documento;
     - 401: `ReaderUnavailableException`, porque es un fallo de configuración, no del documento, y se escribe en el registro del servidor;
     - 500, tiempo agotado o JSON fuera del contrato: `ReaderFailedException`.
   - Validación: páginas de 1 a n, sin huecos ni repetidas, y `reader.name` y `reader.version` con texto.
@@ -347,7 +352,11 @@ Rama `task/fase-2-conocimiento/adaptador-lector` (Odín). Spec 5.2 y 5.4.
     - `healthOkIsAvailable`;
     - `connectionRefusedIsUnavailable`;
     - `unauthorizedIsUnavailable`;
-    - `each4xxIsUnreadable`, para 413, 415 y 422;
+    - `tooLargeIsDocumentTooLarge`, para 413;
+    - `unsupportedOrUnreadableIsUnreadable`, para 415 y 422;
+    - `badRequestOrNotFoundIsReaderFailure`, para 400 y 404;
+    - `sendsContentLengthNotChunked`;
+    - `healthTimesOutWhenTheServiceIsBusy`;
     - `serverErrorIsReaderFailure`;
     - `timeoutIsReaderFailure`;
     - `pagesWithGapIsReaderFailure`;

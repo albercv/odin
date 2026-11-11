@@ -98,7 +98,8 @@ Amplía el del spec base 6.4 sin romperlo: añade `GET /health` y los códigos d
   - `ReadResult read(byte[] content, DocumentFormat format)`, que reutiliza `ReadResult`.
   - Errores del puerto, en `application/port`:
     - `ReaderUnavailableException`: no responde o no se puede conectar;
-    - `UnreadableDocumentException`: respuesta 413, 415 o 422;
+    - `UnreadableDocumentException`: respuesta 415 o 422;
+    - `DocumentTooLargeForReaderException`: respuesta 413, porque el fichero pasa del tamaño o de las páginas que admite el servicio (el puente admite 200 páginas por defecto);
     - `ReaderFailedException`: respuesta 500, tiempo agotado o respuesta que no cumple el contrato.
 - **Caso de uso `ProcessDocumentsWithReader`** (`application/document`), con `processNext()` como el carril local:
   1. Si `isAvailable()` es falso, no toma nada.
@@ -116,6 +117,7 @@ Amplía el del spec base 6.4 sin romperlo: añade `GET /health` y los códigos d
 |---|---|---|
 | `ReaderUnavailableException` | Vuelve a `PENDING_READER` y no cuenta el intento | — |
 | `UnreadableDocumentException` | `FAILED` | «Documento ilegible: el fichero está dañado o no se puede leer.» (el de hoy) |
+| `DocumentTooLargeForReaderException` | `FAILED` | «El documento es demasiado grande para el lector OCR: divídelo en partes más pequeñas.» |
 | `ReaderFailedException` antes del último intento | Vuelve a `PENDING_READER`, conservando el contador | — |
 | `ReaderFailedException` en el último intento | `FAILED` | «El lector OCR no pudo leer el documento. Reinténtalo.» |
 | El lector no encuentra texto en ninguna página | `FAILED` | «El lector OCR no encontró texto en el documento.» |
@@ -272,3 +274,11 @@ Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 7 preguntas
 - reutilizar `pipeline.run` en modo `single` (6);
 - el secreto compartido, que se fija ya en el contrato aunque sea opcional (4 y 7);
 - los dos hilos de programación, para que una lectura larga no pare el carril local (5.2).
+
+## 13. Lo que dejaron las tareas 1 a 3 (2026-11-11)
+
+El CEO autorizó adelantar el contrato y el puente (D-046). Su revisión final dejó cuatro ajustes para las tareas que esperan a la 2a, ya aplicados en el plan:
+- **413 tiene motivo propio.** El puente admite 200 páginas por defecto (`--max-pages`), y un documento demasiado grande no se trata como «ilegible» (5.2 y 5.3).
+- **Cuerpo con `Content-Length`.** El puente no admite el envío por trozos (*chunked*), así que el adaptador envía el cuerpo entero (plan, tarea 6).
+- **400 y 404 son fallo del cliente,** no del documento: se tratan como fallo del lector y quedan en el registro del servidor (plan, tarea 6).
+- **Tiempo máximo en `/health`.** El puente atiende una petición cada vez y, mientras lee, `/health` no responde. Por eso el adaptador fija un tiempo máximo en la petición, no solo al conectar (plan, tarea 6).
