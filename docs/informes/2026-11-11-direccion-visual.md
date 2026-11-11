@@ -17,7 +17,7 @@ Fotograma del cerebro animado de la entrada, con la CPU a un cuarto (60 fotogram
 | 1 | 1,43 ms | 1,35 ms |
 | 2 | 1,52 ms | 1,30 ms |
 
-Escribir en «Correo» tras cargar la entrada (CPU a un cuarto), 5 cargas con el cerebro animado y 5 con `reducedMotion: 'reduce'`. Se mide desde que el campo tiene el foco hasta el siguiente fotograma tras teclear un correo ficticio de 29 caracteres. Umbral: 50 ms más como máximo en la mediana.
+Escribir en «Correo» tras cargar la entrada (CPU a un cuarto), 5 cargas con el cerebro animado y 5 con `reducedMotion: 'reduce'`. Se mide desde que el campo tiene el foco hasta el siguiente fotograma tras teclear un correo ficticio de 29 caracteres; incluye la ida y vuelta de Playwright por cada tecla, igual en las dos modalidades, de modo que lo que importa es la diferencia y no el valor absoluto. Umbral: 50 ms más como máximo en la mediana.
 
 | Ejecución | Con cerebro animado (ms) | Sin animación (ms) | Diferencia de medianas |
 |---|---|---|---|
@@ -28,25 +28,37 @@ Los dos umbrales se cumplen con holgura. Las cifras están medidas en esta máqu
 
 ## Accesibilidad (axe)
 
-`@axe-core/playwright` 4.14.0, reglas `wcag2a`, `wcag2aa`, `wcag21aa` y `wcag22aa`; la prueba falla con cualquier infracción `serious` o `critical`.
+`@axe-core/playwright` 4.14.0, reglas `wcag2a`, `wcag2aa`, `wcag21aa` y `wcag22aa`; la prueba falla con cualquier infracción `serious` o `critical`. `visual.spec.ts` crea sus propios datos (una empresa con una ficha pendiente y otra sin fichas) y no depende de lo que haya hecho `demo.spec.ts`. El tema se fuerza con `emulateMedia({ colorScheme })`.
+
+Cifras: número de infracciones `serious` o `critical` (las únicas que hacen fallar la prueba). El total de infracciones de cualquier gravedad también fue 0 en todas las combinaciones.
 
 | Pantalla | Tema claro | Tema oscuro |
 |---|---|---|
-| Entrada | 0 infracciones | 0 infracciones |
-| Portada (`#cover`) | 0 infracciones | 0 infracciones |
-| Empresa | 0 infracciones | 0 infracciones |
-| Revisión | 0 infracciones | 0 infracciones |
+| Entrada | 0 | 0 |
+| Portada (`#cover`) | 0 | 0 |
+| Empresa | 0 | 0 |
+| Revisión, sin fichas pendientes | 0 | 0 |
+| Revisión, con una ficha abierta | 0 | 0 |
+| Revisión, con el panel «Rechazar» abierto (campo del motivo visible) | 0 | 0 |
 
-Limitación: `demo.spec.ts` aprueba la única ficha pendiente antes de que corra `visual.spec.ts`, así que Revisión se revisó en su estado vacío («No hay fichas pendientes.»), no con una ficha abierta. El tema se fuerza con `emulateMedia({ colorScheme })`.
+Resultados `incomplete` de `color-contrast` (axe no pudo decidir), registrados por pantalla y tema en cada ejecución:
+
+| Pantalla | Claro | Oscuro | Elementos |
+|---|---|---|---|
+| Entrada | 4 | 4 | `span` (propietario de la marca), `small`, `h1`, `p` de la declaración |
+| Portada | 5 | 5 | `span` y `.owner`, `h1`, `p`, `small` de la declaración |
+| Empresa y las tres de Revisión | 0 | 0 | |
+
+Son los textos que están sobre el lienzo del cerebro y un degradado; axe no puede calcular el color de fondo de un `canvas`. Cómo se comprobaron: el texto de esas zonas es `#fff` y `--side-text` (`#c5ced4`) y queda sobre `--brand-base-deep` gracias al degradado de la capa `shade`. Con la marca por defecto (calculado con `deriveTheme` y `contrastRatio`): `#fff` sobre `--brand-base-deep` 17,48:1 y sobre `--brand-base` 13,36:1; `#c5ced4` sobre `--brand-base-deep` 10,95:1 y sobre `--brand-base` 8,37:1; todos por encima de 4,5:1. No se midió el contraste con los puntos del cerebro que pasen por detrás del texto (el color del punto, `#05b4b9`, daría 2,55:1 con blanco si un punto cubriera una letra); esa comprobación sigue pendiente y es visual.
 
 ## Casos límite y marca
 
-Pruebas de `panel/e2e/visual.spec.ts`, todas pasadas en las dos ejecuciones:
+Pruebas de `panel/e2e/visual.spec.ts`, todas pasadas en las dos ejecuciones (21 pruebas en total en `make demo`):
 
 - `coverAppearsOnlyWithCover`: con la marca por defecto `#cover` muestra la portada; sirviendo `brand.json` sin `cover`, muestra la entrada.
 - `longNamesDoNotOverflow`: empresa, persona y proyecto de 120 caracteres y un correo de 67 caracteres sin espacios; `scrollWidth <= innerWidth` en escritorio y a 375 px, y el nombre completo sigue en el texto.
 - `narrowScreenHasNoHorizontalScroll`: 375 px, empresa y revisión, sin desplazamiento horizontal; «Añadir persona», «Revisión», «Mi cuenta» y «Salir» visibles.
-- `brandFilesCannotRunScripts`: `/brand/brand.json` lleva `sandbox` en `content-security-policy`.
+- `brandFilesCannotRunScripts`: `/brand/brand.json` y el logotipo `/brand/<logo>` leído de ese fichero llevan `sandbox` en `content-security-policy`.
 - `brandIsNotCached`: `cache-control` contiene `no-cache`.
 
 ## Tamaños
