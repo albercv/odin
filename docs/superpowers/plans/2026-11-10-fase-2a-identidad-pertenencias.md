@@ -302,8 +302,8 @@ Rama `task/identidad-pertenencias/panel`. Spec 9. Con el sistema de la direcció
 - Lista de personas: código completo (`7F3K-E2D`) · nombre y apellidos, o «Faltan apellidos» · correo o «sin correo» · «Administra la empresa», «Trabaja con su IA» o los dos · «activo» o «desactivado».
 - Alta: nombre, apellidos, correo, las casillas «Administra la empresa» y «Trabaja con su IA» (al menos una) y, solo con la primera marcada, contraseña. «Administra la empresa» solo aparece si quien mira es el administrador del grupo.
 - Tras un alta con `alreadyExisted`: «Esta persona ya existía en el grupo: se ha añadido a esta empresa», en un `role="status"`.
-- Por persona: cambiar papeles, activar o desactivar, quitar de la empresa con `window.confirm('¿Quitar a <nombre> de esta empresa? Sus claves dejarán de valer.')`, y claves si trabaja.
-- `CompanySwitcher`: un `<select>` con la etiqueta «Empresa», visible solo si `me.companies` tiene más de una.
+- Por persona: cambiar papeles, activar o desactivar, quitar de la empresa con `ConfirmDialog`: «¿Quitar a <nombre> de esta empresa? Sus claves y sus proyectos de esta empresa dejarán de valer.», y claves si trabaja.
+- `CompanySwitcher`: selector con la etiqueta «Empresa» y el estilo de la dirección visual, en el hueco del nombre de la empresa de la barra lateral. Con una sola empresa se ve su nombre, como hoy.
 - Proyectos: casilla «Visible para toda la empresa», sin marcar en un proyecto nuevo. Al desmarcarla en un proyecto sin miembros, `ConfirmDialog`: «¿Cerrar <nombre>? Solo lo verán sus miembros, y ahora no tiene ninguno.». Lista de miembros con «Añadir» y «Quitar».
 - Empresas: campo «Código» al crear, y al editar solo para el administrador del grupo.
 - Alta (O1): con «Trabaja con su IA» marcada, casillas con los proyectos de la empresa, todas sin marcar; se envían en `projectIds`.
@@ -314,12 +314,14 @@ Rama `task/identidad-pertenencias/panel`. Spec 9. Con el sistema de la direcció
 - Se mantienen las reglas de accesibilidad y de formularios de la fase 1.1.
 
 - [ ] **Paso 1:** una prueba por acción, que compruebe la petición enviada y lo que se ve; comprueba que fallan:
-  - `MemberForm.test.tsx`: `workerOnlySendsNoPassword`, `adminRoleRequiresPassword`, `adminCheckboxOnlyForGroupAdmin`, `atLeastOneRoleIsRequired`, `alreadyExistedShowsTheNotice` y `failedAddKeepsTheTypedValues`;
-  - `Members.test.tsx`: `rowShowsRolesAndState`, `changesRoles`, `deactivatesAndActivates`, `removeAsksForConfirmation` y `keysOnlyForWorkers`;
+  - `MemberForm.test.tsx`: `workerOnlySendsNoPassword`, `adminRoleRequiresPassword`, `adminCheckboxOnlyForGroupAdmin`, `atLeastOneRoleIsRequired`, `firstAndLastNameAreRequired`, `projectsOnlyForWorkersAndSentAsProjectIds`, `alreadyExistedShowsTheNotice` y `failedAddKeepsTheTypedValues`;
+  - `Members.test.tsx`: `rowShowsMemberCodeRolesAndState`, `missingLastNameIsFlagged`, `changesRoles`, `deactivatesAndActivates`, `removeAsksForConfirmation`, `keysOnlyForWorkers` y `accessesListAddAndRemoveProjects`;
+  - `Keys.test.tsx`: `explainsWhatAKeyGivesAccessTo` y `revokeButtonSaysRevokeKeyAndNamesItForScreenReaders`;
+  - `Companies.test.tsx`: `codeIsRequiredOnCreate` y `onlyGroupAdminEditsTheCode`;
   - `CompanySwitcher.test.tsx`: `hiddenWithOneCompany` y `switchingLoadsTheOtherCompany`;
-  - `ProjectMembers.test.tsx`: `restrictAsksForConfirmationWhenNoMembers`, `addsAndRemovesMembers` y `membersListOnlyForRestrictedProjects`.
+  - `ProjectMembers.test.tsx`: `closingAsksForConfirmationWhenNoMembers`, `addsAndRemovesMembers` y `whoSeesItShowsCompanyWideOrMemberCount`.
 - [ ] **Paso 2:** implementa los componentes.
-- [ ] **Paso 3:** `make check` termina con 0.
+- [ ] **Paso 3:** `make check` y `make demo` terminan con 0, con axe sin infracciones graves en las pantallas nuevas.
 - [ ] **Paso 4:** commit «feat: panel con personas, papeles, accesos y proyectos cerrados».
 
 ### Tarea 7: Prueba de extremo a extremo y demostración · Sonnet
