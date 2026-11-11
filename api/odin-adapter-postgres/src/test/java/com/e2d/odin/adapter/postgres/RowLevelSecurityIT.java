@@ -13,6 +13,7 @@ import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -20,6 +21,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -137,5 +139,97 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
             assertThat(count(c, "document")).isZero();
             assertThat(count(c, "knowledge_card")).isZero();
         }
+    }
+
+    private static final List<String> PROJECT_TABLES = List.of("document", "document_page", "knowledge_card");
+
+    private ProjectId seedInClosedProject(CompanyId company) {
+        UserId user = newUser(company);
+        ProjectId project = newProject(company, "Cerrado " + UUID.randomUUID());
+        Document d = new Document(new com.e2d.odin.domain.shared.DocumentId(UUID.randomUUID()), company,
+                Optional.of(project), "Doc cerrado", "f.pdf", com.e2d.odin.domain.document.DocumentFormat.PDF,
+                UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(), true, user, NOW,
+                Optional.empty(), 0);
+        docs.save(d);
+        docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, "texto cerrado", "lector", "1")));
+        cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.of(project), "T", "B",
+                Optional.empty(), user, NOW, CardStatus.PENDING, Optional.empty()));
+        return project;
+    }
+
+    /** Cuenta las filas de las tres tablas con proyecto, con las variables fijadas; las del proyecto son opcionales. */
+    private void assertProjectRows(CompanyId company, String projectIds, String allProjects, long expected)
+            throws SQLException {
+        try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
+            s.execute("SELECT set_config('app.company_ids', '" + company.value() + "', false)");
+            if (projectIds != null) {
+                s.execute("SELECT set_config('app.project_ids', '" + projectIds + "', false)");
+            }
+            if (allProjects != null) {
+                s.execute("SELECT set_config('app.all_projects', '" + allProjects + "', false)");
+            }
+            for (String table : PROJECT_TABLES) {
+                assertThat(count(c, table)).as(table).isEqualTo(expected);
+            }
+        }
+    }
+
+    @Test
+    void restrictedProjectRowsAreHiddenWithoutItsIdInScope() throws SQLException {
+        ProjectId project = seedInClosedProject(a);
+        seedInClosedProject(a);
+        assertProjectRows(a, UUID.randomUUID().toString(), "off", 1);
+        assertProjectRows(a, project.value().toString(), "off", 2);
+    }
+
+    @Test
+    void rowsWithoutProjectAreVisibleWithEmptyProjectScope() throws SQLException {
+        seedInClosedProject(a);
+        try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
+            s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
+            s.execute("SELECT set_config('app.project_ids', '', false)");
+            s.execute("SELECT set_config('app.all_projects', 'off', false)");
+            for (String table : PROJECT_TABLES) {
+                assertThat(count(c, table)).as(table).isEqualTo(1);
+            }
+        }
+    }
+
+    @Test
+    void allProjectsFlagShowsEverythingOfTheCompany() throws SQLException {
+        seedInClosedProject(a);
+        seedInClosedProject(b);
+        assertProjectRows(a, "", "on", 2);
+    }
+
+    @Test
+    void noProjectVariablesMeansOnlyProjectlessRows() throws SQLException {
+        seedInClosedProject(a);
+        assertProjectRows(a, null, null, 1);
+    }
+
+    @Test
+    void projectMembersOfAnotherCompanyAreHidden() throws SQLException {
+        ProjectId projectOfB = seedInClosedProject(b);
+        UserId member = newUser(b);
+        projectMembers.add(b, projectOfB, member);
+        try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
+            s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
+            assertThat(count(c, "project_member")).isZero();
+            s.execute("SELECT set_config('app.company_ids', '" + b.value() + "', false)");
+            assertThat(count(c, "project_member")).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void documentsOfDeletedProjectStayReadableThroughRlsWithContentVisibility() {
+        ProjectId project = seedInClosedProject(a);
+        orgs.deleteProject(a, project, NOW);
+        ProjectVisibility content = ProjectVisibility.of(Set.of(project));
+        CompanyScope scope = CompanyScope.of(a);
+        assertThat(docs.list(scope, content, Optional.empty(), Optional.empty(), 0, 10)).hasSize(2);
+        assertThat(cards.listByStatus(scope, content, CardStatus.PENDING)).hasSize(2);
+        assertThat(docs.list(scope, ProjectVisibility.of(Set.of()), Optional.empty(), Optional.empty(), 0, 10))
+                .hasSize(1);
     }
 }
