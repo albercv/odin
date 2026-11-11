@@ -1,0 +1,6 @@
+.password { padding: 0 22px 22px; max-width: 28rem; }
+.themes { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 22px; }
+.theme { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; }
+.theme:has(input:checked) { background: var(--accent-tint); border-color: var(--accent); }
+.theme input { accent-color: var(--accent); margin: 0; }
+.theme:has(:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }

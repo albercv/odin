@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { mockFetch } from '../mockApi';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 vi.mock('../brain/BrainCanvas', () => ({ BrainCanvas: () => null }));
 
@@ -67,4 +67,15 @@ test('noticeDisappearsAfterLoginAndDoesNotReturnOnLogout', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Salir' }));
   expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument();
   expect(screen.queryByText('Contraseña cambiada. Entra de nuevo.')).toBeNull();
+});
+
+afterEach(() => localStorage.clear());
+
+test('themeChoiceIsSaved', async () => {
+  routes({ status: 204 });
+  await openAccount();
+  expect(screen.getByRole('radio', { name: 'Como el sistema' })).toBeChecked();
+  await userEvent.click(screen.getByRole('radio', { name: 'Oscuro' }));
+  expect(screen.getByRole('radio', { name: 'Oscuro' })).toBeChecked();
+  expect(localStorage.getItem('odin.colorPreference')).toBe('dark');
 });

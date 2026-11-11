@@ -1,0 +1,14 @@
+.scroll { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  text-align: left; font-size: 13px; font-weight: 500; color: var(--text-muted); padding: 10px 22px;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-muted);
+}
+.table td { padding: 13px 22px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
+.table tr:last-child td { border-bottom: 0; }
+.person strong { display: block; font-weight: 500; }
+.person span { font-size: 14px; color: var(--text-muted); }
+.actions { text-align: right; width: 1%; }
+.panelRow td { background: var(--surface-muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.notice { padding: 0 22px 14px; }

@@ -9,9 +9,20 @@ const WORKER = { name: 'Trabajador E2E', email: 'e2e-worker@demo.test', renamed:
 const COMPANY_ADMIN = { name: 'Admin E2E', email: 'e2e-admin@demo.test', password: `clave-${randomUUID()}`, newPassword: `clave-${randomUUID()}`, resetPassword: `clave-${randomUUID()}` };
 const PROJECT = { name: 'Proyecto E2E', renamed: 'Proyecto E2E renombrado' };
 
-const usersSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Usuarios' }) });
+const usersSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Personas' }) });
 const projectsSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Proyectos' }) });
-const row = (section: Locator, text: string): Locator => section.locator('li').filter({ hasText: text });
+const row = (section: Locator, text: string): Locator => section.getByRole('row').filter({ hasText: text }).first();
+
+async function openActions(section: Locator, name: string): Promise<void> {
+  const toggle = section.getByRole('button', { name: `Más acciones de ${name}`, exact: true });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+}
+
+async function confirmDialog(page: Page, message: string, confirmLabel: string): Promise<void> {
+  const dialog = page.getByRole('dialog', { name: message });
+  await dialog.getByRole('button', { name: confirmLabel, exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+}
 
 async function logIn(page: Page, email: string, password: string): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible();
@@ -21,18 +32,22 @@ async function logIn(page: Page, email: string, password: string): Promise<void>
 }
 
 async function createUser(page: Page, user: { name: string; email?: string; password?: string; role?: 'WORKER' | 'COMPANY_ADMIN' }): Promise<void> {
-  const form = usersSection(page).locator('form').filter({ has: page.getByRole('button', { name: 'Crear usuario' }) });
+  await page.getByRole('button', { name: 'Añadir persona', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Añadir persona' });
+  const form = dialog.locator('form');
   await form.getByLabel('Rol').selectOption(user.role ?? 'WORKER');
   await form.getByLabel('Nombre', { exact: true }).fill(user.name);
   if (user.email) await form.getByLabel('Correo').fill(user.email);
   if (user.password) await form.getByLabel('Contraseña').fill(user.password);
   await form.getByRole('button', { name: 'Crear usuario' }).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 async function createCompanyAndOpenIt(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Nueva empresa' }).click();
-  await page.getByLabel('Nombre de la empresa').fill(COMPANY);
-  await page.getByRole('button', { name: 'Crear empresa' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Nueva empresa' });
+  await dialog.getByLabel('Nombre de la empresa').fill(COMPANY);
+  await dialog.getByRole('button', { name: 'Crear empresa' }).click();
   await page.getByRole('button', { name: `Abrir ${COMPANY}` }).click();
   await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();
   console.log('✓ Admin 1: empresa «Empresa E2E» creada y abierta');
@@ -40,8 +55,8 @@ async function createCompanyAndOpenIt(page: Page): Promise<void> {
 
 async function workerWithoutEmail(page: Page): Promise<void> {
   await createUser(page, { name: WORKER.name });
-  await expect(row(usersSection(page), WORKER.name)).toContainText('sin correo');
-  console.log('✓ Admin 2: trabajador sin correo ni contraseña, listado como «sin correo»');
+  await expect(row(usersSection(page), WORKER.name)).toContainText('Sin correo');
+  console.log('✓ Admin 2: trabajador sin correo ni contraseña, listado como «Sin correo»');
 }
 
 async function companyAdminWithPassword(page: Page): Promise<void> {
@@ -51,17 +66,21 @@ async function companyAdminWithPassword(page: Page): Promise<void> {
 }
 
 async function deactivateAndActivate(page: Page): Promise<void> {
-  const worker = row(usersSection(page), WORKER.name);
-  await worker.getByRole('button', { name: `Desactivar ${WORKER.name}` }).click();
-  await expect(worker).toContainText('desactivado');
-  await worker.getByRole('button', { name: `Activar ${WORKER.name}` }).click();
-  await expect(worker).toContainText('· activo');
+  const users = usersSection(page);
+  const worker = row(users, WORKER.name);
+  await openActions(users, WORKER.name);
+  await users.getByRole('button', { name: `Desactivar ${WORKER.name}`, exact: true }).click();
+  await expect(worker).toContainText('Desactivado');
+  await users.getByRole('button', { name: `Activar ${WORKER.name}`, exact: true }).click();
+  await expect(worker).toContainText('Activo');
+  await expect(worker).not.toContainText('Desactivado');
   console.log('✓ Admin 4: trabajador desactivado y activado de nuevo');
 }
 
 async function editNameAndEmail(page: Page): Promise<void> {
   const users = usersSection(page);
-  await users.getByRole('button', { name: `Editar ${WORKER.name}` }).click();
+  await openActions(users, WORKER.name);
+  await users.getByRole('button', { name: `Editar ${WORKER.name}`, exact: true }).click();
   const form = users.locator('form').filter({ has: page.getByRole('button', { name: `Guardar ${WORKER.name}` }) });
   await form.getByLabel('Nombre').fill(WORKER.renamed);
   await form.getByLabel('Correo').fill(COMPANY_ADMIN.email);
@@ -74,12 +93,14 @@ async function editNameAndEmail(page: Page): Promise<void> {
 }
 
 async function giveKeyShownOnce(page: Page): Promise<void> {
-  const worker = row(usersSection(page), WORKER.renamed);
-  await worker.getByRole('button', { name: `Claves de ${WORKER.renamed}` }).click();
-  await worker.getByLabel('Etiqueta de la clave').fill('clave e2e');
-  await worker.getByRole('button', { name: 'Dar clave' }).click();
-  const issued = worker.getByRole('status');
+  const users = usersSection(page);
+  await openActions(users, WORKER.renamed);
+  await users.getByRole('button', { name: `Claves de ${WORKER.renamed}`, exact: true }).click();
+  await users.getByLabel('Etiqueta de la clave').fill('clave e2e');
+  await users.getByRole('button', { name: 'Dar clave' }).click();
+  const issued = page.getByRole('dialog', { name: 'Clave nueva' });
   await expect(issued).toContainText('No se volverá a mostrar');
+  await expect(issued.getByRole('button', { name: 'Cerrar' })).toHaveCount(0);
   const key = (await issued.locator('code').textContent()) ?? '';
   expect(key.length).toBeGreaterThan(20);
   await issued.getByRole('button', { name: 'Entendido' }).click();
@@ -89,7 +110,9 @@ async function giveKeyShownOnce(page: Page): Promise<void> {
 
 async function removeWorkerAndAddThemBack(page: Page): Promise<void> {
   const users = usersSection(page);
-  await users.getByRole('button', { name: `Quitar ${WORKER.renamed}` }).click();
+  await openActions(users, WORKER.renamed);
+  await users.getByRole('button', { name: `Quitar ${WORKER.renamed}`, exact: true }).click();
+  await confirmDialog(page, `¿Quitar a ${WORKER.renamed} de la empresa?`, 'Quitar');
   await expect(row(users, WORKER.renamed)).toHaveCount(0);
   await createUser(page, { name: 'Otro nombre E2E', email: WORKER.email });
   await expect(row(users, WORKER.renamed)).toContainText(WORKER.email);
@@ -99,29 +122,36 @@ async function removeWorkerAndAddThemBack(page: Page): Promise<void> {
 async function projectLifecycle(page: Page): Promise<void> {
   const projects = projectsSection(page);
   const add = async (name: string) => {
-    await projects.getByLabel('Nombre del proyecto').fill(name);
-    await projects.getByRole('button', { name: 'Añadir' }).click();
+    await projects.getByRole('button', { name: 'Nuevo proyecto' }).click();
+    await page.getByLabel('Nombre del proyecto').fill(name);
+    await page.getByRole('button', { name: 'Crear proyecto' }).click();
   };
   await add(PROJECT.name);
   await expect(row(projects, PROJECT.name)).toBeVisible();
-  await projects.getByRole('button', { name: `Renombrar ${PROJECT.name}` }).click();
+  await openActions(projects, PROJECT.name);
+  await projects.getByRole('button', { name: `Renombrar ${PROJECT.name}`, exact: true }).click();
   await projects.getByLabel('Nombre', { exact: true }).fill(PROJECT.renamed);
-  await projects.getByRole('button', { name: `Guardar ${PROJECT.name}` }).click();
+  await projects.getByRole('button', { name: `Guardar ${PROJECT.name}`, exact: true }).click();
   await expect(row(projects, PROJECT.renamed)).toBeVisible();
   await add(PROJECT.renamed);
-  await expect(projects.getByRole('alert')).toHaveText('Ya existe un proyecto con ese nombre');
-  await projects.getByRole('button', { name: `Borrar ${PROJECT.renamed}` }).click();
+  const dialog = page.getByRole('dialog', { name: 'Nuevo proyecto' });
+  await expect(dialog.getByRole('alert')).toHaveText('Ya existe un proyecto con ese nombre');
+  await dialog.getByRole('button', { name: 'Cerrar' }).click();
+  await openActions(projects, PROJECT.renamed);
+  await projects.getByRole('button', { name: `Borrar ${PROJECT.renamed}`, exact: true }).click();
+  await confirmDialog(page, `¿Borrar el proyecto ${PROJECT.renamed}? Sus documentos se conservan.`, 'Borrar');
   await expect(row(projects, PROJECT.renamed)).toHaveCount(0);
   console.log('✓ Admin 8: proyecto creado, renombrado, duplicado rechazado y borrado');
 }
 
 async function resetCompanyAdminPasswordAndEnter(page: Page): Promise<void> {
   const users = usersSection(page);
-  await users.getByRole('button', { name: `Restablecer contraseña de ${COMPANY_ADMIN.name}` }).click();
+  await openActions(users, COMPANY_ADMIN.name);
+  await users.getByRole('button', { name: `Restablecer contraseña de ${COMPANY_ADMIN.name}`, exact: true }).click();
   await users.getByLabel('Nueva contraseña').fill(COMPANY_ADMIN.resetPassword);
   await users.getByRole('button', { name: `Guardar contraseña de ${COMPANY_ADMIN.name}` }).click();
   await expect(users.getByLabel('Nueva contraseña')).toHaveCount(0);
-  await expect(users.getByRole('status')).toHaveText('Contraseña restablecida');
+  await expect(page.getByRole('status')).toHaveText('Contraseña restablecida');
   await page.getByRole('button', { name: 'Salir' }).click();
   await logIn(page, COMPANY_ADMIN.email, COMPANY_ADMIN.resetPassword);
   await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();
@@ -143,7 +173,6 @@ async function changeOwnPassword(page: Page): Promise<void> {
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
 // El administrador del grupo reutiliza la sesión de prepare (sin login) y los pasos que entran de nuevo van al final.
 test('administración del panel de extremo a extremo', async ({ page, context }) => {
-  page.on('dialog', (dialog) => dialog.accept());
   const [name, value] = state.sessionCookie.split('=');
   await context.addCookies([{ name: name ?? '', value: value ?? '', url: process.env.DEMO_PANEL_URL ?? '' }]);
   await page.goto(process.env.DEMO_PANEL_URL ?? '');

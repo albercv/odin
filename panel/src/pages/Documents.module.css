@@ -1,0 +1,2 @@
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.truncated { margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--pending-bg); color: var(--pending-text); font-weight: 500; }
