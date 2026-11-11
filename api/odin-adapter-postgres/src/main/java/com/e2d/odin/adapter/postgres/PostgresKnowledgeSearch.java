@@ -51,7 +51,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
             return SearchResult.noSource();
         }
         List<String> exact = exactTokens(terms);
-        List<SearchHit> hits = tx.inScope(query.scope(), jdbc -> rows(jdbc, terms, exact, query));
+        List<SearchHit> hits = tx.inScope(query.scope(), query.visibility(), jdbc -> rows(jdbc, terms, exact, query));
         return new SearchResult(hits);
     }
 

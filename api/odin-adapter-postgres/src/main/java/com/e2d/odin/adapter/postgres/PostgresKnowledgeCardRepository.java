@@ -31,7 +31,7 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
     @Override
     public void save(KnowledgeCard c) {
         UUID reviewer = c.review().map(r -> r.reviewerId().value()).orElse(null);
-        tx.runInScope(CompanyScope.of(c.companyId()), jdbc -> jdbc.sql("""
+        tx.runInScope(CompanyScope.of(c.companyId()), ProjectVisibility.all(), jdbc -> jdbc.sql("""
                 INSERT INTO knowledge_card (id, company_id, project_id, title, body, original_body, author_id,
                     created_at, status, reviewer_id, decision, reviewed_at, review_note)
                 VALUES (:id, :company, :project, :title, :body, :original, :author, :created, :status,
@@ -53,7 +53,7 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
     public Optional<KnowledgeCard> findById(CompanyScope scope, ProjectVisibility visibility, CardId id) {
         String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE id = :id AND " + Sql.inScope("company_id")
                 + " AND " + Sql.inVisibleProjects("project_id");
-        return tx.inScope(scope, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("id", id.value()).query((rs, n) -> card(rs)).optional());
     }
 
@@ -61,7 +61,7 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
     public List<KnowledgeCard> listByStatus(CompanyScope scope, ProjectVisibility visibility, CardStatus status) {
         String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE status = :status AND "
                 + Sql.inScope("company_id") + " AND " + Sql.inVisibleProjects("project_id") + " ORDER BY seq";
-        return tx.inScope(scope, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("status", status.name()).query((rs, n) -> card(rs)).list());
     }
 
