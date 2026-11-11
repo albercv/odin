@@ -1,4 +1,4 @@
-.scroll { overflow-x: auto; }
+.scroll { position: relative; overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; }
 .table th {
   text-align: left; font-size: 13px; font-weight: 500; color: var(--text-muted); padding: 10px 22px;

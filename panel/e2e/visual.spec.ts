@@ -60,6 +60,19 @@ async function openCompany(page: Page, name: string): Promise<void> {
 
 const openCompanyA = (page: Page) => openCompany(page, 'Empresa A');
 
+async function openPersonAccesses(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('button', { name: 'Más acciones de Trabajadora Visual', exact: true }).click();
+  await page.getByRole('button', { name: 'Accesos de Trabajadora Visual', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Accesos de Trabajadora Visual' })).toBeVisible();
+}
+
+async function openAddPerson(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('button', { name: 'Añadir persona', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Añadir persona' })).toBeVisible();
+}
+
 async function openReview(page: Page, company = 'Empresa A'): Promise<void> {
   await openCompany(page, company);
   await page.getByRole('link', { name: 'Revisión' }).click();
@@ -81,6 +94,8 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   login: async (page) => { await page.goto(PANEL); await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible(); },
   cover: async (page) => { await page.goto(`${PANEL}/#cover`); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); },
   company: openCompanyA,
+  'company person accesses': openPersonAccesses,
+  'company add person': openAddPerson,
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,
   'review reject panel': openRejectPanel,

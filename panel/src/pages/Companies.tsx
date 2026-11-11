@@ -3,36 +3,62 @@ import { api, type S } from '../api/client';
 import { Capabilities } from '../components/Capabilities';
 import { NameDialog } from '../components/NameDialog';
 import { Notice } from '../components/Notice';
-import { RenameForm } from '../components/RenameForm';
 import { useAction, useLoad } from '../components/useLoad';
 import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
+import form from '../ui/Form.module.css';
 import { PageHeader } from '../ui/PageHeader';
 import { RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
 import { Table, tableStyles } from '../ui/Table';
 
-function CompanyRow({ c, onOpen, onDone }: { c: S['CompanyView']; onOpen: () => void; onDone: () => void }) {
+type EditProps = { company: S['CompanyView']; canEditCode: boolean; onSaved: () => void; onCancel: () => void };
+
+function EditForm({ company, canEditCode, onSaved, onCancel }: EditProps) {
+  const [name, setName] = useState(company.name);
+  const [code, setCode] = useState(company.code);
+  const { error, act } = useAction();
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (await act(() => api.updateCompany(company.id, { name, ...(canEditCode && code !== company.code && { code }) }))) onSaved();
+  };
+  return (
+    <form className={form.form} onSubmit={submit}>
+      <Notice message={error} />
+      <Field label={`Nombre de ${company.name}`}><input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
+      {canEditCode && <Field label="Código"><input required pattern="[A-Z0-9]{2,6}" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} /></Field>}
+      <div className={form.buttons}>
+        <Button type="submit" variant="primary">Guardar {company.name}</Button>
+        <Button onClick={onCancel}>Cancelar {company.name}</Button>
+      </div>
+    </form>
+  );
+}
+
+type RowProps = { c: S['CompanyView']; canEditCode: boolean; onOpen: () => void; onDone: () => void };
+
+function CompanyRow({ c, canEditCode, onOpen, onDone }: RowProps) {
   const [renaming, setRenaming] = useState(false);
   const { error, act } = useAction();
   const run = async (fn: () => Promise<unknown>) => (await act(fn)) && onDone();
   return (
     <tr>
-      <td>
+      <td className={tableStyles.person}>
         {renaming
-          ? <RenameForm name={c.name} label={`Nombre de ${c.name}`} onSave={(n) => api.renameCompany(c.id, n)} onSaved={() => { setRenaming(false); onDone(); }} onCancel={() => setRenaming(false)} />
-          : <strong>{c.name}</strong>}
+          ? <EditForm company={c} canEditCode={canEditCode} onSaved={() => { setRenaming(false); onDone(); }} onCancel={() => setRenaming(false)} />
+          : <><strong>{c.name}</strong><span>Código {c.code}</span></>}
         <Notice message={error} />
       </td>
       <td><Capabilities company={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} /></td>
       <td className={tableStyles.actions}>
         <Button onClick={onOpen}>Abrir {c.name}</Button>
-        <RowActions label={`Más acciones de ${c.name}`}><Button variant="ghost" onClick={() => setRenaming(true)}>Renombrar {c.name}</Button></RowActions>
+        <RowActions label={`Más acciones de ${c.name}`}><Button variant="ghost" onClick={() => setRenaming(true)}>Editar {c.name}</Button></RowActions>
       </td>
     </tr>
   );
 }
 
-export function Companies({ onOpen }: { onOpen: (id: string, name: string) => void }) {
+export function Companies({ onOpen, canEditCode }: { onOpen: (id: string, name: string) => void; canEditCode: boolean }) {
   const list = useLoad(api.companies, []);
   const [adding, setAdding] = useState(false);
   return (
@@ -41,7 +67,7 @@ export function Companies({ onOpen }: { onOpen: (id: string, name: string) => vo
       <Notice message={list.error} />
       <Section title="Empresas del grupo">
         <Table columns={['Empresa', 'Capacidades']}>
-          {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}
+          {list.data?.map((c) => <CompanyRow key={c.id} c={c} canEditCode={canEditCode} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}
         </Table>
       </Section>
       <NameDialog title="Nueva empresa" label="Nombre de la empresa" submitLabel="Crear empresa" codeLabel="Código" open={adding}

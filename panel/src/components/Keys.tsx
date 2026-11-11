@@ -25,12 +25,14 @@ function KeyRow({ k, onRevoke }: { k: S['KeyView']; onRevoke: () => void }) {
   return (
     <li className={styles.item}>
       <span>{k.label} ({k.prefix})</span>
-      {k.revokedAt ? <span className={styles.revoked}>Revocada</span> : <Button variant="danger" onClick={onRevoke}>Revocar {k.label}</Button>}
+      {k.revokedAt
+        ? <span className={styles.revoked}>Revocada</span>
+        : <Button variant="danger" aria-label={`Revocar clave ${k.label}`} onClick={onRevoke}>Revocar clave</Button>}
     </li>
   );
 }
 
-export function Keys({ companyId, userId }: { companyId: string; userId: string }) {
+export function Keys({ companyId, userId, memberName }: { companyId: string; userId: string; memberName: string }) {
   const keys = useLoad(() => api.keys(companyId, userId), [companyId, userId]);
   const [label, setLabel] = useState('');
   const [issued, setIssued] = useState<S['IssuedKeyView']>();
@@ -48,6 +50,7 @@ export function Keys({ companyId, userId }: { companyId: string; userId: string 
     <section aria-label="Claves" className={form.form}>
       <Notice message={error ?? keys.error} />
       {issued && <IssuedKeyDialog key={issued.id} issued={issued} onClose={() => setIssued(undefined)} />}
+      <p className={styles.explanation}>Cada clave da acceso a lo mismo que ve {memberName} en esta empresa.</p>
       <ul className={styles.list}>{keys.data?.map((k) => <KeyRow key={k.id} k={k} onRevoke={() => revoke(k.id)} />)}</ul>
       <form className={form.form} onSubmit={give}>
         <Field label="Etiqueta de la clave"><input required value={label} onChange={(e) => setLabel(e.target.value)} /></Field>

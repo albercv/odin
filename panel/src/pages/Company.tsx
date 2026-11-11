@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
 import { Capabilities } from '../components/Capabilities';
+import { Members } from '../components/Members';
 import { Notice } from '../components/Notice';
 import { Projects } from '../components/Projects';
-import { Users } from '../components/Users';
 import { useAction, useLoad } from '../components/useLoad';
 import { Button } from '../ui/Button';
 import { PageHeader } from '../ui/PageHeader';
@@ -22,7 +22,7 @@ export function Company({ companyId, me }: { companyId: string; me: S['AdminMe']
       <Notice message={error ?? companies.error} />
       {company && <Capabilities company={company} onChange={isGroup ? change : undefined} />}
       <Projects companyId={companyId} />
-      <Users companyId={companyId} me={me} addOpen={adding} onAddClose={() => setAdding(false)} />
+      <Members companyId={companyId} me={me} addOpen={adding} onAddClose={() => setAdding(false)} />
     </div>
   );
 }

@@ -53,16 +53,22 @@ export const api = {
   logout: () => request<void>('DELETE', `${a}/session`, undefined, true),
   companies: () => request<S['CompanyView'][]>('GET', `${a}/companies`),
   createCompany: (name: string, code: string) => request<S['CompanyView']>('POST', `${a}/companies`, { name, code }),
-  renameCompany: (id: string, name: string) => request<S['CompanyView']>('PATCH', co(id), { name }),
+  updateCompany: (id: string, changes: S['UpdateCompany']) => request<S['CompanyView']>('PATCH', co(id), changes),
   setCapabilities: (id: string, capabilities: Capability[]) =>
     request<S['CompanyView']>('PUT', `${co(id)}/capabilities`, { capabilities }),
   projects: (id: string) => request<S['ProjectView'][]>('GET', `${co(id)}/projects`),
   createProject: (id: string, name: string) => request<S['ProjectView']>('POST', `${co(id)}/projects`, { name }),
-  renameProject: (id: string, projectId: string, name: string) =>
-    request<S['ProjectView']>('PATCH', `${co(id)}/projects/${projectId}`, { name }),
+  updateProject: (id: string, projectId: string, changes: S['UpdateProject']) =>
+    request<S['ProjectView']>('PATCH', `${co(id)}/projects/${projectId}`, changes),
+  projectMembers: (id: string, projectId: string) => request<S['ProjectMemberView'][]>('GET', `${co(id)}/projects/${projectId}/members`),
+  addProjectMember: (id: string, projectId: string, userId: string) =>
+    request<void>('PUT', `${co(id)}/projects/${projectId}/members/${userId}`),
+  removeProjectMember: (id: string, projectId: string, userId: string) =>
+    request<void>('DELETE', `${co(id)}/projects/${projectId}/members/${userId}`),
   deleteProject: (id: string, projectId: string) => request<void>('DELETE', `${co(id)}/projects/${projectId}`),
   members: (id: string) => request<S['MemberView'][]>('GET', `${co(id)}/members`),
   addMember: (id: string, b: S['AddMember']) => request<S['MemberAdded']>('POST', `${co(id)}/members`, b),
+  memberProjects: (id: string, userId: string) => request<S['ProjectView'][]>('GET', `${co(id)}/members/${userId}/projects`),
   updateMember: (id: string, userId: string, changes: S['UpdateMember']) =>
     request<S['MemberView']>('PATCH', `${co(id)}/members/${userId}`, changes),
   setActive: (id: string, userId: string, active: boolean) => api.updateMember(id, userId, { active }),

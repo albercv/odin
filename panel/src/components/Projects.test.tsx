@@ -7,7 +7,7 @@ import { renderWithProviders } from '../ui/renderWithProviders';
 
 afterEach(() => vi.restoreAllMocks());
 
-const obra = { id: 'p1', name: 'Obra' };
+const obra = { id: 'p1', companyId: 'c1', name: 'Obra', restricted: true };
 const list = 'GET /v1/admin/companies/c1/projects';
 const one = '/v1/admin/companies/c1/projects/p1';
 
@@ -17,7 +17,7 @@ const actions = async (name: string) => {
 };
 
 const show = (routes: Routes) => {
-  const calls = mockFetch(routes);
+  const calls = mockFetch({ [`${list.slice(4)}/p1/members`.replace(/^/, 'GET ')]: () => [], ...routes });
   renderWithProviders(<Projects companyId="c1" />);
   return calls;
 };

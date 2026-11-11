@@ -1,3 +1,4 @@
+import { CompanySwitcher, type SwitcherProps } from '../components/CompanySwitcher';
 import { Icon, type IconName } from '../ui/Icon';
 import { BrandMark } from './BrandMark';
 import styles from './Sidebar.module.css';
@@ -5,11 +6,16 @@ import styles from './Sidebar.module.css';
 export type Page = 'companies' | 'company' | 'documents' | 'review' | 'account';
 
 type Props = {
-  isGroup: boolean; name: string; companyName?: string; page: Page; pending: number;
+  isGroup: boolean; name: string; companyName?: string; switcher?: SwitcherProps; page: Page; pending: number;
   setPage: (page: Page) => void; onLogout: () => void;
 };
 
-export function Sidebar({ isGroup, name, companyName, page, pending, setPage, onLogout }: Props) {
+function CompanySlot({ switcher, companyName }: { switcher?: SwitcherProps; companyName?: string }) {
+  if (switcher && switcher.companies.length > 1) return <CompanySwitcher {...switcher} />;
+  return companyName ? <p className={styles.company}>{companyName}</p> : null;
+}
+
+export function Sidebar({ isGroup, name, companyName, switcher, page, pending, setPage, onLogout }: Props) {
   const link = (target: Page, text: string, icon: IconName, count = 0) => (
     <a href="#" aria-current={page === target ? 'page' : undefined} onClick={(e) => { e.preventDefault(); setPage(target); }}>
       <Icon name={icon} />{text}
@@ -24,7 +30,7 @@ export function Sidebar({ isGroup, name, companyName, page, pending, setPage, on
   return (
     <aside className={styles.side}>
       <div className={styles.brand}><BrandMark /></div>
-      {companyName && <p className={styles.company}>{companyName}</p>}
+      <CompanySlot switcher={switcher} companyName={companyName} />
       <nav aria-label="Principal" className={styles.nav}>
         {isGroup && link('companies', 'Empresas', 'buildings')}
         {link('company', 'Empresa', 'building')}

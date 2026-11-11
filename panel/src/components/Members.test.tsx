@@ -1,24 +1,23 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
-import { Users } from './Users';
+import { Members } from './Members';
 import { mockFetch, type Routes } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-type Me = Parameters<typeof Users>[0]['me'];
+type Me = Parameters<typeof Members>[0]['me'];
 
 afterEach(() => vi.restoreAllMocks());
 
 const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], active: true };
 const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test' };
-const worker = { userId: 'u3', displayName: 'Raúl', firstName: 'Raúl', personCode: 'RRRR', memberCode: 'RRRR-ACM', roles: ['WORKER'], active: true };
 const list = 'GET /v1/admin/companies/c1/members';
 const groupAdmin: Me = { userId: 'g', displayName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
 const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
 
 const show = (routes: Routes, me: Me = groupAdmin) => {
   const calls = mockFetch(routes);
-  renderWithProviders(<Users companyId="c1" me={me} />);
+  renderWithProviders(<Members companyId="c1" me={me} />);
   return calls;
 };
 const rowOf = async (name: string) =>
@@ -33,16 +32,54 @@ const act = async (person: string, action: string) => {
   await userEvent.click(screen.getByRole('button', { name: action }));
 };
 
-test('rowShowsEmailRoleAndState', async () => {
-  show({ [list]: () => [ana, bea, worker] });
-  const [anaRow, beaRow, raulRow] = [await rowOf('Ana'), await rowOf('Bea'), await rowOf('Raúl')];
-  ['ana@acme.test', 'Trabajador', 'Activo'].forEach((t) => expect(anaRow).toHaveTextContent(t));
-  ['bea@acme.test', 'Administrador', 'Desactivado'].forEach((t) => expect(beaRow).toHaveTextContent(t));
-  ['Sin correo', 'Trabajador', 'Activo'].forEach((t) => expect(raulRow).toHaveTextContent(t));
+const gil = { userId: 'u5', displayName: 'Cora Gil', firstName: 'Cora', lastName: 'Gil', personCode: '7F3K', memberCode: '7F3K-ACM', email: 'cora@acme.test', roles: ['WORKER'], active: true };
+const both = { userId: 'u6', displayName: 'Dani Sol', firstName: 'Dani', lastName: 'Sol', personCode: 'DDDD', memberCode: 'DDDD-ACM', roles: ['COMPANY_ADMIN', 'WORKER'], active: true };
+const projectList = 'GET /v1/admin/companies/c1/projects';
+const obra = { id: 'p1', companyId: 'c1', name: 'Obra', restricted: true };
+const reforma = { id: 'p2', companyId: 'c1', name: 'Reforma', restricted: true };
+const sala = { id: 'p3', companyId: 'c1', name: 'Sala', restricted: false };
+const patio = { id: 'p4', companyId: 'c1', name: 'Patio', restricted: false };
+
+test('rowShowsMemberCodeRolesAndState', async () => {
+  show({ [list]: () => [gil, bea, both] });
+  const [gilRow, beaRow, bothRow] = [await rowOf('Cora Gil'), await rowOf('Bea'), await rowOf('Dani Sol')];
+  ['7F3K-ACM', 'Cora Gil', 'cora@acme.test', 'Trabaja con su IA', 'activo'].forEach((t) => expect(gilRow).toHaveTextContent(t));
+  ['BBBB-ACM', 'bea@acme.test', 'Administra la empresa', 'desactivado'].forEach((t) => expect(beaRow).toHaveTextContent(t));
+  ['DDDD-ACM', 'sin correo', 'Administra la empresa', 'Trabaja con su IA'].forEach((t) => expect(bothRow).toHaveTextContent(t));
+  expect(gilRow).not.toHaveTextContent('Faltan apellidos');
 });
 
-test('activateSendsActiveTrue', async () => {
-  const calls = show({ [list]: () => [bea], 'PATCH /v1/admin/companies/c1/members/u2': () => ({ ...bea, active: true }) });
+test('missingLastNameIsFlagged', async () => {
+  show({ [list]: () => [ana, gil] });
+  expect(await rowOf('Ana')).toHaveTextContent('Faltan apellidos');
+  expect(await rowOf('Cora Gil')).not.toHaveTextContent('Faltan apellidos');
+});
+
+test('changesRoles', async () => {
+  const calls = show({ [list]: () => [ana], 'PATCH /v1/admin/companies/c1/members/u1': () => ana });
+  await act('Ana', 'Papeles de Ana');
+  expect(screen.getByLabelText('Trabaja con su IA')).toBeChecked();
+  await userEvent.click(screen.getByLabelText('Administra la empresa'));
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar papeles de Ana' }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.key === 'PATCH /v1/admin/companies/c1/members/u1')?.body).toEqual({ roles: ['COMPANY_ADMIN', 'WORKER'] }));
+});
+
+test('companyAdminOnlyChangesTheWorkerRole', async () => {
+  show({ [list]: () => [ana] }, companyAdmin);
+  await act('Ana', 'Papeles de Ana');
+  expect(screen.queryByLabelText('Administra la empresa')).toBeNull();
+  expect(screen.getByLabelText('Trabaja con su IA')).toBeInTheDocument();
+});
+
+test('deactivatesAndActivates', async () => {
+  const calls = show({
+    [list]: () => [ana, bea],
+    'PATCH /v1/admin/companies/c1/members/u1': () => ({ ...ana, active: false }),
+    'PATCH /v1/admin/companies/c1/members/u2': () => ({ ...bea, active: true }),
+  });
+  await act('Ana', 'Desactivar Ana');
+  await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/companies/c1/members/u1')?.body).toEqual({ active: false }));
   await act('Bea', 'Activar Bea');
   await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/companies/c1/members/u2')?.body).toEqual({ active: true }));
 });
@@ -95,14 +132,15 @@ test('conflictShowsTheApiMessage', async () => {
   expect(screen.getByLabelText('Nombre')).toHaveValue('Ana');
 });
 
-test('removeAsksWithTheConfirmDialog', async () => {
+test('removeAsksForConfirmation', async () => {
   let users = [ana];
   const calls = show({
     [list]: () => users,
     'DELETE /v1/admin/companies/c1/members/u1': () => { users = []; return { status: 204 }; },
   });
+  const message = '¿Quitar a Ana de esta empresa? Sus claves y sus proyectos de esta empresa dejarán de valer.';
   await act('Ana', 'Quitar Ana');
-  const dialog = screen.getByRole('dialog', { name: '¿Quitar a Ana de la empresa?' });
+  const dialog = screen.getByRole('dialog', { name: message });
   await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
   expect(calls.some((c) => c.key.startsWith('DELETE'))).toBe(false);
   expect(screen.queryByRole('dialog')).toBeNull();
@@ -158,6 +196,27 @@ test('keysOnlyForWorkers', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Bea' }));
   expect(screen.getByRole('button', { name: 'Claves de Ana' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Claves de Bea' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Accesos de Ana' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Accesos de Bea' })).toBeNull();
+});
+
+test('accessesListAddAndRemoveProjects', async () => {
+  const calls = show({
+    [list]: () => [ana],
+    'GET /v1/admin/companies/c1/members/u1/projects': () => [obra],
+    [projectList]: () => [obra, reforma, sala, patio],
+    'PUT /v1/admin/companies/c1/projects/p2/members/u1': () => ({ status: 204 }),
+    'DELETE /v1/admin/companies/c1/projects/p1/members/u1': () => ({ status: 204 }),
+  });
+  await act('Ana', 'Accesos de Ana');
+  const panel = await screen.findByRole('region', { name: 'Accesos de Ana' });
+  expect(await within(panel).findByText('Obra')).toBeInTheDocument();
+  expect(within(panel).getByText('Además ve los 2 proyectos visibles para toda la empresa.')).toBeInTheDocument();
+  await userEvent.selectOptions(within(panel).getByLabelText('Proyecto'), 'Reforma');
+  await userEvent.click(within(panel).getByRole('button', { name: 'Añadir' }));
+  await waitFor(() => expect(calls.some((c) => c.key === 'PUT /v1/admin/companies/c1/projects/p2/members/u1')).toBe(true));
+  await userEvent.click(within(panel).getByRole('button', { name: 'Quitar Obra' }));
+  await waitFor(() => expect(calls.some((c) => c.key === 'DELETE /v1/admin/companies/c1/projects/p1/members/u1')).toBe(true));
 });
 
 test('resetPasswordOnlyForGroupAdminOnCompanyAdmins', async () => {

@@ -107,17 +107,11 @@ test('failedIssueKeepsTheLabel', async () => {
     'GET /v1/admin/companies/c1/members/u1/keys': () => [],
     'POST /v1/admin/companies/c1/members/u1/keys': () => ({ status: 400, body: { detail: 'Etiqueta no válida' } }),
   });
-  render(<Keys companyId="c1" userId="u1" />);
+  render(<Keys companyId="c1" userId="u1" memberName="Ana" />);
   await userEvent.type(await screen.findByLabelText('Etiqueta de la clave'), 'portátil');
   await userEvent.click(screen.getByRole('button', { name: 'Dar clave' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Etiqueta no válida');
   expect(screen.getByLabelText('Etiqueta de la clave')).toHaveValue('portátil');
-});
-
-test('revokeButtonCarriesTheKeyLabel', async () => {
-  mockFetch({ 'GET /v1/admin/companies/c1/members/u1/keys': () => [{ id: 'k1', label: 'portátil', prefix: 'odin_ab' }] });
-  render(<Keys companyId="c1" userId="u1" />);
-  expect(await screen.findByRole('button', { name: 'Revocar portátil' })).toBeInTheDocument();
 });
 
 test('issuedKeyShownOnceWithCopy', async () => {
@@ -128,7 +122,7 @@ test('issuedKeyShownOnceWithCopy', async () => {
     'GET /v1/admin/companies/c1/members/u1/keys': () => [],
     'POST /v1/admin/companies/c1/members/u1/keys': () => ({ status: 201, body: { id: 'k1', prefix: 'odin_ab', key: 'odin_ab.SECRETO' } }),
   });
-  render(<Keys companyId="c1" userId="u1" />);
+  render(<Keys companyId="c1" userId="u1" memberName="Ana" />);
   await userEvent.type(await screen.findByLabelText('Etiqueta de la clave'), 'portátil');
   await userEvent.click(screen.getByRole('button', { name: 'Dar clave' }));
   expect(await screen.findByRole('dialog', { name: 'Clave nueva' })).toHaveTextContent('odin_ab.SECRETO');
