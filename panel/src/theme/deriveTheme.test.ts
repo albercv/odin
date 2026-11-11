@@ -18,7 +18,7 @@ function textPairs(t: ModeTokens, sidebarBackground: string): [string, string, s
   return [
     ['text', t.text, t.background], ['text', t.text, t.surface], ['text', t.text, t.surfaceMuted],
     ['textMuted', t.textMuted, t.surface], ['textMuted', t.textMuted, t.surfaceMuted],
-    ['pending', t.pendingText, t.pendingBackground], ['danger', t.danger, t.surface],
+    ['pending', t.pendingText, t.pendingBackground], ['danger', t.danger, t.surface], ['danger', t.danger, t.dangerBackground],
     ['accentText', t.accentText, t.accent], ['sidebarText', t.sidebarText, sidebarBackground],
     ['sidebarAccent', t.sidebarAccent, sidebarBackground],
     ['accent', t.accent, t.surface], ['accent', t.accent, t.background], ['accent', t.accent, t.surfaceMuted],

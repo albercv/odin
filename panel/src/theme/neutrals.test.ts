@@ -7,10 +7,9 @@ function pairs(n: Neutrals): [string, string, string][] {
     ['textMuted', n.textMuted, n.background], ['textMuted', n.textMuted, n.surface], ['textMuted', n.textMuted, n.surfaceMuted],
     ['pending', n.pendingText, n.pendingBackground],
     ['danger', n.danger, n.background], ['danger', n.danger, n.surface], ['danger', n.danger, n.surfaceMuted],
+    ['danger', n.danger, n.dangerBackground],
   ];
 }
-
-const LIGHT_ONLY = ['danger', LIGHT_NEUTRALS.danger, LIGHT_NEUTRALS.dangerBackground] as const;
 
 describe('neutrals', () => {
   it('fixedPairsReachFourAndAHalf', () => {
@@ -19,7 +18,6 @@ describe('neutrals', () => {
         expect(contrastRatio(fg, bg), `${mode} ${name} ${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
       }
     }
-    expect(contrastRatio(LIGHT_ONLY[1], LIGHT_ONLY[2])).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(SIDEBAR_TEXT, '#283039')).toBeGreaterThanOrEqual(4.5);
     expect(DARK_TEXT_ON_ACCENT).toBe('#172026');
   });

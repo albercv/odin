@@ -13,8 +13,8 @@ export const LIGHT_NEUTRALS: Neutrals = {
 
 export const DARK_NEUTRALS: Neutrals = {
   background: '#1b2229', surface: '#232c34', surfaceMuted: '#2a343d', line: '#34404a', lineStrong: '#46535e',
-  text: '#e8eef1', textMuted: '#9fb0bb', pendingText: '#f2b85b', pendingBackground: mixColors('#f2b85b', '#232c34', 0.12),
-  danger: '#f97066', dangerBackground: mixColors('#f97066', '#232c34', 0.12),
+  text: '#e8eef1', textMuted: '#9fb0bb', pendingText: '#f2b85b', pendingBackground: mixColors('#f2b85b', '#232c34', 0.08),
+  danger: '#f97066', dangerBackground: mixColors('#f97066', '#232c34', 0.08),
 };
 
 export const SIDEBAR_TEXT = '#c5ced4';
