@@ -38,6 +38,7 @@ describe('Sidebar', () => {
     unmount();
     show({ pending: 4 });
     expect(screen.getByRole('link', { name: /Revisión/ })).toHaveTextContent('4');
+    expect(screen.getByRole('link', { name: 'Revisión, 4 fichas pendientes' })).toBeInTheDocument();
   });
 
   it('offersAccountAndLogout', async () => {

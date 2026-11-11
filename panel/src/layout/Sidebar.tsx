@@ -13,7 +13,12 @@ export function Sidebar({ isGroup, name, companyName, page, pending, setPage, on
   const link = (target: Page, text: string, icon: IconName, count = 0) => (
     <a href="#" aria-current={page === target ? 'page' : undefined} onClick={(e) => { e.preventDefault(); setPage(target); }}>
       <Icon name={icon} />{text}
-      {count > 0 && <span className={styles.count}>{count}</span>}
+      {count > 0 && (
+        <>
+          <span className={styles.count} aria-hidden="true">{count}</span>
+          <span className="visually-hidden">, {count} {count === 1 ? 'ficha pendiente' : 'fichas pendientes'}</span>
+        </>
+      )}
     </a>
   );
   return (
