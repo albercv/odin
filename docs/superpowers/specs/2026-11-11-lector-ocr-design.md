@@ -61,6 +61,7 @@ Amplía el del spec base 6.4 sin romperlo: añade `GET /health` y los códigos d
     - **422 `unreadable`:** el fichero está dañado;
     - **500 `reader_failed`:** alguna página no se pudo leer. No se devuelve ninguna página.
 - **`GET /health`:** 200 `{ "status": "ok", "reader": { "name", "version" } }` cuando el modelo está cargado.
+- **Secreto compartido, opcional:** si el servicio se arranca con un secreto, exige `Authorization: Bearer <secreto>` en las dos rutas y responde 401 `unauthorized` sin él. Odín lo envía si `ODIN_READER_TOKEN` tiene valor. Se fija ya para que el contrato no cambie si la red del apartado 7 obliga a usarlo.
 - **Lo que no hace:** guardar el fichero, devolver texto en los errores o escribir el texto en sus registros.
 
 ## 5. Odín
@@ -75,7 +76,18 @@ Amplía el del spec base 6.4 sin romperlo: añade `GET /health` y los códigos d
 | `FAILED` | Carril del lector | Motivo en el apartado 5.3 |
 
 - El carril del lector vuelve a tomar un documento que lleva en `READER_PROCESSING` más de su tiempo de espera, que es el tiempo máximo de lectura más 5 minutos.
-- `RetryDocument` funciona igual que hoy: un `FAILED` vuelve a `RECEIVED`, pasa por el carril local y, si sigue sin texto, vuelve a esperar al lector.
+- **Intentos:** se cuentan igual que en el carril local.
+  - Tomar el documento suma 1.
+  - Si después de sumar el contador pasa del máximo (3), el documento pasa a `FAILED` sin leerse. Se leen, por tanto, los intentos 1, 2 y 3, y el «último intento» es el 3.
+  - Cuando el servicio no responde (apartado 5.3), se resta el intento que se sumó al tomarlo.
+- **Métodos de `Document`:**
+  - `awaitReader()`: `PENDING_READER` con el contador a 0, para el carril local;
+  - `startReading(now)`: `READER_PROCESSING`, suma 1 y guarda la hora;
+  - `returnToReaderQueue(countAttempt)`: `PENDING_READER`, conservando el intento o restándolo.
+- **Documentos que ya esperan:** una migración pone a 0 el contador de los documentos que ya están en `PENDING_READER`. Así no pasan a `FAILED` por los intentos del carril local al llegar el lector.
+- **El carril local no toma `PENDING_READER` ni `READER_PROCESSING`:** solo toma `RECEIVED` y los `PROCESSING` caducados, como hoy.
+- **`RetryDocument`** sigue aceptando `FAILED` y `PENDING_READER`, que vuelven a `RECEIVED` y pasan por el carril local. Un `READER_PROCESSING` da 409, como cualquier otro estado.
+- **Formatos:** Odín ya reconoce PNG, JPEG y TIFF como `IMAGE` (`MagicBytesFormatDetector`). No cambia la subida. Un TIFF de varias páginas vuelve del servicio con varias páginas, y el documento queda `paginated = true`.
 
 ### 5.2 Carril del lector
 
@@ -92,7 +104,8 @@ Amplía el del spec base 6.4 sin romperlo: añade `GET /health` y los códigos d
   3. Si supera el máximo de intentos (3, el mismo de hoy), lo pasa a `FAILED`.
   4. Lee y guarda, o aplica el error del apartado 5.3.
 - **Sin duplicar:** la conversión de `ReadResult` a páginas que hoy está en `ProcessPendingDocuments.store` pasa a un sitio común (`DocumentPages`, en `application/document`) que usan los dos carriles.
-- **Programador:** `ReaderProcessingScheduler`, en `odin-bootstrap`. Se crea solo si `odin.reader.url` tiene valor y se ejecuta cada 30 segundos. Sin URL, el carril no existe y nada cambia.
+- **Programador:** `ReaderProcessingScheduler`, en `odin-bootstrap`. Se crea solo si `odin.reader.url` tiene valor y se ejecuta cada 30 segundos con `fixedDelay`, de modo que una ejecución no se solapa con la anterior. Sin URL, el carril no existe y nada cambia.
+- **Dos hilos de programación:** el programador de Spring tiene un solo hilo por defecto, y una lectura de 30 minutos pararía el carril local. Se fija `spring.task.scheduling.pool.size=2`. Una prueba de `odin-bootstrap` comprueba que el carril local procesa un documento mientras el del lector está bloqueado.
 - **Seguridad por filas:** el carril no tiene actor, así que usa `CompanyScope.all()` y `ProjectVisibility.all()`, como `ProcessPendingDocuments` (spec base 7).
 
 ### 5.3 Errores
@@ -119,6 +132,7 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
 | `ODIN_READER_URL` | vacía | URL base del servicio. Vacía: carril apagado |
 | `ODIN_READER_TIMEOUT` | `PT30M` | Tiempo máximo de una lectura |
 | `ODIN_READER_CONNECT_TIMEOUT` | `PT5S` | Tiempo máximo para conectar y para `GET /health` |
+| `ODIN_READER_TOKEN` | vacía | Secreto compartido del apartado 4. Vacía: no se envía |
 
 - `compose.yaml` pasa `ODIN_READER_URL` a la API, vacía por defecto. Nada del Mac entra en el código común (spec base 3.4): en este equipo, la URL va en `deploy/.env`, que no se versiona.
 - **Validación de la respuesta:** páginas numeradas de 1 a n sin huecos ni repeticiones, `reader.name` y `reader.version` con texto. Si no, `ReaderFailedException`.
@@ -152,8 +166,8 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
   - Se trabaja en memoria: el fichero no se escribe en disco.
   - Tamaño máximo: `--max-bytes`, 50 MB por defecto, igual que Odín.
 - **Lectura:**
-  - Cada página es una petición a `Engine.generate`, con las guardas anti-bucle y el límite de tokens que ya existen (`uocr/pipeline.py`).
-  - Una página falla si la petición lanza un error o agota `max_tokens`. Si falla una, falla todo (500).
+  - Se reutiliza `uocr.pipeline.run(pages, "single", 1, engine)`: cada página es una petición a `Engine.generate`, con las guardas anti-bucle y el límite de tokens que ya existen. Los bloques que devuelve llevan su página, así que el texto de cada página sale de `to_markdown` sobre los bloques de esa página.
+  - Una página falla si su petición tiene `error` o si `generation_tokens` llega a `max_tokens`. Si falla una, falla todo (500).
   - Si el número de `<PAGE>` no es 1, se apunta en el registro y el texto se conserva: la página es la de la petición.
 - **Respuesta:**
   - `reader.name` es `unlimited-ocr-2`.
@@ -164,8 +178,8 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
 
 - En este Mac la API corre en Docker y el puente fuera, con `ODIN_READER_URL=http://host.docker.internal:8077` en `deploy/.env`.
 - **Por verificar en el plan:** que un servicio que escucha en `127.0.0.1` del Mac responde desde el contenedor por `host.docker.internal`.
-  - Si no responde, el puente escucha en la interfaz que use Docker Desktop y exige una cabecera con un secreto compartido. Esa sería una decisión nueva del CTO, registrada en T-015.
-- Nunca se escucha en todas las interfaces sin ese secreto.
+  - Si no responde, el puente escucha en la interfaz que use Docker Desktop y se arranca con el secreto compartido del apartado 4. Se anota en T-015.
+- Nunca se escucha fuera de `127.0.0.1` sin ese secreto: el puente se niega a arrancar así.
 
 ## 8. Pruebas y verificación
 
@@ -220,3 +234,14 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
 - Nombres internos, estructura de paquetes y cómo se monta el multipart.
 - El puerto por defecto del puente, si el 8077 está ocupado en este equipo.
 - Cómo se prueba la red del apartado 7. El resultado sí se anota.
+
+## 11. Revisión del constructor (2026-11-11)
+
+Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 7 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
+- el contador de los documentos que ya esperan al lector, que se pone a 0 con una migración (5.1);
+- qué es un intento y cuándo se resta (5.1);
+- qué estados toma cada carril y qué acepta `RetryDocument` (5.1);
+- TIFF, que Odín ya reconoce como imagen (5.1);
+- reutilizar `pipeline.run` en modo `single` (6);
+- el secreto compartido, que se fija ya en el contrato aunque sea opcional (4 y 7);
+- los dos hilos de programación, para que una lectura larga no pare el carril local (5.2).
