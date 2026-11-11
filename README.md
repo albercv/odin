@@ -56,6 +56,19 @@ La contraseña necesita al menos 12 caracteres.
 
 Desde el panel se crean las empresas, los trabajadores y sus claves personales, se suben documentos y se revisan las fichas.
 
+## Marca
+
+El panel toma el nombre, el logo y los colores de la carpeta que sirve en `/brand/`. Por defecto es `panel/public/brand/` (E2D). Para usar otra, pon su ruta en `ODIN_BRAND_DIR` en `deploy/.env`.
+
+La carpeta lleva un `brand.json` y, si quieres logo, su fichero (PNG, WebP o SVG):
+
+- `name` y `logoAlt`: textos. El nombre aparece como «Odín de <name>» en la entrada.
+- `logo`: nombre del fichero del logo, en la misma carpeta. Se ve siempre sobre el color `base`, así que debe verse bien sobre él.
+- `colors.accent` y `colors.base`: hexadecimales de 6 cifras. `base` es el color oscuro de la barra lateral y de la portada.
+- `cover`: opcional (`title`, `subtitle` y `note`). Sin él, la instalación no tiene portada de demostración.
+
+Si `brand.json` falta o no es válido, el panel arranca con un tema neutro y avisa en la consola. El cambio de marca se ve al recargar la página.
+
 ## Quién entra dónde
 
 - Los administradores entran en el panel con su correo y su contraseña.
