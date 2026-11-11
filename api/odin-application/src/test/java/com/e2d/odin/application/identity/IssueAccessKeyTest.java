@@ -84,7 +84,7 @@ class IssueAccessKeyTest {
     @Test
     void personWhoIsAdminAndWorkerGetsAKey() {
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Carlos", Optional.of("c@demo.test"), false, true, Optional.of("pw:x")));
+        users.save(new User(id, "Carlos", Optional.of("Pérez"), People.nextCode(), Optional.of("c@demo.test"), false, true, Optional.of("pw:x")));
         memberships.save(new Membership(id, company, Set.of(Role.COMPANY_ADMIN, Role.WORKER), true));
 
         assertThat(issue.execute(Actors.companyAdmin(company), company, id, "portátil").plainKey()).isNotBlank();
@@ -113,7 +113,7 @@ class IssueAccessKeyTest {
     @Test
     void deactivatedPersonCannotGetAKey() {
         User worker = saveUser(Role.WORKER, true);
-        users.save(worker.updated(worker.displayName(), worker.email(), false));
+        users.save(worker.withActive(false));
 
         assertThatThrownBy(() -> issue.execute(Actors.groupAdmin(), company, worker.id(), "x"))
                 .isInstanceOf(ValidationException.class);

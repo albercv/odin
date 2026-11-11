@@ -5,6 +5,6 @@ import com.e2d.odin.domain.shared.ProjectId;
 import java.util.Optional;
 import java.util.Set;
 
-public record NewMember(String displayName, Optional<String> email, Set<Role> roles, Optional<String> password,
-        Set<ProjectId> projectIds) {
+public record NewMember(String firstName, String lastName, Optional<String> email, Set<Role> roles,
+        Optional<String> password, Set<ProjectId> projectIds) {
 }

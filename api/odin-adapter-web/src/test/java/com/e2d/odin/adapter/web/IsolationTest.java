@@ -38,6 +38,30 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void companyAdminCannotChangeACompanyCode() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String before = w.orgs.findCompany(a).orElseThrow().code();
+
+        for (CompanyId own : new CompanyId[] {a, b}) {
+            mvc.perform(patch("/v1/admin/companies/" + a.value())
+                    .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(own))).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"HACKED\"}")).andExpect(status().isForbidden());
+        }
+        org.assertj.core.api.Assertions.assertThat(w.orgs.findCompany(a).orElseThrow().code()).isEqualTo(before);
+    }
+
+    @Test
+    void workerRoutesCarryNoCodes() throws Exception {
+        CompanyId a = newCompany();
+
+        String body = mvc.perform(get("/v1/me").header("Authorization", workerKey(a))).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(body).doesNotContainIgnoringCase("code");
+    }
+
+    @Test
     void otherCompanyAdminCannotPatchOrDeleteUser() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
@@ -58,7 +82,7 @@ class IsolationTest extends WebTestSupport {
         String base = "/v1/admin/companies/" + a.value() + "/members";
         mvc.perform(get(base).cookie(other)).andExpect(status().isForbidden());
         mvc.perform(post(base).cookie(other).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Intruso\",\"roles\":[\"WORKER\"]}"))
+                .content("{\"firstName\":\"Intruso\",\"lastName\":\"Gil\",\"roles\":[\"WORKER\"]}"))
                 .andExpect(status().isForbidden());
         mvc.perform(patch(base + "/" + member.value()).cookie(other).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"active\":false}")).andExpect(status().isForbidden());

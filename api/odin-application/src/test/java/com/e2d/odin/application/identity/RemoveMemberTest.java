@@ -16,6 +16,7 @@ import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.fake.SequencePersonCodeGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.AccessKey;
@@ -146,7 +147,7 @@ class RemoveMemberTest {
     void reAddedPersonDoesNotGetOldKeysBack() {
         FakeSecretHasher secrets = new FakeSecretHasher();
         InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
-        organizations.saveCompany(new Company(company, "A", EnumSet.allOf(Capability.class)));
+        organizations.saveCompany(new Company(company, "A", "AAA", EnumSet.allOf(Capability.class)));
         UserId personId = new UserId(UUID.randomUUID());
         People.member(users, memberships, personId, "Pili", Optional.of("p@demo.test"), Role.WORKER, company, true,
                 Optional.empty());
@@ -157,9 +158,9 @@ class RemoveMemberTest {
 
         remove.execute(Actors.companyAdmin(company), company, personId);
         new AddMember(users, memberships, organizations, projectMembers,
-                new FakePasswordHasher(), new SequenceIdGenerator())
+                new FakePasswordHasher(), new SequenceIdGenerator(), new SequencePersonCodeGenerator())
                 .execute(Actors.companyAdmin(company), company,
-                        new NewMember("Pili", Optional.of("p@demo.test"), Set.of(Role.WORKER), Optional.empty(),
+                        new NewMember("Pili", "Pérez", Optional.of("p@demo.test"), Set.of(Role.WORKER), Optional.empty(),
                                 Set.of()));
 
         assertThatThrownBy(() -> resolve.fromAccessKey("odin_abcdefgh_uno")).isInstanceOf(UnauthorizedException.class);
@@ -183,7 +184,7 @@ class RemoveMemberTest {
     @Test
     void removedAndReAddedPersonHasNoProjects() {
         InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
-        organizations.saveCompany(new Company(company, "A", EnumSet.allOf(Capability.class)));
+        organizations.saveCompany(new Company(company, "A", "AAA", EnumSet.allOf(Capability.class)));
         UserId pili = new UserId(UUID.randomUUID());
         People.member(users, memberships, pili, "Pili", Optional.of("pili@demo.test"), Role.WORKER, company, true,
                 Optional.empty());
@@ -192,8 +193,8 @@ class RemoveMemberTest {
 
         remove.execute(Actors.companyAdmin(company), company, pili);
         MemberAdded again = new AddMember(users, memberships, organizations, projectMembers,
-                new FakePasswordHasher(), new SequenceIdGenerator()).execute(Actors.companyAdmin(company), company,
-                new NewMember("Pili", Optional.of("pili@demo.test"), Set.of(Role.WORKER), Optional.empty(),
+                new FakePasswordHasher(), new SequenceIdGenerator(), new SequencePersonCodeGenerator()).execute(Actors.companyAdmin(company), company,
+                new NewMember("Pili", "Pérez", Optional.of("pili@demo.test"), Set.of(Role.WORKER), Optional.empty(),
                         Set.of()));
 
         assertThat(again.alreadyExisted()).isTrue();

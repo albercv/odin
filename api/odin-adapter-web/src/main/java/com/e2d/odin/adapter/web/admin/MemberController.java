@@ -68,8 +68,8 @@ public class MemberController {
     @ResponseStatus(HttpStatus.CREATED)
     public Responses.MemberAdded add(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestBody Requests.AddMember request) {
-        NewMember member = new NewMember(request.displayName(), Optional.ofNullable(request.email()), request.roles(),
-                Optional.ofNullable(request.password()), projectIds(request));
+        NewMember member = new NewMember(request.firstName(), request.lastName(), Optional.ofNullable(request.email()),
+                request.roles(), Optional.ofNullable(request.password()), projectIds(request));
         return Responses.MemberAdded.from(addMember.execute(actor, new CompanyId(companyId), member));
     }
 

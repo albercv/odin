@@ -4,12 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -18,7 +16,7 @@ class PostgresMembershipRepositoryIT extends AbstractPostgresIT {
 
     private UserId person() {
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Persona", Optional.empty(), false, true, Optional.empty()));
+        users.save(person(id));
         return id;
     }
 

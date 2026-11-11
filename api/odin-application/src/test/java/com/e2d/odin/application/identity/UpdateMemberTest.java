@@ -8,6 +8,7 @@ import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
+import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
@@ -16,11 +17,14 @@ import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.organization.Capability;
+import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -33,10 +37,11 @@ class UpdateMemberTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final FakePasswordHasher passwords = new FakePasswordHasher();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final UpdateMember update = new UpdateMember(users, memberships, passwords, sessions);
+    private final UpdateMember update = new UpdateMember(users, memberships, organizations, passwords, sessions);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
@@ -45,6 +50,7 @@ class UpdateMemberTest {
     private final Actor groupAdmin = Actors.groupAdmin();
 
     UpdateMemberTest() {
+        organizations.saveCompany(new Company(company, "A", "AAA", EnumSet.allOf(Capability.class)));
         People.member(users, memberships, workerId, "Wanda", Optional.of("w@demo.test"), Role.WORKER, company, true,
                 Optional.empty());
         People.member(users, memberships, adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company,
@@ -98,7 +104,8 @@ class UpdateMemberTest {
 
     @Test
     void passwordOfAPersonWhoAlreadyHasOneIsNotOverwritten() {
-        users.save(new com.e2d.odin.domain.identity.User(workerId, "Wanda", Optional.of("w@demo.test"), false, true,
+        users.save(new com.e2d.odin.domain.identity.User(workerId, "Wanda", Optional.of("Pérez"), People.nextCode(),
+                Optional.of("w@demo.test"), false, true,
                 Optional.of("pw:propia")));
 
         update.execute(groupAdmin, company, workerId, new MemberChanges(Optional.of(Set.of(Role.COMPANY_ADMIN)),

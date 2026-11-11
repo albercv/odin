@@ -7,9 +7,7 @@ import com.e2d.odin.application.search.PageView;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
-import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.knowledge.CardReview;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
@@ -38,25 +36,32 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record CompanyRef(UUID id, String name) {
+    public record CompanyRef(UUID id, String name, String code) {
         public static CompanyRef from(Company c) {
-            return new CompanyRef(c.id().value(), c.name());
+            return new CompanyRef(c.id().value(), c.name(), c.code());
         }
     }
 
     /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
-    public record AdminMe(UUID userId, String displayName, Role role, @Nullable UUID companyId,
+    public record AdminMe(UUID userId, String displayName, String personCode, Role role, @Nullable UUID companyId,
             List<CompanyRef> companies) {
-        public static AdminMe from(Actor a, List<Company> administered) {
+        public static AdminMe from(Actor a, String personCode, List<Company> administered) {
             UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
-            return new AdminMe(a.userId().value(), a.displayName(), a.role(), onlyCompany,
+            return new AdminMe(a.userId().value(), a.displayName(), personCode, a.role(), onlyCompany,
                     administered.stream().map(CompanyRef::from).toList());
         }
     }
 
-    public record CompanyView(UUID id, String name, Set<Capability> capabilities) {
+    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities) {
         public static CompanyView from(Company c) {
-            return new CompanyView(c.id().value(), c.name(), c.capabilities());
+            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities());
+        }
+    }
+
+    /** La empresa tal como la ve un trabajador: sin código, que es cosa del panel de administración. */
+    public record MeCompany(UUID id, String name, Set<Capability> capabilities) {
+        public static MeCompany from(Company c) {
+            return new MeCompany(c.id().value(), c.name(), c.capabilities());
         }
     }
 
@@ -72,27 +77,25 @@ public final class Responses {
         }
     }
 
-    public record Me(UUID userId, String displayName, Role role, CompanyView company, List<ProjectView> projects) {
+    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<ProjectView> projects) {
         public static Me from(MeView m) {
-            return new Me(m.userId().value(), m.displayName(), m.role(), CompanyView.from(m.company()),
+            return new Me(m.userId().value(), m.displayName(), m.role(), MeCompany.from(m.company()),
                     m.projects().stream().map(ProjectView::from).toList());
         }
     }
 
-    public record MemberView(UUID userId, String displayName, @Nullable String email, Set<Role> roles,
-            boolean active) {
+    public record MemberView(UUID userId, String displayName, String firstName, @Nullable String lastName,
+            String personCode, String memberCode, @Nullable String email, Set<Role> roles, boolean active) {
         public static MemberView from(com.e2d.odin.application.identity.MemberView m) {
-            return new MemberView(m.userId().value(), m.displayName(), m.email().orElse(null), m.roles(), m.active());
-        }
-
-        public static MemberView from(User user, Membership membership) {
-            return from(com.e2d.odin.application.identity.MemberView.of(user, membership));
+            return new MemberView(m.userId().value(), m.displayName(), m.firstName(), m.lastName().orElse(null),
+                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active());
         }
     }
 
     public record MemberAdded(MemberView member, boolean alreadyExisted) {
         public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added) {
-            return new MemberAdded(MemberView.from(added.user(), added.membership()), added.alreadyExisted());
+            return new MemberAdded(MemberView.from(com.e2d.odin.application.identity.MemberView.of(added.user(),
+                    added.membership(), added.company().code())), added.alreadyExisted());
         }
     }
 

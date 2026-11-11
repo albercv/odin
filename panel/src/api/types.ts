@@ -289,7 +289,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["rename"];
+        patch: operations["update_1"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}/projects/{projectId}": {
@@ -321,7 +321,7 @@ export interface paths {
         delete: operations["remove_1"];
         options?: never;
         head?: never;
-        patch: operations["update_1"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/v1/me": {
@@ -499,6 +499,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            code: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
         };
         Setup: {
@@ -588,6 +589,11 @@ export interface components {
             /** Format: int32 */
             attemptCount: number;
         };
+        NewCompany: {
+            name?: string;
+            /** @description De 2 a 6 letras mayúsculas o cifras; único en el grupo. */
+            code?: string;
+        };
         Name: {
             name?: string;
         };
@@ -600,7 +606,8 @@ export interface components {
             restricted: boolean;
         };
         AddMember: {
-            displayName?: string;
+            firstName?: string;
+            lastName?: string;
             email?: string;
             roles?: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             password?: string;
@@ -614,6 +621,10 @@ export interface components {
             /** Format: uuid */
             userId: string;
             displayName: string;
+            firstName: string;
+            lastName?: string;
+            personCode: string;
+            memberCode: string;
             email?: string;
             roles: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active: boolean;
@@ -663,10 +674,16 @@ export interface components {
             note?: string;
         };
         UpdateUser: {
-            displayName?: string;
+            firstName?: string;
+            lastName?: string;
             /** @description Cadena vacía: quita el correo de un trabajador. Ausente o null: no cambia. */
             email?: string;
             active?: boolean;
+        };
+        UpdateCompany: {
+            name?: string;
+            /** @description Solo lo cambia el administrador del grupo. */
+            code?: string;
         };
         UpdateProject: {
             name?: string;
@@ -684,8 +701,14 @@ export interface components {
             displayName: string;
             /** @enum {string} */
             role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
-            company: components["schemas"]["CompanyView"];
+            company: components["schemas"]["MeCompany"];
             projects: components["schemas"]["ProjectView"][];
+        };
+        MeCompany: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
         };
         Health: {
             status: string;
@@ -715,6 +738,7 @@ export interface components {
             /** Format: uuid */
             userId: string;
             displayName: string;
+            personCode: string;
             /** @enum {string} */
             role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
             /** Format: uuid */
@@ -725,6 +749,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            code: string;
         };
         ProjectMemberView: {
             /** Format: uuid */
@@ -1057,7 +1082,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Name"];
+                "application/json": components["schemas"]["NewCompany"];
             };
         };
         responses: {
@@ -1356,7 +1381,7 @@ export interface operations {
             };
         };
     };
-    rename: {
+    update_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1367,7 +1392,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Name"];
+                "application/json": components["schemas"]["UpdateCompany"];
             };
         };
         responses: {
@@ -1451,7 +1476,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;

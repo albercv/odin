@@ -64,6 +64,9 @@ class MigrationFromPhaseOneIT {
 
     private static void insertPhaseOneData() {
         jdbc.sql("INSERT INTO company (id, name) VALUES (:id, 'Empresa')").param("id", COMPANY).update();
+        insertCompany("Talleres Demo Norte");
+        insertCompany("Tintes Dorados  Nuevos");
+        insertCompany("Ñandú Óptica");
         insertUser(GROUP_ADMIN, "GROUP_ADMIN", null, true);
         insertUser(COMPANY_ADMIN, "COMPANY_ADMIN", COMPANY, true);
         insertUser(ACTIVE_WORKER, "WORKER", COMPANY, true);
@@ -77,6 +80,16 @@ class MigrationFromPhaseOneIT {
                 .param("id", DELETED_PROJECT).param("company", COMPANY).update();
         insertKey(KEY, ACTIVE_WORKER, "abcd1234", "h:secreto");
         insertKey(DELETED_WORKER_KEY, DELETED_WORKER, "wxyz5678", "h:otro");
+    }
+
+    private static void insertCompany(String name) {
+        jdbc.sql("INSERT INTO company (id, name) VALUES (:id, :name)").param("id", UUID.randomUUID())
+                .param("name", name).update();
+    }
+
+    private static String codeOfCompany(String name) {
+        return jdbc.sql("SELECT code FROM company WHERE name = :name").param("name", name).query(String.class)
+                .single();
     }
 
     private static void insertKey(UUID id, UUID user, String prefix, String secretHash) {
@@ -108,6 +121,26 @@ class MigrationFromPhaseOneIT {
         assertThat(membership(ACTIVE_WORKER)).containsEntry("company_id", COMPANY)
                 .containsEntry("is_company_admin", false).containsEntry("is_worker", true)
                 .containsEntry("active", true);
+    }
+
+    @Test
+    void existingPeopleKeepTheirNameAsFirstNameAndGetACode() {
+        List<Map<String, Object>> people = jdbc.sql("SELECT first_name, last_name, person_code FROM app_user")
+                .query().listOfRows();
+
+        assertThat(people).hasSize(5).allSatisfy(person -> {
+            assertThat(person).containsEntry("first_name", "Persona").containsEntry("last_name", null);
+            assertThat((String) person.get("person_code")).matches("[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}");
+        });
+        assertThat(people).extracting(person -> person.get("person_code")).doesNotHaveDuplicates();
+    }
+
+    @Test
+    void existingCompaniesGetTheirInitialsAsCode() {
+        assertThat(codeOfCompany("Talleres Demo Norte")).isEqualTo("TDN");
+        assertThat(codeOfCompany("Tintes Dorados  Nuevos")).isEqualTo("TDN2");
+        assertThat(codeOfCompany("Ñandú Óptica")).isEqualTo("NO");
+        assertThat(codeOfCompany("Empresa")).isEqualTo("EMP");
     }
 
     @Test
@@ -161,7 +194,8 @@ class MigrationFromPhaseOneIT {
                 .isInstanceOf(UnauthorizedException.class);
 
         try {
-            MemberView updated = new UpdateMember(users, memberships, new FakePasswordHasher(), sessions).execute(
+            MemberView updated = new UpdateMember(users, memberships, new PostgresOrganizationRepository(tx),
+                    new FakePasswordHasher(), sessions).execute(
                     Actors.companyAdmin(new CompanyId(COMPANY)), new CompanyId(COMPANY), worker,
                     new MemberChanges(Optional.empty(), Optional.of(true), Optional.empty()));
 

@@ -43,8 +43,10 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     @Override
     public void saveCompany(Company c) {
         tx.runInScope(ALL, jdbc -> {
-            jdbc.sql("INSERT INTO company (id, name) VALUES (:id, :name) ON CONFLICT (id) DO UPDATE SET name = :name")
-                    .param("id", c.id().value()).param("name", c.name()).update();
+            jdbc.sql("""
+                    INSERT INTO company (id, name, code) VALUES (:id, :name, :code)
+                    ON CONFLICT (id) DO UPDATE SET name = :name, code = :code""")
+                    .param("id", c.id().value()).param("name", c.name()).param("code", c.code()).update();
             jdbc.sql("DELETE FROM company_capability WHERE company_id = :id").param("id", c.id().value()).update();
             for (Capability capability : c.capabilities()) {
                 jdbc.sql("INSERT INTO company_capability (company_id, capability) VALUES (:id, :capability)")
@@ -55,15 +57,20 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
 
     @Override
     public Optional<Company> findCompany(CompanyId id) {
-        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT id, name FROM company WHERE id = :id")
-                .param("id", id.value()).query((rs, n) -> company(jdbc, rs.getObject("id", UUID.class),
-                        rs.getString("name"))).optional());
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT id, name, code FROM company WHERE id = :id")
+                .param("id", id.value()).query((rs, n) -> company(jdbc, rs)).optional());
+    }
+
+    @Override
+    public Optional<Company> findCompanyByCode(String code) {
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT id, name, code FROM company WHERE code = :code")
+                .param("code", code).query((rs, n) -> company(jdbc, rs)).optional());
     }
 
     @Override
     public List<Company> listCompanies(CompanyScope scope) {
-        return tx.inScope(scope, jdbc -> jdbc.sql("SELECT id, name FROM company ORDER BY seq")
-                .query((rs, n) -> company(jdbc, rs.getObject("id", UUID.class), rs.getString("name"))).list());
+        return tx.inScope(scope, jdbc -> jdbc.sql("SELECT id, name, code FROM company ORDER BY seq")
+                .query((rs, n) -> company(jdbc, rs)).list());
     }
 
     @Override
@@ -98,11 +105,12 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
                 .param("company", companyId.value()).query((rs, n) -> project(rs)).list());
     }
 
-    private static Company company(JdbcClient jdbc, UUID id, String name) {
+    private static Company company(JdbcClient jdbc, java.sql.ResultSet rs) throws java.sql.SQLException {
+        UUID id = rs.getObject("id", UUID.class);
         Set<Capability> capabilities = EnumSet.noneOf(Capability.class);
         jdbc.sql("SELECT capability FROM company_capability WHERE company_id = :id").param("id", id)
                 .query(String.class).list().forEach(c -> capabilities.add(Capability.valueOf(c)));
-        return new Company(new CompanyId(id), name, capabilities);
+        return new Company(new CompanyId(id), rs.getString("name"), rs.getString("code"), capabilities);
     }
 
     private static Project project(java.sql.ResultSet rs) throws java.sql.SQLException {

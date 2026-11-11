@@ -20,5 +20,8 @@ public interface UserRepository {
 
     Optional<User> findGroupAdmin();
 
+    /** Si el código ya lo tiene una persona, también borrada: un código nunca se reutiliza. */
+    boolean personCodeExists(String personCode);
+
     void delete(UserId id, Instant at);
 }

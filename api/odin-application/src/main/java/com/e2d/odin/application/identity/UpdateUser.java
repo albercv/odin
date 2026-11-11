@@ -33,9 +33,11 @@ public class UpdateUser {
         User user = users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         boolean active = changes.active().orElse(user.active());
         requireMayChangeActive(actor, user, active);
-        String name = changes.displayName().map(n -> Validation.requireText(n, "el nombre")).orElse(user.displayName());
+        String firstName = changes.firstName().map(n -> Validation.requireText(n, "el nombre")).orElse(user.firstName());
+        Optional<String> lastName = changes.lastName().map(n -> Validation.requireText(n, "los apellidos"))
+                .or(user::lastName);
         Optional<String> email = changes.email().map(e -> newEmail(user, theirMemberships, e)).orElse(user.email());
-        User updated = user.updated(name, email, active);
+        User updated = user.withNames(firstName, lastName).withEmail(email).withActive(active);
         users.save(updated);
         if (user.active() && !active) {
             sessions.closeAllOf(id);

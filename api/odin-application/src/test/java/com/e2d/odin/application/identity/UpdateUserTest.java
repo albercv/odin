@@ -48,21 +48,25 @@ class UpdateUserTest {
     }
 
     private static UserChanges name(String name) {
-        return new UserChanges(Optional.of(name), Optional.empty(), Optional.empty());
+        return new UserChanges(Optional.of(name), Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+    private static UserChanges surnames(String surnames) {
+        return new UserChanges(Optional.empty(), Optional.of(surnames), Optional.empty(), Optional.empty());
     }
 
     private static UserChanges email(String email) {
-        return new UserChanges(Optional.empty(), Optional.of(email), Optional.empty());
+        return new UserChanges(Optional.empty(), Optional.empty(), Optional.of(email), Optional.empty());
     }
 
     private static UserChanges active(boolean active) {
-        return new UserChanges(Optional.empty(), Optional.empty(), Optional.of(active));
+        return new UserChanges(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(active));
     }
 
     @Test
     void changesNameAndEmail() {
-        User user = update.execute(admin, workerId,
-                new UserChanges(Optional.of("Wanda Díaz"), Optional.of(" W2@Demo.test "), Optional.empty()));
+        User user = update.execute(admin, workerId, new UserChanges(Optional.of("Wanda"), Optional.of("Díaz"),
+                Optional.of(" W2@Demo.test "), Optional.empty()));
 
         assertThat(user.displayName()).isEqualTo("Wanda Díaz");
         assertThat(user.email()).contains("w2@demo.test");
@@ -70,8 +74,32 @@ class UpdateUserTest {
     }
 
     @Test
-    void blankNameIsRejected() {
+    void editsFirstAndLastName() {
+        User renamed = update.execute(admin, workerId, name("Wandita"));
+        User withSurnames = update.execute(admin, workerId, surnames("  Díaz Ruiz "));
+
+        assertThat(renamed.firstName()).isEqualTo("Wandita");
+        assertThat(withSurnames.lastName()).contains("Díaz Ruiz");
+        assertThat(users.findById(workerId).orElseThrow().displayName()).isEqualTo("Wandita Díaz Ruiz");
+    }
+
+    @Test
+    void namesCannotBeCleared() {
         assertThatThrownBy(() -> update.execute(admin, workerId, name(" "))).isInstanceOf(ValidationException.class);
+        assertThatThrownBy(() -> update.execute(admin, workerId, surnames("")))
+                .isInstanceOf(ValidationException.class);
+        assertThat(users.findById(workerId).orElseThrow().displayName()).isEqualTo("Wanda Pérez");
+    }
+
+    @Test
+    void codeNeverChanges() {
+        String code = users.findById(workerId).orElseThrow().personCode();
+
+        update.execute(admin, workerId, name("Otro"));
+        update.execute(Actors.groupAdmin(), workerId, active(false));
+        update.execute(Actors.groupAdmin(), workerId, email("nuevo@demo.test"));
+
+        assertThat(users.findById(workerId).orElseThrow().personCode()).isEqualTo(code);
     }
 
     @Test
@@ -122,9 +150,9 @@ class UpdateUserTest {
         assertThatThrownBy(() -> update.execute(admin, workerId, name("X")))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("Solo el administrador del grupo puede editar a esta persona");
-        assertThat(users.findById(workerId).orElseThrow().displayName()).isEqualTo("Wanda");
-        assertThat(update.execute(Actors.groupAdmin(), workerId, name("Wanda Díaz")).displayName())
-                .isEqualTo("Wanda Díaz");
+        assertThat(users.findById(workerId).orElseThrow().firstName()).isEqualTo("Wanda");
+        assertThat(update.execute(Actors.groupAdmin(), workerId, name("Wandita")).firstName())
+                .isEqualTo("Wandita");
     }
 
     @Test
@@ -133,7 +161,7 @@ class UpdateUserTest {
         memberships.save(new Membership(workerId, second, Set.of(Role.WORKER), true));
         Actor both = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Set.of(company, second));
 
-        assertThat(update.execute(both, workerId, name("Wanda Díaz")).displayName()).isEqualTo("Wanda Díaz");
+        assertThat(update.execute(both, workerId, name("Wandita")).firstName()).isEqualTo("Wandita");
     }
 
     @Test
@@ -170,7 +198,7 @@ class UpdateUserTest {
         Actor stranger = Actors.companyAdmin(new CompanyId(UUID.randomUUID()));
 
         assertThatThrownBy(() -> update.execute(stranger, workerId, name("X"))).isInstanceOf(ForbiddenException.class);
-        assertThat(users.findById(workerId).orElseThrow().displayName()).isEqualTo("Wanda");
+        assertThat(users.findById(workerId).orElseThrow().firstName()).isEqualTo("Wanda");
     }
 
     @Test

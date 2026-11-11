@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 
 abstract class AbstractPostgresIT {
@@ -36,15 +37,28 @@ abstract class AbstractPostgresIT {
         Db.truncate();
     }
 
+    private static final AtomicInteger SEQUENCE = new AtomicInteger();
+
+    /** Un código de empresa válido y distinto en cada llamada. */
+    static String uniqueCode() {
+        return "C" + (10000 + SEQUENCE.incrementAndGet());
+    }
+
+    /** Una persona con apellidos y un código de persona distinto en cada llamada. */
+    static User person(UserId id) {
+        return new User(id, "Persona", Optional.of("Pérez"), "P" + (1000 + SEQUENCE.incrementAndGet()),
+                Optional.empty(), false, true, Optional.empty());
+    }
+
     CompanyId newCompany() {
         CompanyId id = new CompanyId(UUID.randomUUID());
-        orgs.saveCompany(new Company(id, "Empresa " + id.value(), Set.of(Capability.SEARCH_KNOWLEDGE)));
+        orgs.saveCompany(new Company(id, "Empresa " + id.value(), uniqueCode(), Set.of(Capability.SEARCH_KNOWLEDGE)));
         return id;
     }
 
     UserId newUser(CompanyId company) {
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Persona", Optional.empty(), false, true, Optional.empty()));
+        users.save(person(id));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         return id;
     }

@@ -24,7 +24,7 @@ class DescribeMeTest {
     void returnsCompanyCapabilitiesAndProjects() {
         InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
         CompanyId id = new CompanyId(UUID.randomUUID());
-        Company company = new Company(id, "Talleres Demo", EnumSet.of(Capability.SEARCH_KNOWLEDGE));
+        Company company = new Company(id, "Talleres Demo", "TD", EnumSet.of(Capability.SEARCH_KNOWLEDGE));
         Project project = new Project(new ProjectId(UUID.randomUUID()), id, "Obra 1", false);
         organizations.saveCompany(company);
         organizations.saveProject(project);

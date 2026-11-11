@@ -4,6 +4,7 @@ import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.PasswordHasher;
+import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.organization.ProjectMembers;
@@ -13,6 +14,7 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
+import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.NotFoundException;
@@ -30,20 +32,26 @@ public class AddMember {
     private final ProjectMemberRepository projectMembers;
     private final PasswordHasher passwords;
     private final IdGenerator ids;
+    private final PersonCodeGenerator personCodes;
 
     public AddMember(UserRepository users, MembershipRepository memberships, OrganizationRepository organizations,
-            ProjectMemberRepository projectMembers, PasswordHasher passwords, IdGenerator ids) {
+            ProjectMemberRepository projectMembers, PasswordHasher passwords, IdGenerator ids,
+            PersonCodeGenerator personCodes) {
         this.users = users;
         this.memberships = memberships;
         this.organizations = organizations;
         this.projectMembers = projectMembers;
         this.passwords = passwords;
         this.ids = ids;
+        this.personCodes = personCodes;
     }
 
     public MemberAdded execute(Actor actor, CompanyId companyId, NewMember newMember) {
         AccessPolicy.requireAdminOf(actor, companyId);
-        organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
+        Company company = organizations.findCompany(companyId)
+                .orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
+        requireName(newMember.firstName());
+        requireName(newMember.lastName());
         Set<Role> roles = UserAdministration.requireValidRoles(newMember.roles());
         boolean administrator = roles.contains(Role.COMPANY_ADMIN);
         requireAllowedRoles(actor, administrator, newMember.password());
@@ -60,7 +68,7 @@ public class AddMember {
         Membership membership = new Membership(ready.id(), companyId, roles, true);
         memberships.save(membership);
         newMember.projectIds().forEach(projectId -> projectMembers.add(companyId, projectId, ready.id()));
-        return new MemberAdded(ready, membership, existing.isPresent());
+        return new MemberAdded(ready, membership, company, existing.isPresent());
     }
 
     private void requireAssignableProjects(CompanyId companyId, Set<Role> roles, Set<ProjectId> projectIds) {
@@ -92,8 +100,16 @@ public class AddMember {
         return user;
     }
 
+    private static String requireName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ValidationException("Faltan el nombre o los apellidos");
+        }
+        return name.trim();
+    }
+
     private User newPerson(NewMember newMember, Optional<String> email) {
-        return new User(new UserId(ids.newId()), Validation.requireText(newMember.displayName(), "el nombre"), email,
-                false, true, Optional.empty());
+        return new User(new UserId(ids.newId()), requireName(newMember.firstName()),
+                Optional.of(requireName(newMember.lastName())), PersonCodes.next(personCodes, users), email, false,
+                true, Optional.empty());
     }
 }

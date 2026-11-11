@@ -52,7 +52,7 @@ export const api = {
   login: (b: S['Login']) => request<S['UserRef']>('POST', `${a}/session`, b, true),
   logout: () => request<void>('DELETE', `${a}/session`, undefined, true),
   companies: () => request<S['CompanyView'][]>('GET', `${a}/companies`),
-  createCompany: (name: string) => request<S['CompanyView']>('POST', `${a}/companies`, { name }),
+  createCompany: (name: string, code: string) => request<S['CompanyView']>('POST', `${a}/companies`, { name, code }),
   renameCompany: (id: string, name: string) => request<S['CompanyView']>('PATCH', co(id), { name }),
   setCapabilities: (id: string, capabilities: Capability[]) =>
     request<S['CompanyView']>('PUT', `${co(id)}/capabilities`, { capabilities }),

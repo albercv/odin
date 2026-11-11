@@ -26,14 +26,14 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     private static final int MAX_IDENTIFIERS = 10;
     private static final String CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
-                   d.project_id, u.display_name AS author, d.uploaded_at AS date, p.text AS body,
+                   d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
                    %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
                  q
             WHERE d.status = 'READY' AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project) AND %5$s AND %7$s
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
-            SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, u.display_name, c.created_at, c.body,
+            SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
                    %3$s + ts_rank_cd(c.tsv, q.q)::float8
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
             WHERE c.status = 'APPROVED' AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project) AND %6$s AND %8$s

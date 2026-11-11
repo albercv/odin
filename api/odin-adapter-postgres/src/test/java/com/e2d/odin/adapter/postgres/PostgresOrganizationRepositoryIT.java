@@ -43,11 +43,22 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
     @Test
     void savesCompanyWithCapabilitiesAndUpdatesThem() {
         CompanyId id = newCompany();
-        Company updated = new Company(id, "Nueva", Set.of(Capability.SAVE_KNOWLEDGE_CARD, Capability.SEARCH_KNOWLEDGE));
+        Company updated = new Company(id, "Nueva", "NUEVA", Set.of(Capability.SAVE_KNOWLEDGE_CARD, Capability.SEARCH_KNOWLEDGE));
         orgs.saveCompany(updated);
         assertThat(orgs.findCompany(id)).contains(updated);
         orgs.saveCompany(updated.withCapabilities(Set.of()));
         assertThat(orgs.findCompany(id).orElseThrow().capabilities()).isEmpty();
+    }
+
+    @Test
+    void findsACompanyByItsCodeAndTheCodeIsUnique() {
+        CompanyId id = newCompany();
+        String code = orgs.findCompany(id).orElseThrow().code();
+
+        assertThat(orgs.findCompanyByCode(code)).map(Company::id).contains(id);
+        assertThat(orgs.findCompanyByCode("ZZZZ")).isEmpty();
+        assertThatThrownBy(() -> orgs.saveCompany(new Company(new CompanyId(UUID.randomUUID()), "Otra", code,
+                Set.of()))).isInstanceOf(ConflictException.class);
     }
 
     @Test

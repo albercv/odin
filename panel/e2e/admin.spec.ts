@@ -31,12 +31,17 @@ async function logIn(page: Page, email: string, password: string): Promise<void>
   await page.getByRole('button', { name: 'Entrar' }).click();
 }
 
+/** Names are written as «Nombre Apellidos»: the first word is the first name, the rest are the surnames. */
+const firstNameOf = (name: string): string => name.split(' ')[0] ?? name;
+const lastNamesOf = (name: string): string => name.split(' ').slice(1).join(' ');
+
 async function createUser(page: Page, user: { name: string; email?: string; password?: string; role?: 'WORKER' | 'COMPANY_ADMIN' }): Promise<void> {
   await page.getByRole('button', { name: 'Añadir persona', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Añadir persona' });
   const form = dialog.locator('form');
   await form.getByLabel('Rol').selectOption(user.role ?? 'WORKER');
-  await form.getByLabel('Nombre', { exact: true }).fill(user.name);
+  await form.getByLabel('Nombre', { exact: true }).fill(firstNameOf(user.name));
+  await form.getByLabel('Apellidos').fill(lastNamesOf(user.name));
   if (user.email) await form.getByLabel('Correo').fill(user.email);
   if (user.password) await form.getByLabel('Contraseña').fill(user.password);
   await form.getByRole('button', { name: 'Crear usuario' }).click();
@@ -47,6 +52,7 @@ async function createCompanyAndOpenIt(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Nueva empresa' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nueva empresa' });
   await dialog.getByLabel('Nombre de la empresa').fill(COMPANY);
+  await dialog.getByLabel('Código').fill('E2E');
   await dialog.getByRole('button', { name: 'Crear empresa' }).click();
   await page.getByRole('button', { name: `Abrir ${COMPANY}` }).click();
   await expect(page.getByRole('heading', { name: COMPANY })).toBeVisible();
@@ -82,7 +88,8 @@ async function editNameAndEmail(page: Page): Promise<void> {
   await openActions(users, WORKER.name);
   await users.getByRole('button', { name: `Editar ${WORKER.name}`, exact: true }).click();
   const form = users.locator('form').filter({ has: page.getByRole('button', { name: `Guardar ${WORKER.name}` }) });
-  await form.getByLabel('Nombre').fill(WORKER.renamed);
+  await form.getByLabel('Nombre').fill(firstNameOf(WORKER.renamed));
+  await form.getByLabel('Apellidos').fill(lastNamesOf(WORKER.renamed));
   await form.getByLabel('Correo').fill(COMPANY_ADMIN.email);
   await form.getByRole('button', { name: `Guardar ${WORKER.name}` }).click();
   await expect(form.getByRole('alert')).toHaveText('Ya existe un usuario con ese correo');

@@ -8,6 +8,7 @@ import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
+import com.e2d.odin.application.identity.DescribeAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListMembers;
@@ -38,8 +39,8 @@ import com.e2d.odin.application.organization.ListMemberProjects;
 import com.e2d.odin.application.organization.ListProjectMembers;
 import com.e2d.odin.application.organization.ListProjects;
 import com.e2d.odin.application.organization.RemoveProjectMember;
-import com.e2d.odin.application.organization.RenameCompany;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
+import com.e2d.odin.application.organization.UpdateCompany;
 import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
@@ -54,6 +55,7 @@ import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.port.PasswordHasher;
+import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
@@ -119,8 +121,8 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    RenameCompany renameCompany(OrganizationRepository organizations) {
-        return new RenameCompany(organizations);
+    UpdateCompany updateCompany(OrganizationRepository organizations) {
+        return new UpdateCompany(organizations);
     }
 
     @Bean
@@ -173,8 +175,14 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ListMembers listMembers(UserRepository users, MembershipRepository memberships) {
-        return new ListMembers(users, memberships);
+    DescribeAdmin describeAdmin(UserRepository users) {
+        return new DescribeAdmin(users);
+    }
+
+    @Bean
+    ListMembers listMembers(UserRepository users, MembershipRepository memberships,
+            OrganizationRepository organizations) {
+        return new ListMembers(users, memberships, organizations);
     }
 
     @Bean
@@ -221,9 +229,9 @@ public class UseCaseConfiguration {
     @Bean
     AddMember addMember(UserRepository users, MembershipRepository memberships,
             OrganizationRepository organizations, ProjectMemberRepository projectMembers, PasswordHasher passwords,
-            IdGenerator ids, PlatformTransactionManager transactionManager) {
+            IdGenerator ids, PersonCodeGenerator personCodes, PlatformTransactionManager transactionManager) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new AddMember(users, memberships, organizations, projectMembers, passwords, ids) {
+        return new AddMember(users, memberships, organizations, projectMembers, passwords, ids, personCodes) {
             @Override
             public MemberAdded execute(Actor actor, CompanyId companyId, NewMember newMember) {
                 return transaction.execute(status -> super.execute(actor, companyId, newMember));
@@ -232,10 +240,11 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateMember updateMember(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            AdminSessions sessions, PlatformTransactionManager transactionManager) {
+    UpdateMember updateMember(UserRepository users, MembershipRepository memberships,
+            OrganizationRepository organizations, PasswordHasher passwords, AdminSessions sessions,
+            PlatformTransactionManager transactionManager) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new UpdateMember(users, memberships, passwords, sessions) {
+        return new UpdateMember(users, memberships, organizations, passwords, sessions) {
             @Override
             public MemberView execute(Actor actor, CompanyId companyId, UserId userId, MemberChanges changes) {
                 return transaction.execute(status -> super.execute(actor, companyId, userId, changes));
@@ -360,10 +369,10 @@ public class UseCaseConfiguration {
 
     @Bean
     SetUpInstallation setUpInstallation(OrganizationRepository organizations, UserRepository users,
-            PasswordHasher passwords, IdGenerator ids, InstallationSettings installationSettings,
-            PlatformTransactionManager transactionManager) {
+            PasswordHasher passwords, IdGenerator ids, PersonCodeGenerator personCodes,
+            InstallationSettings installationSettings, PlatformTransactionManager transactionManager) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new SetUpInstallation(organizations, users, passwords, ids, installationSettings) {
+        return new SetUpInstallation(organizations, users, passwords, ids, personCodes, installationSettings) {
             @Override
             public UserId execute(String setupToken, String groupName, String adminName, String adminEmail,
                     String password) {

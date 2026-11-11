@@ -126,18 +126,24 @@ class MemberAtomicityIT {
         };
     }
 
+    /** Un código válido y distinto en cada llamada: sirve para empresas y para personas. */
+    private static String code() {
+        return new SecureRandomPersonCodeGenerator().next();
+    }
+
     private void givenCompany() {
-        organizations.saveCompany(new Company(company, "Empresa", EnumSet.allOf(Capability.class)));
+        organizations.saveCompany(new Company(company, "Empresa", code(), EnumSet.allOf(Capability.class)));
     }
 
     @Test
     void failureSavingTheMembershipLeavesNoPerson() {
         givenCompany();
         AddMember add = new UseCaseConfiguration().addMember(users, failingMemberships(), organizations,
-                projectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(), transactionManager);
+                projectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(),
+                new SecureRandomPersonCodeGenerator(), transactionManager);
 
         assertThatThrownBy(() -> add.execute(GROUP_ADMIN, company,
-                new NewMember("Wanda", Optional.of("atomica@e.test"), Set.of(Role.WORKER), Optional.empty(),
+                new NewMember("Wanda", "Pérez", Optional.of("atomica@e.test"), Set.of(Role.WORKER), Optional.empty(),
                 Set.of())))
                 .isInstanceOf(IllegalStateException.class);
 
@@ -156,9 +162,10 @@ class MemberAtomicityIT {
             }
         };
         AddMember add = new UseCaseConfiguration().addMember(users, memberships, organizations,
-                failingProjectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(), transactionManager);
+                failingProjectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(),
+                new SecureRandomPersonCodeGenerator(), transactionManager);
 
-        assertThatThrownBy(() -> add.execute(GROUP_ADMIN, company, new NewMember("Wanda",
+        assertThatThrownBy(() -> add.execute(GROUP_ADMIN, company, new NewMember("Wanda", "Pérez",
                 Optional.of("proyecto@e.test"), Set.of(Role.WORKER), Optional.empty(), Set.of(project))))
                 .isInstanceOf(IllegalStateException.class);
 
@@ -170,10 +177,11 @@ class MemberAtomicityIT {
     void failureSavingTheMembershipLeavesNoPasswordOnAnExistingPerson() {
         givenCompany();
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Wanda", Optional.of("sinclave@e.test"), false, true, Optional.empty()));
+        users.save(new User(id, "Wanda", Optional.of("Pérez"), code(), Optional.of("sinclave@e.test"),
+                false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         UpdateMember update = new UseCaseConfiguration().updateMember(users, failingMemberships(),
-                new BcryptPasswordHasher(), NO_SESSIONS, transactionManager);
+                organizations, new BcryptPasswordHasher(), NO_SESSIONS, transactionManager);
 
         assertThatThrownBy(() -> update.execute(GROUP_ADMIN, company, id, new MemberChanges(
                 Optional.of(Set.of(Role.COMPANY_ADMIN)), Optional.empty(), Optional.of("clave-muy-larga-1"))))
@@ -186,7 +194,8 @@ class MemberAtomicityIT {
     void failureDeletingThePersonKeepsTheirMemberships() {
         givenCompany();
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Wanda", Optional.of("borrar@e.test"), false, true, Optional.empty()));
+        users.save(new User(id, "Wanda", Optional.of("Pérez"), code(), Optional.of("borrar@e.test"),
+                false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         DeleteUser delete = new UseCaseConfiguration().deleteUser(failingUserDelete(), memberships,
                 NO_SESSIONS, Clock.systemUTC(), transactionManager);
@@ -200,7 +209,8 @@ class MemberAtomicityIT {
     void failureRevokingKeysKeepsTheMembership() {
         givenCompany();
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Wanda", Optional.empty(), false, true, Optional.empty()));
+        users.save(new User(id, "Wanda", Optional.of("Pérez"), code(), Optional.empty(),
+                false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         new PostgresAccessKeyRepository(tx).save(new AccessKey(new AccessKeyId(UUID.randomUUID()), id, company,
                 "portatil", "atomic01", "hash", Instant.now(), Optional.empty()));
@@ -217,7 +227,8 @@ class MemberAtomicityIT {
     void failureDeletingTheMembershipKeepsItsKeysValid() {
         givenCompany();
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Wanda", Optional.empty(), false, true, Optional.empty()));
+        users.save(new User(id, "Wanda", Optional.of("Pérez"), code(), Optional.empty(),
+                false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         PostgresAccessKeyRepository keys = new PostgresAccessKeyRepository(tx);
         keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), id, company, "portatil", "atomic02", "hash",
@@ -240,7 +251,8 @@ class MemberAtomicityIT {
     void failureDeletingTheMembershipKeepsTheProjects() {
         givenCompany();
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Wanda", Optional.empty(), false, true, Optional.empty()));
+        users.save(new User(id, "Wanda", Optional.of("Pérez"), code(), Optional.empty(),
+                false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         ProjectId project = new ProjectId(UUID.randomUUID());
         organizations.saveProject(new Project(project, company, "Obra", true));
