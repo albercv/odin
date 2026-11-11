@@ -35,13 +35,15 @@
 | El puente lee **una página por petición** (modo `single` del lector) | Odín guarda y cita por página. En modo `single` el número de página sale de la petición, así que no depende de que el modelo emita bien `<PAGE>`. El informe del lector midió que `single` leyó sin errores el documento real de 16 páginas, también sin las guardas anti-bucle (Resumen y §11). La ventaja del modo multipágina, que une párrafos y tablas entre páginas, no sirve aquí porque Odín guarda texto por página | Un parámetro del puente |
 | Texto de cada página: el Markdown que ya genera `uocr.render.to_markdown` para los bloques de esa página, quitando los comentarios HTML (marcador de página y cabecera de imagen o figura con su caja) | Se reutiliza lo que ya está probado. Los comentarios no son texto del documento. Las tablas se quedan en HTML: la búsqueda ignora las etiquetas y una cita dentro de una celda sigue siendo literal | Una función de texto por página |
 | Modelo de 8 bits por defecto | El informe del lector solo comparó 6 y 8 bits en un documento de una página | Una opción de arranque del puente |
-| Fuera de alcance, el **PDF mixto** (unas páginas con texto y otras escaneadas): queda `READY` con las escaneadas vacías, como hoy | Leer solo algunas páginas cambia el contrato y el modelo de estados. Primero, una pieza bien hecha | Un parámetro `pages` en el contrato y un estado más |
+| Fuera de alcance, leer las páginas escaneadas de un **PDF mixto** (unas páginas con texto y otras escaneadas). Queda `READY` con esas páginas vacías, como hoy, pero **el panel dice qué páginas no tienen texto y no se han leído** (D-040, D-041). Es la primera mejora posterior | Leerlas cambia el contrato y el modelo de estados de un documento que ya está `READY`, con fallos a medias. Primero, una pieza bien hecha | Un parámetro `pages` en el contrato y un carril de páginas sueltas |
 | Un documento se lee entero o no se guarda nada | Una cita no puede apuntar a un documento al que le faltan páginas sin que nadie lo sepa | Guardar lecturas parciales con aviso |
 
 ## 3. Fuera de alcance
 
-- El PDF mixto (apartado 2).
-- OCR fuera de un Mac con Apple Silicon (encargo 8, pendiente). Sin servicio lector configurado, todo sigue como hoy: los escaneados esperan en `PENDING_READER`.
+- Leer las páginas escaneadas de un PDF mixto (apartado 2). El aviso sí entra (apartado 5.5).
+- OCR fuera de un Mac con Apple Silicon (encargo 8, pendiente).
+  - Sin servicio lector configurado, los escaneados se guardan en `PENDING_READER`, como hoy.
+  - El panel no dice que esperan: dice que esa instalación no lee documentos escaneados (D-041, apartado 5.5).
 - Elegir qué páginas leer, releer con OCR un PDF que ya tiene texto, o comparar la lectura del OCR con la digital.
 - Que el panel diga si el servicio lector responde. Lo que ve es el estado de cada documento.
 - Coordenadas, tipos de bloque y otros datos de diseño de página que emite el modelo: no entran en Odín.
@@ -140,11 +142,22 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
 ### 5.5 Lo que ven el panel y el trabajador
 
 - **Panel, lista de documentos:**
-  - `PENDING_READER` pasa a decir «Esperando al lector OCR»;
+  - `PENDING_READER`:
+    - con servicio lector configurado, dice «Esperando al lector OCR»;
+    - sin él, dice «Esta instalación no lee documentos escaneados» (D-041).
+    - `GET /v1/admin/me` gana `scannedDocumentsSupported`, verdadero si `ODIN_READER_URL` tiene valor. `InstallationSettings` lo lleva al caso de uso.
   - `READER_PROCESSING` dice «Leyendo con OCR».
+  - **Páginas sin leer (D-040, D-041):** un documento `READY` con páginas sin texto dice «Páginas sin texto, no leídas: 3, 5».
+- **Páginas sin texto:**
+  - `Document` gana `pagesWithoutText`, la lista de páginas cuyo texto queda vacío tras quitar los espacios.
+  - La rellena el carril local al guardar un PDF con texto en alguna página, y queda vacía en todo lo que lee el lector, porque esas páginas sí se leyeron.
+  - La migración la calcula para los documentos `READY` que ya existen, a partir de `document_page`.
+  - `DocumentView` gana `pagesWithoutText`.
 - **Trabajador:**
   - `readPage` añade `readerName` a su respuesta.
-  - Las instrucciones del MCP ganan una frase: si la página la leyó el OCR, el texto viene de un escaneo y puede tener errores de lectura; se cita igual, tal como está.
+  - Las instrucciones del MCP ganan dos frases:
+    - si la página la leyó el OCR, el texto viene de un escaneo y puede tener errores de lectura; se cita igual, tal como está;
+    - una página con el texto vacío no se ha leído: no se concluye nada de ella.
   - Las rutas del trabajador no cambian de forma.
 
 ## 6. Puente en el repositorio OCR
@@ -201,6 +214,7 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
     - que `readPage` dice qué lector lo leyó.
 
     Prueba el camino de Odín, no la calidad del OCR.
+  - **El lector de prueba es solo para las pruebas automáticas** (D-041). Una demo que vea una persona usa siempre el puente real con Unlimited-OCR 2. Lo dicen este diseño y el `README` de la demo.
 - **Puente, sin el modelo:** pruebas con un motor falso. Cubren:
   - multipart;
   - reconocimiento del tipo;
@@ -218,7 +232,7 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
   - segundos por página;
   - pico de memoria del puente.
 
-  Esas cifras, y solo esas, van al informe del bloque.
+  Esas cifras, y solo esas, van al informe del bloque, con la máquina en la que se midieron (D-041). Con ellas el CEO estimará cuánto tarda un despacho en digitalizar su historial; hasta entonces no se promete ningún plazo.
 - **Regresión:** la batería de búsqueda mantiene 27 de 30.
 
 ## 9. Criterio de cierre
@@ -226,7 +240,11 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
 - `make check` y `make demo` de Odín terminan con 0.
 - `make test` del repositorio OCR termina con 0, y `uv run pytest -m model` también.
 - La verificación del CTO del apartado 8, hecha y anotada con sus cifras.
-- Los documentos de la instalación de prueba del propietario que estaban en `PENDING_READER` se leen solos al configurar el servicio, sin perder nada. Se verifica con una copia, nunca con su instalación sin su permiso.
+- Los documentos que estaban en `PENDING_READER` se leen solos al configurar el servicio, sin perder nada.
+  - Se verifica primero con una base de prueba de la fase 1.1 con datos ficticios.
+  - Con una copia de la instalación del propietario, solo si él da permiso. Lo pide el CEO, y el CTO le avisa antes de esa verificación (D-041).
+  - La copia se queda en el equipo, fuera de git y con las reglas de `private/`, y se borra al terminar.
+  - El informe da recuentos, nunca texto.
 - Decisiones registradas en el registro técnico (T-015).
 
 ## 10. Lo que queda al constructor
@@ -235,7 +253,16 @@ El detalle técnico va solo al registro del servidor, sin texto del documento (s
 - El puerto por defecto del puente, si el 8077 está ocupado en este equipo.
 - Cómo se prueba la red del apartado 7. El resultado sí se anota.
 
-## 11. Revisión del constructor (2026-11-11)
+## 11. Validación del CEO (D-040 y D-041, 2026-11-11)
+
+El CEO validó el diseño con estas precisiones, ya aplicadas:
+- el aviso de páginas sin texto en los PDF mixtos (2, 3 y 5.5);
+- el texto del panel en una instalación sin lector (3 y 5.5);
+- el lector de prueba, solo para las pruebas automáticas (8);
+- las condiciones para usar una copia de la instalación del propietario (9);
+- las cifras de tiempo y memoria, con su máquina (8).
+
+## 12. Revisión del constructor (2026-11-11)
 
 Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 7 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
 - el contador de los documentos que ya esperan al lector, que se pone a 0 con una migración (5.1);

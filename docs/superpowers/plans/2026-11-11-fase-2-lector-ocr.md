@@ -20,6 +20,20 @@
 - **Odín (tareas 1, 4 a 7):** cuando el CEO lo diga, tras el cierre de la 2a. Antes de empezar, se actualiza `feature/fase-2-conocimiento` con la punta de `feature/identidad-pertenencias`.
 - **Repositorio OCR (tareas 2 y 3):** no tocan Odín ni dependen de la 2a. Pueden ir antes si el CEO lo autoriza, en una rama `feature/puente-odin` que sale de `develop`.
 
+## PDF mixtos: opción tomada (D-040 y D-041)
+
+El CEO dejó elegir entre leer solo las páginas sin texto, si cabía sin mucho coste, o avisar en el panel de qué páginas no se han leído. **Este plan avisa.**
+
+Leerlas no cabe sin coste, por cuatro motivos:
+- obliga a añadir al contrato un parámetro `pages`;
+- obliga a un carril que trabaje sobre documentos que ya están `READY`, con su propio bloqueo y sus propios intentos, porque el documento tiene que seguir buscable mientras tanto;
+- obliga a decidir qué pasa cuando algunas páginas sí se leen y otras fallan;
+- obliga a otra regla de reintento.
+
+Eso duplica el riesgo del modelo de estados de este bloque. El aviso cuesta una columna, su cálculo en el carril local, una migración que lo rellena y una etiqueta en el panel.
+
+El CEO aceptó el motivo (D-041). Leer esas páginas queda como primera mejora posterior.
+
 ## Restricciones globales
 
 - **TDD con evidencia:** primero la prueba; se ejecuta y se guardan en el informe la orden y la salida en rojo antes del código. Un fallo de compilación solo vale como rojo para la primera prueba de una clase nueva.
@@ -55,6 +69,7 @@
 3. **Una página falla a mitad de documento:** no se guarda nada y la cita nunca apunta a un documento incompleto. Pruebas en la tarea 2 (`failedPageFailsWholeDocument`) y en la tarea 4 (`failureOnLastAttemptStoresNoPages`).
 4. **Una respuesta del servicio que no cumple el contrato** (páginas que faltan, repetidas o sin `reader`): se trata como fallo y no se guarda. Prueba en la tarea 6 (`pagesWithGapIsReaderFailure`).
 5. **Documentos que ya esperaban con intentos acumulados** en una instalación de la fase 1.1: se leen al llegar el lector. Prueba en la tarea 5 (`migrationResetsAttemptsOfDocumentsWaitingForReader`).
+6. **Un PDF mixto ya guardado antes de este bloque:** el panel dice sus páginas sin texto sin volver a procesarlo. Prueba en la tarea 5 (`migrationFillsPagesWithoutTextOfExistingDocuments`).
 
 ---
 
@@ -68,6 +83,10 @@ public Document awaitReader();                          // PENDING_READER, attem
 public Document startReading(Instant now);              // READER_PROCESSING, attemptCount + 1, processingStartedAt now
 public Document returnToReaderQueue(boolean countAttempt); // PENDING_READER; sin contar: attemptCount - 1
 // markPendingReader() desaparece: su único uso pasa a awaitReader().
+// Document gana el componente final `List<Integer> pagesWithoutText` (vacía por defecto) y:
+public Document markReady(boolean paginated, List<Integer> pagesWithoutText);  // sustituye a markReady(boolean)
+
+// application/shared — InstallationSettings gana `boolean scannedDocumentsSupported`
 
 // application/port
 public interface ReaderService {
@@ -81,7 +100,10 @@ public class ReaderFailedException extends RuntimeException { }        // 500, t
 Optional<Document> claimNextForReader(Instant now, Duration staleAfter);
 
 // application/document
-final class DocumentPages { static List<DocumentPage> from(Document document, ReadResult result); }
+final class DocumentPages {
+    static List<DocumentPage> from(Document document, ReadResult result);
+    static List<Integer> withoutText(List<DocumentPage> pages);   // números de las páginas en blanco tras strip()
+}
 public class ProcessDocumentsWithReader {
     public ProcessDocumentsWithReader(DocumentRepository documents, OriginalFileStore files, ReaderService reader,
             ReaderSettings settings, Clock clock);
@@ -228,10 +250,11 @@ Rama `task/fase-2-conocimiento/carril-lector` (Odín). Spec 5.1 a 5.3.
     - `startReadingCountsAttempt`;
     - `returnToReaderQueueWithoutCountingUndoesTheAttempt`.
   - `ProcessPendingDocumentsTest`: `imageWithoutLocalReaderAwaitsReaderWithZeroAttempts` y `pdfWithoutTextAwaitsReaderWithZeroAttempts`.
-  - `DocumentPagesTest`: `paginatedResultKeepsPages` y `nonPaginatedResultIsOnePage`, los dos casos que hoy cubre `store`.
+  - `DocumentPagesTest`: `paginatedResultKeepsPages` y `nonPaginatedResultIsOnePage`, los dos casos que hoy cubre `store`, más `withoutTextListsBlankPages`.
+  - `ProcessPendingDocumentsTest.mixedPdfIsReadyWithItsPagesWithoutText`: un PDF con texto en las páginas 1 y 3, y en blanco la 2 y la 4, queda `READY` con `pagesWithoutText` `[2, 4]`.
   - `ProcessDocumentsWithReaderTest`:
     - `unavailableServiceClaimsNothing`;
-    - `readsPendingDocumentAndMarksReady`;
+    - `readsPendingDocumentAndMarksReady`, con `pagesWithoutText` vacía;
     - `unavailableServiceKeepsDocumentWaitingWithoutSpendingAttempts`;
     - `unreadableIsFailedWithUnreadableReason`;
     - `readerFailureBeforeLastAttemptReturnsToQueueKeepingAttempts`;
@@ -254,7 +277,11 @@ Rama `task/fase-2-conocimiento/carril-lector-postgres` (Odín). Spec 5.1 y 5.2.
 **Interfaces que consume:** `DocumentRepository.claimNextForReader` y `Document.startReading` de la tarea 4.
 
 **Valores:**
-- `V10`: `UPDATE document SET attempt_count = 0 WHERE status = 'PENDING_READER'`. La columna `status` es texto sin restricción, así que no hace falta nada para el estado nuevo.
+- `V10`:
+  - `UPDATE document SET attempt_count = 0 WHERE status = 'PENDING_READER'`. La columna `status` es texto sin restricción, así que no hace falta nada para el estado nuevo;
+  - `ALTER TABLE document ADD COLUMN pages_without_text integer[] NOT NULL DEFAULT '{}'`;
+  - la rellena para los documentos `READY` y paginados con los números de sus páginas cuyo `btrim(text)` es vacío.
+- `PostgresDocumentRepository` lee y guarda `pages_without_text`.
 - `claimNextForReader`:
   - toma `status = 'PENDING_READER' OR (status = 'READER_PROCESSING' AND (processing_started_at IS NULL OR processing_started_at <= :threshold))`;
   - `ORDER BY seq LIMIT 1 FOR UPDATE SKIP LOCKED`, en `CompanyScope.all()` y `ProjectVisibility.all()`;
@@ -267,6 +294,8 @@ Rama `task/fase-2-conocimiento/carril-lector-postgres` (Odín). Spec 5.1 y 5.2.
     - `claimNextForReaderRetakesStaleReaderProcessing`;
     - `localClaimNeverTakesReaderStates`.
   - `migrationResetsAttemptsOfDocumentsWaitingForReader`: aplica hasta la migración anterior, inserta un `PENDING_READER` con 3 intentos, migra y comprueba que tiene 0.
+  - `migrationFillsPagesWithoutTextOfExistingDocuments`: un `READY` con las páginas 1 y 3 en blanco queda con `[1, 3]`.
+  - `PostgresDocumentRepositoryIT.storesPagesWithoutText`.
 - [ ] **Paso 2:** escribe `V10` y `claimNextForReader`.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0. `SearchBatteryIT` mantiene 27 de 30.
 - [ ] **Paso 4:** commit «feat: toma del carril del lector en PostgreSQL».
@@ -307,6 +336,7 @@ Rama `task/fase-2-conocimiento/adaptador-lector` (Odín). Spec 5.2 y 5.4.
   - `connect-timeout: ${ODIN_READER_CONNECT_TIMEOUT:PT5S}`;
   - `token: ${ODIN_READER_TOKEN:}`.
 - `ReaderLaneConfiguration` crea el adaptador, el caso de uso y el programador solo si `odin.reader.url` no está vacía (`@ConditionalOnExpression`). El programador usa `@Scheduled(fixedDelay = 30000)`.
+- `SettingsConfiguration` rellena `InstallationSettings.scannedDocumentsSupported` con `!odin.reader.url.isBlank()`.
 - `compose.yaml`: en `api`, `ODIN_READER_URL: ${ODIN_READER_URL:-}` y `ODIN_READER_TOKEN: ${ODIN_READER_TOKEN:-}`.
 - `.env.example`: las dos variables comentadas, con una línea que diga que en un Mac con el puente del repositorio OCR la URL es la del puente vista desde Docker. Sin escribir `host.docker.internal`, que se documenta en el `README` de operación.
 
@@ -323,7 +353,7 @@ Rama `task/fase-2-conocimiento/adaptador-lector` (Odín). Spec 5.2 y 5.4.
     - `pagesWithGapIsReaderFailure`;
     - `missingReaderIsReaderFailure`;
     - `returnsPagesInOrderAsPaginated`.
-  - `ReaderLaneIT`: `noUrlMeansNoReaderLaneBeans` y `localLaneKeepsRunningWhileReaderLaneIsBlocked`. Esta última usa un `ReaderService` que se bloquea hasta que se le suelta y un DOCX subido mientras, que llega a `READY`.
+  - `ReaderLaneIT`: `noUrlMeansNoReaderLaneBeans`, `scannedDocumentsSupportedFollowsUrl` y `localLaneKeepsRunningWhileReaderLaneIsBlocked`. Esta última usa un `ReaderService` que se bloquea hasta que se le suelta y un DOCX subido mientras, que llega a `READY`.
 - [ ] **Paso 2:** implementa el módulo, la configuración y el despliegue. Comprueba que `LayerRulesTest` incluye el módulo nuevo y sigue en verde.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0. `make demo` no configura lector y debe seguir igual.
 - [ ] **Paso 4:** commit «feat: adaptador HTTP del servicio lector y su carril».
@@ -336,15 +366,21 @@ Rama `task/fase-2-conocimiento/lector-demo` (Odín). Spec 5.5 y 8.
 - **Crear:** `deploy/demo/reader-stub.mjs`, `deploy/demo/compose.reader-stub.yaml` y `deploy/demo/escaneo-ficticio.png`, copiado de `samples/es_simple_png.png` del repositorio OCR, que es sintético.
 - **Modificar:**
   - `panel/src/pages/Documents.tsx` y su prueba;
-  - `api/odin-adapter-web/src/main/java/com/e2d/odin/adapter/web/dto/Responses.java`, en la respuesta de `readPage`;
-  - `WorkerApiTest`;
+  - `api/odin-adapter-web/src/main/java/com/e2d/odin/adapter/web/dto/Responses.java`, en la respuesta de `readPage`, en `DocumentView` (`pagesWithoutText`) y en `AdminMe` (`scannedDocumentsSupported`);
+  - `SessionController`, o donde se monte `GET /v1/admin/me`;
+  - `WorkerApiTest` y `AdminApiTest`;
   - `mcp/src/server.ts`, `mcp/src/tools/readPage.ts` y sus pruebas;
   - `deploy/demo/run-demo.sh`, `mcp/scripts/demo-client.ts` y `README.md`.
 
 **Valores:**
-- Panel: `PENDING_READER` dice «Esperando al lector OCR» y `READER_PROCESSING`, «Leyendo con OCR», con el tono `pending`.
+- **Panel:**
+  - `PENDING_READER` dice «Esperando al lector OCR» si `me.scannedDocumentsSupported`, y «Esta instalación no lee documentos escaneados» si no;
+  - `READER_PROCESSING` dice «Leyendo con OCR», con el tono `pending`;
+  - un documento con `pagesWithoutText` no vacía lleva debajo del estado «Páginas sin texto, no leídas: 3, 5».
 - La respuesta de `readPage` gana `readerName`.
-- Instrucción nueva en `INSTRUCTIONS`: «Si readerName es unlimited-ocr-2, la página viene de un escaneo leído por OCR y puede tener errores de lectura: cítala tal como está.».
+- **Instrucciones nuevas en `INSTRUCTIONS`:**
+  - «Si readerName es unlimited-ocr-2, la página viene de un escaneo leído por OCR y puede tener errores de lectura: cítala tal como está.»;
+  - «Una página con el texto vacío no se ha leído: no concluyas nada de ella.».
 - `reader-stub.mjs`:
   - Node sin dependencias;
   - `GET /health` da `ok`;
@@ -355,12 +391,20 @@ Rama `task/fase-2-conocimiento/lector-demo` (Odín). Spec 5.5 y 8.
   2. espera `READY`;
   3. `searchKnowledge(["bajante del patio"])` encuentra el documento en la página 1;
   4. `readPage` devuelve `readerName: "reader-stub"`.
-- `README`: apartado «Lector OCR». Cuenta que sin lector los escaneados esperan, cómo se arranca el puente en el Mac (repositorio OCR, `make serve`) y que en este equipo la URL va en `deploy/.env`.
+- **`README`, apartado «Lector OCR».** Cuenta:
+  - que sin lector los escaneados no se leen y el panel lo dice;
+  - cómo se arranca el puente en el Mac (repositorio OCR, `make serve`);
+  - que en este equipo la URL va en `deploy/.env`.
+- **`README`, apartado de la demostración,** con esta frase literal: «El lector de prueba (`reader-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el puente real con Unlimited-OCR 2.».
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
-  - `Documents.test.tsx`: `pendingReaderAndReaderProcessingLabels`;
+  - `Documents.test.tsx`:
+    - `pendingReaderAndReaderProcessingLabels`;
+    - `pendingReaderSaysInstallationDoesNotReadScansWhenUnsupported`;
+    - `listsPagesWithoutText`.
   - `WorkerApiTest.readPageIncludesReaderName`;
-  - la prueba del servidor MCP que comprueba la instrucción del OCR.
+  - `AdminApiTest`: `meSaysWhetherScannedDocumentsAreSupported` y `documentViewIncludesPagesWithoutText`;
+  - la prueba del servidor MCP que comprueba las dos instrucciones.
 - [ ] **Paso 2:** implementa. Regenera el contrato y los tipos.
 - [ ] **Paso 3:** `make demo` dos veces seguidas y `make check` terminan con 0.
 - [ ] **Paso 4:** commit «feat: lector OCR en el panel, el MCP y la demostración».
@@ -377,8 +421,12 @@ No es de un subagente: la hace el CTO. Spec 7, 8 y 9.
    - Se suben `samples/factura_scan.pdf` y `samples/long_report.pdf`, este último pasado antes a solo imagen (por ejemplo, rasterizado con pypdfium2 en un script del scratchpad), para tener un escaneado de 30 páginas.
    - El trabajador encuentra un importe de la factura con su cita y su página.
    - Se miden los segundos por página (registro del puente) y el pico MLX.
-   - Esas cifras, y solo esas, van al informe.
-4. **Documentos que ya esperaban:** con una copia de la base de datos de prueba de la fase 1.1, nunca con la instalación del propietario sin su permiso, los `PENDING_READER` se leen solos.
+   - Esas cifras, y solo esas, van al informe, con la máquina en la que se midieron: modelo, chip, memoria y sistema (D-041).
+4. **Documentos que ya esperaban:**
+   - Primero con una base de prueba de la fase 1.1 con datos ficticios: los `PENDING_READER` se leen solos y un PDF mixto ya existente sale con sus páginas sin texto.
+   - Con una copia de la instalación del propietario, **solo si él da permiso**, que pide el CEO. El CTO avisa al CEO antes de esta verificación.
+     - La copia se queda en el equipo, fuera de git y con las reglas de `private/`, y se borra al terminar.
+     - El informe da recuentos, nunca texto (D-041).
 5. **Cierre:**
    - revisión final de toda la rama con Opus;
    - `make check` y `make demo`;
