@@ -105,9 +105,9 @@ public final class Responses {
     }
 
     public record MemberAdded(MemberView member, boolean alreadyExisted) {
-        public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added) {
+        public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added, Actor viewer) {
             return new MemberAdded(MemberView.from(com.e2d.odin.application.identity.MemberView.of(added.user(),
-                    added.membership(), added.company().code())), added.alreadyExisted());
+                    added.membership(), added.company().code(), viewer)), added.alreadyExisted());
         }
     }
 

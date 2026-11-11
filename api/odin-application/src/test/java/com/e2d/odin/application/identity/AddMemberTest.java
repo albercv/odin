@@ -117,7 +117,7 @@ class AddMemberTest {
         MemberAdded added = add.execute(Actors.companyAdmin(company), company,
                 member(null, Set.of(Role.WORKER), null));
 
-        MemberView view = MemberView.of(added.user(), added.membership(), added.company().code());
+        MemberView view = MemberView.of(added.user(), added.membership(), added.company().code(), groupAdmin);
 
         assertThat(view.memberCode()).isEqualTo("7F3K-E2D");
         assertThat(view.personCode()).isEqualTo("7F3K");

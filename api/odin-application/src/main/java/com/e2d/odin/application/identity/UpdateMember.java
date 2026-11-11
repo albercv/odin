@@ -49,7 +49,7 @@ public class UpdateMember {
         if (losesAdministration(current, updated)) {
             UserAdministration.closeSessionsIfNoLongerAdministering(memberships, sessions, userId);
         }
-        return MemberView.of(user, updated, companyCode);
+        return MemberView.of(user, updated, companyCode, actor);
     }
 
     /** Dar o quitar la administración, o activar o desactivar una pertenencia que la tiene. */

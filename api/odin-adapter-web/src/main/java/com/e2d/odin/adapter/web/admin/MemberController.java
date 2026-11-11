@@ -70,7 +70,7 @@ public class MemberController {
             @PathVariable UUID companyId, @RequestBody Requests.AddMember request) {
         NewMember member = new NewMember(request.firstName(), request.lastName(), Optional.ofNullable(request.email()),
                 request.roles(), Optional.ofNullable(request.password()), projectIds(request));
-        return Responses.MemberAdded.from(addMember.execute(actor, new CompanyId(companyId), member));
+        return Responses.MemberAdded.from(addMember.execute(actor, new CompanyId(companyId), member), actor);
     }
 
     private static Set<ProjectId> projectIds(Requests.AddMember request) {
