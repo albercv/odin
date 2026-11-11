@@ -25,12 +25,13 @@
   - el trabajador ve sus preguntas, y el panel nunca enseña las de una persona.
 - **D-005:** la revisión es del contenido, no de la persona. Nada cuenta las fichas rechazadas de nadie.
 
-**Preguntas al CEO** (enviadas el 2026-11-11). El diseño sigue la recomendación del CTO:
+**Respuestas del CEO** (D-040 y D-044, 2026-11-11):
 
-| Pregunta | Recomendación, que es lo que sigue el diseño | Si la respuesta es otra |
-|---|---|---|
-| ¿Qué se dice al autor de una ficha rechazada? (D-036 lo dejó abierto) | La ve en su lista como «rechazada», con la nota del revisor, que trata del contenido. Nunca sale en búsquedas | Se quita la nota o el estado de la respuesta |
-| ¿Entra aquí que el trabajador vea sus preguntas? | Sí, por MCP | Se quita la tarea de las preguntas, que es independiente |
+| Pregunta | Respuesta |
+|---|---|
+| ¿Qué se dice al autor de una ficha rechazada? (D-036 lo dejó abierto) | La ve en su lista por MCP como «rechazada», con la nota del revisor tal cual y sin decir quién revisó. Nunca sale en búsquedas, y nada cuenta los rechazos de nadie. Como la nota se enseña, el panel pide al revisor que trate del contenido (bloque 4) |
+| ¿Y una ficha corregida? | La IA la presenta como «corregida por el administrador», con los dos textos |
+| ¿Entra aquí que el trabajador vea sus preguntas? | Sí, por MCP. Solo las ve su autor, y solo las de la empresa de su clave. El administrador nunca |
 
 **Del CTO.** Cada decisión dice lo que cuesta si resulta errónea:
 
@@ -100,7 +101,10 @@
 - **`listMyQuestions`,** con la capacidad `SEARCH_KNOWLEDGE`. Entrada: `limit`, opcional.
   - Descripción: «Lista las consultas que tu IA ha hecho al cerebro con tu clave».
 - **`saveKnowledgeCard`:** su descripción añade que el autor puede ver el estado con `listMyKnowledgeCards`.
-- **Instrucción nueva:** la del apartado 4.1.
+- **Instrucciones nuevas:**
+  - la del apartado 4.1;
+  - una ficha con `review.decision` `CORRECT` se presenta como «corregida por el administrador», con el texto que envió el autor y el corregido (D-040, D-044);
+  - una ficha rechazada se presenta como «rechazada», con la nota del revisor tal cual.
 
 ## 7. Pruebas
 
@@ -143,7 +147,13 @@
 - Nombres internos y cómo se pasa el autor al filtro común de fichas.
 - Los textos exactos de las descripciones de las herramientas, con el sentido de los apartados 4 y 6.
 
-## 10. Revisión del constructor (2026-11-11)
+## 10. Validación del CEO (D-040 y D-044, 2026-11-11)
+
+El CEO validó el diseño con dos precisiones, ya aplicadas:
+- la ficha corregida, con su rótulo y los dos textos (2 y 6);
+- la nota del revisor, que el panel del bloque 4 pide que trate del contenido (2).
+
+## 11. Revisión del constructor (2026-11-11)
 
 Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 6 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
 - las fichas pendientes ya están en el índice (4.1);

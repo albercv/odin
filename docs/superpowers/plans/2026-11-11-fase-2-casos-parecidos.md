@@ -89,6 +89,12 @@ public record SimilarCasesRequest(List<String> queries, Optional<ProjectId> proj
 public class FindSimilarCases { public SimilarCasesResult execute(Actor actor, SimilarCasesRequest request); }
 // application/document
 public class UpdateDocument { public Document execute(Actor actor, DocumentId documentId, boolean caseDocument); }
+public class MarkCaseDocuments {    // todo o nada
+    public static final int MAX_DOCUMENTS = 500;
+    public int execute(Actor actor, CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument);
+}
+// application/port — DocumentRepository gana:
+int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument); // 1 transacción; NotFoundException si falta alguno
 // UploadDocument.execute gana el parámetro final `boolean caseDocument`
 ```
 
@@ -104,7 +110,11 @@ public class UpdateDocument { public Document execute(Actor actor, DocumentId do
 | `GET /v1/documents?caseDocument=` | — | `WorkerDocumentView` gana `caseDocument` | 2 |
 | `POST /v1/similar-cases` | `SimilarCasesRequestBody { queries, projectId?, limit? }` | `SimilarCasesResponse { cases: SimilarCaseView[], noSource }` | 2 |
 
-`SimilarCaseView` tiene los campos del spec 6. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, y `originLabel` es `null` o «Ficha aportada por un trabajador, resumen hecho por IA».
+`SimilarCaseView` tiene los campos del spec 6. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, y `originLabel` es `null` o «Ficha aportada por un trabajador, redactada con IA» (D-040).
+
+| Ruta | Cuerpo | Respuesta | Tarea |
+|---|---|---|---|
+| `POST /v1/admin/companies/{companyId}/documents/case-marks` | `CaseMarksRequest { documentIds (1 a 500), caseDocument }` | `CaseMarksResult { updated }` | 1 |
 
 ---
 
@@ -116,7 +126,8 @@ Rama `task/fase-2-conocimiento/marca-de-caso`. Spec 4 y 5.1.
 - **Crear:**
   - `V11__similar_cases.sql`;
   - `domain/knowledge/QuestionKind.java`;
-  - `application/document/UpdateDocument.java` y `UpdateDocumentTest`.
+  - `application/document/UpdateDocument.java` y `UpdateDocumentTest`;
+  - `application/document/MarkCaseDocuments.java` y `MarkCaseDocumentsTest`.
 - **Modificar:**
   - dominio: `Document`, `Capability` y `QuestionRecord`;
   - aplicación: `UploadDocument` y su prueba, y `SearchKnowledge`, que registra `QuestionKind.SEARCH`;
@@ -133,6 +144,10 @@ Rama `task/fase-2-conocimiento/marca-de-caso`. Spec 4 y 5.1.
   - `INSERT INTO company_capability (company_id, capability) SELECT id, 'SIMILAR_CASES' FROM company ON CONFLICT DO NOTHING`.
 - `CreateCompany` ya usa `EnumSet.allOf(Capability.class)`: una empresa nueva nace con `SIMILAR_CASES` sin tocarlo.
 - `UpdateDocument`: `AccessPolicy.requireAdminOf`, con el orden 404 y luego 403 de siempre.
+- `MarkCaseDocuments`:
+  - `AccessPolicy.requireAdminOf(actor, companyId)`;
+  - de 1 a 500 identificadores, o 400 «Elige entre 1 y 500 documentos»;
+  - `DocumentRepository.markCaseDocuments` hace un `UPDATE … WHERE company_id = :company AND id = ANY(:ids)` en una transacción. Si el número de filas no es el de identificadores, deshace y lanza 404 «Documento no encontrado».
 - Duplicado: el documento que ya existía conserva su `caseDocument`.
 - Panel: solo lo imprescindible para que compile. Las pantallas van en la tarea 4.
 
@@ -143,16 +158,22 @@ Rama `task/fase-2-conocimiento/marca-de-caso`. Spec 4 y 5.1.
     - `unknownDocumentIsNotFound`;
     - `adminOfAnotherCompanyIsForbidden`;
     - `workerIsForbidden`.
+  - `MarkCaseDocumentsTest`:
+    - `marksBatchOfDocuments`;
+    - `unmarksBatch`;
+    - `emptyOrMoreThanFiveHundredIsRejected`;
+    - `foreignDocumentInBatchChangesNothingAndIsNotFound`;
+    - `adminOfAnotherCompanyIsForbidden`.
   - `SearchKnowledgeTest.recordsQuestionOfKindSearch`.
 - [ ] **Paso 2:** implementa el dominio, los casos de uso y los dobles.
 - [ ] **Paso 3:** PostgreSQL:
-  - `PostgresDocumentRepositoryIT.storesAndListsCaseDocument`;
+  - `PostgresDocumentRepositoryIT.storesAndListsCaseDocument` y `markCaseDocumentsIsAllOrNothing`;
   - `PostgresQuestionLogIT.storesKind`, o la prueba del registro que exista;
   - `migrationGivesSimilarCasesToExistingCompanies`, en la prueba de migración: una empresa insertada antes de `V11` tiene `SIMILAR_CASES` después.
   - Escribe `V11`.
 - [ ] **Paso 4:** web y contrato:
-  - `AdminApiTest`: `uploadAcceptsCaseDocumentField` y `patchDocumentMarksCase`;
-  - `IsolationTest.otherCompanyAdminCannotMarkForeignDocument`.
+  - `AdminApiTest`: `uploadAcceptsCaseDocumentField`, `patchDocumentMarksCase` y `caseMarksMarksBatch`;
+  - `IsolationTest.otherCompanyAdminCannotMarkForeignDocument` y `otherCompanyAdminCannotMarkForeignBatch`.
 - [ ] **Paso 5:** regenera el contrato y los tipos. `make check` y `make demo` terminan con 0.
 - [ ] **Paso 6:** commit «feat: marca de ficha de caso, capacidad de casos parecidos y tipo de pregunta».
 
@@ -251,7 +272,7 @@ Rama `task/fase-2-conocimiento/bateria-casos`. Spec 9.
   - Cada una se parece a un grupo de 1 a 3 casos del corpus por el mismo problema: qué falla, en qué elemento y por qué causa.
   - Dos de ellas reproducen G1 (esperados `caso-2024-017-filtracion-azotea` y `caso-2025-004-filtracion-cubierta`) y G2 (esperado `caso-2025-011-fuga-riego`) de `bateria.json`.
   - Cada una indica en `claves.json` su comunidad y sus casos esperados.
-- **Términos:** un subagente **Haiku** distinto, que solo recibe el texto de cada caso nuevo y las instrucciones «Eres la IA de un trabajador; escribe de 3 a 6 consultas cortas para buscar casos parecidos ya resueltos». No ve `claves.json` ni el corpus. Su salida va literal a `terminos.json`.
+- **Términos:** un subagente **Haiku** distinto, que solo recibe el texto de cada caso nuevo y las instrucciones «Eres la IA de un trabajador; escribe de 3 a 6 consultas cortas para buscar casos parecidos ya resueltos, con los términos del problema (qué falla, dónde, la causa) y sin nombres de personas». Es el mismo criterio que la descripción de la herramienta (D-042). No ve `claves.json` ni el corpus. Su salida va literal a `terminos.json`.
 - **Medida:** para cada caso nuevo, `findSimilarCases` en su comunidad con sus términos y límite 5. Dos datos:
   - porcentaje de casos esperados que salen;
   - número de casos nuevos con todos sus esperados.
@@ -279,27 +300,35 @@ Rama `task/fase-2-conocimiento/casos-panel-mcp`. Spec 7, 8 y 10.
 
 **Valores:**
 - `findSimilarCases` se registra solo con `SIMILAR_CASES`.
-  - Descripción: «Busca casos ya resueltos parecidos a uno nuevo. Pasa en queries los términos del problema (qué falla, dónde, la causa) y sus reformulaciones.».
+  - Descripción: «Busca casos ya resueltos parecidos a uno nuevo. Pasa en queries los términos del problema (qué falla, dónde, la causa) y sus reformulaciones. No pongas nombres de personas.».
   - Sin resultados: «No constan casos parecidos en los documentos de tu empresa.».
 - `listDocuments` gana `caseDocument`, opcional y booleano.
-- `INSTRUCTIONS` gana las seis frases del spec 7, en ese orden.
+- `INSTRUCTIONS`:
+  - gana las frases del spec 7, en ese orden, incluida la de sugerir solo con el resultado escrito;
+  - la frase que ya existe sobre `KNOWLEDGE_CARD` cambia «con resumen hecho por IA» por «redactadas con IA».
 - Panel:
-  - casilla «Es la ficha de un caso» en la subida;
-  - etiqueta «Caso» en la fila;
-  - acción «Marcar como caso» o «Quitar marca de caso»;
-  - en capacidades, «Casos parecidos».
+  - **subida:** `<input type="file" multiple>`, con la casilla «Son fichas de caso» para todo el lote. Con un solo fichero se pide el título como hoy; con varios, el título de cada uno es su nombre sin la extensión. Un `Toast` final dice cuántos se subieron y cuáles fallaron, con su motivo;
+  - **fila:** etiqueta «Caso», y la acción «Marcar como caso» o «Quitar marca de caso»;
+  - **selección:** una casilla por fila y, con alguna marcada, los botones «Marcar como caso» y «Quitar marca de caso», que llaman a `case-marks`;
+  - **capacidades:** «Casos parecidos».
   - Con los componentes de la dirección visual.
 - `demo-client.ts`, paso nuevo:
   1. sube los dos casos ficticios marcados como caso y uno sin marcar;
   2. `findSimilarCases` devuelve los dos con `pages` y sin `authorName`, y no el otro documento.
-- `admin.spec.ts`: marcar y desmarcar un documento contra la API real.
+- `admin.spec.ts`, contra la API real: subir dos ficheros a la vez marcados como caso, y marcar y desmarcar una selección.
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
   - MCP:
     - `findSimilarCases.test.ts`: `registeredOnlyWithCapability`, `sendsQueriesProjectAndLimit` y `noSourceSaysNoConstan`;
     - la prueba de `INSTRUCTIONS`, con las seis frases.
   - Panel:
-    - `Documents.test.tsx`: `uploadSendsCaseDocument`, `rowShowsCaseLabel` y `togglesCaseMark`;
+    - `Documents.test.tsx`:
+      - `uploadSendsCaseDocument`;
+      - `uploadsSeveralFilesWithOneCaseCheckbox`;
+      - `batchUploadReportsFailuresByFile`;
+      - `rowShowsCaseLabel`;
+      - `togglesCaseMark`;
+      - `marksSelectedDocumentsAsCases`.
     - `Capabilities.test.tsx`: `showsSimilarCasesCapability`.
 - [ ] **Paso 2:** implementa.
 - [ ] **Paso 3:** `make demo` dos veces seguidas y `make check` terminan con 0.

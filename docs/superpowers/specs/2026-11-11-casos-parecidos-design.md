@@ -19,13 +19,15 @@
 
 **De negocio que se aplican:** nunca inventa y cita (D-008, D-024); conocimiento, no evaluación (D-005); proyectos restringidos (D-038); fichas pendientes y rechazadas fuera de las búsquedas de los compañeros (D-036).
 
-**Preguntas al CEO** (enviadas el 2026-11-11). El diseño sigue la recomendación del CTO; si el CEO responde otra cosa, cambia lo que se indica:
+**Respuestas del CEO** (D-040 y D-042, 2026-11-11):
 
-| Pregunta | Recomendación, que es lo que sigue el diseño | Si la respuesta es otra |
-|---|---|---|
-| ¿Quién decide qué documento es un caso? | El administrador marca «Es la ficha de un caso» al subirlo, y puede cambiarlo después | Otra forma de marcarlos; el resto no cambia |
-| ¿Cuentan las fichas de conocimiento aprobadas como casos resueltos? | Sí | Se quita la mitad de fichas de la consulta |
-| ¿Va el autor en los resultados? | No. Ni quién subió el documento ni quién aportó la ficha. La ficha sale como «ficha aportada por un trabajador, resumen hecho por IA» | Un campo más en la respuesta |
+| Pregunta | Respuesta |
+|---|---|
+| ¿Quién decide qué documento es un caso? | Una persona, nunca la IA. El administrador marca «Es la ficha de un caso» al subirlo y lo puede cambiar después. Puede marcar un lote entero de una vez, al subirlo o en la lista de documentos |
+| ¿Salen las fichas de conocimiento aprobadas? | Sí, junto a los casos, pero rotuladas como fichas. No cuentan como casos resueltos, y la IA no les atribuye un resultado que su texto no diga |
+| ¿Va el autor en los resultados? | No: ni quién subió el documento ni quién aportó la ficha. La ficha sale como «ficha aportada por un trabajador, redactada con IA», porque la redacta la IA del trabajador; no es un resumen. Se sigue citando el documento, la página y la fecha. En la búsqueda normal, el autor sigue saliendo |
+| ¿Cuándo se sugiere una resolución? | Solo cuando el resultado está escrito en los documentos. Si ninguno de los casos lo tiene escrito, se enseñan las resoluciones sin sugerir ninguna |
+| ¿Qué términos manda la IA? | Los del problema (qué falla, dónde, la causa), nunca nombres de personas. Así entra menos en el registro de preguntas (RGPD, D-036), y la semejanza entre casos está en el problema |
 
 **Del CTO.** Cada decisión dice lo que cuesta si resulta errónea:
 
@@ -70,6 +72,11 @@
 
 - **Al subir:** el campo `caseDocument` del multipart, falso si no llega.
 - **Después:** `PATCH /v1/admin/documents/{documentId}` con `{ caseDocument }`, solo para administradores de esa empresa o el del grupo. El orden de las comprobaciones es el de siempre: 404 si no existe, 403 si es de otra empresa.
+- **Por lotes (D-040, D-042):**
+  - **Al subir:** el panel deja elegir varios ficheros a la vez, con una sola casilla «Son fichas de caso» para todos. Envía una subida por fichero, con el mismo `caseDocument`. Con varios ficheros, el título de cada uno es su nombre sin la extensión.
+  - **En la lista:** el administrador selecciona varios documentos y elige «Marcar como caso» o «Quitar marca de caso».
+    - Ruta: `POST /v1/admin/companies/{companyId}/documents/case-marks` con `{ documentIds, caseDocument }`, hasta 500 documentos.
+    - Todo o nada, en una transacción. Si un identificador no existe o es de otra empresa, 404 y no cambia ninguno.
 - **Documento duplicado** (misma SHA-256): se ignora el valor nuevo de `caseDocument`, igual que el título y el proyecto (spec base 6.1). Para cambiarlo está el `PATCH`.
 
 ### 5.2 Buscar casos parecidos
@@ -80,7 +87,7 @@
   - **Límite:** 5 por defecto y 10 como máximo.
 - **Qué entra:**
   - las páginas de documentos `READY` con `caseDocument`;
-  - las fichas `APPROVED`, que cuentan como casos resueltos;
+  - las fichas `APPROVED`, que salen junto a los casos rotuladas como fichas y no cuentan como casos resueltos;
   - siempre de la empresa del actor y de sus proyectos visibles, con el filtro SQL explícito y la seguridad por filas (spec 2a, 6). Lo que no tiene proyecto lo ve toda la empresa, como en la búsqueda (D-038).
 - **Orden:**
   - se reutiliza la consulta de `PostgresKnowledgeSearch`: `odin_spanish`, `plainto_tsquery` con `|`, el canal exacto de identificadores y `ts_rank_cd`;
@@ -92,11 +99,11 @@
   - **Documento:** sus páginas en orden, desde la primera, mientras no pasen de 3 páginas ni de 12.000 caracteres.
     - Si la página con mejor puntuación se queda fuera, se añade al final, aunque pase de los límites. Por ejemplo, las páginas 1, 2 y 5.
     - Si falta alguna página, `truncated: true` y `pageCount`, y la IA sigue con `readPage`.
-  - **Ficha:** su texto completo y la marca «ficha aportada por un trabajador, resumen hecho por IA».
+  - **Ficha:** su texto completo y la marca «ficha aportada por un trabajador, redactada con IA».
   - **Extracto:** el que coincidió, literal, igual que en la búsqueda.
 - **Sin resultados:** `{ cases: [], noSource: true }`.
 - **Registro:** un `QuestionRecord` de tipo `SIMILAR_CASES`, con los términos y el número de casos. Hoy nada lee el registro. Las estadísticas y los huecos del bloque 4 cuentan los dos tipos y los enseñan por separado.
-- **Autoría:** la respuesta no lleva ningún autor (pregunta al CEO). El texto literal del documento no se toca: si menciona a una persona, la instrucción del MCP le pide a la IA que no compare ni mencione a quien resolvió cada caso.
+- **Autoría:** la respuesta no lleva ningún autor (D-040). El texto literal del documento no se toca: si menciona a una persona, la instrucción del MCP le pide a la IA que no compare ni mencione a quien resolvió cada caso.
 
 ### 5.3 Listado de documentos
 
@@ -111,25 +118,33 @@
 | `GET /v1/documents?caseDocument=` | Trabajador | Filtro nuevo; `WorkerDocumentView` gana `caseDocument` |
 | `POST /v1/admin/companies/{companyId}/documents` | Administradores | Campo multipart nuevo `caseDocument` |
 | `PATCH /v1/admin/documents/{documentId}` | Administradores | `{ caseDocument }` → `DocumentView`, que gana `caseDocument` |
+| `POST /v1/admin/companies/{companyId}/documents/case-marks` | Administradores | `{ documentIds, caseDocument }` → `{ updated }` |
 
 `SimilarCaseView` lleva: `sourceType`, `sourceId`, `title`, `projectId`, `addedAt`, `pageCount`, `pages` (`[{ number, text }]`, vacío en una ficha), `body` (solo en una ficha), `truncated`, `excerpt` y `origin`. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, con el texto de la marca.
 
 ## 7. MCP
 
-- **Herramienta `findSimilarCases`,** solo si la empresa tiene `SIMILAR_CASES`. Entrada con zod: `queries`, `projectId` y `limit`. Si no hay casos: «No constan casos parecidos en los documentos de tu empresa».
+- **Herramienta `findSimilarCases`,** solo si la empresa tiene `SIMILAR_CASES`. Entrada con zod: `queries`, `projectId` y `limit`.
+  - Su descripción pide términos del problema (qué falla, dónde, la causa) y prohíbe nombres de personas (D-042).
+  - Si no hay casos: «No constan casos parecidos en los documentos de tu empresa».
 - **`listDocuments`** gana el filtro `caseDocument`.
+- **La instrucción que ya existe sobre las fichas** en la búsqueda cambia «resumen hecho por IA» por «redactada con IA» (D-040). En la búsqueda normal se sigue citando al autor.
 - **Instrucciones nuevas:**
   - de cada caso parecido, presenta su resolución y su resultado con la cita del documento y la página;
   - si dos casos se resolvieron de forma distinta, enséñalos los dos con sus citas y su resultado, y sugiere solo el que acabó bien, citando ese resultado;
+  - **sugiere una resolución solo si su resultado está escrito en el documento; si ninguno de los casos tiene el resultado escrito, enseña las resoluciones sin sugerir ninguna** (D-042);
   - nunca compares ni menciones a las personas que resolvieron cada caso;
-  - una ficha aportada es un resumen hecho por IA y se presenta como tal;
+  - una ficha aportada es una ficha redactada con IA por un trabajador: preséntala como ficha, no como caso resuelto, y no le atribuyas un resultado que su texto no diga;
   - `addedAt` es cuándo entró el documento en Odín, no la fecha del caso; esa fecha está en el texto;
   - si un caso no tiene resolución o resultado escritos, dilo; si es el mismo caso nuevo que te han dado, descártalo.
 
 ## 8. Panel
 
-- **Subir documento:** casilla «Es la ficha de un caso».
-- **Lista de documentos:** marca «Caso» y una acción para marcarlo o desmarcarlo.
+- **Subir documento:** varios ficheros a la vez, con la casilla «Son fichas de caso» para todos (5.1).
+- **Lista de documentos:**
+  - la marca «Caso»;
+  - una acción por documento para marcarlo o desmarcarlo;
+  - selección de varios documentos con «Marcar como caso» y «Quitar marca de caso» (5.1).
 - **Capacidades de la empresa:** «Casos parecidos».
 - Con los componentes y las reglas de la dirección visual (D-039).
 
@@ -162,7 +177,7 @@ La forma de medir es la misma que la de la búsqueda (T-007, T-009). No se anunc
   - proyecto restringido ajeno, invisible y 404 al filtrar;
   - actor de otra empresa (D-014);
   - el registro de tipo `SIMILAR_CASES`.
-- **Marcar un caso:** `UpdateDocumentTest`, con su caso de otra empresa.
+- **Marcar un caso:** `UpdateDocumentTest` y `MarkCaseDocumentsTest` (todo o nada, el máximo de 500 y el identificador de otra empresa), cada uno con su caso de otra empresa.
 - **PostgreSQL:** `PostgresKnowledgeSearchIT.findsSimilarCasesGroupedByDocument` y `filtersByVisibleProjects`. La migración, con una base que ya tiene empresas.
 - **Web y contrato:** una prueba por ruta, y `IsolationTest` para el `PATCH` y la búsqueda de casos.
 - **De principio a fin:** `make demo` gana un paso.
@@ -183,7 +198,16 @@ La forma de medir es la misma que la de la búsqueda (T-007, T-009). No se anunc
 - Los textos exactos de la casilla y de la marca en el panel, dentro de la dirección visual.
 - El formato interno de los ficheros de la batería.
 
-## 13. Revisión del constructor (2026-11-11)
+## 13. Validación del CEO (D-040 y D-042, 2026-11-11)
+
+El CEO validó el diseño con estas precisiones, ya aplicadas:
+- el rótulo «redactada con IA» (2, 5.2 y 7);
+- las fichas, que no son casos resueltos (2, 5.2 y 7);
+- sugerir solo con el resultado escrito (2 y 7);
+- marcar por lotes (5.1, 6 y 8);
+- términos sin nombres de personas (2 y 7).
+
+## 14. Revisión del constructor (2026-11-11)
 
 Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 8 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
 - casos abiertos y el propio caso nuevo: entran, y la IA avisa o los descarta (4 y 7);

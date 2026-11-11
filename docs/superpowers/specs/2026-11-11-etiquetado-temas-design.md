@@ -91,10 +91,11 @@
 - **Versión:** sube al crear un tema y al cambiar su nombre o su definición.
   - Renombrar no crea un tema nuevo: es el mismo identificador, así que las decisiones del administrador sobre él se conservan.
   - Varios cambios seguidos se juntan solos: un documento etiquetado con la versión 3, cuando la lista va por la 5, se etiqueta una sola vez.
-  - Volver a etiquetar una empresa entera lleva tiempo. Como cálculo, no como medida, a unos 20 s por documento (T-010), 1.000 documentos son unas 5,5 horas: una noche.
+  - Volver a etiquetar una empresa entera lleva tiempo. Como cálculo, no como medida, a unos 20 s por documento (T-010), 1.000 documentos son unas 5,5 horas: una noche. **Esta cifra no sale de este documento técnico ni se usa para vender hasta medirla con la batería** (D-043).
 
 ### 5.2 Etiquetado
 
+- **El etiquetado no retrasa la búsqueda:** un documento se puede buscar desde que queda `READY`. Solo sus temas llegan después, cuando se abre la ventana (D-040).
 - **Caso de uso:** `TagPendingDocuments.processNext()` (`application/topic`).
   - **Ventana:** si estamos fuera de la ventana horaria, o si `isAvailable()` es falso, no toma nada.
   - **Qué toma:** con `FOR UPDATE SKIP LOCKED`, un documento `READY` cuya empresa tiene al menos un tema y que cumple una de estas:
@@ -121,6 +122,17 @@
   - fallo o texto recortado en un tramo: falla el documento entero y no se guarda nada a medias.
 - **Programador:** `TaggingScheduler`, en `odin-bootstrap`. Solo existe si `odin.tagger.url` tiene valor, se ejecuta cada 60 segundos con `fixedDelay` y usa el hilo de programación del bloque 1. Si el bloque 1 no está, se sube el número de hilos aquí.
 - **Seguridad por filas:** sin actor, con `CompanyScope.all()` y `ProjectVisibility.all()`, como los otros carriles internos.
+
+### 5.2 bis Estado del etiquetado para el panel (D-043)
+
+- **Por qué:** una microempresa suele apagar el equipo por la noche, y entonces el etiquetado no ocurre sin que nadie lo sepa.
+- **Caso de uso `GetTaggingStatus(actor, companyId)`** devuelve:
+  - `pendingDocuments`: los `READY` de la empresa que no están `DONE` con la versión actual, los `FAILED` incluidos;
+  - `oldestPendingSince`: desde cuándo espera el más antiguo, el mayor de tres instantes: su subida, el último inicio de su lectura (`processing_started_at`) y el último cambio de la lista (`company.topic_list_changed_at`, columna nueva);
+  - `window` y `timezone`.
+- **Quién lo ve:** administradores de esa empresa o el del grupo.
+- **Lo que hace el panel con él:** lo enseña el bloque 4.
+- **Guía de instalación** (`README`, apartado «Etiquetado por tema»): el equipo tiene que estar encendido durante la ventana, o hay que cambiar la ventana con `ODIN_TAGGER_WINDOW`.
 
 ### 5.3 Revisión del administrador
 
@@ -153,6 +165,7 @@
 | `GET /v1/admin/documents/{documentId}/topics` | Administradores | `DocumentTopicView[]`: tema, origen, estado, etiquetador, quién decidió y cuándo; con el `DocumentTagging` |
 | `PUT, DELETE /v1/admin/documents/{documentId}/topics/{topicId}` | Administradores | Añadir o quitar, 204 |
 | `POST /v1/admin/documents/{documentId}/topics/retag` | Administradores | Vuelve a poner el documento en cola, 202 |
+| `GET /v1/admin/companies/{companyId}/tagging-status` | Administradores | `TaggingStatusView { pendingDocuments, oldestPendingSince, window, timezone }` |
 | `GET /v1/admin/companies/{companyId}/documents` | Administradores | `DocumentView` gana `taggingStatus` y `topics` activos |
 | `GET /v1/me` | Trabajador | `MeView` gana `topics` y `tagging` |
 | `GET /v1/documents?topicId=` | Trabajador | Filtro nuevo; `WorkerDocumentView` gana `topics` |
@@ -203,6 +216,7 @@
   3. El administrador quita el tema y se queda quitado al volver a etiquetar.
 
   Prueba el camino de Odín, no el modelo.
+  - **El etiquetador de prueba es solo para las pruebas automáticas** (D-043). Una demo que vea una persona usa el modelo real, igual que el lector OCR (D-041). Lo dice el `README` de la demo.
 - **Batería con el modelo real** (`make tagging-battery`, fuera de `make check`):
   - `TaggingBatteryIT` repite con Odín la medida de T-010 sobre las 46 fichas de control, con las claves del estudio copiadas a los recursos de prueba;
   - da la exhaustividad por tema y las etiquetas de más, y los segundos por documento y la memoria que dice Ollama;
@@ -213,7 +227,10 @@
 ## 9. Criterio de cierre
 
 - `make check` y `make demo` terminan con 0.
-- `make tagging-battery` ejecutada en este Mac, en CPU, con sus cifras en el informe del bloque.
+- `make tagging-battery` ejecutada en este Mac, en CPU, con sus cifras en el informe del bloque (D-043):
+  - la memoria y el tiempo por documento, con la máquina en la que se midieron;
+  - la memoria de los dos modelos juntos, medida con el puente del lector OCR cargado, porque en una oficina corren en el mismo equipo.
+  - Si hace falta más que un equipo modesto, vuelve al CEO como pregunta de negocio (D-030).
 - Si la exhaustividad de un tema sale peor que en T-010, se dice en el informe y se plantea al CEO.
 - Decisiones registradas en el registro técnico (T-017).
 
@@ -223,7 +240,16 @@
 - Cómo se parte una página más larga que el tramo: por párrafos o por el límite.
 - La versión fijada de la imagen de Ollama, la última estable al ejecutar.
 
-## 11. Revisión del constructor (2026-11-11)
+## 11. Validación del CEO (D-040 y D-043, 2026-11-11)
+
+El CEO validó el diseño con estas precisiones, ya aplicadas:
+- el equipo apagado de noche: estado del etiquetado para el panel y aviso en la guía de instalación (5.2 bis);
+- el equipo modesto: memoria y tiempo con su máquina, y los dos modelos juntos (9);
+- el etiquetador de prueba, solo para las pruebas automáticas (8);
+- el cálculo de 5,5 horas, que no sale de este documento ni se usa para vender (5.1);
+- que el documento se pueda buscar desde el principio (5.2).
+
+## 12. Revisión del constructor (2026-11-11)
 
 Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 7 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
 - el preámbulo generalizado, que se vuelve a medir, y sin tema comodín (2);

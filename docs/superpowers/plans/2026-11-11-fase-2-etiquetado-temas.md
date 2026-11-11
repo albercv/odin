@@ -86,7 +86,9 @@ public interface TaggingRepository {
     List<DocumentTopic> topicsOf(CompanyScope scope, DocumentId documentId);
     void decide(CompanyScope scope, DocumentId documentId, TopicId topicId, TopicState state, UserId by, Instant at); // bloquea la fila
     int pendingCount(CompanyId companyId, ProjectVisibility visibility);
+    TaggingBacklog backlog(CompanyId companyId);      // para el panel (D-043); todas las visibilidades
 }
+public record TaggingBacklog(int pendingDocuments, Optional<Instant> oldestPendingSince) { }
 public record TaggingJob(Document document, List<DocumentPage> pages, List<Topic> topics, String companyName,
         int topicListVersion, int attemptCount) { }
 public interface TopicTagger {
@@ -101,6 +103,8 @@ public record TaggerAnswer(String text, int promptTokens, int contextTokens, Str
 // application/topic
 public class CreateTopic, UpdateTopic, DeleteTopic, ListTopics      // Actor administrador de la empresa o del grupo
 public class ReviewDocumentTopics { add(Actor, DocumentId, TopicId); remove(Actor, DocumentId, TopicId); retag(Actor, DocumentId); }
+public class GetTaggingStatus { public TaggingStatusReport execute(Actor actor, CompanyId companyId); }
+public record TaggingStatusReport(TaggingBacklog backlog, TaggingWindow window) { }
 public final class TaggingInstructions { static String build(String companyName, List<Topic> topics, String text); }
 public final class TaggingChunks { static List<String> of(List<DocumentPage> pages, int maxCharacters); static List<String> split(String chunk); }
 public final class TopicMatcher { static Set<TopicId> match(String answer, List<Topic> topics); }
@@ -146,7 +150,7 @@ Rama `task/fase-2-conocimiento/temas`. Spec 4 y 5.1.
   - `topic (id, company_id, name, definition, deleted_at)`, con un índice único `(company_id, lower(unaccent(name))) WHERE deleted_at IS NULL`;
   - `document_topic (document_id, topic_id, company_id, source, state, tagger_version, decided_by, decided_at)`, con clave primaria `(document_id, topic_id)`;
   - `document_tagging (document_id PK, company_id, topic_list_version, status, attempt_count, deadline_at, failure_reason, tagger_version, seq)`;
-  - `company.topic_list_version`.
+  - `company.topic_list_version` y `company.topic_list_changed_at timestamptz`.
   - Seguridad por filas: `topic` como `project`; las otras dos como `document_page`, con el proyecto de su documento (spec 2a, 6). `odin_app` recibe los mismos permisos que sobre `document_page`.
 - **Mensajes:**
   - 409, «Ya hay un tema con ese nombre»;
@@ -155,7 +159,7 @@ Rama `task/fase-2-conocimiento/temas`. Spec 4 y 5.1.
   - 400 con `Validation.requireText` para el nombre y la definición vacíos;
   - 400, «El nombre del tema no puede pasar de 60 caracteres» y «La definición no puede pasar de 500 caracteres».
 - **Versión:**
-  - `save` de un tema nuevo, o con nombre o definición distintos, suma 1 a `company.topic_list_version` en la misma transacción;
+  - `save` de un tema nuevo, o con nombre o definición distintos, suma 1 a `company.topic_list_version` y pone `topic_list_changed_at` a la hora actual, en la misma transacción;
   - `delete` no la cambia.
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
@@ -252,6 +256,9 @@ Rama `task/fase-2-conocimiento/etiquetado-postgres`. Spec 4, 5.2 y 5.3.
   - `saveResult` borra los `document_topic` con `source = 'AI'` que no tengan `decided_by` e inserta los nuevos, saltándose los temas con una decisión del administrador;
   - deja la fila `DONE` con la versión con la que se tomó.
 - `pendingCount`: documentos `READY` visibles, con el filtro de empresa y de proyectos, sin fila `DONE` en la versión actual.
+- `backlog`: los mismos documentos, sin filtro de proyectos, porque lo pide un administrador.
+  - `pendingDocuments` es su número;
+  - `oldestPendingSince` es el mínimo, entre ellos, de `greatest(d.uploaded_at, d.processing_started_at, c.topic_list_changed_at)`, que es vacío si no hay ninguno (spec 5.2 bis).
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
   - `claimsUntaggedBeforeOutdated`;
@@ -263,6 +270,7 @@ Rama `task/fase-2-conocimiento/etiquetado-postgres`. Spec 4, 5.2 y 5.3.
   - `adminDecisionDuringTaggingSurvives`: dos conexiones; la decisión entra entre la toma y el guardado;
   - `replacingPagesRequeuesTagging`;
   - `pendingCountCountsFailedAndRespectsVisibility`;
+  - `backlogGivesCountAndOldestWaitingSince`, que incluye un documento leído por OCR después de subirlo y un cambio de la lista;
   - `rowLevelSecurityHidesOtherCompanyTagging`.
 - [ ] **Paso 2:** implementa.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0.
@@ -294,6 +302,9 @@ Rama `task/fase-2-conocimiento/adaptador-ollama`. Spec 7.
   - en `api`, `ODIN_TAGGER_*` con valor por defecto vacío.
 - `make tagger-model MODEL=qwen3.5:9b`: `docker compose … --profile tagging run --rm tagger ollama pull $(MODEL)`.
 - `.env.example`: las variables comentadas, y que en el Mac vale también el Ollama del propio equipo.
+- **`README`, apartado «Etiquetado por tema»** (guía de instalación, D-043):
+  - el equipo tiene que estar encendido durante la ventana del etiquetado, o hay que cambiar `ODIN_TAGGER_WINDOW`;
+  - sin eso los documentos se pueden buscar, pero no tienen temas.
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
   - `OllamaTopicTaggerTest`, contra `HttpServer` del JDK:
@@ -316,7 +327,7 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
 
 **Ficheros:**
 - **Crear:**
-  - `application/topic/ReviewDocumentTopics.java`, con su prueba;
+  - `application/topic/ReviewDocumentTopics.java` y `GetTaggingStatus.java`, con sus pruebas;
   - `deploy/demo/tagger-stub.mjs` y `deploy/demo/compose.tagger-stub.yaml`.
 - **Modificar:**
   - aplicación: `ListDocuments`, `DescribeMe`, `MeView`, `ListCompanyDocuments` y sus pruebas;
@@ -340,7 +351,9 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
   - responde a `GET /api/tags` con el modelo `stub`;
   - responde a `/api/generate` con «agua y humedades» si el texto lleva «filtración» o «fuga», y con «otros» en caso contrario;
   - `prompt_eval_count` es 100.
+- `GetTaggingStatus`: administradores de la empresa o el del grupo, con 404 y luego 403. Ruta `GET /v1/admin/companies/{companyId}/tagging-status`.
 - `run-demo.sh` usa el etiquetador de prueba con `ODIN_TAGGER_WINDOW=always`.
+- `README`, apartado de la demostración, con esta frase literal: «El etiquetador de prueba (`tagger-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el modelo real.».
 - `demo-client.ts`, paso nuevo:
   1. crea los temas «agua y humedades» y «otros»;
   2. espera a que un documento con «filtración» quede `DONE`;
@@ -355,6 +368,7 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
     - `readdingRemovedTopicMakesItAdminActive`;
     - `retagRequeues`;
     - `adminOfAnotherCompanyIsForbidden`.
+  - `GetTaggingStatusTest`: `returnsBacklogAndWindow`, `workerIsForbidden` y `adminOfAnotherCompanyIsForbidden`.
   - `ListDocumentsTest`:
     - `filtersByTopicWithActiveTopicsOnly`;
     - `foreignTopicIsNotFound`;
@@ -395,9 +409,12 @@ Rama `task/fase-2-conocimiento/bateria-etiquetado`. Spec 8 y 9.
 
 - [ ] **Paso 1 (Sonnet):** copia los datos y escribe `TaggingBatteryIT` con una aserción mínima: el fichero de salida existe y cada conjunto tiene todas sus fichas. Comprueba que `make check` no la ejecuta.
 - [ ] **Paso 2 (CTO):** ejecuta `make tagging-battery` contra el Ollama de este equipo, en CPU (`ODIN_TAGGER_NUM_GPU=0`, `ODIN_TAGGER_NUM_THREAD=4`), con `qwen3.5:9b` y con `qwen3.5:4b-q4_K_M`. Los dos modelos ya están descargados (T-010).
+  - Una de las dos ejecuciones se hace con el puente del lector OCR arrancado y el modelo cargado (bloque 1). Se anota la memoria de los dos juntos: lo que dice Ollama más el pico del puente (D-043).
+  - Se anota la máquina: modelo, chip, memoria y sistema.
 - [ ] **Paso 3 (CTO):** compara con T-010 con el mismo modelo.
   - Si una exhaustividad baja, se investiga primero el preámbulo generalizado: se repite con el preámbulo medido para aislar la causa.
   - Las cifras van al informe del bloque y a T-017. Si siguen peor, se plantea al CEO.
+  - Si la memoria o el tiempo superan lo que da un equipo modesto, también se plantea al CEO (D-030, D-043).
 - [ ] **Paso 4:** commit «test: batería de etiquetado con el modelo real».
 
 ### Cierre del bloque · CTO
