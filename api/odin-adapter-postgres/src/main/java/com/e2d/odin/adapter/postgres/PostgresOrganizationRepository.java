@@ -5,6 +5,7 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.GroupId;
@@ -95,6 +96,17 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc
                 .sql("SELECT id, company_id, name, restricted FROM project WHERE company_id = :company AND deleted_at IS NULL ORDER BY seq")
                 .param("company", companyId.value()).query((rs, n) -> project(rs)).list());
+    }
+
+    @Override
+    public List<ProjectSummary> listProjectSummaries(CompanyId companyId) {
+        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
+                SELECT p.id, p.company_id, p.name, p.restricted, COUNT(m.user_id) AS member_count
+                FROM project p LEFT JOIN project_member m ON m.project_id = p.id
+                WHERE p.company_id = :company AND p.deleted_at IS NULL
+                GROUP BY p.id, p.company_id, p.name, p.restricted, p.seq ORDER BY p.seq""")
+                .param("company", companyId.value())
+                .query((rs, n) -> new ProjectSummary(project(rs), rs.getInt("member_count"))).list());
     }
 
     @Override

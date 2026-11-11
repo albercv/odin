@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
+import { RowAction } from '../ui/RowActions';
 import form from '../ui/Form.module.css';
 import { FormDialog } from '../ui/FormDialog';
 import { Notice } from './Notice';
@@ -27,7 +28,7 @@ function KeyRow({ k, onRevoke }: { k: S['KeyView']; onRevoke: () => void }) {
       <span>{k.label} ({k.prefix})</span>
       {k.revokedAt
         ? <span className={styles.revoked}>Revocada</span>
-        : <Button variant="danger" aria-label={`Revocar clave ${k.label}`} onClick={onRevoke}>Revocar clave</Button>}
+        : <RowAction variant="danger" text="Revocar clave" target={k.label} onClick={onRevoke} />}
     </li>
   );
 }

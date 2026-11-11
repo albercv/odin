@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
 import { PageHeader } from '../ui/PageHeader';
-import { RowActions } from '../ui/RowActions';
+import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
 import { Table, tableStyles } from '../ui/Table';
 
@@ -43,16 +43,16 @@ function CompanyRow({ c, canEditCode, onOpen, onDone }: RowProps) {
   const run = async (fn: () => Promise<unknown>) => (await act(fn)) && onDone();
   return (
     <tr>
-      <td className={tableStyles.person}>
+      <td className={tableStyles.person} data-label="Empresa">
         {renaming
           ? <EditForm company={c} canEditCode={canEditCode} onSaved={() => { setRenaming(false); onDone(); }} onCancel={() => setRenaming(false)} />
           : <><strong>{c.name}</strong><span>Código {c.code}</span></>}
         <Notice message={error} />
       </td>
-      <td><Capabilities company={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} /></td>
+      <td data-label="Capacidades"><Capabilities company={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} /></td>
       <td className={tableStyles.actions}>
-        <Button onClick={onOpen}>Abrir {c.name}</Button>
-        <RowActions label={`Más acciones de ${c.name}`}><Button variant="ghost" onClick={() => setRenaming(true)}>Editar {c.name}</Button></RowActions>
+        <RowAction text="Abrir" target={c.name} onClick={onOpen} />
+        <RowActions label={`Más acciones de ${c.name}`}><RowAction variant="ghost" text="Editar" target={c.name} onClick={() => setRenaming(true)} /></RowActions>
       </td>
     </tr>
   );

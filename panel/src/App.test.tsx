@@ -147,7 +147,9 @@ test('documentsListShowsStatusAndReason', async () => {
   expect(within(row).getByText('Fallido')).toBeInTheDocument();
   expect(within(row).getByText('Fichero ilegible')).toBeInTheDocument();
   expect(screen.getByText('Listo')).toBeInTheDocument();
-  await userEvent.click(within(row).getByRole('button', { name: 'Reintentar Contrato' }));
+  const retry = within(row).getByRole('button', { name: 'Reintentar Contrato' });
+  expect(retry).toHaveTextContent(/^Reintentar$/);
+  await userEvent.click(retry);
   await waitFor(() => expect(calls.some((c) => c.key === 'POST /v1/admin/documents/d1/retry')).toBe(true));
 });
 

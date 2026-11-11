@@ -422,6 +422,18 @@ class AdminApiTest extends WebTestSupport {
     }
 
     @Test
+    void projectListCarriesTheMemberCount() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String obra = createProject(admin, company, "Obra");
+        createProject(admin, company, "Otra");
+        mvc.perform(put("/v1/admin/companies/" + company.value() + "/projects/" + obra + "/members/"
+                + workerId(company).value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/projects").cookie(admin))
+                .andExpect(jsonPath("$[0].memberCount").value(1)).andExpect(jsonPath("$[1].memberCount").value(0));
+    }
+
+    @Test
     void projectMemberRoutes() throws Exception {
         CompanyId company = newCompany();
         Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));

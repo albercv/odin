@@ -53,3 +53,8 @@ test('groupAdminEditsNameAndCode', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Guardar Acme' }));
   await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/companies/c1')?.body).toEqual({ name: 'Acme', code: 'ACX' }));
 });
+
+test('rowButtonsShowShortTextAndNameTheTarget', async () => {
+  await edit(true);
+  expect(screen.getByRole('button', { name: 'Abrir Acme' })).toHaveTextContent(/^Abrir$/);
+});

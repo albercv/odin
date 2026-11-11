@@ -4,6 +4,7 @@ import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
@@ -12,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.ToIntFunction;
 
 public class InMemoryOrganizationRepository implements OrganizationRepository {
 
@@ -19,6 +21,12 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     private final Map<CompanyId, Company> companies = new LinkedHashMap<>();
     private final Map<ProjectId, Project> projects = new LinkedHashMap<>();
     private final Map<ProjectId, Project> deletedProjects = new LinkedHashMap<>();
+    private ToIntFunction<ProjectId> memberCount = id -> 0;
+
+    /** Lo registra el repositorio de miembros de la prueba, que es quien los conoce. */
+    void countMembersWith(ToIntFunction<ProjectId> counter) {
+        memberCount = counter;
+    }
 
     @Override
     public Optional<Group> findGroup() {
@@ -63,6 +71,11 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     @Override
     public List<Project> listProjects(CompanyId companyId) {
         return projects.values().stream().filter(p -> p.companyId().equals(companyId)).toList();
+    }
+
+    @Override
+    public List<ProjectSummary> listProjectSummaries(CompanyId companyId) {
+        return listProjects(companyId).stream().map(p -> new ProjectSummary(p, memberCount.applyAsInt(p.id()))).toList();
     }
 
     @Override

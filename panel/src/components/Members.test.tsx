@@ -43,10 +43,29 @@ const patio = { id: 'p4', companyId: 'c1', name: 'Patio', restricted: false };
 test('rowShowsMemberCodeRolesAndState', async () => {
   show({ [list]: () => [gil, bea, both] });
   const [gilRow, beaRow, bothRow] = [await rowOf('Cora Gil'), await rowOf('Bea'), await rowOf('Dani Sol')];
-  ['7F3K-ACM', 'Cora Gil', 'cora@acme.test', 'Trabaja con su IA', 'activo'].forEach((t) => expect(gilRow).toHaveTextContent(t));
-  ['BBBB-ACM', 'bea@acme.test', 'Administra la empresa', 'desactivado'].forEach((t) => expect(beaRow).toHaveTextContent(t));
+  ['7F3K-ACM', 'Cora Gil', 'cora@acme.test', 'Trabaja con su IA', 'Activo'].forEach((t) => expect(gilRow).toHaveTextContent(t));
+  ['BBBB-ACM', 'bea@acme.test', 'Administra la empresa', 'Desactivado'].forEach((t) => expect(beaRow).toHaveTextContent(t));
   ['DDDD-ACM', 'sin correo', 'Administra la empresa', 'Trabaja con su IA'].forEach((t) => expect(bothRow).toHaveTextContent(t));
   expect(gilRow).not.toHaveTextContent('Faltan apellidos');
+});
+
+test('rowButtonsShowShortTextAndNameTheTarget', async () => {
+  show({ [list]: () => [gil, both] });
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Cora Gil' }));
+  const expected: [string, string][] = [['Desactivar', 'Desactivar'], ['Editar', 'Editar'], ['Papeles', 'Papeles de'], ['Quitar', 'Quitar'], ['Claves', 'Claves de'], ['Accesos', 'Accesos de']];
+  expected.forEach(([visible, name]) => {
+    const button = screen.getByRole('button', { name: `${name} Cora Gil` });
+    expect(button).toHaveTextContent(new RegExp(`^${visible}$`));
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Dani Sol' }));
+  expect(screen.getByRole('button', { name: 'Restablecer contraseña de Dani Sol' })).toHaveTextContent(/^Restablecer contraseña$/);
+});
+
+test('cellsCarryTheirColumnLabelForNarrowScreens', async () => {
+  show({ [list]: () => [gil] });
+  const row = await rowOf('Cora Gil');
+  const labels = [...row.querySelectorAll('td')].map((td) => td.getAttribute('data-label'));
+  expect(labels).toEqual(['Código', 'Persona', 'Papel', 'Acceso', null]);
 });
 
 test('missingLastNameIsFlagged', async () => {

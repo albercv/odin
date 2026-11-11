@@ -8,6 +8,7 @@ import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
 import { FormDialog } from '../ui/FormDialog';
 import { PageHeader } from '../ui/PageHeader';
+import { RowAction } from '../ui/RowActions';
 import { Section } from '../ui/Section';
 import { StatusPill } from '../ui/StatusPill';
 import { Table, tableStyles } from '../ui/Table';
@@ -56,10 +57,10 @@ function DocRow({ d, onRetry }: { d: S['DocumentView']; onRetry: () => void }) {
   const [label, tone] = STATUS[d.status] ?? [d.status, 'off' as const];
   return (
     <tr>
-      <td>{d.title}</td>
-      <td><StatusPill tone={tone}>{label}</StatusPill></td>
-      <td>{d.failureReason}</td>
-      <td className={tableStyles.actions}>{d.status === 'FAILED' && <Button onClick={onRetry}>Reintentar {d.title}</Button>}</td>
+      <td data-label="Título">{d.title}</td>
+      <td data-label="Estado"><StatusPill tone={tone}>{label}</StatusPill></td>
+      <td data-label="Motivo">{d.failureReason}</td>
+      <td className={tableStyles.actions}>{d.status === 'FAILED' && <RowAction text="Reintentar" target={d.title} onClick={onRetry} />}</td>
     </tr>
   );
 }

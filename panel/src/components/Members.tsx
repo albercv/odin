@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
-import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { FormDialog } from '../ui/FormDialog';
-import { RowActions } from '../ui/RowActions';
+import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
 import { StatusPill } from '../ui/StatusPill';
 import { Table, tableStyles } from '../ui/Table';
@@ -46,19 +45,19 @@ function MemberActions({ companyId, u, isGroup, onChanged, panel, show }: RowPro
     if (!(await confirm({ message, confirmLabel: 'Quitar', danger: true }))) return;
     if (await act(() => api.removeMember(companyId, u.userId))) onChanged();
   };
-  const open = (target: Panel, text: string) => (
-    <Button variant="ghost" aria-expanded={panel === target} onClick={() => show(target)}>{text} {u.displayName}</Button>
+  const open = (target: Panel, text: string, label?: string) => (
+    <RowAction variant="ghost" text={text} label={label} target={u.displayName} aria-expanded={panel === target} onClick={() => show(target)} />
   );
   return (
     <>
       <RowActions label={`Más acciones de ${u.displayName}`}>
-        <Button variant="ghost" onClick={toggle}>{u.active ? 'Desactivar' : 'Activar'} {u.displayName}</Button>
+        <RowAction variant="ghost" text={u.active ? 'Desactivar' : 'Activar'} target={u.displayName} onClick={toggle} />
         {open('edit', 'Editar')}
-        {open('roles', 'Papeles de')}
-        <Button variant="danger" aria-label={`Quitar ${u.displayName}`} onClick={remove}>Quitar</Button>
-        {worker && open('keys', 'Claves de')}
-        {worker && open('accesses', 'Accesos de')}
-        {isGroup && u.roles.includes('COMPANY_ADMIN') && open('password', 'Restablecer contraseña de')}
+        {open('roles', 'Papeles', 'Papeles de')}
+        <RowAction variant="danger" text="Quitar" target={u.displayName} onClick={remove} />
+        {worker && open('keys', 'Claves', 'Claves de')}
+        {worker && open('accesses', 'Accesos', 'Accesos de')}
+        {isGroup && u.roles.includes('COMPANY_ADMIN') && open('password', 'Restablecer contraseña', 'Restablecer contraseña de')}
       </RowActions>
       <Notice message={error} />
     </>
@@ -74,13 +73,13 @@ function MemberRow(props: RowProps) {
   return (
     <>
       <tr>
-        <td><code className={styles.code}>{u.memberCode}</code></td>
-        <td className={tableStyles.person}>
+        <td data-label="Código"><code className={styles.code}>{u.memberCode}</code></td>
+        <td className={tableStyles.person} data-label="Persona">
           <strong>{u.displayName}</strong><span>{u.email ?? 'sin correo'}</span>
           {!u.lastName && <span className={styles.flag}><StatusPill tone="pending">Faltan apellidos</StatusPill></span>}
         </td>
-        <td>{roleLabel(u.roles)}</td>
-        <td><StatusPill tone={u.active ? 'ok' : 'off'}>{u.active ? 'activo' : 'desactivado'}</StatusPill></td>
+        <td data-label="Papel">{roleLabel(u.roles)}</td>
+        <td data-label="Acceso"><StatusPill tone={u.active ? 'ok' : 'off'}>{u.active ? 'Activo' : 'Desactivado'}</StatusPill></td>
         <td className={tableStyles.actions}><MemberActions {...props} panel={panel} show={show} /></td>
       </tr>
       {panel && (

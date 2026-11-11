@@ -65,7 +65,7 @@ test('resolvedCardLeavesTheQueueAndTheCountDrops', async () => {
   expect(await screen.findByRole('status')).toHaveTextContent('Ficha aprobada');
   expect(sent(calls, 'k1')).toEqual({ decision: 'APPROVE' });
   await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 1/ })).toBeNull());
-  expect(onPendingChanged).toHaveBeenLastCalledWith(1);
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(1));
   expect(screen.getByRole('heading', { name: 'Ficha 2' })).toBeInTheDocument();
 });
 

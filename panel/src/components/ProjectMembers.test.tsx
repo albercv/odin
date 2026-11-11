@@ -8,47 +8,43 @@ import { renderWithProviders } from '../ui/renderWithProviders';
 afterEach(() => vi.restoreAllMocks());
 
 const base = '/v1/admin/companies/c1';
-const project = (id: string, name: string, restricted: boolean) => ({ id, companyId: 'c1', name, restricted });
+const project = (id: string, name: string, restricted: boolean, memberCount = 0) => ({ id, companyId: 'c1', name, restricted, memberCount });
 const person = (userId: string, displayName: string, roles: string[], active = true) => ({ userId, displayName, firstName: displayName, personCode: 'XXXX', memberCode: 'XXXX-ACM', roles, active });
 const raul = { userId: 'u3', displayName: 'Raúl' };
-const ana = { userId: 'u1', displayName: 'Ana' };
 
 const show = (routes: Routes) => {
   const calls = mockFetch(routes);
   renderWithProviders(<Projects companyId="c1" />);
   return calls;
 };
-const openAccess = async (name: string) => {
+const openMembers = async (name: string) => {
   await userEvent.click(await screen.findByRole('button', { name: `Más acciones de ${name}` }));
-  await userEvent.click(screen.getByRole('button', { name: `Accesos de ${name}` }));
-  return screen.findByRole('region', { name: `Accesos de ${name}` });
+  await userEvent.click(screen.getByRole('button', { name: `Miembros de ${name}` }));
+  return screen.findByRole('region', { name: `Miembros de ${name}` });
 };
 
 test('whoSeesItShowsCompanyWideOrMemberCount', async () => {
-  show({
-    [`GET ${base}/projects`]: () => [project('p1', 'Obra', true), project('p2', 'Sala', false), project('p3', 'Taller', true), project('p4', 'Patio', true)],
-    [`GET ${base}/projects/p1/members`]: () => [raul, ana],
-    [`GET ${base}/projects/p2/members`]: () => [],
-    [`GET ${base}/projects/p3/members`]: () => [raul],
-    [`GET ${base}/projects/p4/members`]: () => [],
+  const calls = show({
+    [`GET ${base}/projects`]: () => [project('p1', 'Obra', true, 2), project('p2', 'Sala', false, 3), project('p3', 'Taller', true, 1), project('p4', 'Patio', true, 0)],
   });
   const row = async (name: string) => (await screen.findByText(name)).closest('tr')!;
-  await waitFor(async () => expect(await row('Obra')).toHaveTextContent('2 miembros'));
+  expect(await row('Obra')).toHaveTextContent('2 miembros');
   expect(await row('Sala')).toHaveTextContent('Toda la empresa');
   expect(await row('Taller')).toHaveTextContent('1 miembro');
   expect(await row('Taller')).not.toHaveTextContent('1 miembros');
   expect(await row('Patio')).toHaveTextContent('Nadie todavía');
+  expect(calls.filter((c) => c.key.includes('/members'))).toEqual([]);
 });
 
 test('closingAsksForConfirmationWhenNoMembers', async () => {
   const patch = `PATCH ${base}/projects/p2`;
   const calls = show({
-    [`GET ${base}/projects`]: () => [project('p2', 'Sala', false)],
+    [`GET ${base}/projects`]: () => [project('p2', 'Sala', false, 0)],
     [`GET ${base}/projects/p2/members`]: () => [],
     [`GET ${base}/members`]: () => [],
     [patch]: () => project('p2', 'Sala', true),
   });
-  const panel = await openAccess('Sala');
+  const panel = await openMembers('Sala');
   const box = within(panel).getByLabelText('Visible para toda la empresa');
   expect(box).toBeChecked();
   await userEvent.click(box);
@@ -64,18 +60,18 @@ test('closingAsksForConfirmationWhenNoMembers', async () => {
 test('closingWithMembersDoesNotAskAndOpeningSendsFalse', async () => {
   const patch = `PATCH ${base}/projects/p2`;
   const calls = show({
-    [`GET ${base}/projects`]: () => [project('p2', 'Sala', false), project('p1', 'Obra', true)],
+    [`GET ${base}/projects`]: () => [project('p2', 'Sala', false, 1), project('p1', 'Obra', true, 0)],
     [`GET ${base}/projects/p2/members`]: () => [raul],
     [`GET ${base}/projects/p1/members`]: () => [],
     [`GET ${base}/members`]: () => [],
     [patch]: () => project('p2', 'Sala', true),
     [`PATCH ${base}/projects/p1`]: () => project('p1', 'Obra', false),
   });
-  const sala = await openAccess('Sala');
+  const sala = await openMembers('Sala');
   await userEvent.click(within(sala).getByLabelText('Visible para toda la empresa'));
   await waitFor(() => expect(calls.find((c) => c.key === patch)?.body).toEqual({ restricted: true }));
   expect(screen.queryByRole('dialog')).toBeNull();
-  const obra = await openAccess('Obra');
+  const obra = await openMembers('Obra');
   const box = within(obra).getByLabelText('Visible para toda la empresa');
   expect(box).not.toBeChecked();
   await userEvent.click(box);
@@ -84,13 +80,13 @@ test('closingWithMembersDoesNotAskAndOpeningSendsFalse', async () => {
 
 test('addsAndRemovesMembers', async () => {
   const calls = show({
-    [`GET ${base}/projects`]: () => [project('p1', 'Obra', true)],
+    [`GET ${base}/projects`]: () => [project('p1', 'Obra', true, 1)],
     [`GET ${base}/projects/p1/members`]: () => [raul],
     [`GET ${base}/members`]: () => [person('u1', 'Ana', ['WORKER']), person('u3', 'Raúl', ['WORKER']), person('u2', 'Bea', ['COMPANY_ADMIN']), person('u4', 'Eva', ['WORKER'], false)],
     [`PUT ${base}/projects/p1/members/u1`]: () => ({ status: 204 }),
     [`DELETE ${base}/projects/p1/members/u3`]: () => ({ status: 204 }),
   });
-  const panel = await openAccess('Obra');
+  const panel = await openMembers('Obra');
   expect(within(panel).getByLabelText('Visible para toda la empresa')).not.toBeChecked();
   expect(await within(panel).findByText('Raúl')).toBeInTheDocument();
   const options = within(within(panel).getByLabelText('Persona')).getAllByRole('option').map((o) => o.textContent);

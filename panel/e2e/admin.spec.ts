@@ -47,7 +47,7 @@ async function createUser(page: Page, user: { name: string; email?: string; pass
   await form.getByLabel('Apellidos').fill(lastNamesOf(user.name));
   if (user.email) await form.getByLabel('Correo').fill(user.email);
   if (user.password) await form.getByLabel('Contraseña').fill(user.password);
-  await form.getByRole('button', { name: 'Crear usuario' }).click();
+  await form.getByRole('button', { name: 'Añadir persona' }).click();
   await expect(dialog).toHaveCount(0);
 }
 
@@ -79,10 +79,10 @@ async function deactivateAndActivate(page: Page): Promise<void> {
   const worker = row(users, WORKER.name);
   await openActions(users, WORKER.name);
   await users.getByRole('button', { name: `Desactivar ${WORKER.name}`, exact: true }).click();
-  await expect(worker).toContainText('desactivado');
+  await expect(worker).toContainText('Desactivado');
   await users.getByRole('button', { name: `Activar ${WORKER.name}`, exact: true }).click();
-  await expect(worker).toContainText('activo');
-  await expect(worker).not.toContainText('desactivado');
+  await expect(worker).toContainText('Activo');
+  await expect(worker).not.toContainText('Desactivado');
   console.log('✓ Admin 4: trabajador desactivado y activado de nuevo');
 }
 

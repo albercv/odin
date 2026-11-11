@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
-import { RowActions } from '../ui/RowActions';
+import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
 import { Table, tableStyles } from '../ui/Table';
 import { NameDialog } from './NameDialog';
@@ -24,9 +24,9 @@ function ProjectActions({ project, companyId, onChanged, panel, show }: RowProps
   return (
     <>
       <RowActions label={`Más acciones de ${project.name}`}>
-        <Button variant="ghost" onClick={() => show('rename')}>Renombrar {project.name}</Button>
-        <Button variant="ghost" aria-expanded={panel === 'access'} onClick={() => show('access')}>Accesos de {project.name}</Button>
-        <Button variant="danger" onClick={remove}>Borrar {project.name}</Button>
+        <RowAction variant="ghost" text="Renombrar" target={project.name} onClick={() => show('rename')} />
+        <RowAction variant="ghost" text="Miembros" label="Miembros de" target={project.name} aria-expanded={panel === 'access'} onClick={() => show('access')} />
+        <RowAction variant="danger" text="Borrar" target={project.name} onClick={remove} />
       </RowActions>
       <Notice message={error} />
     </>
@@ -36,21 +36,19 @@ function ProjectActions({ project, companyId, onChanged, panel, show }: RowProps
 function ProjectRow(props: RowProps) {
   const { project, companyId, onChanged } = props;
   const [panel, setPanel] = useState<Panel>();
-  const members = useLoad(() => api.projectMembers(companyId, project.id), [companyId, project.id]);
-  const reload = () => { onChanged(); members.reload(); };
   const show = (p: Panel) => setPanel(panel === p ? undefined : p);
   return (
     <>
       <tr>
-        <td>{project.name}</td>
-        <td>{members.data ? whoSees(project, members.data.length) : ''}</td>
+        <td data-label="Proyecto">{project.name}</td>
+        <td data-label="Quién lo ve">{whoSees(project)}</td>
         <td className={tableStyles.actions}><ProjectActions {...props} panel={panel} show={show} /></td>
       </tr>
       {panel && (
         <tr className={tableStyles.panelRow}>
           <td colSpan={3}>{panel === 'rename'
             ? <RenameForm name={project.name} label="Nombre" onSave={(name) => api.updateProject(companyId, project.id, { name })} onSaved={() => { setPanel(undefined); onChanged(); }} onCancel={() => setPanel(undefined)} />
-            : <ProjectMembers companyId={companyId} project={project} members={members.data ?? []} onChanged={reload} />}</td>
+            : <ProjectMembers companyId={companyId} project={project} onChanged={onChanged} />}</td>
         </tr>
       )}
     </>

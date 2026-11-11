@@ -8,6 +8,7 @@ const path = 'POST /v1/admin/companies/c1/members';
 const projects = [
   { id: 'p1', companyId: 'c1', name: 'Obra', restricted: true },
   { id: 'p2', companyId: 'c1', name: 'Reforma', restricted: true },
+  { id: 'p3', companyId: 'c1', name: 'Sala común', restricted: false },
 ];
 const created = (alreadyExisted = false) => ({
   status: 201,
@@ -25,7 +26,7 @@ const fillNames = async (first = 'Ana', last = 'Gil') => {
   await userEvent.type(screen.getByLabelText('Nombre'), first);
   await userEvent.type(screen.getByLabelText('Apellidos'), last);
 };
-const submit = () => userEvent.click(screen.getByRole('button', { name: 'Crear usuario' }));
+const submit = () => userEvent.click(screen.getByRole('button', { name: 'Añadir persona' }));
 
 test('workerOnlySendsNoPassword', async () => {
   const { calls, onDone } = show({ [path]: () => created() });
@@ -99,6 +100,13 @@ test('projectsAreHiddenAndNotSentWithoutTheWorkerRole', async () => {
   await submit();
   await waitFor(() => expect(sent(calls)).toMatchObject({ roles: ['COMPANY_ADMIN'] }));
   expect(sent(calls)).not.toHaveProperty('projectIds');
+});
+
+test('onlyClosedProjectsAreOfferedAndTheWideOnesAreCounted', async () => {
+  show({});
+  await screen.findByLabelText('Obra');
+  expect(screen.queryByLabelText('Sala común')).toBeNull();
+  expect(screen.getByText('Además verá 1 proyecto visible para toda la empresa.')).toBeInTheDocument();
 });
 
 test('alreadyExistedShowsTheNotice', async () => {

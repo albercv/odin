@@ -148,7 +148,7 @@ async function createLongNamedData(page: Page): Promise<void> {
   await dialog.getByLabel('Nombre', { exact: true }).fill(LONG_PERSON);
   await dialog.getByLabel('Apellidos').fill('Apellidos de prueba');
   await dialog.getByLabel('Correo').fill(LONG_EMAIL);
-  await dialog.getByRole('button', { name: 'Crear usuario' }).click();
+  await dialog.getByRole('button', { name: 'Añadir persona' }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole('button', { name: 'Nuevo proyecto' }).click();
   await page.getByLabel('Nombre del proyecto').fill(LONG_PROJECT);
@@ -164,6 +164,20 @@ test('longNamesDoNotOverflow', async ({ page, context }) => {
   await expect(page.getByRole('heading', { name: LONG_COMPANY })).toContainText(LONG_COMPANY);
   await page.setViewportSize({ width: 375, height: 800 });
   await expectNoHorizontalScroll(page);
+});
+
+test('personsTableShowsEveryColumnAtPhoneWidth', async ({ page, context }) => {
+  await signIn(context);
+  await page.setViewportSize({ width: 375, height: 800 });
+  await openCompany(page, CARD_COMPANY);
+  const row = page.getByRole('row').filter({ hasText: 'Trabajadora Visual' });
+  for (const label of ['Código', 'Persona', 'Papel', 'Acceso']) await expect(row.locator(`td[data-label="${label}"]`)).toBeVisible();
+  await expect(row).toContainText('visual@demo.invalid');
+  await expect(row).toContainText('Trabaja con su IA');
+  await expect(row).toContainText('Activo');
+  await expectNoHorizontalScroll(page);
+  const clipped = await row.locator('td').evaluateAll((cells) => cells.filter((c) => c.getBoundingClientRect().right > window.innerWidth).length);
+  expect(clipped).toBe(0);
 });
 
 test('narrowScreenHasNoHorizontalScroll', async ({ page, context }) => {

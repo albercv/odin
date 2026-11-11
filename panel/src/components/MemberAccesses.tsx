@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
 import { Button } from '../ui/Button';
+import { RowAction } from '../ui/RowActions';
 import { Field } from '../ui/Field';
 import { Notice } from './Notice';
 import { useAction, useLoad } from './useLoad';
@@ -48,7 +49,7 @@ export function MemberAccesses({ companyId, member }: { companyId: string; membe
         {mine.data?.map((p) => (
           <li key={p.id} className={styles.item}>
             <span>{p.name}</span>
-            <Button variant="danger" aria-label={`Quitar ${p.name}`} onClick={() => change(() => api.removeProjectMember(companyId, p.id, member.userId))}>Quitar</Button>
+            <RowAction variant="danger" text="Quitar" target={p.name} onClick={() => change(() => api.removeProjectMember(companyId, p.id, member.userId))} />
           </li>
         ))}
       </ul>

@@ -13,8 +13,11 @@ import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -65,9 +68,17 @@ public final class Responses {
         }
     }
 
-    public record ProjectView(UUID id, UUID companyId, String name, boolean restricted) {
+    public record ProjectView(UUID id, UUID companyId, String name, boolean restricted,
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            @Schema(description = "Solo en la lista de proyectos de la empresa.") @Nullable Integer memberCount) {
+        /** Sin recuento: solo la lista de proyectos de la empresa lo calcula. */
         public static ProjectView from(Project p) {
-            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted());
+            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted(), null);
+        }
+
+        public static ProjectView from(ProjectSummary s) {
+            Project p = s.project();
+            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted(), s.memberCount());
         }
     }
 

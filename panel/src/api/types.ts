@@ -604,6 +604,11 @@ export interface components {
             companyId: string;
             name: string;
             restricted: boolean;
+            /**
+             * Format: int32
+             * @description Solo en la lista de proyectos de la empresa.
+             */
+            memberCount?: number;
         };
         AddMember: {
             firstName?: string;

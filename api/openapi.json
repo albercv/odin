@@ -1602,6 +1602,11 @@
           },
           "restricted" : {
             "type" : "boolean"
+          },
+          "memberCount" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Solo en la lista de proyectos de la empresa."
           }
         },
         "required" : [ "companyId", "id", "name", "restricted" ]

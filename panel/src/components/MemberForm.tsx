@@ -22,18 +22,25 @@ function bodyOf(draft: Draft, choice: RoleChoice): S['AddMember'] {
   return body;
 }
 
+const widelyVisible = (count: number) =>
+  count === 1 ? 'Además verá 1 proyecto visible para toda la empresa.' : `Además verá los ${count} proyectos visibles para toda la empresa.`;
+
+/** Only closed projects need choosing; the company-wide ones are seen anyway. */
 function ProjectChoices({ companyId, chosen, onChange }: { companyId: string; chosen: string[]; onChange: (ids: string[]) => void }) {
   const projects = useLoad(() => api.projects(companyId), [companyId]);
-  if (!projects.data?.length) return null;
+  const closed = projects.data?.filter((p) => p.restricted) ?? [];
+  const wide = (projects.data?.length ?? 0) - closed.length;
+  if (closed.length === 0 && wide === 0) return null;
   const toggle = (id: string) => onChange(chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id]);
   return (
     <fieldset className={form.group}>
       <legend>Proyectos a los que accede</legend>
-      {projects.data.map((p) => (
+      {closed.map((p) => (
         <label key={p.id} className={form.check}>
           <input type="checkbox" checked={chosen.includes(p.id)} onChange={() => toggle(p.id)} />{p.name}
         </label>
       ))}
+      {wide > 0 && <p className={form.hint}>{widelyVisible(wide)}</p>}
     </fieldset>
   );
 }
@@ -76,7 +83,7 @@ export function MemberForm({ companyId, isGroupAdmin, onDone }: Props) {
         <Field label="Contraseña"><input type="password" required minLength={12} value={draft.password} onChange={(e) => set({ password: e.target.value })} /></Field>
       )}
       {choice.worker && <ProjectChoices companyId={companyId} chosen={draft.projectIds} onChange={(projectIds) => set({ projectIds })} />}
-      <div><Button type="submit" variant="primary">Crear usuario</Button></div>
+      <div><Button type="submit" variant="primary">Añadir persona</Button></div>
     </form>
   );
 }
