@@ -1,0 +1,4 @@
+{
+  "error": "too_large",
+  "detail": "El fichero supera el tamaño máximo que admite el servicio."
+}

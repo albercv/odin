@@ -1,0 +1,7 @@
+{
+  "status": "ok",
+  "reader": {
+    "name": "unlimited-ocr-2",
+    "version": "mlx-community/Unlimited-OCR-2-8bit; uocr 0.1.0"
+  }
+}
