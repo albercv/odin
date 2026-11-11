@@ -103,3 +103,15 @@ test('countIsZeroAfterResolvingTheLastTwoCards', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
   await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(0));
 });
+
+test('focusMovesToTheNextCardTitleAfterResolving', async () => {
+  show([card(1), card(2)]);
+  await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
+  expect(await screen.findByRole('heading', { name: 'Ficha 2' })).toHaveFocus();
+});
+
+test('focusMovesToTheEmptyStateWhenTheQueueIsDone', async () => {
+  show([card(1)]);
+  await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
+  expect(await screen.findByRole('heading', { name: 'No hay fichas pendientes.' })).toHaveFocus();
+});

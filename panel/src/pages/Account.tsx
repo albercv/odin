@@ -3,7 +3,7 @@ import { api, type S } from '../api/client';
 import { Notice } from '../components/Notice';
 import { useAction } from '../components/useLoad';
 import type { ColorPreference } from '../theme/colorPreference';
-import { useColorMode } from '../theme/useColorMode';
+import { useColorChoice } from '../theme/ColorModeContext';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
@@ -14,12 +14,12 @@ import styles from './Account.module.css';
 const THEMES: [ColorPreference, string][] = [['system', 'Como el sistema'], ['light', 'Claro'], ['dark', 'Oscuro']];
 
 function ThemeChoice() {
-  const { preference, setPreference } = useColorMode();
+  const { preference, setPreference } = useColorChoice();
   return (
     <Section title="Tema">
       <div role="radiogroup" aria-label="Tema" className={styles.themes}>
         {THEMES.map(([value, label]) => (
-          <label key={value} className={styles.theme}>
+          <label key={value} className={`${styles.theme} ${preference === value ? styles.selected : ''}`}>
             <input type="radio" name="theme" checked={preference === value} onChange={() => setPreference(value)} />
             {label}
           </label>

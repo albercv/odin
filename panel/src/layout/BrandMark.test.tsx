@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { BrandMark } from './BrandMark';
 import { BrandProvider } from '../theme/BrandContext';
 import { NEUTRAL_BRAND, type Brand } from '../theme/brand';
@@ -19,6 +19,13 @@ describe('BrandMark', () => {
     expect(screen.getByText('O')).toBeInTheDocument();
     expect(screen.getByText('Odín')).toBeInTheDocument();
     expect(screen.queryByText(/^de /)).toBeNull();
+  });
+
+  it('fallsBackToInitialsWhenTheLogoFails', () => {
+    show({ ...NEUTRAL_BRAND, name: 'Fincas Rivera', logoUrl: '/brand/l.png', logoAlt: 'Logo Fincas' });
+    fireEvent.error(screen.getByRole('img', { name: 'Logo Fincas' }));
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.getByText('FR')).toBeInTheDocument();
   });
 
   it('showsTheOwnerNameWhenAsked', () => {

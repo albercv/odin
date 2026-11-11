@@ -42,6 +42,12 @@ afterEach(() => {
 });
 
 describe('BrainCanvas', () => {
+  it('leavesTheGradientWhenTheCanvasHasNoContext', () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    expect(() => render(<BrainCanvas placement={COVER_PLACEMENT} />)).not.toThrow();
+    expect(callbacks.size).toBe(0);
+  });
+
   it('drawsOneStillFrameWhenReducedMotion', () => {
     reduced = true;
     render(<BrainCanvas placement={COVER_PLACEMENT} />);

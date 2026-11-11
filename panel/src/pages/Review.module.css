@@ -11,5 +11,6 @@
 .queue button[aria-current='true'] { background: var(--accent-tint); box-shadow: inset 3px 0 0 var(--accent); }
 .queue strong { font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
 .queue span { font-size: 14px; color: var(--text-muted); overflow-wrap: anywhere; }
+.queue button[aria-current='true'] span { color: var(--text); }
 @media (max-width: 900px) { .review { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .queue li.leaving { animation: none; opacity: 0; } }

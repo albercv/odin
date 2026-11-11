@@ -58,14 +58,14 @@ Desde el panel se crean las empresas, los trabajadores y sus claves personales, 
 
 ## Marca
 
-El panel toma el nombre, el logo y los colores de la carpeta que sirve en `/brand/`. Por defecto es `panel/public/brand/` (E2D). Para usar otra, pon su ruta en `ODIN_BRAND_DIR` en `deploy/.env`.
+El panel toma el nombre, el logo y los colores de la carpeta que sirve en `/brand/`. Por defecto es `panel/public/brand/` (E2D). Para usar otra, pon su ruta en `ODIN_BRAND_DIR` en `deploy/.env`; una ruta relativa se resuelve desde `deploy/`.
 
 La carpeta lleva un `brand.json` y, si quieres logo, su fichero (PNG, WebP o SVG):
 
 - `name` y `logoAlt`: textos. El nombre aparece como «Odín de <name>» en la entrada.
-- `logo`: nombre del fichero del logo, en la misma carpeta. Se ve siempre sobre el color `base`, así que debe verse bien sobre él.
+- `logo`: nombre del fichero del logo, en la misma carpeta, con la extensión en minúsculas (`.png`, `.webp` o `.svg`); el servidor no sirve otra cosa desde `/brand/`. Se ve siempre sobre el color `base`, así que debe verse bien sobre él.
 - `colors.accent` y `colors.base`: hexadecimales de 6 cifras. `base` es el color oscuro de la barra lateral y de la portada.
-- `cover`: opcional (`title`, `subtitle` y `note`). Sin él, la instalación no tiene portada de demostración.
+- `cover`: opcional (`title`, `subtitle` y `note`). Sin él, la instalación no tiene portada de demostración. Con él, la portada se abre en `/#cover`.
 
 Si `brand.json` falta o no es válido, el panel arranca con un tema neutro y avisa en la consola. El cambio de marca se ve al recargar la página.
 

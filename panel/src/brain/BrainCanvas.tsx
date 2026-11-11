@@ -20,7 +20,9 @@ function reportOnce(canvas: HTMLCanvasElement, summary: FrameSummary | undefined
   canvas.dataset.medianFrameMs = summary.medianMs.toFixed(2);
 }
 
-function createLoop(canvas: HTMLCanvasElement, renderer: ReturnType<typeof createBrainRenderer>) {
+type Renderer = NonNullable<ReturnType<typeof createBrainRenderer>>;
+
+function createLoop(canvas: HTMLCanvasElement, renderer: Renderer) {
   const guard = createFrameGuard();
   let raf = 0, last = 0, frozen = false;
   const state = { onScreen: true };
@@ -50,9 +52,10 @@ function createLoop(canvas: HTMLCanvasElement, renderer: ReturnType<typeof creat
   return { state, stop, sync };
 }
 
-function start(canvas: HTMLCanvasElement, placement: BrainPlacement): () => void {
+function start(canvas: HTMLCanvasElement, placement: BrainPlacement): (() => void) | undefined {
   geometry ??= buildBrainGeometry();
   const renderer = createBrainRenderer(canvas, geometry, placement);
+  if (!renderer) return undefined; // no canvas: the gradient stays
   const accent = getComputedStyle(document.documentElement).getPropertyValue('--brand-accent-on-dark').trim();
   if (accent) renderer.setColor(accent);
   renderer.resize();
