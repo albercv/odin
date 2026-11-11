@@ -191,13 +191,30 @@ class MemberAtomicityIT {
     }
 
     @Test
+    void failureDeletingThePersonKeepsTheirProjects() {
+        givenCompany();
+        UserId id = new UserId(UUID.randomUUID());
+        users.save(new User(id, "Wanda", Optional.of("Pérez"), code(), Optional.empty(), false, true, Optional.empty()));
+        memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
+        ProjectId project = new ProjectId(UUID.randomUUID());
+        organizations.saveProject(new Project(project, company, "Obra", true));
+        projectMembers.add(company, project, id);
+        DeleteUser delete = new UseCaseConfiguration().deleteUser(failingUserDelete(), memberships, projectMembers,
+                NO_SESSIONS, Clock.systemUTC(), transactionManager);
+
+        assertThatThrownBy(() -> delete.execute(GROUP_ADMIN, id)).isInstanceOf(IllegalStateException.class);
+
+        assertThat(projectMembers.projectsOf(company, id)).containsExactly(project);
+    }
+
+    @Test
     void failureDeletingThePersonKeepsTheirMemberships() {
         givenCompany();
         UserId id = new UserId(UUID.randomUUID());
         users.save(new User(id, "Wanda", Optional.of("Pérez"), code(), Optional.of("borrar@e.test"),
                 false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
-        DeleteUser delete = new UseCaseConfiguration().deleteUser(failingUserDelete(), memberships,
+        DeleteUser delete = new UseCaseConfiguration().deleteUser(failingUserDelete(), memberships, projectMembers,
                 NO_SESSIONS, Clock.systemUTC(), transactionManager);
 
         assertThatThrownBy(() -> delete.execute(GROUP_ADMIN, id)).isInstanceOf(IllegalStateException.class);

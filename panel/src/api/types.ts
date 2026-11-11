@@ -633,6 +633,7 @@ export interface components {
             email?: string;
             roles: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active: boolean;
+            hasPassword: boolean;
         };
         KeyLabel: {
             label?: string;

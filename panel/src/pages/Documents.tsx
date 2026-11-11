@@ -11,7 +11,7 @@ import { PageHeader } from '../ui/PageHeader';
 import { RowAction } from '../ui/RowActions';
 import { Section } from '../ui/Section';
 import { StatusPill } from '../ui/StatusPill';
-import { Table, tableStyles } from '../ui/Table';
+import { Table, Td, Tr, tableStyles } from '../ui/Table';
 import styles from './Documents.module.css';
 
 const STATUS: Record<string, [string, 'ok' | 'off' | 'pending']> = {
@@ -56,12 +56,12 @@ function UploadDialog({ companyId, open, onClose, onDone }: { companyId: string;
 function DocRow({ d, onRetry }: { d: S['DocumentView']; onRetry: () => void }) {
   const [label, tone] = STATUS[d.status] ?? [d.status, 'off' as const];
   return (
-    <tr>
-      <td data-label="Título">{d.title}</td>
-      <td data-label="Estado"><StatusPill tone={tone}>{label}</StatusPill></td>
-      <td data-label="Motivo">{d.failureReason}</td>
-      <td className={tableStyles.actions}>{d.status === 'FAILED' && <RowAction text="Reintentar" target={d.title} onClick={onRetry} />}</td>
-    </tr>
+    <Tr>
+      <Td label="Título">{d.title}</Td>
+      <Td label="Estado"><StatusPill tone={tone}>{label}</StatusPill></Td>
+      <Td label="Motivo">{d.failureReason}</Td>
+      <Td className={tableStyles.actions}>{d.status === 'FAILED' && <RowAction text="Reintentar" target={d.title} onClick={onRetry} />}</Td>
+    </Tr>
   );
 }
 

@@ -102,7 +102,8 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.member.lastName").value("Gil"))
                 .andExpect(jsonPath("$.member.personCode").value(matchesPattern("[A-Z0-9]{4}")))
                 .andExpect(jsonPath("$.member.roles", containsInAnyOrder("COMPANY_ADMIN", "WORKER")))
-                .andExpect(jsonPath("$.member.active").value(true)).andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.member.active").value(true)).andExpect(jsonPath("$.member.hasPassword").value(true))
+                .andExpect(jsonPath("$.password").doesNotExist())
                 .andReturn();
         String personCode = com.jayway.jsonpath.JsonPath.read(added.getResponse().getContentAsString(),
                 "$.member.personCode");
@@ -116,6 +117,15 @@ class AdminApiTest extends WebTestSupport {
                 .andReturn().getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(listing).doesNotContainIgnoringCase("hash")
                 .doesNotContain("clave-muy-larga-1");
+    }
+
+    @Test
+    void memberListSaysWhetherThePersonHasAPassword() throws Exception {
+        CompanyId company = newCompany();
+        UserId worker = workerId(company);
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/members").cookie(admin))
+                .andExpect(jsonPath("$[?(@.userId=='" + worker.value() + "')].hasPassword").value(false));
     }
 
     @Test

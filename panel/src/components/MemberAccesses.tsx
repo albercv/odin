@@ -1,61 +1,64 @@
-import { useState } from 'react';
+import { useRef } from 'react';
 import { api, type S } from '../api/client';
-import { Button } from '../ui/Button';
 import { RowAction } from '../ui/RowActions';
-import { Field } from '../ui/Field';
+import { useToast } from '../ui/Toast';
+import { AddPicker } from './AddPicker';
 import { Notice } from './Notice';
 import { useAction, useLoad } from './useLoad';
+import { widelyVisible } from './widelyVisible';
 import styles from './MemberAccesses.module.css';
 
-const widelyVisible = (count: number) =>
-  count === 1 ? 'Además ve 1 proyecto visible para toda la empresa.' : `Además ve los ${count} proyectos visibles para toda la empresa.`;
+function unassigned(all: S['ProjectView'][], mine: S['ProjectView'][]) {
+  const assigned = new Set(mine.map((p) => p.id));
+  const free = all.filter((p) => !assigned.has(p.id));
+  return { free, wide: free.filter((p) => !p.restricted).length };
+}
 
-function AddAccess({ free, onAdd }: { free: S['ProjectView'][]; onAdd: (projectId: string) => Promise<unknown> }) {
-  const [chosen, setChosen] = useState('');
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (await onAdd(chosen)) setChosen('');
-  };
+type AssignedProps = { listRef: React.RefObject<HTMLUListElement | null>; projects: S['ProjectView'][]; onRemove: (p: S['ProjectView']) => void };
+
+function AssignedProjects({ listRef, projects, onRemove }: AssignedProps) {
   return (
-    <form className={styles.add} onSubmit={add}>
-      <Field label="Proyecto">
-        <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
-          <option value="">Elige un proyecto</option>
-          {free.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-      </Field>
-      <Button type="submit" disabled={!chosen}>Añadir</Button>
-    </form>
+    <ul ref={listRef} tabIndex={-1} aria-label="Proyectos asignados" className={styles.list}>
+      {projects.map((p) => (
+        <li key={p.id} className={styles.item}>
+          <span>{p.name}</span>
+          <RowAction variant="danger" text="Quitar" target={p.name} onClick={() => onRemove(p)} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
+type Props = { companyId: string; member: S['MemberView']; onChanged: () => void };
+
 /** Projects a person is a member of; the same members the project shows. */
-export function MemberAccesses({ companyId, member }: { companyId: string; member: S['MemberView'] }) {
+export function MemberAccesses({ companyId, member, onChanged }: Props) {
   const mine = useLoad(() => api.memberProjects(companyId, member.userId), [companyId, member.userId]);
   const all = useLoad(() => api.projects(companyId), [companyId]);
+  const list = useRef<HTMLUListElement>(null);
+  const toast = useToast();
   const { error, act } = useAction();
-  const assigned = new Set(mine.data?.map((p) => p.id));
-  const free = all.data?.filter((p) => !assigned.has(p.id)) ?? [];
-  const wide = free.filter((p) => !p.restricted).length;
-  const change = async (run: () => Promise<unknown>) => {
+  const { free, wide } = unassigned(all.data ?? [], mine.data ?? []);
+  const change = async (run: () => Promise<unknown>, announcement: string) => {
     const done = await act(run);
-    if (done) mine.reload();
-    return done;
+    if (!done) return false;
+    mine.reload();
+    onChanged();
+    toast(announcement);
+    return true;
+  };
+  const remove = async (p: S['ProjectView']) => {
+    if (await change(() => api.removeProjectMember(companyId, p.id, member.userId), `Quitado ${p.name}`)) list.current?.focus();
   };
   return (
     <section aria-label={`Accesos de ${member.displayName}`} className={styles.accesses}>
       <Notice message={error ?? mine.error ?? all.error} />
-      <ul className={styles.list}>
-        {mine.data?.map((p) => (
-          <li key={p.id} className={styles.item}>
-            <span>{p.name}</span>
-            <RowAction variant="danger" text="Quitar" target={p.name} onClick={() => change(() => api.removeProjectMember(companyId, p.id, member.userId))} />
-          </li>
-        ))}
-      </ul>
-      {mine.data?.length === 0 && <p className={styles.hint}>Sin proyectos asignados.</p>}
-      {wide > 0 && <p className={styles.hint}>{widelyVisible(wide)}</p>}
-      <AddAccess free={free} onAdd={(projectId) => change(() => api.addProjectMember(companyId, projectId, member.userId))} />
+      <AssignedProjects listRef={list} projects={mine.data ?? []} onRemove={remove} />
+      <p className={styles.hint}>{[mine.data?.length === 0 && 'Sin proyectos asignados.', wide > 0 && widelyVisible(wide, 've')].filter(Boolean).join(' ')}</p>
+      {member.active
+        ? <AddPicker label="Proyecto" placeholder="Elige un proyecto" options={free}
+          onAdd={(id) => change(() => api.addProjectMember(companyId, id, member.userId), `Añadido ${free.find((p) => p.id === id)?.name}`)} />
+        : <p className={styles.hint}>Está desactivada: no se le pueden añadir proyectos.</p>}
     </section>
   );
 }

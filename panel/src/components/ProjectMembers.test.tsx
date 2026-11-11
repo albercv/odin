@@ -36,6 +36,20 @@ test('whoSeesItShowsCompanyWideOrMemberCount', async () => {
   expect(calls.filter((c) => c.key.includes('/members'))).toEqual([]);
 });
 
+test('confirmationUsesTheMemberListJustLoadedNotTheStaleCount', async () => {
+  const patch = `PATCH ${base}/projects/p2`;
+  const calls = show({
+    [`GET ${base}/projects`]: () => [project('p2', 'Sala', false, 1)],
+    [`GET ${base}/projects/p2/members`]: () => [],
+    [`GET ${base}/members`]: () => [],
+    [patch]: () => project('p2', 'Sala', true),
+  });
+  const panel = await openMembers('Sala');
+  await userEvent.click(within(panel).getByLabelText('Visible para toda la empresa'));
+  expect(await screen.findByRole('dialog', { name: '¿Cerrar Sala? Solo lo verán sus miembros, y ahora no tiene ninguno.' })).toBeInTheDocument();
+  expect(calls.some((c) => c.key === patch)).toBe(false);
+});
+
 test('closingAsksForConfirmationWhenNoMembers', async () => {
   const patch = `PATCH ${base}/projects/p2`;
   const calls = show({
@@ -68,6 +82,7 @@ test('closingWithMembersDoesNotAskAndOpeningSendsFalse', async () => {
     [`PATCH ${base}/projects/p1`]: () => project('p1', 'Obra', false),
   });
   const sala = await openMembers('Sala');
+  await within(sala).findByText('Raúl');
   await userEvent.click(within(sala).getByLabelText('Visible para toda la empresa'));
   await waitFor(() => expect(calls.find((c) => c.key === patch)?.body).toEqual({ restricted: true }));
   expect(screen.queryByRole('dialog')).toBeNull();
@@ -94,6 +109,9 @@ test('addsAndRemovesMembers', async () => {
   await userEvent.selectOptions(within(panel).getByLabelText('Persona'), 'Ana');
   await userEvent.click(within(panel).getByRole('button', { name: 'Añadir' }));
   await waitFor(() => expect(calls.some((c) => c.key === `PUT ${base}/projects/p1/members/u1`)).toBe(true));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Añadido Ana'));
   await userEvent.click(within(panel).getByRole('button', { name: 'Quitar Raúl' }));
   await waitFor(() => expect(calls.some((c) => c.key === `DELETE ${base}/projects/p1/members/u3`)).toBe(true));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Quitado Raúl'));
+  expect(within(panel).getByRole('list', { name: 'Miembros del proyecto' })).toHaveFocus();
 });

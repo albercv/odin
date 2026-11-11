@@ -75,6 +75,16 @@ class ListMembersTest {
     }
 
     @Test
+    void showsWhetherThePersonHasAPasswordNeverTheHash() {
+        var members = list.execute(Actors.companyAdmin(company), company);
+
+        assertThat(members).filteredOn(m -> m.userId().equals(adminId)).singleElement()
+                .satisfies(m -> assertThat(m.hasPassword()).isTrue());
+        assertThat(members).filteredOn(m -> m.userId().equals(workerId)).singleElement()
+                .satisfies(m -> assertThat(m.hasPassword()).isFalse());
+    }
+
+    @Test
     void adminOfAnotherCompanyIsForbidden() {
         assertThatThrownBy(() -> list.execute(Actors.companyAdmin(other), company))
                 .isInstanceOf(ForbiddenException.class);

@@ -7,6 +7,7 @@ import { useToast } from '../ui/Toast';
 import { Notice } from './Notice';
 import { RolesFields, rolesOf, type RoleChoice } from './RolesFields';
 import { useAction, useLoad } from './useLoad';
+import { widelyVisible } from './widelyVisible';
 
 const NO_ROLE = 'Elige al menos un papel';
 const ALREADY_EXISTED = 'Esta persona ya existía en el grupo: se ha añadido a esta empresa';
@@ -21,9 +22,6 @@ function bodyOf(draft: Draft, choice: RoleChoice): S['AddMember'] {
   if (choice.worker && draft.projectIds.length > 0) body.projectIds = draft.projectIds;
   return body;
 }
-
-const widelyVisible = (count: number) =>
-  count === 1 ? 'Además verá 1 proyecto visible para toda la empresa.' : `Además verá los ${count} proyectos visibles para toda la empresa.`;
 
 /** Only closed projects need choosing; the company-wide ones are seen anyway. */
 function ProjectChoices({ companyId, chosen, onChange }: { companyId: string; chosen: string[]; onChange: (ids: string[]) => void }) {
@@ -40,7 +38,7 @@ function ProjectChoices({ companyId, chosen, onChange }: { companyId: string; ch
           <input type="checkbox" checked={chosen.includes(p.id)} onChange={() => toggle(p.id)} />{p.name}
         </label>
       ))}
-      {wide > 0 && <p className={form.hint}>{widelyVisible(wide)}</p>}
+      {wide > 0 && <p className={form.hint}>{widelyVisible(wide, 'verá')}</p>}
     </fieldset>
   );
 }

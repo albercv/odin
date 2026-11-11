@@ -28,3 +28,6 @@
   .table td.actions { width: auto; text-align: left; }
   .table .panelRow td { padding: 14px 16px; }
 }
+
+/* The person column keeps a readable width even when an open row menu asks for space; addresses wrap only at «@» or dots. */
+.person { min-width: 13rem; overflow-wrap: normal; }

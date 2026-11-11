@@ -215,10 +215,11 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DeleteUser deleteUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
-            Clock clock, PlatformTransactionManager transactionManager) {
+    DeleteUser deleteUser(UserRepository users, MembershipRepository memberships,
+            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock,
+            PlatformTransactionManager transactionManager) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new DeleteUser(users, memberships, sessions, clock) {
+        return new DeleteUser(users, memberships, projectMembers, sessions, clock) {
             @Override
             public void execute(Actor actor, UserId id) {
                 transaction.executeWithoutResult(status -> super.execute(actor, id));

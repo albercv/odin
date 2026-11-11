@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
-import { Button } from '../ui/Button';
+import { RowAction } from '../ui/RowActions';
 import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
 import { Notice } from './Notice';
@@ -25,8 +25,8 @@ export function EditForm({ user, onDone }: { user: Member; onDone: (saved: boole
       <Field label="Apellidos"><input value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>
       <Field label="Correo"><input type="email" required={user.roles.includes('COMPANY_ADMIN')} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
       <div className={form.buttons}>
-        <Button type="submit" variant="primary">Guardar {user.displayName}</Button>
-        <Button onClick={() => onDone(false)}>Cancelar {user.displayName}</Button>
+        <RowAction type="submit" variant="primary" text="Guardar" target={user.displayName} />
+        <RowAction text="Cancelar" target={user.displayName} onClick={() => onDone(false)} />
       </div>
     </form>
   );
@@ -36,21 +36,26 @@ type RolesProps = { companyId: string; user: Member; canGiveAdmin: boolean; onDo
 
 export function RolesForm({ companyId, user, canGiveAdmin, onDone }: RolesProps) {
   const [choice, setChoice] = useState<RoleChoice>(choiceOf(user.roles));
+  const [password, setPassword] = useState('');
   const [roleError, setRoleError] = useState<string>();
   const { error, act } = useAction();
+  // Becoming an administrator needs a password only if the person has none yet; never overwrite an existing one.
+  const needsPassword = choice.admin && !user.roles.includes('COMPANY_ADMIN') && !user.hasPassword;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!choice.admin && !choice.worker) return setRoleError('Elige al menos un papel');
     setRoleError(undefined);
-    if (await act(() => api.updateMember(companyId, user.userId, { roles: rolesOf(choice) }))) onDone(true);
+    const changes = { roles: rolesOf(choice), ...(needsPassword && { password }) };
+    if (await act(() => api.updateMember(companyId, user.userId, changes))) onDone(true);
   };
   return (
     <form className={form.form} onSubmit={submit}>
       <Notice message={error} />
       <RolesFields choice={choice} onChange={setChoice} canGiveAdmin={canGiveAdmin} error={roleError} />
+      {needsPassword && <Field label="Contraseña"><input type="password" required minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} /></Field>}
       <div className={form.buttons}>
-        <Button type="submit" variant="primary">Guardar papeles de {user.displayName}</Button>
-        <Button onClick={() => onDone(false)}>Cancelar {user.displayName}</Button>
+        <RowAction type="submit" variant="primary" text="Guardar" label="Guardar papeles de" target={user.displayName} />
+        <RowAction text="Cancelar" target={user.displayName} onClick={() => onDone(false)} />
       </div>
     </form>
   );
@@ -67,7 +72,7 @@ export function ResetPasswordForm({ user, onDone }: { user: Member; onDone: () =
     <form className={form.form} onSubmit={submit}>
       <Notice message={error} />
       <Field label="Nueva contraseña"><input type="password" required minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
-      <div><Button type="submit" variant="primary">Guardar contraseña de {user.displayName}</Button></div>
+      <div><RowAction type="submit" variant="primary" text="Guardar" label="Guardar contraseña de" target={user.displayName} /></div>
     </form>
   );
 }

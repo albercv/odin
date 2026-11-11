@@ -101,8 +101,9 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     @Override
     public List<ProjectSummary> listProjectSummaries(CompanyId companyId) {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
-                SELECT p.id, p.company_id, p.name, p.restricted, COUNT(m.user_id) AS member_count
+                SELECT p.id, p.company_id, p.name, p.restricted, COUNT(u.id) AS member_count
                 FROM project p LEFT JOIN project_member m ON m.project_id = p.id
+                LEFT JOIN app_user u ON u.id = m.user_id AND u.deleted_at IS NULL
                 WHERE p.company_id = :company AND p.deleted_at IS NULL
                 GROUP BY p.id, p.company_id, p.name, p.restricted, p.seq ORDER BY p.seq""")
                 .param("company", companyId.value())

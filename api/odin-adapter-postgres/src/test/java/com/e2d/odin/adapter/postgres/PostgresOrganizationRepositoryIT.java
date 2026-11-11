@@ -139,4 +139,17 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
                 .containsExactly(org.assertj.core.api.Assertions.tuple(obra, 2), org.assertj.core.api.Assertions.tuple(vacio, 0));
         assertThat(orgs.listProjectSummaries(b)).extracting(ProjectSummary::memberCount).containsExactly(2);
     }
+
+    @Test
+    void projectSummariesDoNotCountDeletedPeople() {
+        CompanyId a = newCompany();
+        ProjectId obra = newProject(a, "Obra");
+        UserId wanda = newUser(a);
+        UserId gone = newUser(a);
+        projectMembers.add(a, obra, wanda);
+        projectMembers.add(a, obra, gone);
+        users.delete(gone, Instant.now());
+
+        assertThat(orgs.listProjectSummaries(a)).extracting(ProjectSummary::memberCount).containsExactly(1);
+    }
 }

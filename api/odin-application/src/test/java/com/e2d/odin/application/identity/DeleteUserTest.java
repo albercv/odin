@@ -6,7 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
+import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
@@ -31,7 +34,9 @@ class DeleteUserTest {
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final DeleteUser delete = new DeleteUser(users, memberships, sessions, new MutableClock());
+    private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
+    private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(organizations);
+    private final DeleteUser delete = new DeleteUser(users, memberships, projectMembers, sessions, new MutableClock());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
 
@@ -48,6 +53,20 @@ class DeleteUserTest {
 
         assertThat(memberships.listByUser(workerId)).isEmpty();
         assertThat(users.findById(workerId)).isEmpty();
+    }
+
+    @Test
+    void deletedPersonLeavesTheProjectsOfEveryCompany() {
+        CompanyId other = Fixtures.company(organizations);
+        memberships.save(new Membership(workerId, other, Set.of(Role.WORKER), true));
+        var inOther = Fixtures.project(organizations, other);
+        var inFirst = Fixtures.project(organizations, Fixtures.company(organizations));
+        projectMembers.add(inOther, workerId);
+        projectMembers.add(inFirst, workerId);
+
+        delete.execute(Actors.groupAdmin(), workerId);
+
+        assertThat(projectMembers.listMembers(inOther)).isEmpty();
     }
 
     @Test

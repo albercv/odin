@@ -38,7 +38,7 @@ export function AppShell({ me, onLogout, onPasswordChanged }: Props) {
         pending={pending} setPage={setPage} onLogout={onLogout} />
       <main className={styles.main}>
         {page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} />}
-        {page === 'companies' && <Companies onOpen={open} canEditCode={isGroup} />}
+        {page === 'companies' && <Companies onOpen={open} />}
         {needsCompany && !companyId && <p>Elige primero una empresa en «Empresas».</p>}
         {needsCompany && companyId && page === 'company' && <Company key={companyId} companyId={companyId} me={me} />}
         {needsCompany && companyId && page === 'documents' && <Documents key={companyId} companyId={companyId} />}

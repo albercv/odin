@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { S } from '../api/client';
 import styles from '../ui/Form.module.css';
 
@@ -11,18 +12,20 @@ type Props = { choice: RoleChoice; onChange: (choice: RoleChoice) => void; canGi
 
 /** The two role checkboxes; «Administra la empresa» only shows to whoever may give it. */
 export function RolesFields({ choice, onChange, canGiveAdmin, error }: Props) {
+  const errorId = useId();
+  const invalid = Boolean(error);
   return (
-    <fieldset className={styles.group}>
+    <fieldset className={styles.group} aria-describedby={invalid ? errorId : undefined}>
       <legend>Papeles</legend>
       {canGiveAdmin && (
         <label className={styles.check}>
-          <input type="checkbox" checked={choice.admin} onChange={(e) => onChange({ ...choice, admin: e.target.checked })} />Administra la empresa
+          <input type="checkbox" aria-invalid={invalid} checked={choice.admin} onChange={(e) => onChange({ ...choice, admin: e.target.checked })} />Administra la empresa
         </label>
       )}
       <label className={styles.check}>
-        <input type="checkbox" checked={choice.worker} onChange={(e) => onChange({ ...choice, worker: e.target.checked })} />Trabaja con su IA
+        <input type="checkbox" aria-invalid={invalid} checked={choice.worker} onChange={(e) => onChange({ ...choice, worker: e.target.checked })} />Trabaja con su IA
       </label>
-      {error && <p role="alert" className={styles.error}>{error}</p>}
+      {error && <p id={errorId} role="alert" className={styles.error}>{error}</p>}
     </fieldset>
   );
 }

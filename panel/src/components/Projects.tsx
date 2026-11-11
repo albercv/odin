@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
-import { Table, tableStyles } from '../ui/Table';
+import { Table, Td, Tr, tableStyles } from '../ui/Table';
 import { NameDialog } from './NameDialog';
 import { Notice } from './Notice';
 import { ProjectMembers, whoSees } from './ProjectMembers';
@@ -39,24 +39,25 @@ function ProjectRow(props: RowProps) {
   const show = (p: Panel) => setPanel(panel === p ? undefined : p);
   return (
     <>
-      <tr>
-        <td data-label="Proyecto">{project.name}</td>
-        <td data-label="Quién lo ve">{whoSees(project)}</td>
-        <td className={tableStyles.actions}><ProjectActions {...props} panel={panel} show={show} /></td>
-      </tr>
+      <Tr>
+        <Td label="Proyecto">{project.name}</Td>
+        <Td label="Quién lo ve">{whoSees(project)}</Td>
+        <Td className={tableStyles.actions}><ProjectActions {...props} panel={panel} show={show} /></Td>
+      </Tr>
       {panel && (
-        <tr className={tableStyles.panelRow}>
-          <td colSpan={3}>{panel === 'rename'
+        <Tr className={tableStyles.panelRow}>
+          <Td colSpan={3}>{panel === 'rename'
             ? <RenameForm name={project.name} label="Nombre" onSave={(name) => api.updateProject(companyId, project.id, { name })} onSaved={() => { setPanel(undefined); onChanged(); }} onCancel={() => setPanel(undefined)} />
-            : <ProjectMembers companyId={companyId} project={project} onChanged={onChanged} />}</td>
-        </tr>
+            : <ProjectMembers companyId={companyId} project={project} onChanged={onChanged} />}</Td>
+        </Tr>
       )}
     </>
   );
 }
 
-export function Projects({ companyId }: { companyId: string }) {
-  const list = useLoad(() => api.projects(companyId), [companyId]);
+/** `version` changes when something elsewhere (a person's accesses, a removal) altered the project members. */
+export function Projects({ companyId, version = 0 }: { companyId: string; version?: number }) {
+  const list = useLoad(() => api.projects(companyId), [companyId, version]);
   const [adding, setAdding] = useState(false);
   return (
     <Section title="Proyectos" description="Un proyecto nuevo nace cerrado: solo lo ven sus miembros." actions={<Button icon="plus" onClick={() => setAdding(true)}>Nuevo proyecto</Button>}>

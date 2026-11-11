@@ -196,7 +196,7 @@ public class TestWiring {
     }
 
     @Bean DeleteUser deleteUser() {
-        return new DeleteUser(users, memberships, adminSessions(), clock);
+        return new DeleteUser(users, memberships, projectMembers, adminSessions(), clock);
     }
 
     @Bean IssueAccessKey issueAccessKey() {

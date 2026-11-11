@@ -37,7 +37,7 @@ class ListProjectsTest {
     }
 
     @Test
-    void eachProjectCarriesItsMemberCountAndNeverOtherCompaniesMembers() {
+    void eachProjectCarriesItsMemberCount() {
         InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(organizations);
         var obra = Fixtures.project(organizations, company);
         Fixtures.project(organizations, company);

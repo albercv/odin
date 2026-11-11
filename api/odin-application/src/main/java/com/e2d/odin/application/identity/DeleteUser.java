@@ -2,6 +2,7 @@ package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.MembershipRepository;
+import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.identity.Actor;
@@ -16,12 +17,15 @@ public class DeleteUser {
 
     private final UserRepository users;
     private final MembershipRepository memberships;
+    private final ProjectMemberRepository projectMembers;
     private final AdminSessions sessions;
     private final Clock clock;
 
-    public DeleteUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions, Clock clock) {
+    public DeleteUser(UserRepository users, MembershipRepository memberships, ProjectMemberRepository projectMembers,
+            AdminSessions sessions, Clock clock) {
         this.users = users;
         this.memberships = memberships;
+        this.projectMembers = projectMembers;
         this.sessions = sessions;
         this.clock = clock;
     }
@@ -33,7 +37,10 @@ public class DeleteUser {
             throw new ValidationException("No puedes borrarte a ti mismo");
         }
         Instant now = clock.instant();
-        memberships.listByUser(id).forEach(m -> memberships.delete(id, m.companyId(), now));
+        memberships.listByUser(id).forEach(m -> {
+            projectMembers.removeAllOf(m.companyId(), id);
+            memberships.delete(id, m.companyId(), now);
+        });
         users.delete(id, now);
         sessions.closeAllOf(id);
     }

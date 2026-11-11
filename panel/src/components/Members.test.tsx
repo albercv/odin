@@ -9,15 +9,15 @@ type Me = Parameters<typeof Members>[0]['me'];
 
 afterEach(() => vi.restoreAllMocks());
 
-const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], active: true };
-const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test' };
+const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], active: true, hasPassword: false };
+const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test', hasPassword: true };
 const list = 'GET /v1/admin/companies/c1/members';
 const groupAdmin: Me = { userId: 'g', displayName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
 const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
 
-const show = (routes: Routes, me: Me = groupAdmin) => {
+const show = (routes: Routes, me: Me = groupAdmin, onProjectsChanged?: () => void) => {
   const calls = mockFetch(routes);
-  renderWithProviders(<Members companyId="c1" me={me} />);
+  renderWithProviders(<Members companyId="c1" me={me} onProjectsChanged={onProjectsChanged} />);
   return calls;
 };
 const rowOf = async (name: string) =>
@@ -61,6 +61,13 @@ test('rowButtonsShowShortTextAndNameTheTarget', async () => {
   expect(screen.getByRole('button', { name: 'Restablecer contraseña de Dani Sol' })).toHaveTextContent(/^Restablecer contraseña$/);
 });
 
+test('inlineFormButtonsShowShortTextAndNameTheTarget', async () => {
+  show({ [list]: () => [ana] });
+  await act('Ana', 'Editar Ana');
+  expect(screen.getByRole('button', { name: 'Guardar Ana' })).toHaveTextContent(/^Guardar$/);
+  expect(screen.getByRole('button', { name: 'Cancelar Ana' })).toHaveTextContent(/^Cancelar$/);
+});
+
 test('cellsCarryTheirColumnLabelForNarrowScreens', async () => {
   show({ [list]: () => [gil] });
   const row = await rowOf('Cora Gil');
@@ -74,14 +81,52 @@ test('missingLastNameIsFlagged', async () => {
   expect(await rowOf('Cora Gil')).not.toHaveTextContent('Faltan apellidos');
 });
 
+const patchMember = 'PATCH /v1/admin/companies/c1/members/u1';
+
 test('changesRoles', async () => {
-  const calls = show({ [list]: () => [ana], 'PATCH /v1/admin/companies/c1/members/u1': () => ana });
+  const calls = show({ [list]: () => [ana], [patchMember]: () => ana });
   await act('Ana', 'Papeles de Ana');
   expect(screen.getByLabelText('Trabaja con su IA')).toBeChecked();
+  expect(screen.queryByLabelText('Contraseña')).toBeNull();
   await userEvent.click(screen.getByLabelText('Administra la empresa'));
+  const password = screen.getByLabelText('Contraseña');
+  expect(password).toBeRequired();
+  expect(password).toHaveAttribute('minlength', '12');
+  await userEvent.type(password, 'una-clave-larga-1');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar papeles de Ana' }));
-  await waitFor(() =>
-    expect(calls.find((c) => c.key === 'PATCH /v1/admin/companies/c1/members/u1')?.body).toEqual({ roles: ['COMPANY_ADMIN', 'WORKER'] }));
+  await waitFor(() => expect(calls.find((c) => c.key === patchMember)?.body).toEqual({ roles: ['COMPANY_ADMIN', 'WORKER'], password: 'una-clave-larga-1' }));
+});
+
+test('promotingAPersonWhoAlreadyHasAPasswordSendsOnlyTheRoles', async () => {
+  const withPassword = { ...ana, hasPassword: true };
+  const calls = show({ [list]: () => [withPassword], [patchMember]: () => withPassword });
+  await act('Ana', 'Papeles de Ana');
+  await userEvent.click(screen.getByLabelText('Administra la empresa'));
+  expect(screen.queryByLabelText('Contraseña')).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar papeles de Ana' }));
+  await waitFor(() => expect(calls.find((c) => c.key === patchMember)?.body).toEqual({ roles: ['COMPANY_ADMIN', 'WORKER'] }));
+});
+
+test('changingOnlyTheWorkerRoleNeverAsksForAPassword', async () => {
+  const calls = show({ [list]: () => [ana], [patchMember]: () => ana });
+  await act('Ana', 'Papeles de Ana');
+  await userEvent.click(screen.getByLabelText('Trabaja con su IA'));
+  await userEvent.click(screen.getByLabelText('Administra la empresa'));
+  await userEvent.click(screen.getByLabelText('Administra la empresa'));
+  expect(screen.queryByLabelText('Contraseña')).toBeNull();
+  await userEvent.click(screen.getByLabelText('Trabaja con su IA'));
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar papeles de Ana' }));
+  await waitFor(() => expect(calls.find((c) => c.key === patchMember)?.body).toEqual({ roles: ['WORKER'] }));
+});
+
+test('noRoleErrorIsLinkedToTheCheckboxes', async () => {
+  show({ [list]: () => [ana] });
+  await act('Ana', 'Papeles de Ana');
+  await userEvent.click(screen.getByLabelText('Trabaja con su IA'));
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar papeles de Ana' }));
+  const alert = await screen.findByRole('alert');
+  expect(screen.getByRole('group', { name: 'Papeles' })).toHaveAccessibleDescription(alert.textContent!);
+  expect(screen.getByLabelText('Trabaja con su IA')).toBeInvalid();
 });
 
 test('companyAdminOnlyChangesTheWorkerRole', async () => {
@@ -169,6 +214,17 @@ test('removeAsksForConfirmation', async () => {
   expect(calls.some((c) => c.key === 'DELETE /v1/admin/companies/c1/members/u1')).toBe(true);
 });
 
+test('removingAPersonAnnouncesItAndKeepsTheFocusInTheList', async () => {
+  let users = [ana, gil];
+  const onProjectsChanged = vi.fn();
+  show({ [list]: () => users, 'DELETE /v1/admin/companies/c1/members/u1': () => { users = [gil]; return { status: 204 }; } }, groupAdmin, onProjectsChanged);
+  await act('Ana', 'Quitar Ana');
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar' }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Se ha quitado a Ana de esta empresa'));
+  await waitFor(() => expect(screen.getByRole('region', { name: 'Lista de personas' })).toHaveFocus());
+  expect(onProjectsChanged).toHaveBeenCalled();
+});
+
 test('issuedKeyOnlyClosesWithEntendido', async () => {
   show({
     [list]: () => [ana],
@@ -236,6 +292,45 @@ test('accessesListAddAndRemoveProjects', async () => {
   await waitFor(() => expect(calls.some((c) => c.key === 'PUT /v1/admin/companies/c1/projects/p2/members/u1')).toBe(true));
   await userEvent.click(within(panel).getByRole('button', { name: 'Quitar Obra' }));
   await waitFor(() => expect(calls.some((c) => c.key === 'DELETE /v1/admin/companies/c1/projects/p1/members/u1')).toBe(true));
+});
+
+test('accessesAnnounceChangesKeepFocusAndRefreshTheProjects', async () => {
+  const onProjectsChanged = vi.fn();
+  show({
+    [list]: () => [ana],
+    'GET /v1/admin/companies/c1/members/u1/projects': () => [obra],
+    [projectList]: () => [obra, reforma],
+    'PUT /v1/admin/companies/c1/projects/p2/members/u1': () => ({ status: 204 }),
+    'DELETE /v1/admin/companies/c1/projects/p1/members/u1': () => ({ status: 204 }),
+  }, groupAdmin, onProjectsChanged);
+  await act('Ana', 'Accesos de Ana');
+  const panel = await screen.findByRole('region', { name: 'Accesos de Ana' });
+  await userEvent.click(await within(panel).findByRole('button', { name: 'Quitar Obra' }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Quitado Obra'));
+  expect(within(panel).getByRole('list', { name: 'Proyectos asignados' })).toHaveFocus();
+  await userEvent.selectOptions(within(panel).getByLabelText('Proyecto'), 'Reforma');
+  await userEvent.click(within(panel).getByRole('button', { name: 'Añadir' }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Añadido Reforma'));
+  expect(onProjectsChanged).toHaveBeenCalledTimes(2);
+});
+
+test('aDeactivatedPersonCannotBeGivenProjects', async () => {
+  show({
+    [list]: () => [{ ...ana, active: false }],
+    'GET /v1/admin/companies/c1/members/u1/projects': () => [],
+    [projectList]: () => [obra],
+  });
+  await act('Ana', 'Accesos de Ana');
+  const panel = await screen.findByRole('region', { name: 'Accesos de Ana' });
+  expect(within(panel).getByText('Está desactivada: no se le pueden añadir proyectos.')).toBeInTheDocument();
+  expect(within(panel).queryByRole('button', { name: 'Añadir' })).toBeNull();
+});
+
+test('personEmailsBreakOnlyAtAtOrDots', async () => {
+  show({ [list]: () => [ana] });
+  const row = await rowOf('Ana');
+  expect(row.querySelectorAll('wbr').length).toBeGreaterThan(0);
+  expect(row).toHaveTextContent('ana@acme.test');
 });
 
 test('resetPasswordOnlyForGroupAdminOnCompanyAdmins', async () => {

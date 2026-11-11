@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef } from 'react';
 import { api, type S } from '../api/client';
-import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
-import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
 import { RowAction } from '../ui/RowActions';
+import { useToast } from '../ui/Toast';
+import { AddPicker } from './AddPicker';
 import { Notice } from './Notice';
 import { useAction, useLoad } from './useLoad';
 import styles from './MemberAccesses.module.css';
@@ -26,10 +26,17 @@ type WithMembers = Props & { members: Person[]; reload: () => void };
 function VisibleToAll({ companyId, project, onChanged }: Props) {
   const { error, act } = useAction();
   const confirm = useConfirm();
+  // The list may have changed since the panel opened (e.g. from the person's «Accesos»), so ask again before deciding.
+  const freshMemberCount = async () => {
+    let count = 1;
+    await act(async () => { count = (await api.projectMembers(companyId, project.id)).length; });
+    return count;
+  };
   const change = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const restricted = !e.target.checked;
     const message = `¿Cerrar ${project.name}? Solo lo verán sus miembros, y ahora no tiene ninguno.`;
-    if (restricted && project.memberCount === 0 && !(await confirm({ message, confirmLabel: 'Cerrar' }))) return;
+    const closing = restricted && (await freshMemberCount()) === 0;
+    if (closing && !(await confirm({ message, confirmLabel: 'Cerrar' }))) return;
     if (await act(() => api.updateProject(companyId, project.id, { restricted }))) onChanged();
   };
   return (
@@ -42,27 +49,21 @@ function VisibleToAll({ companyId, project, onChanged }: Props) {
 
 function AddMember({ companyId, project, members, reload }: WithMembers) {
   const people = useLoad(() => api.members(companyId), [companyId]);
-  const [chosen, setChosen] = useState('');
   const { error, act } = useAction();
+  const toast = useToast();
   const taken = new Set(members.map((m) => m.userId));
   const free = people.data?.filter((p) => p.active && p.roles.includes('WORKER') && !taken.has(p.userId)) ?? [];
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!(await act(() => api.addProjectMember(companyId, project.id, chosen)))) return;
-    setChosen('');
+  const add = async (userId: string) => {
+    if (!(await act(() => api.addProjectMember(companyId, project.id, userId)))) return false;
+    toast(`Añadido ${free.find((p) => p.userId === userId)?.displayName}`);
     reload();
+    return true;
   };
   return (
-    <form className={styles.add} onSubmit={add}>
+    <>
       <Notice message={error ?? people.error} />
-      <Field label="Persona">
-        <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
-          <option value="">Elige una persona</option>
-          {free.map((p) => <option key={p.userId} value={p.userId}>{p.displayName}</option>)}
-        </select>
-      </Field>
-      <Button type="submit" disabled={!chosen}>Añadir</Button>
-    </form>
+      <AddPicker label="Persona" placeholder="Elige una persona" options={free.map((p) => ({ id: p.userId, name: p.displayName }))} onAdd={add} />
+    </>
   );
 }
 
@@ -70,18 +71,25 @@ function AddMember({ companyId, project, members, reload }: WithMembers) {
 export function ProjectMembers(props: Props) {
   const { companyId, project, onChanged } = props;
   const members = useLoad(() => api.projectMembers(companyId, project.id), [companyId, project.id]);
+  const list = useRef<HTMLUListElement>(null);
+  const toast = useToast();
   const { error, act } = useAction();
   const reload = () => { members.reload(); onChanged(); };
-  const remove = async (userId: string) => (await act(() => api.removeProjectMember(companyId, project.id, userId))) && reload();
+  const remove = async (m: Person) => {
+    if (!(await act(() => api.removeProjectMember(companyId, project.id, m.userId)))) return;
+    toast(`Quitado ${m.displayName}`);
+    reload();
+    list.current?.focus();
+  };
   return (
     <section aria-label={`Miembros de ${project.name}`} className={styles.accesses}>
       <VisibleToAll {...props} />
       <Notice message={error ?? members.error} />
-      <ul className={styles.list}>
+      <ul ref={list} tabIndex={-1} aria-label="Miembros del proyecto" className={styles.list}>
         {members.data?.map((m) => (
           <li key={m.userId} className={styles.item}>
             <span>{m.displayName}</span>
-            <RowAction variant="danger" text="Quitar" target={m.displayName} onClick={() => remove(m.userId)} />
+            <RowAction variant="danger" text="Quitar" target={m.displayName} onClick={() => remove(m)} />
           </li>
         ))}
       </ul>

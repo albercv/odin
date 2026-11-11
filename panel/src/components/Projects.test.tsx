@@ -39,6 +39,14 @@ test('rowButtonsShowShortTextAndNameTheTarget', async () => {
     expect(screen.getByRole('button', { name })).toHaveTextContent(new RegExp(`^${visible}$`)));
 });
 
+test('inlineRenameButtonsShowShortTextAndNameTheTarget', async () => {
+  show({ [list]: () => [obra] });
+  await actions('Obra');
+  await userEvent.click(screen.getByRole('button', { name: 'Renombrar Obra' }));
+  expect(screen.getByRole('button', { name: 'Guardar Obra' })).toHaveTextContent(/^Guardar$/);
+  expect(screen.getByRole('button', { name: 'Cancelar Obra' })).toHaveTextContent(/^Cancelar$/);
+});
+
 test('deleteAsksWithTheConfirmDialog', async () => {
   const calls = show({ [list]: () => [obra], [`DELETE ${one}`]: () => ({ status: 204 }) });
   await actions('Obra');
