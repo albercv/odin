@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
@@ -10,9 +10,9 @@ import { Notice } from './Notice';
 import { useAction } from './useLoad';
 import styles from './CardDetail.module.css';
 
-type Props = { card: S['CardView']; author: string; project: string; locked?: boolean; onResolved: () => void };
+type Props = { card: S['CardView']; author: string; project: string; locked?: boolean; focusTitle?: boolean; onResolved: () => void };
 
-function Facts({ card, author, project }: Omit<Props, 'onResolved' | 'locked'>) {
+function Facts({ card, author, project }: Omit<Props, 'onResolved' | 'locked' | 'focusTitle'>) {
   return (
     <dl className={styles.facts}>
       <div><dt>Proyecto</dt><dd>{project}</dd></div>
@@ -81,7 +81,9 @@ function useSend(cardId: string, locked: boolean, onResolved: () => void) {
   return { send, sending, error };
 }
 
-export function CardDetail({ card, author, project, locked = false, onResolved }: Props) {
+export function CardDetail({ card, author, project, locked = false, focusTitle = false, onResolved }: Props) {
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (focusTitle) title.current?.focus(); }, []);
   const [body, setBody] = useState(card.body);
   const { send, sending, error } = useSend(card.id, locked, onResolved);
   const changed = body.trim() !== card.body.trim();
@@ -91,7 +93,7 @@ export function CardDetail({ card, author, project, locked = false, onResolved }
         <StatusPill tone="pending">Pendiente de revisión</StatusPill>
         <span className={styles.origin}><Icon name="spark" />Ficha redactada por la IA de {author}</span>
       </div>
-      <h2>{card.title}</h2>
+      <h2 ref={title} tabIndex={-1}>{card.title}</h2>
       <Facts card={card} author={author} project={project} />
       <Notice message={error} />
       <Field label="Texto de la ficha"><textarea value={body} onChange={(e) => setBody(e.target.value)} /></Field>

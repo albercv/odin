@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type S } from '../api/client';
 import { CardDetail } from '../components/CardDetail';
 import { Notice } from '../components/Notice';
@@ -56,6 +56,9 @@ export function Review({ companyId, onPendingChanged }: { companyId: string; onP
   const members = useLoad(() => api.members(companyId), [companyId]);
   const projects = useLoad(() => api.projects(companyId), [companyId]);
   const { visible, current, leavingId, setSelected, resolve } = useResolvedCards(list.data, onPendingChanged);
+  const [resolved, setResolved] = useState(false);
+  const emptyHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (resolved && list.data && visible.length === 0) emptyHeading.current?.focus(); }, [resolved, visible.length]);
   const names = { members: members.data ?? [], projects: projects.data ?? [] };
   const loaded = list.data && members.data && projects.data;
   return (
@@ -63,13 +66,14 @@ export function Review({ companyId, onPendingChanged }: { companyId: string; onP
       <PageHeader title="Revisión de fichas"
         description="Las fichas que la gente guarda desde su IA esperan aquí. Cuando apruebas una, la IA de la empresa ya puede citarla." />
       <Notice message={list.error ?? members.error ?? projects.error} />
-      {visible.length === 0 && list.data && <EmptyState title="No hay fichas pendientes." description="Las nuevas aparecerán aquí cuando alguien guarde una desde su IA." />}
+      {visible.length === 0 && list.data && <EmptyState headingRef={emptyHeading} title="No hay fichas pendientes." description="Las nuevas aparecerán aquí cuando alguien guarde una desde su IA." />}
       {loaded && visible.length > 0 && current && (
         <div className={styles.review}>
-          <Queue cards={visible} names={names} selectedId={current.id} leavingId={leavingId} onSelect={setSelected} />
+          <Queue cards={visible} names={names} selectedId={current.id} leavingId={leavingId} onSelect={(id) => { setResolved(false); setSelected(id); }} />
           <section className={styles.panel} aria-label="Ficha seleccionada" aria-live="polite">
             <CardDetail key={current.id} card={current} author={authorName(current.authorId, names.members)}
-              project={projectName(current.projectId, names.projects)} locked={leavingId !== undefined} onResolved={() => resolve(current.id)} />
+              project={projectName(current.projectId, names.projects)} locked={leavingId !== undefined} focusTitle={resolved}
+              onResolved={() => { setResolved(true); resolve(current.id); }} />
           </section>
         </div>
       )}
