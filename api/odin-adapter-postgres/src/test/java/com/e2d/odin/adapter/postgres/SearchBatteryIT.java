@@ -14,6 +14,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -69,7 +70,7 @@ class SearchBatteryIT extends AbstractPostgresIT {
                 : List.of(question);
         Optional<ProjectId> project = COMMUNITIES.entrySet().stream().filter(e -> question.contains(e.getKey()))
                 .findFirst().map(e -> projectByFolder.get(e.getValue()));
-        List<SearchHit> hits = search.search(new SearchQuery(terms, CompanyScope.of(company), project, 5)).hits();
+        List<SearchHit> hits = search.search(new SearchQuery(terms, CompanyScope.of(company), ProjectVisibility.all(), project, 5)).hits();
         List<String> expected = expectedPages(item);
         return hits.stream().anyMatch(h -> expected.contains(h.title() + "#" + h.pageNumber().orElse(0)));
     }
@@ -102,7 +103,7 @@ class SearchBatteryIT extends AbstractPostgresIT {
         UserId uploader = newUser(company);
         for (Map.Entry<String, String> community : COMMUNITIES.entrySet()) {
             ProjectId project = new ProjectId(UUID.randomUUID());
-            orgs.saveProject(new Project(project, company, community.getKey()));
+            orgs.saveProject(new Project(project, company, community.getKey(), true));
             projectByFolder.put(community.getValue(), project);
             try (var files = Files.list(DIR.resolve("corpus-limpio").resolve(community.getValue()))) {
                 for (Path file : files.sorted().toList()) {

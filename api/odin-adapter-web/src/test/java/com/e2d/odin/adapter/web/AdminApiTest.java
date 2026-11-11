@@ -341,4 +341,78 @@ class AdminApiTest extends WebTestSupport {
                 .file(new MockMultipartFile("file", "manual.pdf", "application/pdf", bytes))
                 .param("title", "Manual").cookie(admin);
     }
+
+    @Test
+    void newProjectIsClosedAndPatchTogglesCompanyWide() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String id = createProject(admin, company, "Obra");
+        String url = "/v1/admin/companies/" + company.value() + "/projects/" + id;
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/projects").cookie(admin))
+                .andExpect(jsonPath("$[0].restricted").value(true));
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"restricted\":false}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.restricted").value(false)).andExpect(jsonPath("$.name").value("Obra"));
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"restricted\":true,\"name\":\"Reforma\"}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.restricted").value(true)).andExpect(jsonPath("$.name").value("Reforma"));
+    }
+
+    @Test
+    void projectMemberRoutes() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String project = createProject(admin, company, "Obra");
+        UserId worker = workerId(company);
+        String members = "/v1/admin/companies/" + company.value() + "/projects/" + project + "/members";
+        mvc.perform(get(members).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(put(members + "/" + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(put(members + "/" + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(members).cookie(admin)).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].userId").value(worker.value().toString()))
+                .andExpect(jsonPath("$[0].displayName").value("Wilma"));
+        mvc.perform(delete(members + "/" + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(members).cookie(admin)).andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    void onlyWorkersCanBeProjectMembers() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String project = createProject(admin, company, "Obra");
+        mvc.perform(put("/v1/admin/companies/" + company.value() + "/projects/" + project + "/members/"
+                + UUID.randomUUID()).cookie(admin)).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Solo un trabajador de la empresa puede ser miembro"));
+    }
+
+    @Test
+    void memberProjectsListsTheProjectsThePersonBelongsTo() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String obra = createProject(admin, company, "Obra");
+        createProject(admin, company, "Otra");
+        UserId worker = workerId(company);
+        mvc.perform(put("/v1/admin/companies/" + company.value() + "/projects/" + obra + "/members/"
+                + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/members/" + worker.value() + "/projects")
+                .cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(obra)).andExpect(jsonPath("$[0].restricted").value(true));
+    }
+
+    @Test
+    void addMemberAcceptsProjectIds() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String obra = createProject(admin, company, "Obra");
+        String url = "/v1/admin/companies/" + company.value() + "/members";
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content(
+                "{\"displayName\":\"Pepa\",\"roles\":[\"WORKER\"],\"projectIds\":[\"" + obra + "\"]}"))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/projects/" + obra + "/members").cookie(admin))
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].displayName").value("Pepa"));
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content(
+                "{\"displayName\":\"Pepe\",\"roles\":[\"WORKER\"],\"projectIds\":[\"" + UUID.randomUUID()
+                        + "\"]}")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Proyecto no encontrado"));
+    }
 }

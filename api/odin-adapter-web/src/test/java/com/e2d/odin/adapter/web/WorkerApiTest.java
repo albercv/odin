@@ -90,7 +90,7 @@ class WorkerApiTest extends WebTestSupport {
     @Test
     void meListsCompanyAndProjects() throws Exception {
         CompanyId company = newCompany();
-        Fixtures.project(w.orgs, company);
+        Fixtures.companyWideProject(w.orgs, company);
         mvc.perform(get("/v1/me").header(AUTH, workerKey(company))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.company.id").value(company.value().toString()))
                 .andExpect(jsonPath("$.projects", hasSize(1)));
@@ -131,5 +131,23 @@ class WorkerApiTest extends WebTestSupport {
                 .content("{\"title\":\"Truco\",\"body\":\"Se hace así\"}")).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNotEmpty()).andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.message").value("Ficha guardada; queda pendiente de revisión."));
+    }
+
+    @Test
+    void filterByUnassignedProjectIs404() throws Exception {
+        CompanyId company = newCompany();
+        String key = workerKey(company);
+        var project = Fixtures.project(w.orgs, company);
+        mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"vacaciones\"],\"projectId\":\"" + project.value() + "\"}"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("Proyecto no encontrado"));
+        mvc.perform(get("/v1/documents?projectId=" + project.value()).header(AUTH, key))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("Proyecto no encontrado"));
+        mvc.perform(get("/v1/me").header(AUTH, key)).andExpect(jsonPath("$.projects", hasSize(0)));
+
+        w.projectMembers.add(project, w.memberships.listByCompany(company).get(0).userId());
+        mvc.perform(get("/v1/documents?projectId=" + project.value()).header(AUTH, key))
+                .andExpect(status().isOk());
+        mvc.perform(get("/v1/me").header(AUTH, key)).andExpect(jsonPath("$.projects", hasSize(1)));
     }
 }

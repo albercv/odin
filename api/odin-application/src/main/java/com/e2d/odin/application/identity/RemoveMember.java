@@ -3,6 +3,7 @@ package com.e2d.odin.application.identity;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.MembershipRepository;
+import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
@@ -20,13 +21,15 @@ public class RemoveMember {
 
     private final MembershipRepository memberships;
     private final AccessKeyRepository keys;
+    private final ProjectMemberRepository projectMembers;
     private final AdminSessions sessions;
     private final Clock clock;
 
-    public RemoveMember(MembershipRepository memberships, AccessKeyRepository keys, AdminSessions sessions,
-            Clock clock) {
+    public RemoveMember(MembershipRepository memberships, AccessKeyRepository keys,
+            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock) {
         this.memberships = memberships;
         this.keys = keys;
+        this.projectMembers = projectMembers;
         this.sessions = sessions;
         this.clock = clock;
     }
@@ -43,6 +46,7 @@ public class RemoveMember {
         Instant now = clock.instant();
         keys.listByMembership(userId, companyId).stream().filter(key -> key.revokedAt().isEmpty())
                 .forEach(key -> keys.save(key.revoked(now)));
+        projectMembers.removeAllOf(companyId, userId);
         memberships.delete(userId, companyId, now);
         UserAdministration.closeSessionsIfNoLongerAdministering(memberships, sessions, userId);
     }

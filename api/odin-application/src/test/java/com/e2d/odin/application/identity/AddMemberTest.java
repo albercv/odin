@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
@@ -18,9 +20,12 @@ import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -33,9 +38,10 @@ class AddMemberTest {
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(organizations);
     private final FakePasswordHasher passwords = new FakePasswordHasher();
-    private final AddMember add = new AddMember(users, memberships, organizations, passwords,
-            new SequenceIdGenerator());
+    private final AddMember add = new AddMember(users, memberships, organizations, projectMembers,
+            passwords, new SequenceIdGenerator());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final Actor groupAdmin = Actors.groupAdmin();
@@ -46,7 +52,7 @@ class AddMemberTest {
     }
 
     private static NewMember member(String email, Set<Role> roles, String password) {
-        return new NewMember("Pepe", Optional.ofNullable(email), roles, Optional.ofNullable(password));
+        return new NewMember("Pepe", Optional.ofNullable(email), roles, Optional.ofNullable(password), Set.of());
     }
 
     private User existingAdminOfOtherCompany() {
@@ -57,7 +63,7 @@ class AddMemberTest {
     @Test
     void newPersonGetsUserAndMembership() {
         MemberAdded added = add.execute(Actors.companyAdmin(company), company,
-                new NewMember("Wanda", Optional.of(" W@Demo.test "), Set.of(Role.WORKER), Optional.empty()));
+                new NewMember("Wanda", Optional.of(" W@Demo.test "), Set.of(Role.WORKER), Optional.empty(), Set.of()));
 
         assertThat(added.alreadyExisted()).isFalse();
         assertThat(added.user().displayName()).isEqualTo("Wanda");
@@ -75,7 +81,7 @@ class AddMemberTest {
 
         MemberAdded added = add.execute(groupAdmin, company,
                 new NewMember("Otro nombre", Optional.of("C@demo.test"), Set.of(Role.COMPANY_ADMIN),
-                        Optional.of("otra-clave-1234")));
+                        Optional.of("otra-clave-1234"), Set.of()));
 
         assertThat(added.alreadyExisted()).isTrue();
         assertThat(added.user()).isEqualTo(carlos);
@@ -177,5 +183,60 @@ class AddMemberTest {
     void groupAdminRoleIsRejected() {
         assertThatThrownBy(() -> add.execute(groupAdmin, company, member(null, Set.of(Role.GROUP_ADMIN), null)))
                 .isInstanceOf(ValidationException.class);
+    }
+
+    private static NewMember worker(String email, Set<ProjectId> projectIds) {
+        return new NewMember("Wanda", Optional.of(email), Set.of(Role.WORKER), Optional.empty(), projectIds);
+    }
+
+    @Test
+    void addsProjectsOnCreation() {
+        ProjectId obra = Fixtures.project(organizations, company);
+        ProjectId reforma = Fixtures.project(organizations, company);
+
+        MemberAdded added = add.execute(Actors.companyAdmin(company), company,
+                worker("w@demo.test", Set.of(obra, reforma)));
+
+        assertThat(projectMembers.projectsOf(company, added.user().id())).containsExactlyInAnyOrder(obra, reforma);
+    }
+
+    @Test
+    void addsProjectsToAPersonWhoAlreadyExistedInTheGroup() {
+        existingAdminOfOtherCompany();
+        ProjectId obra = Fixtures.project(organizations, company);
+
+        MemberAdded added = add.execute(Actors.companyAdmin(company), company,
+                worker("c@demo.test", Set.of(obra)));
+
+        assertThat(added.alreadyExisted()).isTrue();
+        assertThat(projectMembers.projectsOf(company, added.user().id())).containsExactly(obra);
+    }
+
+    @Test
+    void projectOfAnotherCompanyIsRejectedAndNothingIsSaved() {
+        ProjectId ofOther = Fixtures.project(organizations, other);
+        ProjectId deleted = Fixtures.project(organizations, company);
+        organizations.deleteProject(company, deleted, Fixtures.NOW);
+
+        for (ProjectId project : List.of(ofOther, deleted, new ProjectId(UUID.randomUUID()))) {
+            assertThatThrownBy(() -> add.execute(Actors.companyAdmin(company), company,
+                    worker("w@demo.test", Set.of(project))))
+                    .isInstanceOf(NotFoundException.class).hasMessage("Proyecto no encontrado");
+        }
+        assertThat(users.findByEmail("w@demo.test")).isEmpty();
+        assertThat(memberships.listByCompany(company)).isEmpty();
+        assertThat(projectMembers.listMembers(ofOther)).isEmpty();
+    }
+
+    @Test
+    void projectsOnlyForWorkers() {
+        ProjectId obra = Fixtures.project(organizations, company);
+
+        assertThatThrownBy(() -> add.execute(groupAdmin, company, new NewMember("Carlos",
+                Optional.of("c2@demo.test"), Set.of(Role.COMPANY_ADMIN), Optional.of(PASSWORD), Set.of(obra))))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("Solo un trabajador de la empresa puede ser miembro");
+        assertThat(users.findByEmail("c2@demo.test")).isEmpty();
+        assertThat(projectMembers.listMembers(obra)).isEmpty();
     }
 }

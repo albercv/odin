@@ -65,11 +65,11 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
     void projectsAreScopedToTheirCompany() {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
-        Project p1 = new Project(new ProjectId(UUID.randomUUID()), a, "P1");
-        Project p2 = new Project(new ProjectId(UUID.randomUUID()), a, "P2");
+        Project p1 = new Project(new ProjectId(UUID.randomUUID()), a, "P1", true);
+        Project p2 = new Project(new ProjectId(UUID.randomUUID()), a, "P2", true);
         orgs.saveProject(p1);
         orgs.saveProject(p2);
-        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), b, "Otro"));
+        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), b, "Otro", true));
         assertThat(orgs.listProjects(a)).containsExactly(p1, p2);
         assertThat(orgs.findProject(a, p1.id())).contains(p1);
         assertThat(orgs.findProject(b, p1.id())).isEmpty();
@@ -78,8 +78,8 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
     @Test
     void deletedProjectIsExcludedFromReads() {
         CompanyId a = newCompany();
-        Project p1 = new Project(new ProjectId(UUID.randomUUID()), a, "P1");
-        Project p2 = new Project(new ProjectId(UUID.randomUUID()), a, "P2");
+        Project p1 = new Project(new ProjectId(UUID.randomUUID()), a, "P1", true);
+        Project p2 = new Project(new ProjectId(UUID.randomUUID()), a, "P2", true);
         orgs.saveProject(p1);
         orgs.saveProject(p2);
 
@@ -93,14 +93,14 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
     void uniqueNameIndexIgnoresDeletedProjects() {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
-        Project first = new Project(new ProjectId(UUID.randomUUID()), a, "Obra");
+        Project first = new Project(new ProjectId(UUID.randomUUID()), a, "Obra", true);
         orgs.saveProject(first);
 
-        assertThatThrownBy(() -> orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), a, "OBRA")))
+        assertThatThrownBy(() -> orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), a, "OBRA", true)))
                 .isInstanceOf(ConflictException.class);
-        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), b, "Obra"));
+        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), b, "Obra", true));
         orgs.deleteProject(a, first.id(), NOW);
-        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), a, "Obra"));
+        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), a, "Obra", true));
 
         assertThat(orgs.listProjects(a)).extracting(Project::name).containsExactly("Obra");
     }

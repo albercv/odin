@@ -10,9 +10,12 @@ import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -31,9 +34,9 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
         KnowledgeCard c = card(a, newUser(a), "Ficha");
-        assertThat(cards.findById(CompanyScope.of(a), c.id())).contains(c);
-        assertThat(cards.findById(CompanyScope.all(), c.id())).contains(c);
-        assertThat(cards.findById(CompanyScope.of(b), c.id())).isEmpty();
+        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(c);
+        assertThat(cards.findById(CompanyScope.all(), ProjectVisibility.all(), c.id())).contains(c);
+        assertThat(cards.findById(CompanyScope.of(b), ProjectVisibility.all(), c.id())).isEmpty();
     }
 
     @Test
@@ -44,10 +47,10 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CardReview review = new CardReview(reviewer, ReviewDecision.CORRECT, NOW.plusSeconds(5), Optional.of("nota"));
         KnowledgeCard corrected = c.correct("Cuerpo corregido", review);
         cards.save(corrected);
-        assertThat(cards.findById(CompanyScope.of(a), c.id())).contains(corrected);
+        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(corrected);
         KnowledgeCard noNote = c.approve(new CardReview(reviewer, ReviewDecision.APPROVE, NOW, Optional.empty()));
         cards.save(noNote);
-        assertThat(cards.findById(CompanyScope.of(a), c.id())).contains(noNote);
+        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(noNote);
     }
 
     @Test
@@ -61,10 +64,10 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         KnowledgeCard approved = card(a, ua, "Aprobada")
                 .approve(new CardReview(ua, ReviewDecision.APPROVE, NOW, Optional.empty()));
         cards.save(approved);
-        assertThat(cards.listByStatus(CompanyScope.of(a), CardStatus.PENDING)).containsExactly(one, two);
-        assertThat(cards.listByStatus(CompanyScope.of(a), CardStatus.APPROVED)).containsExactly(approved);
-        assertThat(cards.listByStatus(CompanyScope.of(b), CardStatus.APPROVED)).isEmpty();
-        assertThat(cards.listByStatus(CompanyScope.all(), CardStatus.PENDING)).hasSize(3);
+        assertThat(cards.listByStatus(CompanyScope.of(a), ProjectVisibility.all(), CardStatus.PENDING)).containsExactly(one, two);
+        assertThat(cards.listByStatus(CompanyScope.of(a), ProjectVisibility.all(), CardStatus.APPROVED)).containsExactly(approved);
+        assertThat(cards.listByStatus(CompanyScope.of(b), ProjectVisibility.all(), CardStatus.APPROVED)).isEmpty();
+        assertThat(cards.listByStatus(CompanyScope.all(), ProjectVisibility.all(), CardStatus.PENDING)).hasSize(3);
     }
 
     @Test
@@ -87,5 +90,35 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
     private List<Integer> hitCounts() {
         return tx.inScope(CompanyScope.all(), (JdbcClient jdbc) -> jdbc.sql("SELECT hit_count FROM question_record")
                 .query(Integer.class).list());
+    }
+
+    @Test
+    void filtersByVisibleProjects() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        ProjectId visible = newProject(a, "Visible");
+        ProjectId hidden = newProject(a, "Oculto");
+        KnowledgeCard free = card(a, ua, "Libre");
+        KnowledgeCard inVisible = cardIn(a, ua, visible, "En visible");
+        KnowledgeCard inHidden = cardIn(a, ua, hidden, "En oculta");
+        ProjectVisibility some = ProjectVisibility.of(Set.of(visible));
+        CompanyScope scope = CompanyScope.of(a);
+
+        assertThat(cards.listByStatus(scope, some, CardStatus.PENDING)).containsExactly(free, inVisible);
+        assertThat(cards.listByStatus(scope, ProjectVisibility.of(Set.of()), CardStatus.PENDING))
+                .containsExactly(free);
+        assertThat(cards.listByStatus(scope, ProjectVisibility.all(), CardStatus.PENDING))
+                .containsExactly(free, inVisible, inHidden);
+        assertThat(cards.findById(scope, some, inHidden.id())).isEmpty();
+        assertThat(cards.findById(scope, some, inVisible.id())).contains(inVisible);
+        assertThat(cards.findById(scope, some, free.id())).contains(free);
+        assertThat(cards.findById(scope, ProjectVisibility.all(), inHidden.id())).contains(inHidden);
+    }
+
+    private KnowledgeCard cardIn(CompanyId company, UserId author, ProjectId project, String title) {
+        KnowledgeCard c = new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.of(project), title,
+                "Cuerpo", Optional.empty(), author, NOW, CardStatus.PENDING, Optional.empty());
+        cards.save(c);
+        return c;
     }
 }

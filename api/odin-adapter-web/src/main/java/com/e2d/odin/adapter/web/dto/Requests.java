@@ -25,7 +25,13 @@ public final class Requests {
     public record Capabilities(Set<Capability> capabilities) {
     }
 
-    public record AddMember(String displayName, String email, Set<Role> roles, String password) {
+    public record AddMember(String displayName, String email, Set<Role> roles, String password,
+            Set<UUID> projectIds) {
+    }
+
+    public record UpdateProject(String name,
+            @Schema(description = "Verdadero: solo lo ven sus miembros. Falso: visible para toda la empresa.")
+            Boolean restricted) {
     }
 
     public record UpdateMember(Set<Role> roles, Boolean active, String password) {

@@ -113,4 +113,35 @@ class IsolationTest extends WebTestSupport {
         mvc.perform(delete("/v1/admin/companies/" + b.value() + "/projects/" + id).cookie(other))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void otherCompanyAdminCannotManageProjectMembers() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String project = Fixtures.project(w.orgs, a).value().toString();
+        UserId worker = workerId(a);
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        String inA = "/v1/admin/companies/" + a.value() + "/projects/" + project + "/members";
+        String inB = "/v1/admin/companies/" + b.value() + "/projects/" + project + "/members";
+        mvc.perform(get(inA).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(put(inA + "/" + worker.value()).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(delete(inA + "/" + worker.value()).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(inB).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(put(inB + "/" + worker.value()).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(delete(inB + "/" + worker.value()).cookie(other)).andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.projectMembers.listMembers(
+                new com.e2d.odin.domain.shared.ProjectId(java.util.UUID.fromString(project)))).isEmpty();
+    }
+
+    @Test
+    void otherCompanyAdminCannotListMemberProjects() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId worker = workerId(a);
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        mvc.perform(get("/v1/admin/companies/" + a.value() + "/members/" + worker.value() + "/projects")
+                .cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/members/" + worker.value() + "/projects")
+                .cookie(other)).andExpect(status().isNotFound());
+    }
 }

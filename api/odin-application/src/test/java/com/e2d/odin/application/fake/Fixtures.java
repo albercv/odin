@@ -4,6 +4,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
@@ -37,9 +38,36 @@ public final class Fixtures {
         return id;
     }
 
+    /** Un proyecto cerrado, como nace: solo lo ven sus miembros. */
     public static ProjectId project(InMemoryOrganizationRepository orgs, CompanyId company) {
+        return project(orgs, company, true);
+    }
+
+    public static ProjectId companyWideProject(InMemoryOrganizationRepository orgs, CompanyId company) {
+        return project(orgs, company, false);
+    }
+
+    private static ProjectId project(InMemoryOrganizationRepository orgs, CompanyId company, boolean restricted) {
         ProjectId id = new ProjectId(UUID.randomUUID());
-        orgs.saveProject(new Project(id, company, "Proyecto"));
+        orgs.saveProject(new Project(id, company, "Proyecto", restricted));
+        return id;
+    }
+
+    public static Document documentIn(InMemoryDocumentRepository docs, CompanyId company, ProjectId project,
+            String pageText) {
+        Document d = readyDocument(docs, company, pageText);
+        Document inProject = new Document(d.id(), company, Optional.of(project), d.title(), d.filename(), d.format(),
+                d.sha256(), d.status(), d.failureReason(), d.paginated(), d.uploadedBy(), d.uploadedAt(),
+                d.processingStartedAt(), d.attemptCount());
+        docs.save(inProject);
+        return inProject;
+    }
+
+    /** Una persona con su pertenencia (activa o no) a una empresa, guardada en los dobles en memoria. */
+    public static UserId person(InMemoryUserRepository users, InMemoryMembershipRepository memberships, String name,
+            Role role, CompanyId company, boolean active) {
+        UserId id = new UserId(UUID.randomUUID());
+        People.member(users, memberships, id, name, Optional.empty(), role, company, active, Optional.empty());
         return id;
     }
 

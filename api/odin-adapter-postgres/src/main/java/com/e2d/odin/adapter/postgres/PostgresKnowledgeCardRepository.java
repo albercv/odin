@@ -9,6 +9,7 @@ import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -49,18 +50,19 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
     }
 
     @Override
-    public Optional<KnowledgeCard> findById(CompanyScope scope, CardId id) {
-        String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE id = :id AND " + Sql.inScope("company_id");
-        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("id", id.value())
-                .query((rs, n) -> card(rs)).optional());
+    public Optional<KnowledgeCard> findById(CompanyScope scope, ProjectVisibility visibility, CardId id) {
+        String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE id = :id AND " + Sql.inScope("company_id")
+                + " AND " + Sql.inVisibleProjects("project_id");
+        return tx.inScope(scope, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("id", id.value()).query((rs, n) -> card(rs)).optional());
     }
 
     @Override
-    public List<KnowledgeCard> listByStatus(CompanyScope scope, CardStatus status) {
+    public List<KnowledgeCard> listByStatus(CompanyScope scope, ProjectVisibility visibility, CardStatus status) {
         String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE status = :status AND "
-                + Sql.inScope("company_id") + " ORDER BY seq";
-        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("status", status.name())
-                .query((rs, n) -> card(rs)).list());
+                + Sql.inScope("company_id") + " AND " + Sql.inVisibleProjects("project_id") + " ORDER BY seq";
+        return tx.inScope(scope, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("status", status.name()).query((rs, n) -> card(rs)).list());
     }
 
     private static KnowledgeCard card(ResultSet rs) throws SQLException {

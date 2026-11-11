@@ -43,7 +43,7 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
 
     private void seed(CompanyId company) {
         UserId user = newUser(company);
-        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), company, "P"));
+        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), company, "P", true));
         Document d = newDocument(company, user, "Doc", DocumentStatus.READY);
         docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, "texto", "lector", "1")));
         cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), "T", "B",

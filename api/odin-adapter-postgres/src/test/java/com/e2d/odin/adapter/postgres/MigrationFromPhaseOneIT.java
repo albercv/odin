@@ -43,6 +43,8 @@ class MigrationFromPhaseOneIT {
     private static final UUID ACTIVE_WORKER = UUID.randomUUID();
     private static final UUID INACTIVE_WORKER = UUID.randomUUID();
     private static final UUID DELETED_WORKER = UUID.randomUUID();
+    private static final UUID PROJECT = UUID.randomUUID();
+    private static final UUID DELETED_PROJECT = UUID.randomUUID();
     private static final UUID KEY = UUID.randomUUID();
     private static final UUID DELETED_WORKER_KEY = UUID.randomUUID();
     private static final String DELETED_AT = "2026-10-01T10:00:00Z";
@@ -69,6 +71,10 @@ class MigrationFromPhaseOneIT {
         insertUser(DELETED_WORKER, "WORKER", COMPANY, true);
         jdbc.sql("UPDATE app_user SET deleted_at = :at WHERE id = :id")
                 .param("at", OffsetDateTime.parse(DELETED_AT)).param("id", DELETED_WORKER).update();
+        jdbc.sql("INSERT INTO project (id, company_id, name) VALUES (:id, :company, 'Obra')")
+                .param("id", PROJECT).param("company", COMPANY).update();
+        jdbc.sql("INSERT INTO project (id, company_id, name, deleted_at) VALUES (:id, :company, 'Vieja', now())")
+                .param("id", DELETED_PROJECT).param("company", COMPANY).update();
         insertKey(KEY, ACTIVE_WORKER, "abcd1234", "h:secreto");
         insertKey(DELETED_WORKER_KEY, DELETED_WORKER, "wxyz5678", "h:otro");
     }
@@ -165,5 +171,14 @@ class MigrationFromPhaseOneIT {
             memberships.save(memberships.find(worker, new CompanyId(COMPANY)).orElseThrow().withActive(false));
             jdbc.sql("DELETE FROM access_key WHERE prefix = 'inact123'").update();
         }
+    }
+
+    @Test
+    void existingProjectsBecomeClosedWithTheirWorkersAsMembers() {
+        assertThat(jdbc.sql("SELECT restricted FROM project").query(Boolean.class).list()).containsOnly(true);
+        assertThat(jdbc.sql("SELECT user_id FROM project_member WHERE project_id = :id").param("id", PROJECT)
+                .query(UUID.class).list()).containsExactly(ACTIVE_WORKER);
+        assertThat(jdbc.sql("SELECT count(*) FROM project_member WHERE project_id = :id")
+                .param("id", DELETED_PROJECT).query(Long.class).single()).isZero();
     }
 }

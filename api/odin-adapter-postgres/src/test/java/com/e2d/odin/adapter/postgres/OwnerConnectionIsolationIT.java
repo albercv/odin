@@ -11,6 +11,7 @@ import com.e2d.odin.domain.search.SearchQuery;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,12 +50,12 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     }
 
     private int readEverything(CompanyScope scope) {
-        int seen = ownerDocs.findById(scope, documentOfA.id()).stream().toList().size();
-        seen += ownerDocs.list(scope, Optional.empty(), Optional.empty(), 0, 10).size();
-        seen += ownerDocs.findPage(scope, documentOfA.id(), 1).stream().toList().size();
-        seen += ownerCards.findById(scope, pendingOfA.id()).stream().toList().size();
-        seen += ownerCards.listByStatus(scope, CardStatus.PENDING).size();
-        return seen + ownerSearch.search(new SearchQuery(List.of("filtración"), scope, Optional.empty(), 10))
+        int seen = ownerDocs.findById(scope, ProjectVisibility.all(), documentOfA.id()).stream().toList().size();
+        seen += ownerDocs.list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10).size();
+        seen += ownerDocs.findPage(scope, ProjectVisibility.all(), documentOfA.id(), 1).stream().toList().size();
+        seen += ownerCards.findById(scope, ProjectVisibility.all(), pendingOfA.id()).stream().toList().size();
+        seen += ownerCards.listByStatus(scope, ProjectVisibility.all(), CardStatus.PENDING).size();
+        return seen + ownerSearch.search(new SearchQuery(List.of("filtración"), scope, ProjectVisibility.all(), Optional.empty(), 10))
                 .hits().size();
     }
 
