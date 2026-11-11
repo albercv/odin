@@ -120,7 +120,7 @@
 | `PATCH /v1/admin/documents/{documentId}` | Administradores | `{ caseDocument }` → `DocumentView`, que gana `caseDocument` |
 | `POST /v1/admin/companies/{companyId}/documents/case-marks` | Administradores | `{ documentIds, caseDocument }` → `{ updated }` |
 
-`SimilarCaseView` lleva: `sourceType`, `sourceId`, `title`, `projectId`, `addedAt`, `pageCount`, `pages` (`[{ number, text }]`, vacío en una ficha), `body` (solo en una ficha), `truncated`, `excerpt` y `origin`. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, con el texto de la marca.
+`SimilarCaseView` lleva `originLabel`, que es nulo en un documento y es «Ficha aportada por un trabajador, redactada con IA» en una ficha. Además lleva: `sourceType`, `sourceId`, `title`, `projectId`, `addedAt`, `pageCount`, `pages` (`[{ number, text }]`, vacío en una ficha), `body` (solo en una ficha), `truncated`, `excerpt` y `origin`. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, con el texto de la marca.
 
 ## 7. MCP
 
@@ -166,6 +166,8 @@ La forma de medir es la misma que la de la búsqueda (T-007, T-009). No se anunc
   - Las fichas del corpus se **copian** ahí desde la rama `feature/planificacion-tecnica` del repositorio OCR, como ya se hizo con la batería de búsqueda. La prueba no lee nada de otro repositorio.
 
 ## 10. Pruebas
+
+Aquí se dice qué se prueba. Los nombres exactos de las pruebas, y si cada una es de caso de uso o de PostgreSQL, los fija el plan.
 
 - **Casos de uso:** `FindSimilarCasesTest`. Cubre:
   - solo entran documentos con `caseDocument`;

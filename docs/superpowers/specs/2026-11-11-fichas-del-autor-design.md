@@ -108,6 +108,8 @@
 
 ## 7. Pruebas
 
+Aquí se dice qué se prueba. Los nombres exactos de las pruebas, y si cada una es de caso de uso o de PostgreSQL, los fija el plan.
+
 - **Casos de uso:**
   - `SearchKnowledgeTest`. Cubre:
     - `authorSeesOwnPendingCardMarked`;
