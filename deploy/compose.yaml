@@ -53,6 +53,8 @@ services:
       - api
     environment:
       ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:?falta ODIN_UPLOAD_MAX_BYTES en deploy/.env}
+    volumes:
+      - ${ODIN_BRAND_DIR:-../panel/public/brand}:/usr/share/nginx/html/brand:ro
     ports:
       - "127.0.0.1:${ODIN_PANEL_PORT:-8088}:80"
 
