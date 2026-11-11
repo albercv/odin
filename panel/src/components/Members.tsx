@@ -127,7 +127,7 @@ export function Members({ companyId, me, addOpen = false, onAddClose = () => und
         </Table>
       </section>
       <FormDialog title="Añadir persona" open={addOpen} onClose={onAddClose}>
-        <MemberForm companyId={companyId} isGroupAdmin={isGroup} onDone={() => { onAddClose(); list.reload(); }} />
+        <MemberForm companyId={companyId} isGroupAdmin={isGroup} onDone={() => { onAddClose(); list.reload(); onProjectsChanged(); }} />
       </FormDialog>
     </Section>
   );

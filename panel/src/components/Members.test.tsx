@@ -359,3 +359,18 @@ test('companyAdminDoesNotSeeResetPassword', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Bea' }));
   expect(screen.queryByRole('button', { name: /Restablecer contraseña/ })).toBeNull();
 });
+
+test('addingAPersonRefreshesTheProjectsTheyJoined', async () => {
+  const onProjectsChanged = vi.fn();
+  mockFetch({
+    [list]: () => [ana],
+    [projectList]: () => [obra],
+    'POST /v1/admin/companies/c1/members': () => ({ status: 201, body: { member: gil, alreadyExisted: false } }),
+  });
+  renderWithProviders(<Members companyId="c1" me={groupAdmin} addOpen onProjectsChanged={onProjectsChanged} />);
+  await userEvent.type(await screen.findByLabelText('Nombre'), 'Cora');
+  await userEvent.type(screen.getByLabelText('Apellidos'), 'Gil');
+  await userEvent.click(await screen.findByLabelText('Obra'));
+  await userEvent.click(screen.getByRole('button', { name: 'Añadir persona' }));
+  await waitFor(() => expect(onProjectsChanged).toHaveBeenCalledTimes(1));
+});

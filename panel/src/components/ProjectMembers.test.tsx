@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
 import { Projects } from './Projects';
 import { mockFetch, type Routes } from '../mockApi';
+import { ConfirmProvider } from '../ui/ConfirmDialog';
 import { renderWithProviders } from '../ui/renderWithProviders';
+import { ToastProvider } from '../ui/Toast';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -133,4 +135,21 @@ test('addsAndRemovesMembers', async () => {
   await waitFor(() => expect(calls.some((c) => c.key === `DELETE ${base}/projects/p1/members/u3`)).toBe(true));
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Quitado Raúl'));
   expect(within(panel).getByRole('list', { name: 'Miembros del proyecto' })).toHaveFocus();
+});
+
+test('anOpenMemberListFollowsChangesMadeElsewhere', async () => {
+  let members = [raul, { userId: 'u4', displayName: 'Sara' }];
+  mockFetch({
+    [`GET ${base}/projects`]: () => [project('p1', 'Obra', true, members.length)],
+    [`GET ${base}/projects/p1/members`]: () => members,
+    [`GET ${base}/members`]: () => [],
+  });
+  const Host = ({ version }: { version: number }) => <Projects companyId="c1" version={version} />;
+  const { rerender } = renderWithProviders(<Host version={0} />);
+  const region = await openMembers('Obra');
+  expect(await within(region).findByText('Sara')).toBeInTheDocument();
+  members = [raul];
+  rerender(<ToastProvider><ConfirmProvider><Host version={1} /></ConfirmProvider></ToastProvider>);
+  await waitFor(() => expect(within(region).queryByText('Sara')).not.toBeInTheDocument());
+  expect(region).toBeInTheDocument();
 });
