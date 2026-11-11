@@ -11,7 +11,9 @@ function Content({ title, onClose, children, dismissible = true }: Omit<Props, '
   const ref = useRef<HTMLDialogElement>(null);
   useModalDialog(ref, firstField);
   return (
-    <dialog ref={ref} className={styles.dialog} aria-label={title} onCancel={(event) => { event.preventDefault(); if (dismissible) onClose(); }}>
+    <dialog ref={ref} className={styles.dialog} aria-label={title} onCancel={(event) => { event.preventDefault(); if (dismissible) onClose(); }}
+      onKeyDown={(event) => { if (event.key === 'Escape' && !dismissible) event.preventDefault(); }}
+      onClose={() => { if (!dismissible && ref.current && !ref.current.open) ref.current.showModal(); }}>
       <div className={styles.body}>
         <div className={styles.head}>
           <h2>{title}</h2>

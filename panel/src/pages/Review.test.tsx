@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Review } from './Review';
 import { mockFetch } from '../mockApi';
@@ -81,4 +81,25 @@ test('showsTheOriginalAfterEditing', async () => {
 test('emptyQueueSaysThereIsNothingPending', async () => {
   show([]);
   expect(await screen.findByText('No hay fichas pendientes.')).toBeInTheDocument();
+});
+
+test('doubleClickApprovesExactlyOneCard', async () => {
+  const { calls } = show([card(1), card(2)]);
+  const approve = await screen.findByRole('button', { name: 'Aprobar' });
+  fireEvent.click(approve);
+  fireEvent.click(approve);
+  await screen.findByRole('status');
+  fireEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 1/ })).toBeNull());
+  expect(calls.filter((c) => c.key.startsWith('POST'))).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Aprobar' })).toBeEnabled();
+});
+
+test('countIsZeroAfterResolvingTheLastTwoCards', async () => {
+  const { onPendingChanged } = show([card(1), card(2)]);
+  await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
+  await screen.findByRole('heading', { name: 'Ficha 2' });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar' })).toBeEnabled());
+  await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(0));
 });

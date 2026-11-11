@@ -105,6 +105,27 @@ test('issuedKeyOnlyClosesWithEntendido', async () => {
   expect(screen.queryByText('odin_ab.SECRETO')).toBeNull();
 });
 
+test('secondKeyShowsInAnOpenDialog', async () => {
+  let n = 0;
+  show({
+    [list]: () => [ana],
+    'GET /v1/admin/companies/c1/members/u1/keys': () => [],
+    'POST /v1/admin/companies/c1/members/u1/keys': () => { n += 1; return { status: 201, body: { id: `k${n}`, prefix: 'odin_ab', key: `odin_ab.SECRETO${n}` } }; },
+  });
+  await act('Ana', 'Claves de Ana');
+  const give = async (label: string) => {
+    await userEvent.type(await screen.findByLabelText('Etiqueta de la clave'), label);
+    await userEvent.click(screen.getByRole('button', { name: 'Dar clave' }));
+  };
+  await give('uno');
+  const first = await screen.findByRole('dialog', { name: 'Clave nueva' });
+  first.removeAttribute('open');
+  fireEvent(first, new Event('close'));
+  await give('dos');
+  await waitFor(() => expect(screen.getByRole('dialog', { name: 'Clave nueva' })).toHaveTextContent('SECRETO2'));
+  expect(screen.getByRole('dialog', { name: 'Clave nueva' })).toHaveAttribute('open');
+});
+
 test('keysOnlyForWorkers', async () => {
   show({ [list]: () => [ana, bea] });
   await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Ana' }));

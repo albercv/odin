@@ -5,11 +5,10 @@ import { Notice } from '../components/Notice';
 import { useLoad } from '../components/useLoad';
 import { EmptyState } from '../ui/EmptyState';
 import { PageHeader } from '../ui/PageHeader';
-import { authorName, projectName } from './reviewNames';
+import { authorName, formatDate, projectName } from './reviewNames';
 import styles from './Review.module.css';
 
 const LEAVE_MS = 240;
-const formatDate = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
 type Names = { members: S['MemberView'][]; projects: S['ProjectView'][] };
 
@@ -39,6 +38,7 @@ function useResolvedCards(cards: S['CardView'][] | undefined, onPendingChanged?:
   const [selected, setSelected] = useState<string>();
   const visible = (cards ?? []).filter((c) => !gone.includes(c.id));
   const current = visible.find((c) => c.id === selected) ?? visible.find((c) => c.id !== leavingId) ?? visible[0];
+  useEffect(() => { if (cards) onPendingChanged?.(visible.length); }, [cards, visible.length]);
   const resolve = (id: string) => {
     const index = visible.findIndex((c) => c.id === id);
     setSelected((visible[index + 1] ?? visible[index - 1])?.id);
@@ -46,7 +46,6 @@ function useResolvedCards(cards: S['CardView'][] | undefined, onPendingChanged?:
     setTimeout(() => {
       setGone((ids) => [...ids, id]);
       setLeavingId(undefined);
-      onPendingChanged?.(visible.length - 1);
     }, LEAVE_MS);
   };
   return { visible, current, leavingId, setSelected, resolve };
@@ -56,7 +55,6 @@ export function Review({ companyId, onPendingChanged }: { companyId: string; onP
   const list = useLoad(() => api.pendingCards(companyId), [companyId]);
   const members = useLoad(() => api.members(companyId), [companyId]);
   const projects = useLoad(() => api.projects(companyId), [companyId]);
-  useEffect(() => { if (list.data) onPendingChanged?.(list.data.length); }, [list.data]);
   const { visible, current, leavingId, setSelected, resolve } = useResolvedCards(list.data, onPendingChanged);
   const names = { members: members.data ?? [], projects: projects.data ?? [] };
   const loaded = list.data && members.data && projects.data;
@@ -71,7 +69,7 @@ export function Review({ companyId, onPendingChanged }: { companyId: string; onP
           <Queue cards={visible} names={names} selectedId={current.id} leavingId={leavingId} onSelect={setSelected} />
           <section className={styles.panel} aria-label="Ficha seleccionada" aria-live="polite">
             <CardDetail key={current.id} card={current} author={authorName(current.authorId, names.members)}
-              project={projectName(current.projectId, names.projects)} onResolved={() => resolve(current.id)} />
+              project={projectName(current.projectId, names.projects)} locked={leavingId !== undefined} onResolved={() => resolve(current.id)} />
           </section>
         </div>
       )}

@@ -47,7 +47,7 @@ export function Keys({ companyId, userId }: { companyId: string; userId: string 
   return (
     <section aria-label="Claves" className={form.form}>
       <Notice message={error ?? keys.error} />
-      {issued && <IssuedKeyDialog issued={issued} onClose={() => setIssued(undefined)} />}
+      {issued && <IssuedKeyDialog key={issued.id} issued={issued} onClose={() => setIssued(undefined)} />}
       <ul className={styles.list}>{keys.data?.map((k) => <KeyRow key={k.id} k={k} onRevoke={() => revoke(k.id)} />)}</ul>
       <form className={form.form} onSubmit={give}>
         <Field label="Etiqueta de la clave"><input required value={label} onChange={(e) => setLabel(e.target.value)} /></Field>

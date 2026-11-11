@@ -7,3 +7,5 @@ export function authorName(authorId: string, members: S['MemberView'][]): string
 export function projectName(projectId: string | undefined, projects: S['ProjectView'][]): string {
   return projects.find((p) => p.id === projectId)?.name ?? 'Sin proyecto';
 }
+
+export const formatDate = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
