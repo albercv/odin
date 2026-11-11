@@ -7,11 +7,14 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.GroupId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.UserId;
+import java.time.Instant;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -114,5 +117,39 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
         orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), a, "Obra", true));
 
         assertThat(orgs.listProjects(a)).extracting(Project::name).containsExactly("Obra");
+    }
+
+    @Test
+    void projectSummariesCountOnlyTheMembersOfEachProjectOfThatCompany() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        ProjectId obra = newProject(a, "Obra");
+        ProjectId vacio = newProject(a, "Vacío");
+        ProjectId vieja = newProject(a, "Vieja");
+        ProjectId ofB = newProject(b, "De B");
+        UserId wanda = newUser(a);
+        projectMembers.add(a, obra, wanda);
+        projectMembers.add(a, obra, newUser(a));
+        projectMembers.add(a, vieja, wanda);
+        projectMembers.add(b, ofB, wanda);
+        projectMembers.add(b, ofB, newUser(b));
+        orgs.deleteProject(a, vieja, Instant.now());
+
+        assertThat(orgs.listProjectSummaries(a)).extracting(s -> s.project().id(), ProjectSummary::memberCount)
+                .containsExactly(org.assertj.core.api.Assertions.tuple(obra, 2), org.assertj.core.api.Assertions.tuple(vacio, 0));
+        assertThat(orgs.listProjectSummaries(b)).extracting(ProjectSummary::memberCount).containsExactly(2);
+    }
+
+    @Test
+    void projectSummariesDoNotCountDeletedPeople() {
+        CompanyId a = newCompany();
+        ProjectId obra = newProject(a, "Obra");
+        UserId wanda = newUser(a);
+        UserId gone = newUser(a);
+        projectMembers.add(a, obra, wanda);
+        projectMembers.add(a, obra, gone);
+        users.delete(gone, Instant.now());
+
+        assertThat(orgs.listProjectSummaries(a)).extracting(ProjectSummary::memberCount).containsExactly(1);
     }
 }

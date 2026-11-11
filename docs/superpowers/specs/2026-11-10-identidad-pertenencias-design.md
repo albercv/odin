@@ -38,7 +38,6 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
 
 ## 3. Fuera de alcance
 
-- Rediseño visual del panel y marca configurable: fase 2b.
 - Compartir conocimiento entre empresas del grupo: sigue pendiente de negocio (D-033).
 - Equipos o grupos de personas dentro de una empresa. Los miembros de un proyecto se añaden de uno en uno.
 - Que el trabajador vea sus fichas pendientes (D-037): fase aparte.
@@ -155,7 +154,7 @@ Cambian las rutas de usuarios y se añaden las de pertenencias y miembros. Los n
 
 ## 9. Panel
 
-Cambios funcionales, sin rediseño (fase 2b):
+Pantallas nuevas con el sistema de la dirección visual (D-039, `2026-11-10-direccion-visual-design.md`), que ya está construido: sus componentes, el selector de empresa en el hueco de la barra lateral y la columna «Quién lo ve» en los proyectos:
 - **Personas de la empresa:** la lista muestra código completo, nombre y apellidos, correo, papeles y estado de la pertenencia. Tras un alta con un correo que ya era de otra persona del grupo, el panel avisa: «Esta persona ya existía en el grupo: se ha añadido a esta empresa».
 - **Papeles:** casillas «Administra la empresa» y «Trabaja con su IA».
 - **Claves:** en quien tiene el papel de trabajador.

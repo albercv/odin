@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Company } from './Company';
 import { mockFetch } from '../mockApi';
@@ -36,4 +36,26 @@ test('addPersonOpensADialog', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Añadir persona' }));
   expect(screen.getByRole('dialog', { name: 'Añadir persona' })).toBeInTheDocument();
   expect(screen.getByLabelText('Nombre')).toHaveFocus();
+});
+
+test('removingAProjectsOnlyMemberFromAccessesRefreshesTheProjectConfirmation', async () => {
+  let members = [{ userId: 'u1', displayName: 'Ana' }];
+  const project = () => ({ id: 'p1', companyId: 'c1', name: 'Sala', restricted: false, memberCount: members.length });
+  mockFetch({
+    'GET /v1/admin/companies': () => [{ id: 'c1', name: 'Acme', code: 'ACM', capabilities: [] }],
+    'GET /v1/admin/companies/c1/projects': () => [project()],
+    'GET /v1/admin/companies/c1/projects/p1/members': () => members,
+    'GET /v1/admin/companies/c1/members': () => [{ userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', roles: ['WORKER'], active: true, hasPassword: false }],
+    'GET /v1/admin/companies/c1/members/u1/projects': () => (members.length ? [project()] : []),
+    'DELETE /v1/admin/companies/c1/projects/p1/members/u1': () => { members = []; return { status: 204 }; },
+  });
+  renderWithProviders(<Company companyId="c1" me={companyAdmin} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Ana' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Accesos de Ana' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Quitar Sala' }));
+  await waitFor(() => expect(screen.getByRole('row', { name: /Sala/ })).toHaveTextContent('Toda la empresa'));
+  await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Sala' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Miembros de Sala' }));
+  await userEvent.click(await screen.findByLabelText('Visible para toda la empresa'));
+  expect(await screen.findByRole('dialog', { name: /¿Cerrar Sala\?/ })).toBeInTheDocument();
 });

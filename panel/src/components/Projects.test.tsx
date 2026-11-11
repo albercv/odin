@@ -7,7 +7,7 @@ import { renderWithProviders } from '../ui/renderWithProviders';
 
 afterEach(() => vi.restoreAllMocks());
 
-const obra = { id: 'p1', name: 'Obra' };
+const obra = { id: 'p1', companyId: 'c1', name: 'Obra', restricted: true, memberCount: 0 };
 const list = 'GET /v1/admin/companies/c1/projects';
 const one = '/v1/admin/companies/c1/projects/p1';
 
@@ -30,6 +30,21 @@ test('renamesProject', async () => {
   await userEvent.type(screen.getByLabelText('Nombre'), 'Reforma');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar Obra' }));
   await waitFor(() => expect(calls.find((c) => c.key === `PATCH ${one}`)?.body).toEqual({ name: 'Reforma' }));
+});
+
+test('rowButtonsShowShortTextAndNameTheTarget', async () => {
+  show({ [list]: () => [obra] });
+  await actions('Obra');
+  [['Renombrar', 'Renombrar Obra'], ['Miembros', 'Miembros de Obra'], ['Borrar', 'Borrar Obra']].forEach(([visible, name]) =>
+    expect(screen.getByRole('button', { name })).toHaveTextContent(new RegExp(`^${visible}$`)));
+});
+
+test('inlineRenameButtonsShowShortTextAndNameTheTarget', async () => {
+  show({ [list]: () => [obra] });
+  await actions('Obra');
+  await userEvent.click(screen.getByRole('button', { name: 'Renombrar Obra' }));
+  expect(screen.getByRole('button', { name: 'Guardar Obra' })).toHaveTextContent(/^Guardar$/);
+  expect(screen.getByRole('button', { name: 'Cancelar Obra' })).toHaveTextContent(/^Cancelar$/);
 });
 
 test('deleteAsksWithTheConfirmDialog', async () => {

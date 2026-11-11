@@ -1602,6 +1602,11 @@
           },
           "restricted" : {
             "type" : "boolean"
+          },
+          "memberCount" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Solo en la lista de proyectos de la empresa."
           }
         },
         "required" : [ "companyId", "id", "name", "restricted" ]
@@ -1686,9 +1691,12 @@
           },
           "active" : {
             "type" : "boolean"
+          },
+          "hasPassword" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "active", "displayName", "firstName", "memberCode", "personCode", "roles", "userId" ]
+        "required" : [ "active", "displayName", "firstName", "hasPassword", "memberCode", "personCode", "roles", "userId" ]
       },
       "KeyLabel" : {
         "type" : "object",

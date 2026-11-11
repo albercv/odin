@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type APIRequestContext, type BrowserContext, type Cookie, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Browser, type BrowserContext, type Cookie, type Page } from '@playwright/test';
 
 const state = JSON.parse(readFileSync(process.env.DEMO_STATE ?? '', 'utf8')) as { admin: { email: string; password: string } };
 const PANEL = process.env.DEMO_PANEL_URL ?? '';
@@ -9,6 +9,7 @@ const LONG_COMPANY = LONG('Empresa');
 const LONG_PERSON = LONG('Persona');
 const LONG_PROJECT = LONG('Proyecto');
 const LONG_EMAIL = `${'correo-largo-sin-espacios-'.repeat(4)}@ficticio.test`;
+const SWITCHER = { email: 'doble@demo.invalid', password: 'clave-ficticia-larga-1' };
 const RULES = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 
 const API = process.env.DEMO_API_URL ?? '';
@@ -24,16 +25,22 @@ async function postJson<T>(request: APIRequestContext, path: string, data: unkno
 // Own data, so the Revisión scans do not depend on demo.spec.ts having approved the card from prepare.
 async function seedReviewData(request: APIRequestContext): Promise<void> {
   const company = await postJson<{ id: string }>(request, '/v1/admin/companies', { name: CARD_COMPANY, code: 'TARJ' });
-  await postJson(request, '/v1/admin/companies', { name: EMPTY_COMPANY, code: 'VACIA' });
+  const empty = await postJson<{ id: string }>(request, '/v1/admin/companies', { name: EMPTY_COMPANY, code: 'VACIA' });
+  const admin = { firstName: 'Administradora', lastName: 'Doble', email: SWITCHER.email, roles: ['COMPANY_ADMIN'], password: SWITCHER.password };
+  await postJson(request, `/v1/admin/companies/${empty.id}/members`, admin);
   await request.put(`${API}/v1/admin/companies/${company.id}/capabilities`, { data: { capabilities: ['SAVE_KNOWLEDGE_CARD'] } });
+  await postJson(request, `/v1/admin/companies/${company.id}/members`, { ...admin, password: undefined });
   const added = await postJson<{ member: { userId: string } }>(request, `/v1/admin/companies/${company.id}/members`,
     { firstName: 'Trabajadora', lastName: 'Visual', email: 'visual@demo.invalid', roles: ['WORKER'] });
+  await postJson(request, `/v1/admin/companies/${company.id}/projects`, { name: 'Proyecto visual' });
+  await postJson(request, `/v1/admin/companies/${company.id}/members/${added.member.userId}/keys`, { label: 'panel visual' });
   const { key } = await postJson<{ key: string }>(request, `/v1/admin/companies/${company.id}/members/${added.member.userId}/keys`, { label: 'visual' });
   await postJson(request, '/v1/cards', { title: 'Franquicia ficticia por daños de agua', body: 'La póliza ficticia aplica una franquicia de 150 euros por siniestro.' }, { Authorization: `Bearer ${key}` });
 }
 
 // admin.spec.ts closes the session from prepare, and failed logins are rate-limited: log in once and share the cookies.
 let sessionCookies: Cookie[] = [];
+let switcherCookies: Cookie[] = [];
 
 test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext();
@@ -46,7 +53,21 @@ test.beforeAll(async ({ browser }) => {
   sessionCookies = await context.cookies();
   await seedReviewData(context.request);
   await context.close();
+  switcherCookies = await logInAs(browser, SWITCHER.email, SWITCHER.password);
 });
+
+async function logInAs(browser: Browser, email: string, password: string): Promise<Cookie[]> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto(PANEL);
+  await page.getByLabel('Correo').fill(email);
+  await page.getByLabel('Contraseña').fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
+  const cookies = await context.cookies();
+  await context.close();
+  return cookies;
+}
 
 async function signIn(context: BrowserContext): Promise<void> {
   await context.addCookies(sessionCookies);
@@ -59,6 +80,46 @@ async function openCompany(page: Page, name: string): Promise<void> {
 }
 
 const openCompanyA = (page: Page) => openCompany(page, 'Empresa A');
+
+async function openPersonAccesses(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('button', { name: 'Más acciones de Trabajadora Visual', exact: true }).click();
+  await page.getByRole('button', { name: 'Accesos de Trabajadora Visual', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Accesos de Trabajadora Visual' })).toBeVisible();
+}
+
+async function openRolesForm(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('button', { name: 'Más acciones de Trabajadora Visual', exact: true }).click();
+  await page.getByRole('button', { name: 'Papeles de Trabajadora Visual', exact: true }).click();
+  await page.getByLabel('Administra la empresa').check();
+  await expect(page.getByLabel('Contraseña')).toBeVisible();
+}
+
+async function openKeys(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('button', { name: 'Más acciones de Trabajadora Visual', exact: true }).click();
+  await page.getByRole('button', { name: 'Claves de Trabajadora Visual', exact: true }).click();
+  await expect(page.getByText('Cada clave da acceso a lo mismo que ve Trabajadora Visual en esta empresa.')).toBeVisible();
+}
+
+async function openProjectMembers(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('button', { name: 'Más acciones de Proyecto visual', exact: true }).click();
+  await page.getByRole('button', { name: 'Miembros de Proyecto visual', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Miembros de Proyecto visual' })).toBeVisible();
+}
+
+async function openSwitcher(page: Page): Promise<void> {
+  await page.goto(PANEL);
+  await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
+}
+
+async function openAddPerson(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('button', { name: 'Añadir persona', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Añadir persona' })).toBeVisible();
+}
 
 async function openReview(page: Page, company = 'Empresa A'): Promise<void> {
   await openCompany(page, company);
@@ -81,6 +142,12 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   login: async (page) => { await page.goto(PANEL); await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible(); },
   cover: async (page) => { await page.goto(`${PANEL}/#cover`); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); },
   company: openCompanyA,
+  'company person accesses': openPersonAccesses,
+  'company add person': openAddPerson,
+  'company roles form': openRolesForm,
+  'company keys': openKeys,
+  'project members': openProjectMembers,
+  'company switcher': openSwitcher,
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,
   'review reject panel': openRejectPanel,
@@ -90,7 +157,8 @@ for (const scheme of ['light', 'dark'] as const) {
   for (const [screen, open] of Object.entries(SCREENS)) {
     test(`axeFindsNoSeriousIssues: ${screen} in ${scheme} theme`, async ({ page, context }) => {
       await page.emulateMedia({ colorScheme: scheme });
-      if (screen !== 'login' && screen !== 'cover') await signIn(context);
+      if (screen === 'company switcher') await context.addCookies(switcherCookies);
+      else if (screen !== 'login' && screen !== 'cover') await signIn(context);
       await open(page);
       await page.waitForTimeout(400);
       const { violations, incomplete } = await new AxeBuilder({ page }).withTags(RULES).analyze();
@@ -133,7 +201,7 @@ async function createLongNamedData(page: Page): Promise<void> {
   await dialog.getByLabel('Nombre', { exact: true }).fill(LONG_PERSON);
   await dialog.getByLabel('Apellidos').fill('Apellidos de prueba');
   await dialog.getByLabel('Correo').fill(LONG_EMAIL);
-  await dialog.getByRole('button', { name: 'Crear usuario' }).click();
+  await dialog.getByRole('button', { name: 'Añadir persona' }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole('button', { name: 'Nuevo proyecto' }).click();
   await page.getByLabel('Nombre del proyecto').fill(LONG_PROJECT);
@@ -149,6 +217,20 @@ test('longNamesDoNotOverflow', async ({ page, context }) => {
   await expect(page.getByRole('heading', { name: LONG_COMPANY })).toContainText(LONG_COMPANY);
   await page.setViewportSize({ width: 375, height: 800 });
   await expectNoHorizontalScroll(page);
+});
+
+test('personsTableShowsEveryColumnAtPhoneWidth', async ({ page, context }) => {
+  await signIn(context);
+  await page.setViewportSize({ width: 375, height: 800 });
+  await openCompany(page, CARD_COMPANY);
+  const row = page.getByRole('row').filter({ hasText: 'Trabajadora Visual' });
+  for (const label of ['Código', 'Persona', 'Papel', 'Acceso']) await expect(row.locator(`td[data-label="${label}"]`)).toBeVisible();
+  await expect(row).toContainText('visual@demo.invalid');
+  await expect(row).toContainText('Trabaja con su IA');
+  await expect(row).toContainText('Activo');
+  await expectNoHorizontalScroll(page);
+  const clipped = await row.locator('td').evaluateAll((cells) => cells.filter((c) => c.getBoundingClientRect().right > window.innerWidth).length);
+  expect(clipped).toBe(0);
 });
 
 test('narrowScreenHasNoHorizontalScroll', async ({ page, context }) => {

@@ -13,8 +13,11 @@ import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -65,9 +68,17 @@ public final class Responses {
         }
     }
 
-    public record ProjectView(UUID id, UUID companyId, String name, boolean restricted) {
+    public record ProjectView(UUID id, UUID companyId, String name, boolean restricted,
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            @Schema(description = "Solo en la lista de proyectos de la empresa.") @Nullable Integer memberCount) {
+        /** Sin recuento: solo la lista de proyectos de la empresa lo calcula. */
         public static ProjectView from(Project p) {
-            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted());
+            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted(), null);
+        }
+
+        public static ProjectView from(ProjectSummary s) {
+            Project p = s.project();
+            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted(), s.memberCount());
         }
     }
 
@@ -85,10 +96,11 @@ public final class Responses {
     }
 
     public record MemberView(UUID userId, String displayName, String firstName, @Nullable String lastName,
-            String personCode, String memberCode, @Nullable String email, Set<Role> roles, boolean active) {
+            String personCode, String memberCode, @Nullable String email, Set<Role> roles, boolean active,
+            boolean hasPassword) {
         public static MemberView from(com.e2d.odin.application.identity.MemberView m) {
             return new MemberView(m.userId().value(), m.displayName(), m.firstName(), m.lastName().orElse(null),
-                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active());
+                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.hasPassword());
         }
     }
 

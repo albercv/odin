@@ -23,16 +23,18 @@ function usePendingCount(companyId: string) {
 export function AppShell({ me, onLogout, onPasswordChanged }: Props) {
   const isGroup = me.role === 'GROUP_ADMIN';
   const [page, setPageNow] = useState<Page>(isGroup ? 'companies' : 'company');
-  const [companyId, setCompanyId] = useState(me.companyId ?? '');
+  const [companyId, setCompanyId] = useState(me.companyId ?? (isGroup ? '' : me.companies[0]?.id ?? ''));
   const [openedName, setOpenedName] = useState<string>();
   const [pending, setPending] = usePendingCount(companyId);
   const setPage = (next: Page) => withViewTransition(() => setPageNow(next));
   const open = (id: string, name: string) => { setCompanyId(id); setOpenedName(name); setPage('company'); };
   const companyName = openedName ?? me.companies?.find((c) => c.id === companyId)?.name;
+  const switchTo = (id: string) => { setCompanyId(id); setOpenedName(undefined); };
   const needsCompany = page !== 'companies' && page !== 'account';
   return (
     <div className={styles.shell}>
       <Sidebar isGroup={isGroup} name={me.displayName} companyName={companyId ? companyName : undefined} page={page}
+        switcher={isGroup ? undefined : { companies: me.companies, currentId: companyId, onChange: switchTo }}
         pending={pending} setPage={setPage} onLogout={onLogout} />
       <main className={styles.main}>
         {page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} />}

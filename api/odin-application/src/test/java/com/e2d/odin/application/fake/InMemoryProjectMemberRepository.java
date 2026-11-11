@@ -19,6 +19,7 @@ public class InMemoryProjectMemberRepository implements ProjectMemberRepository 
 
     public InMemoryProjectMemberRepository(InMemoryOrganizationRepository organizations) {
         this.organizations = organizations;
+        organizations.countMembersWith(id -> members.getOrDefault(id, Set.of()).size());
     }
 
     /** Ayuda de las pruebas: usa la empresa con la que se creó el proyecto. */

@@ -604,6 +604,11 @@ export interface components {
             companyId: string;
             name: string;
             restricted: boolean;
+            /**
+             * Format: int32
+             * @description Solo en la lista de proyectos de la empresa.
+             */
+            memberCount?: number;
         };
         AddMember: {
             firstName?: string;
@@ -628,6 +633,7 @@ export interface components {
             email?: string;
             roles: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active: boolean;
+            hasPassword: boolean;
         };
         KeyLabel: {
             label?: string;

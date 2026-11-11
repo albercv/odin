@@ -39,12 +39,15 @@ async function createUser(page: Page, user: { name: string; email?: string; pass
   await page.getByRole('button', { name: 'Añadir persona', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Añadir persona' });
   const form = dialog.locator('form');
-  await form.getByLabel('Rol').selectOption(user.role ?? 'WORKER');
+  if (user.role === 'COMPANY_ADMIN') {
+    await form.getByLabel('Administra la empresa').check();
+    await form.getByLabel('Trabaja con su IA').uncheck();
+  }
   await form.getByLabel('Nombre', { exact: true }).fill(firstNameOf(user.name));
   await form.getByLabel('Apellidos').fill(lastNamesOf(user.name));
   if (user.email) await form.getByLabel('Correo').fill(user.email);
   if (user.password) await form.getByLabel('Contraseña').fill(user.password);
-  await form.getByRole('button', { name: 'Crear usuario' }).click();
+  await form.getByRole('button', { name: 'Añadir persona' }).click();
   await expect(dialog).toHaveCount(0);
 }
 
@@ -61,8 +64,8 @@ async function createCompanyAndOpenIt(page: Page): Promise<void> {
 
 async function workerWithoutEmail(page: Page): Promise<void> {
   await createUser(page, { name: WORKER.name });
-  await expect(row(usersSection(page), WORKER.name)).toContainText('Sin correo');
-  console.log('✓ Admin 2: trabajador sin correo ni contraseña, listado como «Sin correo»');
+  await expect(row(usersSection(page), WORKER.name)).toContainText('sin correo');
+  console.log('✓ Admin 2: trabajador sin correo ni contraseña, listado como «sin correo»');
 }
 
 async function companyAdminWithPassword(page: Page): Promise<void> {
@@ -119,7 +122,7 @@ async function removeWorkerAndAddThemBack(page: Page): Promise<void> {
   const users = usersSection(page);
   await openActions(users, WORKER.renamed);
   await users.getByRole('button', { name: `Quitar ${WORKER.renamed}`, exact: true }).click();
-  await confirmDialog(page, `¿Quitar a ${WORKER.renamed} de la empresa?`, 'Quitar');
+  await confirmDialog(page, `¿Quitar a ${WORKER.renamed} de esta empresa? Sus claves y sus proyectos de esta empresa dejarán de valer.`, 'Quitar');
   await expect(row(users, WORKER.renamed)).toHaveCount(0);
   await createUser(page, { name: 'Otro nombre E2E', email: WORKER.email });
   await expect(row(users, WORKER.renamed)).toContainText(WORKER.email);
