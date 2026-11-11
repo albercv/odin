@@ -18,6 +18,7 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     private Group group;
     private final Map<CompanyId, Company> companies = new LinkedHashMap<>();
     private final Map<ProjectId, Project> projects = new LinkedHashMap<>();
+    private final Map<ProjectId, Project> deletedProjects = new LinkedHashMap<>();
 
     @Override
     public Optional<Group> findGroup() {
@@ -61,6 +62,17 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
 
     @Override
     public void deleteProject(CompanyId companyId, ProjectId id, Instant at) {
-        findProject(companyId, id).ifPresent(p -> projects.remove(id));
+        findProject(companyId, id).ifPresent(p -> deletedProjects.put(id, projects.remove(id)));
+    }
+
+    @Override
+    public List<Project> listDeletedProjects(CompanyId companyId) {
+        return deletedProjects.values().stream().filter(p -> p.companyId().equals(companyId)).toList();
+    }
+
+    /** Ayuda de las pruebas: la empresa de un proyecto, esté o no borrado. */
+    public CompanyId companyOf(ProjectId id) {
+        Project project = projects.getOrDefault(id, deletedProjects.get(id));
+        return project == null ? null : project.companyId();
     }
 }

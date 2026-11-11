@@ -167,4 +167,24 @@ class SearchKnowledgeTest {
         assertThat(search.lastQuery().visibility().includes(closed)).isTrue();
         assertThat(search.lastQuery().projectId()).contains(closed);
     }
+
+    @Test
+    void deletedProjectContentStaysVisibleToWhoCouldSeeIt() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        ProjectId companyWide = Fixtures.companyWideProject(orgs, companyA);
+        Actor member = Actors.worker(companyA);
+        Actor stranger = Actors.worker(companyA);
+        members.add(closed, member.userId());
+        orgs.deleteProject(companyA, closed, Fixtures.NOW);
+        orgs.deleteProject(companyA, companyWide, Fixtures.NOW);
+
+        useCase.execute(member, request(Optional.empty()));
+        assertThat(search.lastQuery().visibility().includes(closed)).isTrue();
+        assertThat(search.lastQuery().visibility().includes(companyWide)).isTrue();
+        useCase.execute(stranger, request(Optional.empty()));
+        assertThat(search.lastQuery().visibility().includes(closed)).isFalse();
+        assertThat(search.lastQuery().visibility().includes(companyWide)).isTrue();
+        SearchRequest filtered = new SearchRequest(List.of("x"), Optional.of(closed), Optional.empty());
+        assertThatThrownBy(() -> useCase.execute(member, filtered)).isInstanceOf(NotFoundException.class);
+    }
 }

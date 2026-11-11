@@ -90,6 +90,14 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
                 .param("company", companyId.value()).query((rs, n) -> project(rs)).list());
     }
 
+    @Override
+    public List<Project> listDeletedProjects(CompanyId companyId) {
+        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
+                SELECT id, company_id, name, restricted FROM project
+                WHERE company_id = :company AND deleted_at IS NOT NULL ORDER BY seq""")
+                .param("company", companyId.value()).query((rs, n) -> project(rs)).list());
+    }
+
     private static Company company(JdbcClient jdbc, UUID id, String name) {
         Set<Capability> capabilities = EnumSet.noneOf(Capability.class);
         jdbc.sql("SELECT capability FROM company_capability WHERE company_id = :id").param("id", id)

@@ -27,7 +27,7 @@ public class ListProjectMembers {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findProject(companyId, projectId)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado"));
-        return users.findAllById(projectMembers.listMembers(projectId)).stream()
+        return users.findAllById(projectMembers.listMembers(companyId, projectId)).stream()
                 .map(user -> new ProjectMemberView(user.id(), user.displayName())).toList();
     }
 }

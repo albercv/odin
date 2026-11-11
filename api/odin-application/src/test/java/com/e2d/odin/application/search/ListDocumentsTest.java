@@ -96,4 +96,18 @@ class ListDocumentsTest {
         assertThat(list.execute(Actors.worker(companyA), Optional.of(open), 0, Optional.empty()))
                 .containsExactly(inOpen);
     }
+
+    @Test
+    void documentOfDeletedProjectStaysVisibleToWhoCouldSeeIt() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        Document inClosed = Fixtures.documentIn(docs, companyA, closed, "texto");
+        Actor member = Actors.worker(companyA);
+        members.add(closed, member.userId());
+        orgs.deleteProject(companyA, closed, Fixtures.NOW);
+
+        assertThat(list.execute(member, Optional.empty(), 0, Optional.empty())).containsExactly(inClosed);
+        assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).isEmpty();
+        assertThatThrownBy(() -> list.execute(member, Optional.of(closed), 0, Optional.empty()))
+                .isInstanceOf(NotFoundException.class);
+    }
 }

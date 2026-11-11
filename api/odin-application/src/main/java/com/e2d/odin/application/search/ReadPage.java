@@ -26,7 +26,7 @@ public class ReadPage {
 
     public PageView execute(Actor actor, DocumentId id, int pageNumber) {
         var visibility = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)
-                .visibility();
+                .content();
         Document document = documents.findById(actor.scope(), visibility, id).filter(d -> d.status() == DocumentStatus.READY)
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
         var page = documents.findPage(actor.scope(), visibility, id, pageNumber)

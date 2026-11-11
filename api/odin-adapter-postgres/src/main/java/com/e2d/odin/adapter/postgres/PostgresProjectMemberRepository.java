@@ -9,13 +9,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * La tabla no lleva empresa: los casos de uso comprueban antes que el proyecto es de la empresa del administrador.
- * Por eso solo {@code projectsOf} puede filtrar por empresa en el SQL.
- */
+/** La tabla no lleva empresa: cada consulta filtra por la empresa del proyecto (join o EXISTS con {@code project}). */
 public class PostgresProjectMemberRepository implements ProjectMemberRepository {
 
-    private static final CompanyScope ALL = CompanyScope.all();
+    private static final String OF_COMPANY = "EXISTS (SELECT 1 FROM project p WHERE p.id = m.project_id"
+            + " AND p.company_id = :company)";
     private final ScopedTransactions tx;
 
     public PostgresProjectMemberRepository(ScopedTransactions tx) {
@@ -23,32 +21,54 @@ public class PostgresProjectMemberRepository implements ProjectMemberRepository 
     }
 
     @Override
-    public void add(ProjectId projectId, UserId userId) {
-        tx.runInScope(ALL, jdbc -> jdbc.sql("""
-                INSERT INTO project_member (project_id, user_id) VALUES (:project, :user)
+    public void add(CompanyId companyId, ProjectId projectId, UserId userId) {
+        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
+                INSERT INTO project_member (project_id, user_id)
+                SELECT p.id, :user FROM project p WHERE p.id = :project AND p.company_id = :company
                 ON CONFLICT (project_id, user_id) DO NOTHING""")
-                .param("project", projectId.value()).param("user", userId.value()).update());
+                .param("project", projectId.value()).param("user", userId.value())
+                .param("company", companyId.value()).update());
     }
 
     @Override
-    public void remove(ProjectId projectId, UserId userId) {
-        tx.runInScope(ALL, jdbc -> jdbc.sql("DELETE FROM project_member WHERE project_id = :project AND user_id = :user")
-                .param("project", projectId.value()).param("user", userId.value()).update());
+    public void remove(CompanyId companyId, ProjectId projectId, UserId userId) {
+        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("DELETE FROM project_member m"
+                + " WHERE m.project_id = :project AND m.user_id = :user AND " + OF_COMPANY)
+                .param("project", projectId.value()).param("user", userId.value())
+                .param("company", companyId.value()).update());
     }
 
     @Override
-    public List<UserId> listMembers(ProjectId projectId) {
-        return tx.inScope(ALL, jdbc -> jdbc.sql("""
-                SELECT user_id FROM project_member WHERE project_id = :project ORDER BY added_at, user_id""")
-                .param("project", projectId.value()).query((rs, n) -> new UserId(Sql.uuid(rs, "user_id"))).list());
+    public void removeAllOf(CompanyId companyId, UserId userId) {
+        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("DELETE FROM project_member m"
+                + " WHERE m.user_id = :user AND " + OF_COMPANY)
+                .param("user", userId.value()).param("company", companyId.value()).update());
+    }
+
+    @Override
+    public List<UserId> listMembers(CompanyId companyId, ProjectId projectId) {
+        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("SELECT m.user_id FROM project_member m"
+                + " WHERE m.project_id = :project AND " + OF_COMPANY + " ORDER BY m.added_at, m.user_id")
+                .param("project", projectId.value()).param("company", companyId.value())
+                .query((rs, n) -> new UserId(Sql.uuid(rs, "user_id"))).list());
     }
 
     @Override
     public Set<ProjectId> projectsOf(CompanyId companyId, UserId userId) {
+        return projectsOf(companyId, userId, "p.deleted_at IS NULL");
+    }
+
+    @Override
+    public Set<ProjectId> deletedProjectsOf(CompanyId companyId, UserId userId) {
+        return projectsOf(companyId, userId, "p.deleted_at IS NOT NULL");
+    }
+
+    private Set<ProjectId> projectsOf(CompanyId companyId, UserId userId, String deletedFilter) {
         CompanyScope scope = CompanyScope.of(companyId);
         return tx.inScope(scope, jdbc -> new HashSet<>(Sql.scoped(jdbc.sql("""
                 SELECT p.id FROM project_member m JOIN project p ON p.id = m.project_id
-                WHERE m.user_id = :user AND p.deleted_at IS NULL AND p.company_id = :company AND """
+                WHERE m.user_id = :user AND p.company_id = :company AND
+                """ + deletedFilter + " AND "
                 + Sql.inScope("p.company_id")), scope).param("user", userId.value())
                 .param("company", companyId.value()).query((rs, n) -> new ProjectId(Sql.uuid(rs, "id"))).list()));
     }

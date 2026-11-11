@@ -127,7 +127,7 @@ class ApplicationFlowIT extends AbstractIT {
 
     @Test
     @Order(6)
-    void documentOfDeletedProjectIsHiddenFromWorkersAndFilterIs404() throws InterruptedException {
+    void documentOfDeletedProjectStaysVisibleToWhoCouldSeeIt() throws InterruptedException {
         ApiClient api = new ApiClient(port);
         String project = createProject(api, "Obra vieja");
         String assignedKey = assignedWorkerKey(api, "obra-vieja@ejemplo.test", project);
@@ -143,7 +143,8 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(api.delete("/v1/admin/companies/" + companyA + "/projects/" + project, "Cookie", adminCookie)
                 .status()).isEqualTo(204);
 
-        assertThat(found(api, assignedKey, "andamio obra junio")).isFalse();
+        assertThat(found(api, assignedKey, "andamio obra junio")).isTrue();
+        assertThat(found(api, keyA, "andamio obra junio")).isFalse();
         Reply filtered = api.post("/v1/search", map("queries", List.of("andamio obra junio"), "projectId", project),
                 "Authorization", assignedKey);
         assertThat(filtered.status()).isEqualTo(404);

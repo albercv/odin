@@ -59,7 +59,7 @@ public class AddMember {
         }
         Membership membership = new Membership(ready.id(), companyId, roles, true);
         memberships.save(membership);
-        newMember.projectIds().forEach(projectId -> projectMembers.add(projectId, ready.id()));
+        newMember.projectIds().forEach(projectId -> projectMembers.add(companyId, projectId, ready.id()));
         return new MemberAdded(ready, membership, existing.isPresent());
     }
 

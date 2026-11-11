@@ -88,4 +88,16 @@ class DescribeMeTest {
         members.add(created.id(), worker.userId());
         assertThat(describe.execute(worker).projects()).containsExactly(created);
     }
+
+    @Test
+    void deletedProjectIsNotListed() {
+        InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
+        InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(organizations);
+        CompanyId company = Fixtures.company(organizations);
+        ProjectId open = Fixtures.companyWideProject(organizations, company);
+        Actor worker = Actors.worker(company);
+        organizations.deleteProject(company, open, Fixtures.NOW);
+
+        assertThat(new DescribeMe(organizations, members).execute(worker).projects()).isEmpty();
+    }
 }

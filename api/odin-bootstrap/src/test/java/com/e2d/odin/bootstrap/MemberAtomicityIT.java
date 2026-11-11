@@ -151,7 +151,7 @@ class MemberAtomicityIT {
         organizations.saveProject(new Project(project, company, "Obra", true));
         ProjectMemberRepository failingProjectMembers = new PostgresProjectMemberRepository(tx) {
             @Override
-            public void add(ProjectId projectId, UserId userId) {
+            public void add(CompanyId companyId, ProjectId projectId, UserId userId) {
                 throw new IllegalStateException("fallo forzado");
             }
         };
@@ -204,7 +204,8 @@ class MemberAtomicityIT {
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         new PostgresAccessKeyRepository(tx).save(new AccessKey(new AccessKeyId(UUID.randomUUID()), id, company,
                 "portatil", "atomic01", "hash", Instant.now(), Optional.empty()));
-        RemoveMember remove = new UseCaseConfiguration().removeMember(memberships, failingKeySave(), NO_SESSIONS,
+        RemoveMember remove = new UseCaseConfiguration().removeMember(memberships, failingKeySave(), projectMembers,
+                NO_SESSIONS,
                 Clock.systemUTC(), transactionManager);
 
         assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
@@ -227,11 +228,35 @@ class MemberAtomicityIT {
                 throw new IllegalStateException("fallo forzado");
             }
         };
-        RemoveMember remove = new UseCaseConfiguration().removeMember(failingDelete, keys, NO_SESSIONS,
+        RemoveMember remove = new UseCaseConfiguration().removeMember(failingDelete, keys, projectMembers, NO_SESSIONS,
                 Clock.systemUTC(), transactionManager);
 
         assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
 
         assertThat(keys.listByMembership(id, company)).allSatisfy(k -> assertThat(k.revokedAt()).isEmpty());
+    }
+
+    @Test
+    void failureDeletingTheMembershipKeepsTheProjects() {
+        givenCompany();
+        UserId id = new UserId(UUID.randomUUID());
+        users.save(new User(id, "Wanda", Optional.empty(), false, true, Optional.empty()));
+        memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
+        ProjectId project = new ProjectId(UUID.randomUUID());
+        organizations.saveProject(new Project(project, company, "Obra", true));
+        projectMembers.add(company, project, id);
+        MembershipRepository failingDelete = new PostgresMembershipRepository(tx) {
+            @Override
+            public void delete(UserId userId, CompanyId companyId, Instant at) {
+                throw new IllegalStateException("fallo forzado");
+            }
+        };
+        RemoveMember remove = new UseCaseConfiguration().removeMember(failingDelete,
+                new PostgresAccessKeyRepository(tx), projectMembers, NO_SESSIONS, Clock.systemUTC(),
+                transactionManager);
+
+        assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
+
+        assertThat(projectMembers.projectsOf(company, id)).containsExactly(project);
     }
 }

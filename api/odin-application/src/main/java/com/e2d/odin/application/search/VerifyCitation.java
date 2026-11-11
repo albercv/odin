@@ -26,7 +26,7 @@ public class VerifyCitation {
 
     public boolean execute(Actor actor, DocumentId id, int pageNumber, String quote) {
         var visibility = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)
-                .visibility();
+                .content();
         if (documents.findById(actor.scope(), visibility, id).filter(d -> d.status() != DocumentStatus.READY).isPresent()) {
             throw new NotFoundException("Documento no encontrado");
         }

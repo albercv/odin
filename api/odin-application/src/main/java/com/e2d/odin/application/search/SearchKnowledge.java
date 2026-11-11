@@ -45,7 +45,7 @@ public class SearchKnowledge {
             throw new ValidationException("Indica al menos una consulta con texto");
         }
         int limit = WorkerAccess.cap(request.limit(), DEFAULT_LIMIT, MAX_LIMIT);
-        SearchResult result = search.search(new SearchQuery(terms, actor.scope(), access.visibility(),
+        SearchResult result = search.search(new SearchQuery(terms, actor.scope(), access.content(),
                 request.projectId(), limit));
         questions.record(new QuestionRecord(ids.newId(), access.companyId(), actor.userId(), String.join(" | ", terms),
                 result.hits().size(), clock.instant()));

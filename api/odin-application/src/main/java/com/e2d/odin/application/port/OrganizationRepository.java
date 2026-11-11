@@ -28,5 +28,7 @@ public interface OrganizationRepository {
 
     List<Project> listProjects(CompanyId companyId);
 
+    List<Project> listDeletedProjects(CompanyId companyId);
+
     void deleteProject(CompanyId companyId, ProjectId id, Instant at);
 }

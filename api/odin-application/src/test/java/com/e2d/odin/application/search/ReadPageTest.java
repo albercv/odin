@@ -84,4 +84,13 @@ class ReadPageTest {
         members.add(closed, worker.userId());
         assertThat(readPage.execute(worker, d.id(), 1).page().text()).isEqualTo("texto");
     }
+
+    @Test
+    void pageOfDeletedProjectStaysReadableByWhoCouldSeeIt() {
+        ProjectId open = Fixtures.companyWideProject(orgs, companyA);
+        Document d = Fixtures.documentIn(docs, companyA, open, "texto");
+        orgs.deleteProject(companyA, open, Fixtures.NOW);
+
+        assertThat(readPage.execute(Actors.worker(companyA), d.id(), 1).page().text()).isEqualTo("texto");
+    }
 }

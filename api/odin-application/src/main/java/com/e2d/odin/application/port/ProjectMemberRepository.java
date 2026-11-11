@@ -9,12 +9,18 @@ import java.util.Set;
 public interface ProjectMemberRepository {
 
     /** Idempotente: añadir a quien ya es miembro no cambia nada. */
-    void add(ProjectId projectId, UserId userId);
+    void add(CompanyId companyId, ProjectId projectId, UserId userId);
 
-    void remove(ProjectId projectId, UserId userId);
+    void remove(CompanyId companyId, ProjectId projectId, UserId userId);
 
-    List<UserId> listMembers(ProjectId projectId);
+    /** Quita a la persona de todos los proyectos de esa empresa. */
+    void removeAllOf(CompanyId companyId, UserId userId);
+
+    List<UserId> listMembers(CompanyId companyId, ProjectId projectId);
 
     /** Los proyectos no borrados de esa empresa de los que la persona es miembro, estén o no cerrados. */
     Set<ProjectId> projectsOf(CompanyId companyId, UserId userId);
+
+    /** Los proyectos borrados de esa empresa de los que era miembro: su contenido sigue visible para él. */
+    Set<ProjectId> deletedProjectsOf(CompanyId companyId, UserId userId);
 }

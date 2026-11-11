@@ -28,7 +28,7 @@ public class ListDocuments {
     public List<Document> execute(Actor actor, Optional<ProjectId> projectId, int offset, Optional<Integer> limit) {
         var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE);
         WorkerAccess.requireProject(access.visibility(), projectId);
-        return documents.list(actor.scope(), access.visibility(), projectId, Optional.of(DocumentStatus.READY), Math.max(0, offset),
+        return documents.list(actor.scope(), access.content(), projectId, Optional.of(DocumentStatus.READY), Math.max(0, offset),
                 WorkerAccess.cap(limit, 100, 500));
     }
 }

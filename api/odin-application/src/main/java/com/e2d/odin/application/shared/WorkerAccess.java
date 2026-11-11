@@ -15,8 +15,12 @@ import java.util.Set;
 
 public final class WorkerAccess {
 
-    /** La empresa del trabajador y los proyectos que ve, calculados una vez por petición. */
-    public record Granted(CompanyId companyId, ProjectVisibility visibility) {
+    /**
+     * La empresa del trabajador y sus proyectos, calculados una vez por petición. {@code visibility} son los
+     * proyectos vivos que ve (listas y filtros); {@code content} añade los borrados que veía, porque borrar un
+     * proyecto no oculta sus documentos ni sus fichas.
+     */
+    public record Granted(CompanyId companyId, ProjectVisibility visibility, ProjectVisibility content) {
     }
 
     private WorkerAccess() {
@@ -29,7 +33,9 @@ public final class WorkerAccess {
         var company = organizations.findCompany(companyId)
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         AccessPolicy.requireCapability(company, capability);
-        return new Granted(companyId, visibleProjects(actor, companyId, organizations, projectMembers));
+        ProjectVisibility visibility = visibleProjects(actor, companyId, organizations, projectMembers);
+        return new Granted(companyId, visibility, withDeleted(visibility, actor, companyId, organizations,
+                projectMembers));
     }
 
     /** Los de su empresa visibles para toda ella más aquellos de los que es miembro. */
@@ -39,6 +45,15 @@ public final class WorkerAccess {
         organizations.listProjects(companyId).stream().filter(p -> !p.restricted()).map(Project::id)
                 .forEach(visible::add);
         return ProjectVisibility.of(visible);
+    }
+
+    private static ProjectVisibility withDeleted(ProjectVisibility alive, Actor actor, CompanyId companyId,
+            OrganizationRepository organizations, ProjectMemberRepository projectMembers) {
+        Set<ProjectId> content = new HashSet<>(alive.projects());
+        content.addAll(projectMembers.deletedProjectsOf(companyId, actor.userId()));
+        organizations.listDeletedProjects(companyId).stream().filter(p -> !p.restricted()).map(Project::id)
+                .forEach(content::add);
+        return ProjectVisibility.of(content);
     }
 
     public static void requireProject(ProjectVisibility visibility, Optional<ProjectId> projectId) {

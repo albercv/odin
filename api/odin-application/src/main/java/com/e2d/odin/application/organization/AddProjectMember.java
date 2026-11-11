@@ -33,6 +33,6 @@ public class AddProjectMember {
         Set<Role> roles = memberships.find(userId, companyId).filter(Membership::active).map(Membership::roles)
                 .orElse(Set.of());
         ProjectMembers.requireWorker(roles);
-        projectMembers.add(projectId, userId);
+        projectMembers.add(companyId, projectId, userId);
     }
 }

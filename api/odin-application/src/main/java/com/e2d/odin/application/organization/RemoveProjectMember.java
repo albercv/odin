@@ -23,6 +23,6 @@ public class RemoveProjectMember {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findProject(companyId, projectId)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado"));
-        projectMembers.remove(projectId, userId);
+        projectMembers.remove(companyId, projectId, userId);
     }
 }

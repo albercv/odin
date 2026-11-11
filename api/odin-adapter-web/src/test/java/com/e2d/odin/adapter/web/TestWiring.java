@@ -173,7 +173,7 @@ public class TestWiring {
     }
 
     @Bean RemoveMember removeMember() {
-        return new RemoveMember(memberships, keys, adminSessions(), clock);
+        return new RemoveMember(memberships, keys, projectMembers, adminSessions(), clock);
     }
 
     @Bean UpdateUser updateUser() {

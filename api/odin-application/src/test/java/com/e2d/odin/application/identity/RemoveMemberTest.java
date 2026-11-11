@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
+import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
@@ -27,6 +28,7 @@ import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -44,7 +46,10 @@ class RemoveMemberTest {
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
-    private final RemoveMember remove = new RemoveMember(memberships, keys, sessions, new MutableClock());
+    private final InMemoryOrganizationRepository projects = new InMemoryOrganizationRepository();
+    private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(projects);
+    private final RemoveMember remove = new RemoveMember(memberships, keys, projectMembers, sessions,
+            new MutableClock());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
@@ -151,7 +156,7 @@ class RemoveMemberTest {
         ResolveActor resolve = new ResolveActor(keys, users, memberships, sessions, secrets);
 
         remove.execute(Actors.companyAdmin(company), company, personId);
-        new AddMember(users, memberships, organizations, new InMemoryProjectMemberRepository(organizations),
+        new AddMember(users, memberships, organizations, projectMembers,
                 new FakePasswordHasher(), new SequenceIdGenerator())
                 .execute(Actors.companyAdmin(company), company,
                         new NewMember("Pili", Optional.of("p@demo.test"), Set.of(Role.WORKER), Optional.empty(),
@@ -159,5 +164,35 @@ class RemoveMemberTest {
 
         assertThatThrownBy(() -> resolve.fromAccessKey("odin_abcdefgh_uno")).isInstanceOf(UnauthorizedException.class);
         assertThat(resolve.fromAccessKey("odin_ijklmnop_dos").companies()).containsExactly(other);
+    }
+
+    @Test
+    void removingDropsTheProjectsOfThatCompanyOnly() {
+        memberships.save(new Membership(workerId, other, Set.of(Role.WORKER), true));
+        ProjectId inCompany = Fixtures.project(projects, company);
+        ProjectId inOther = Fixtures.project(projects, other);
+        projectMembers.add(inCompany, workerId);
+        projectMembers.add(inOther, workerId);
+
+        remove.execute(Actors.companyAdmin(company), company, workerId);
+
+        assertThat(projectMembers.projectsOf(company, workerId)).isEmpty();
+        assertThat(projectMembers.projectsOf(other, workerId)).containsExactly(inOther);
+    }
+
+    @Test
+    void removedAndReAddedPersonHasNoProjects() {
+        InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
+        organizations.saveCompany(new Company(company, "A", EnumSet.allOf(Capability.class)));
+        ProjectId project = Fixtures.project(projects, company);
+        projectMembers.add(project, workerId);
+
+        remove.execute(Actors.companyAdmin(company), company, workerId);
+        MemberAdded again = new AddMember(users, memberships, organizations, projectMembers,
+                new FakePasswordHasher(), new SequenceIdGenerator()).execute(Actors.companyAdmin(company), company,
+                new NewMember("Wanda", Optional.of("w2@demo.test"), Set.of(Role.WORKER), Optional.empty(), Set.of()));
+
+        assertThat(projectMembers.projectsOf(company, workerId)).isEmpty();
+        assertThat(projectMembers.projectsOf(company, again.user().id())).isEmpty();
     }
 }

@@ -6,8 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
+import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
+import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
@@ -19,6 +22,7 @@ import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
@@ -37,6 +41,8 @@ class UpdateMemberTest {
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
     private final UpdateMember update = new UpdateMember(users, memberships, passwords, sessions);
+    private final InMemoryOrganizationRepository projects = new InMemoryOrganizationRepository();
+    private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(projects);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
@@ -226,5 +232,16 @@ class UpdateMemberTest {
         assertThatThrownBy(() -> update.execute(companyAdmin, company, stranger, active(false)))
                 .isInstanceOf(NotFoundException.class);
         assertThat(stored(stranger, other).active()).isTrue();
+    }
+
+    @Test
+    void deactivatingAndReactivatingKeepsTheProjects() {
+        ProjectId project = Fixtures.project(projects, company);
+        projectMembers.add(project, workerId);
+
+        update.execute(companyAdmin, company, workerId, active(false));
+        update.execute(companyAdmin, company, workerId, active(true));
+
+        assertThat(projectMembers.projectsOf(company, workerId)).containsExactly(project);
     }
 }
