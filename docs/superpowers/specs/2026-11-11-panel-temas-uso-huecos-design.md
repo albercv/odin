@@ -37,10 +37,10 @@ El encargo 11 pide un panel desde el que el administrador controle, además de l
 | Por persona solo hay dos recuentos: preguntas hechas y fichas aportadas, en el periodo | Son actividad, no calidad. Aprobadas, corregidas y rechazadas se cuentan solo por empresa | Un recuento más |
 | La tabla por persona está siempre ordenada por nombre. No se puede ordenar por cantidad ni hay «más activos», gráficos por persona, medias ni colores que destaquen a alguien | Ordenar por cantidad ya es un ranking (D-005) | — |
 | No hay estadísticas por equipo | No existen equipos (spec 2a, 3) | Una dimensión más, cuando existan |
-| Huecos: consultas con 0 resultados de búsqueda o de casos parecidos, agrupadas por texto igual (sin tildes, sin mayúsculas y con los espacios normalizados), con cuántas veces y la última fecha | D-036. Agrupar por significado sería otra IA interpretando | Agrupar de otra forma |
+| Huecos: consultas con 0 resultados de búsqueda o de casos parecidos, agrupadas por texto igual (sin tildes, sin mayúsculas y con los espacios normalizados), con cuántas veces y la última fecha | D-036. Agrupar por significado sería otra IA interpretando. El tipo sale de `question_record.kind`, que añade el bloque 2; `hit_count` es el número de resultados en los dos tipos | Agrupar de otra forma |
 | El texto del hueco es la consulta que mandó la IA del trabajador, y el panel lo dice | Es lo que se guarda (spec base 6.6), no lo que escribió la persona | — |
 | Todo se calcula al pedirlo, con consultas sobre los datos que ya existen. Sin tablas de resumen | Con el volumen de una oficina basta. Se mide al verificar | Una vista materializada |
-| Periodo: por meses, con el mes en curso por defecto, hasta 12 meses atrás | Simple y suficiente | Fechas libres |
+| Periodo: por meses, con el mes en curso por defecto, hasta 12 meses atrás | Simple y suficiente. Si la validación legal fija un plazo de conservación de preguntas menor (D-022, D-036), el periodo se acorta a ese plazo | Fechas libres |
 
 ## 3. Fuera de alcance
 
@@ -95,8 +95,9 @@ Usa la API del bloque 3.
   - documentos subidos, listos, que fallaron y que esperan al lector;
   - documentos etiquetados y pendientes, si hay temas.
 - **Por persona:** `people[]`, con `userId`, `displayName`, `questions` y `cardsSaved`, **ordenado por nombre**.
-  - Solo personas con pertenencia a esa empresa, o que la tuvieron en ese mes.
-  - Una persona borrada sale como «Persona dada de baja», sin nombre.
+  - **Quién sale:** las personas con pertenencia viva en esa empresa, aunque tengan cero, y las que tienen preguntas o fichas en esa empresa ese mes. No hace falta saber desde cuándo pertenece cada una, un dato que la 2a no guarda.
+  - **Personas borradas** (`app_user.deleted_at`): se suman en una sola fila, «Personas dadas de baja», sin `userId` ni nombre. Así no se distinguen entre ellas.
+  - `questions` cuenta las filas de `question_record` de la persona en esa empresa y mes, de los dos tipos. `cardsSaved` cuenta las de `knowledge_card` con ese `author_id`, que es obligatorio desde V2. Todas las fichas las aporta un trabajador: no hay fichas del sistema.
 - **En la pantalla:**
   - tabla de la empresa y tabla por persona;
   - sin ordenar por columnas, sin destacar a nadie y sin totales por persona fuera de la tabla;
@@ -111,7 +112,8 @@ Usa la API del bloque 3.
   - **Puerto `AiUsageLedger`** (`application/port`) y tabla `ai_usage` (empresa, finalidad, proveedor, modelo, tokens de entrada y de salida, fecha). Lo escribirá cualquier adaptador futuro que llame a una IA externa, con los tokens que diga el proveedor. Nada lo escribe todavía, y por eso es una tarea pequeña y separada.
 - **Entregado a la IA del trabajador:**
   - por herramienta (búsqueda, casos parecidos, leer página, listar documentos, verificar cita): llamadas y bytes de las respuestas;
-  - un filtro del adaptador web cuenta los bytes de cada respuesta 200 de esas rutas y llama al puerto `DeliveryMeter`;
+  - un filtro del adaptador web cuenta los bytes de cada respuesta 200 de esas rutas y llama al puerto `DeliveryMeter`. Las rutas ya existen: `POST /v1/search`, `GET /v1/documents`, `GET /v1/documents/{documentId}/pages/{pageNumber}` y `POST /v1/citations/verify`; y `POST /v1/similar-cases`, del bloque 2;
+  - cuenta el cuerpo tal como lo escribe la API, sin compresión, y la empresa sale del `Actor` de la clave, con su contexto de seguridad por filas;
   - se guarda en `delivery_usage (company_id, month, tool, calls, bytes)` con un `UPSERT` por petición.
   - Por empresa, nunca por persona.
   - La pantalla explica que son bytes y no tokens.
@@ -188,3 +190,13 @@ En la pantalla:
 - Nombres internos de componentes y de consultas.
 - Textos de botones y estados vacíos, dentro de la dirección visual.
 - Cómo se cuenta la normalización de los huecos en SQL (`unaccent` y `lower`, ya disponibles).
+
+## 10. Revisión del constructor (2026-11-11)
+
+Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 6 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
+- quién sale en la tabla por persona, sin fechas de pertenencia (5.2);
+- las personas borradas, sumadas en una sola fila (5.2);
+- `kind` y `hit_count`, que vienen del bloque 2 (2);
+- `author_id`, que es obligatorio (5.2);
+- qué rutas cuenta el filtro de bytes y cómo (5.3);
+- el periodo frente al plazo legal de conservación (2).
