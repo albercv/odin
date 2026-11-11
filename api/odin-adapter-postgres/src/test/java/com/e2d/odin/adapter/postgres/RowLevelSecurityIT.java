@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
@@ -12,6 +13,7 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
@@ -30,8 +32,10 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 class RowLevelSecurityIT extends AbstractPostgresIT {
 
     private static final List<String> TABLES = List.of("company", "project", "membership", "document", "document_page",
-            "knowledge_card", "question_record");
+            "knowledge_card", "question_record", "project_member");
+    private static final List<String> PROJECT_TABLES = List.of("document", "document_page", "knowledge_card");
 
+    private Document closedDocument;
     private CompanyId a;
     private CompanyId b;
 
@@ -45,7 +49,9 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
 
     private void seed(CompanyId company) {
         UserId user = newUser(company);
-        orgs.saveProject(new Project(new ProjectId(UUID.randomUUID()), company, "P", true));
+        ProjectId project = new ProjectId(UUID.randomUUID());
+        orgs.saveProject(new Project(project, company, "P", true));
+        projectMembers.add(company, project, user);
         Document d = newDocument(company, user, "Doc", DocumentStatus.READY);
         docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, "texto", "lector", "1")));
         cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), "T", "B",
@@ -141,16 +147,15 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         }
     }
 
-    private static final List<String> PROJECT_TABLES = List.of("document", "document_page", "knowledge_card");
-
     private ProjectId seedInClosedProject(CompanyId company) {
         UserId user = newUser(company);
         ProjectId project = newProject(company, "Cerrado " + UUID.randomUUID());
-        Document d = new Document(new com.e2d.odin.domain.shared.DocumentId(UUID.randomUUID()), company,
-                Optional.of(project), "Doc cerrado", "f.pdf", com.e2d.odin.domain.document.DocumentFormat.PDF,
+        Document d = new Document(new DocumentId(UUID.randomUUID()), company,
+                Optional.of(project), "Doc cerrado", "f.pdf", DocumentFormat.PDF,
                 UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(), true, user, NOW,
                 Optional.empty(), 0);
         docs.save(d);
+        closedDocument = d;
         docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, "texto cerrado", "lector", "1")));
         cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.of(project), "T", "B",
                 Optional.empty(), user, NOW, CardStatus.PENDING, Optional.empty()));
@@ -185,14 +190,7 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
     @Test
     void rowsWithoutProjectAreVisibleWithEmptyProjectScope() throws SQLException {
         seedInClosedProject(a);
-        try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
-            s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
-            s.execute("SELECT set_config('app.project_ids', '', false)");
-            s.execute("SELECT set_config('app.all_projects', 'off', false)");
-            for (String table : PROJECT_TABLES) {
-                assertThat(count(c, table)).as(table).isEqualTo(1);
-            }
-        }
+        assertProjectRows(a, "", "off", 1);
     }
 
     @Test
@@ -215,9 +213,9 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         projectMembers.add(b, projectOfB, member);
         try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
             s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
-            assertThat(count(c, "project_member")).isZero();
+            assertThat(count(c, "project_member WHERE project_id = '" + projectOfB.value() + "'")).isZero();
             s.execute("SELECT set_config('app.company_ids', '" + b.value() + "', false)");
-            assertThat(count(c, "project_member")).isEqualTo(1);
+            assertThat(count(c, "project_member WHERE project_id = '" + projectOfB.value() + "'")).isEqualTo(1);
         }
     }
 
@@ -229,7 +227,25 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         CompanyScope scope = CompanyScope.of(a);
         assertThat(docs.list(scope, content, Optional.empty(), Optional.empty(), 0, 10)).hasSize(2);
         assertThat(cards.listByStatus(scope, content, CardStatus.PENDING)).hasSize(2);
+        assertThat(docs.findPage(scope, content, closedDocument.id(), 1)).isPresent();
+        assertThat(docs.findPage(scope, ProjectVisibility.of(Set.of()), closedDocument.id(), 1)).isEmpty();
         assertThat(docs.list(scope, ProjectVisibility.of(Set.of()), Optional.empty(), Optional.empty(), 0, 10))
                 .hasSize(1);
+    }
+
+    @Test
+    void projectVariablesDoNotLeakAcrossCallsOnAReusedConnection() throws SQLException {
+        seedInClosedProject(a);
+        try (SingleConnectionDataSource single = new SingleConnectionDataSource(Db.app().getConnection(), true)) {
+            ScopedTransactions reused = new ScopedTransactions(single);
+            long inside = reused.inScope(CompanyScope.of(a), ProjectVisibility.all(),
+                    jdbc -> jdbc.sql("SELECT count(*) FROM document").query(Long.class).single());
+            assertThat(inside).isEqualTo(2);
+            Connection c = single.getConnection();
+            try (Statement s = c.createStatement()) {
+                s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
+            }
+            assertThat(count(c, "document")).isEqualTo(1);
+        }
     }
 }
