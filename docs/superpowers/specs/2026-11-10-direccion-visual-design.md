@@ -236,7 +236,7 @@ El cerebro gira unos 35° a cada lado, nunca entero, para que siempre se reconoz
 | Pantalla | Qué cambia |
 |---|---|
 | Entrada | Dos mitades: a la izquierda, la marca, el cerebro y el lema «Cómo se resolvió, y dónde consta.»; a la derecha, el formulario. Ayuda para la contraseña olvidada: «Pide a quien administra el grupo que te la restablezca». |
-| Portada de la demo | A pantalla completa, sin sesión ni llamadas a la API: el cerebro, los textos de `cover` y el botón «Empezar la demostración», que lleva a la entrada. Se abre con la dirección `#portada`. Sin `cover` en la marca, esa dirección lleva a la entrada. |
+| Portada de la demo | A pantalla completa, sin sesión ni llamadas a la API: el cerebro, los textos de `cover` y el botón «Empezar la demostración», que lleva a la entrada. Se abre con la dirección `#cover`. Sin `cover` en la marca, esa dirección lleva a la entrada. |
 | Empresas | Lista de empresas del grupo, con su nombre y sus capacidades como interruptores. |
 | Empresa | Cabecera con el nombre y las capacidades: interruptores para el administrador de grupo; etiquetas de solo lectura para el administrador de empresa, que hoy no puede cambiarlas. Sección de proyectos (nombre y acciones; la columna «Quién lo ve» llega con la tarea 5). Sección de personas (nombre y correo, papel, acceso y acciones; el número de claves no se muestra, porque pediría una llamada por persona, y las claves se ven al desplegarlas). La acción principal es «Añadir persona». |
 | Documentos | Mismo patrón: cabecera, subida como acción principal y tabla. |

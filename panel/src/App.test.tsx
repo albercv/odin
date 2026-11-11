@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { App } from './App';
@@ -46,8 +46,8 @@ test('loginStillLogsIn', async () => {
   expect(calls.find((c) => c.key === 'POST /v1/admin/session')?.body).toEqual({ email: 'a@b.c', password: 'buena' });
 });
 
-test('portadaWithCoverShowsCoverThenLogin', async () => {
-  location.hash = '#portada';
+test('coverHashShowsCoverThenLogin', async () => {
+  location.hash = '#cover';
   mockFetch(unauthorized);
   renderWith({ title: 'Titular', subtitle: 'Sub', note: 'Nota' });
   await userEvent.click(await screen.findByRole('button', { name: 'Empezar la demostración' }));
@@ -55,8 +55,8 @@ test('portadaWithCoverShowsCoverThenLogin', async () => {
   expect(location.hash).toBe('');
 });
 
-test('portadaWithoutCoverShowsLogin', async () => {
-  location.hash = '#portada';
+test('coverHashWithoutCoverShowsLogin', async () => {
+  location.hash = '#cover';
   mockFetch(unauthorized);
   renderWith();
   expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
@@ -206,4 +206,20 @@ test('reviewApproveCorrectReject', async () => {
   await waitFor(() => expect(sent('k3')).toEqual({ decision: 'REJECT', note: 'Dudoso' }));
   expect(sent('k1')).toEqual({ decision: 'APPROVE' });
   expect(sent('k2')).toEqual({ decision: 'CORRECT', correctedBody: 'Mejor' });
+});
+
+test('hashChangeDoesNotBreakHookOrder', async () => {
+  location.hash = '';
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  mockFetch(unauthorized);
+  renderWith({ title: 'Titular', subtitle: 'Sub', note: 'Nota' });
+  expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
+  location.hash = '#cover';
+  act(() => { window.dispatchEvent(new HashChangeEvent('hashchange')); });
+  expect(await screen.findByRole('button', { name: 'Empezar la demostración' })).toBeInTheDocument();
+  location.hash = '';
+  act(() => { window.dispatchEvent(new HashChangeEvent('hashchange')); });
+  expect(await screen.findByRole('heading', { name: 'Entra en el panel' })).toBeInTheDocument();
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
 });

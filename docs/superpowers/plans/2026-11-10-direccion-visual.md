@@ -331,21 +331,21 @@ Rama `task/identidad-pertenencias/visual-6`. Spec 8 (disposición) y 11 (entrada
   - abajo: la persona, «Mi cuenta» y «Salir»;
   - `aria-current="page"` en la página activa;
   - por debajo de 900 px pasa a barra superior.
-- `App`: `#portada` con `brand.cover` muestra `Cover`; sin `cover`, `#portada` muestra la entrada. Las páginas cambian con `withViewTransition`. Los proveedores `ToastProvider` y `ConfirmProvider` envuelven la aplicación.
+- `App`: `#cover` con `brand.cover` muestra `Cover`; sin `cover`, `#cover` muestra la entrada. Las páginas cambian con `withViewTransition`. Los proveedores `ToastProvider` y `ConfirmProvider` envuelven la aplicación.
 - `Login`:
   - a la izquierda, el bloque de marca con `BrainCanvas` (`LOGIN_PLACEMENT`), el lema «Cómo se resolvió, y dónde consta.» y el texto «Odín guarda los documentos y las fichas de la empresa y responde a la IA de cada persona citando la fuente.»;
   - a la derecha, «Entra en el panel», los campos «Correo» y «Contraseña», el botón «Entrar» y la ayuda «¿Has olvidado la contraseña? Pide a quien administra el grupo que te la restablezca.»;
   - el aviso de `notice` sigue en un `role="status"`.
 - `Cover`:
   - `BrainCanvas` (`COVER_PLACEMENT`) y los tres textos de `brand.cover`;
-  - el botón «Empezar la demostración», que quita `#portada` y lleva a la entrada;
+  - el botón «Empezar la demostración», que quita `#cover` y lleva a la entrada;
   - ninguna llamada a la API.
 
 - [ ] **Paso 1:** pruebas, y comprueba que fallan:
   - `brandMarkShowsLogoOrInitials`;
   - `sidebarHidesCompaniesForCompanyAdmins`, `sidebarMarksTheCurrentPage`, `pendingCountHiddenAtZero`;
   - `coverShowsTheBrandTexts`, `coverMakesNoApiCalls`;
-  - `portadaWithoutCoverShowsLogin`;
+  - `coverHashWithoutCoverShowsLogin`;
   - `loginStillLogsIn`.
 - [ ] **Paso 2:** implementa la estructura y las dos pantallas.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0.

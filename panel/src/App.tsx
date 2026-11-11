@@ -22,7 +22,8 @@ function Panel() {
   const [me, setMe] = useState<S['AdminMe'] | null | undefined>(undefined);
   const [notice, setNotice] = useState<string>();
   const { hash, clear } = useHash();
-  const showCover = hash === '#portada' && Boolean(useBrand().cover);
+  const hasCover = Boolean(useBrand().cover);
+  const showCover = hash === '#cover' && hasCover;
   const refresh = () => api.me().then(setMe, () => setMe(null));
   useEffect(() => { setUnauthorizedHandler(() => { setNotice(undefined); setMe(null); }); }, []);
   useEffect(() => { if (!showCover) refresh(); }, [showCover]);
