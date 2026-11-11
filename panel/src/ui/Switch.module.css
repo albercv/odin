@@ -1,0 +1,15 @@
+.switch {
+  display: inline-flex; align-items: center; gap: 10px; margin: 0; padding: 6px 12px 6px 6px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 400;
+}
+.switch input {
+  appearance: none; display: block; min-width: 0; width: 34px; height: 20px; margin: 0; padding: 0; border: 0;
+  border-radius: 999px; background: var(--line-strong); position: relative; cursor: inherit; transition: background-color .2s var(--ease-out);
+}
+.switch input::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--surface); transition: transform .2s var(--ease-out);
+}
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(14px); }
+.switch input:disabled { opacity: .45; }

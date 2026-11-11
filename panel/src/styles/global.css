@@ -1,0 +1,51 @@
+:root {
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --shadow: 0 8px 24px -12px var(--line-strong);
+}
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 15px/1.55 var(--font); -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.012em; line-height: 1.2; }
+h1 { font-size: 26px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+p { margin: 0; }
+button, input, textarea, select { font: inherit; color: inherit; }
+code { font-family: var(--mono); font-size: 14px; word-break: break-all; display: block; margin: .5rem 0; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Páginas actuales, hasta la tarea 7 */
+nav { display: flex; gap: 1rem; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+nav a { color: var(--accent); }
+nav a[aria-current='page'] { font-weight: 600; }
+#root { max-width: 56rem; margin: 0 auto; padding: 1rem; }
+label { display: block; margin: .5rem 0; font-size: 14px; font-weight: 500; }
+input, select, textarea {
+  display: block; min-width: 18rem; max-width: 100%; padding: 9px 12px;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface);
+}
+button {
+  height: 38px; padding: 0 16px; margin: .2rem .4rem .2rem 0; cursor: pointer; font-weight: 500;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface);
+}
+button:disabled { opacity: .45; cursor: not-allowed; }
+.card { border: 1px solid var(--line); border-radius: var(--radius-md); padding: .5rem 1rem; margin: 1rem 0; list-style: none; background: var(--surface); }
+.error { color: var(--danger); font-weight: 600; }
+.issued { border: 2px solid var(--accent); border-radius: var(--radius-md); padding: .5rem; background: var(--accent-tint); }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; border-bottom: 1px solid var(--line); padding: .5rem; }
+th { font-size: 13px; font-weight: 500; color: var(--text-muted); background: var(--surface-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
