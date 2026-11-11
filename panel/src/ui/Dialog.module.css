@@ -2,7 +2,7 @@
   width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line);
   border-radius: var(--radius-md, 12px); background: var(--surface); color: var(--text); overflow: auto;
 }
-.dialog::backdrop { background: var(--brand-base-deep); opacity: .6; }
+.dialog::backdrop { background: rgb(0 0 0 / .5); }
 .dialog[open] { animation: dialog-in .22s cubic-bezier(.23, 1, .32, 1); }
 .body { padding: 20px 24px; display: grid; gap: 16px; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
