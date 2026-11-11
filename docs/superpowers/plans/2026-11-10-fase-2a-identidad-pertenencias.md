@@ -291,7 +291,7 @@ Rama `task/identidad-pertenencias/codigo-persona`. Spec 5.5 y 7. Petición del p
 
 ### Tarea 6: Panel: personas, papeles, accesos, selector de empresa y proyectos · Sonnet
 
-Rama `task/identidad-pertenencias/panel`. Spec 9. Con el sistema de la dirección visual (D-039), sin rediseñarlo: `docs/superpowers/specs/2026-11-10-direccion-visual-design.md` (apartados 11 y 15) y su maqueta. El selector de empresa va en el hueco del nombre de la empresa en la barra lateral, y la columna «Quién lo ve» de proyectos dice «Toda la empresa» o «N miembros».
+Rama `task/identidad-pertenencias/panel`. Spec 9. Con el sistema de la dirección visual (D-039), sin rediseñarlo: `docs/superpowers/specs/2026-11-10-direccion-visual-design.md` (apartados 11 y 15) y su maqueta. El selector de empresa va en el hueco del nombre de la empresa en la barra lateral, y la columna «Quién lo ve» de proyectos dice «Toda la empresa», «N miembros» («1 miembro») o, sin miembros, «Nadie todavía».
 
 **Ficheros:**
 - **Crear:** `panel/src/components/Members.tsx`, `MemberForm.tsx`, `ProjectMembers.tsx` y `CompanySwitcher.tsx`, con sus pruebas.
