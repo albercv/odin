@@ -20,7 +20,6 @@ import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
-import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
 import java.util.Set;
 
