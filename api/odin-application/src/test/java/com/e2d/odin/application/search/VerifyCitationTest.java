@@ -75,4 +75,16 @@ class VerifyCitationTest {
         members.add(closed, worker.userId());
         assertThat(verify.execute(worker, d.id(), 1, "franquicia")).isTrue();
     }
+
+    @Test
+    void citationOfDeletedProjectStaysVerifiableByWhoCouldSeeIt() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        Document d = Fixtures.documentIn(docs, companyA, closed, "La franquicia es de 300 euros");
+        Actor member = Actors.worker(companyA);
+        members.add(closed, member.userId());
+        orgs.deleteProject(companyA, closed, Fixtures.NOW);
+
+        assertThat(verify.execute(member, d.id(), 1, "franquicia")).isTrue();
+        assertThat(verify.execute(Actors.worker(companyA), d.id(), 1, "franquicia")).isFalse();
+    }
 }

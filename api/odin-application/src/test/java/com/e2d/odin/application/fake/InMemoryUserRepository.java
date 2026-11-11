@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
 import java.util.Optional;
 
@@ -32,7 +31,7 @@ public class InMemoryUserRepository implements UserRepository {
 
     @Override
     public List<User> findAllById(Collection<UserId> ids) {
-        return ids.stream().map(users::get).filter(Objects::nonNull).toList();
+        return users.values().stream().filter(u -> ids.contains(u.id())).toList();
     }
 
     @Override

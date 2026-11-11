@@ -5,8 +5,10 @@ import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.shared.WorkerAccess;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.NotFoundException;
+import java.util.List;
 
 public class DescribeMe {
 
@@ -23,8 +25,9 @@ public class DescribeMe {
         CompanyId companyId = actor.requireCompany();
         Company company = organizations.findCompany(companyId)
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
-        var visibility = WorkerAccess.visibleProjects(actor, companyId, organizations, projectMembers);
+        List<Project> alive = organizations.listProjects(companyId);
+        var visibility = WorkerAccess.visibleProjects(actor, companyId, alive, projectMembers);
         return new MeView(actor.userId(), actor.displayName(), actor.role(), company,
-                organizations.listProjects(companyId).stream().filter(p -> visibility.includes(p.id())).toList());
+                alive.stream().filter(p -> visibility.includes(p.id())).toList());
     }
 }

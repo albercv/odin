@@ -25,12 +25,12 @@ public class VerifyCitation {
     }
 
     public boolean execute(Actor actor, DocumentId id, int pageNumber, String quote) {
-        var visibility = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)
+        var content = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)
                 .content();
-        if (documents.findById(actor.scope(), visibility, id).filter(d -> d.status() != DocumentStatus.READY).isPresent()) {
+        if (documents.findById(actor.scope(), content, id).filter(d -> d.status() != DocumentStatus.READY).isPresent()) {
             throw new NotFoundException("Documento no encontrado");
         }
-        return documents.findPage(actor.scope(), visibility, id, pageNumber)
+        return documents.findPage(actor.scope(), content, id, pageNumber)
                 .map(page -> QuoteMatcher.containsLiteral(page.text(), quote)).orElse(false);
     }
 }

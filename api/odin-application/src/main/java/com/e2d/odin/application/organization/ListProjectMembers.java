@@ -5,10 +5,15 @@ import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class ListProjectMembers {
 
@@ -27,7 +32,10 @@ public class ListProjectMembers {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findProject(companyId, projectId)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado"));
-        return users.findAllById(projectMembers.listMembers(companyId, projectId)).stream()
-                .map(user -> new ProjectMemberView(user.id(), user.displayName())).toList();
+        List<UserId> order = projectMembers.listMembers(companyId, projectId);
+        Map<UserId, User> people = users.findAllById(order).stream()
+                .collect(Collectors.toMap(User::id, Function.identity()));
+        return order.stream().filter(people::containsKey)
+                .map(id -> new ProjectMemberView(id, people.get(id).displayName())).toList();
     }
 }

@@ -25,11 +25,11 @@ public class ReadPage {
     }
 
     public PageView execute(Actor actor, DocumentId id, int pageNumber) {
-        var visibility = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)
+        var content = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)
                 .content();
-        Document document = documents.findById(actor.scope(), visibility, id).filter(d -> d.status() == DocumentStatus.READY)
+        Document document = documents.findById(actor.scope(), content, id).filter(d -> d.status() == DocumentStatus.READY)
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
-        var page = documents.findPage(actor.scope(), visibility, id, pageNumber)
+        var page = documents.findPage(actor.scope(), content, id, pageNumber)
                 .orElseThrow(() -> new NotFoundException("Página no encontrada"));
         return new PageView(document, page);
     }

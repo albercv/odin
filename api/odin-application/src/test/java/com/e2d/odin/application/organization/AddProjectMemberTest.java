@@ -9,7 +9,6 @@ import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
-import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -18,7 +17,6 @@ import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -33,9 +31,7 @@ class AddProjectMemberTest {
     private final ProjectId obra = Fixtures.project(organizations, company);
 
     private UserId person(String name, Role role, CompanyId in, boolean active) {
-        UserId id = new UserId(UUID.randomUUID());
-        People.member(users, memberships, id, name, Optional.empty(), role, in, active, Optional.empty());
-        return id;
+        return Fixtures.person(users, memberships, name, role, in, active);
     }
     private final AddProjectMember add = new AddProjectMember(organizations, memberships, members);
 

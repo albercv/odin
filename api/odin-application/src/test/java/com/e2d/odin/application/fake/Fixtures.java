@@ -4,6 +4,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
@@ -60,6 +61,14 @@ public final class Fixtures {
                 d.processingStartedAt(), d.attemptCount());
         docs.save(inProject);
         return inProject;
+    }
+
+    /** Una persona con su pertenencia (activa o no) a una empresa, guardada en los dobles en memoria. */
+    public static UserId person(InMemoryUserRepository users, InMemoryMembershipRepository memberships, String name,
+            Role role, CompanyId company, boolean active) {
+        UserId id = new UserId(UUID.randomUUID());
+        People.member(users, memberships, id, name, Optional.empty(), role, company, active, Optional.empty());
+        return id;
     }
 
     public static Document document(InMemoryDocumentRepository docs, CompanyId company, DocumentStatus status) {

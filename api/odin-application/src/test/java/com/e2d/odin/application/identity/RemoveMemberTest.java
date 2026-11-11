@@ -184,15 +184,20 @@ class RemoveMemberTest {
     void removedAndReAddedPersonHasNoProjects() {
         InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
         organizations.saveCompany(new Company(company, "A", EnumSet.allOf(Capability.class)));
+        UserId pili = new UserId(UUID.randomUUID());
+        People.member(users, memberships, pili, "Pili", Optional.of("pili@demo.test"), Role.WORKER, company, true,
+                Optional.empty());
         ProjectId project = Fixtures.project(projects, company);
-        projectMembers.add(project, workerId);
+        projectMembers.add(project, pili);
 
-        remove.execute(Actors.companyAdmin(company), company, workerId);
+        remove.execute(Actors.companyAdmin(company), company, pili);
         MemberAdded again = new AddMember(users, memberships, organizations, projectMembers,
                 new FakePasswordHasher(), new SequenceIdGenerator()).execute(Actors.companyAdmin(company), company,
-                new NewMember("Wanda", Optional.of("w2@demo.test"), Set.of(Role.WORKER), Optional.empty(), Set.of()));
+                new NewMember("Pili", Optional.of("pili@demo.test"), Set.of(Role.WORKER), Optional.empty(),
+                        Set.of()));
 
-        assertThat(projectMembers.projectsOf(company, workerId)).isEmpty();
-        assertThat(projectMembers.projectsOf(company, again.user().id())).isEmpty();
+        assertThat(again.alreadyExisted()).isTrue();
+        assertThat(again.user().id()).isEqualTo(pili);
+        assertThat(projectMembers.projectsOf(company, pili)).isEmpty();
     }
 }

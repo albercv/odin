@@ -154,6 +154,8 @@ class SearchKnowledgeTest {
         orgs.saveProject(orgs.findProject(companyA, project).orElseThrow().withRestricted(true));
 
         assertThatThrownBy(() -> useCase.execute(worker, forProject)).isInstanceOf(NotFoundException.class);
+        useCase.execute(worker, request(Optional.empty()));
+        assertThat(search.lastQuery().visibility().includes(project)).isFalse();
     }
 
     @Test

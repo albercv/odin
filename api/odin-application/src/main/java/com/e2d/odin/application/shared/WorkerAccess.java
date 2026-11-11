@@ -10,6 +10,7 @@ import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -33,17 +34,17 @@ public final class WorkerAccess {
         var company = organizations.findCompany(companyId)
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         AccessPolicy.requireCapability(company, capability);
-        ProjectVisibility visibility = visibleProjects(actor, companyId, organizations, projectMembers);
+        ProjectVisibility visibility = visibleProjects(actor, companyId, organizations.listProjects(companyId),
+                projectMembers);
         return new Granted(companyId, visibility, withDeleted(visibility, actor, companyId, organizations,
                 projectMembers));
     }
 
     /** Los de su empresa visibles para toda ella más aquellos de los que es miembro. */
-    public static ProjectVisibility visibleProjects(Actor actor, CompanyId companyId,
-            OrganizationRepository organizations, ProjectMemberRepository projectMembers) {
+    public static ProjectVisibility visibleProjects(Actor actor, CompanyId companyId, List<Project> alive,
+            ProjectMemberRepository projectMembers) {
         Set<ProjectId> visible = new HashSet<>(projectMembers.projectsOf(companyId, actor.userId()));
-        organizations.listProjects(companyId).stream().filter(p -> !p.restricted()).map(Project::id)
-                .forEach(visible::add);
+        alive.stream().filter(p -> !p.restricted()).map(Project::id).forEach(visible::add);
         return ProjectVisibility.of(visible);
     }
 

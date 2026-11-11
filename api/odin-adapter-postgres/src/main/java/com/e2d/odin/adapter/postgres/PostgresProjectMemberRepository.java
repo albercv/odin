@@ -64,12 +64,11 @@ public class PostgresProjectMemberRepository implements ProjectMemberRepository 
     }
 
     private Set<ProjectId> projectsOf(CompanyId companyId, UserId userId, String deletedFilter) {
-        CompanyScope scope = CompanyScope.of(companyId);
-        return tx.inScope(scope, jdbc -> new HashSet<>(Sql.scoped(jdbc.sql("""
+        String sql = """
                 SELECT p.id FROM project_member m JOIN project p ON p.id = m.project_id
-                WHERE m.user_id = :user AND p.company_id = :company AND
-                """ + deletedFilter + " AND "
-                + Sql.inScope("p.company_id")), scope).param("user", userId.value())
-                .param("company", companyId.value()).query((rs, n) -> new ProjectId(Sql.uuid(rs, "id"))).list()));
+                WHERE m.user_id = :user AND p.company_id = :company AND %s""".formatted(deletedFilter);
+        return tx.inScope(CompanyScope.of(companyId), jdbc -> new HashSet<>(jdbc.sql(sql)
+                .param("user", userId.value()).param("company", companyId.value())
+                .query((rs, n) -> new ProjectId(Sql.uuid(rs, "id"))).list()));
     }
 }

@@ -9,15 +9,12 @@ import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
-import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
-import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ListProjectMembersTest {
@@ -31,9 +28,7 @@ class ListProjectMembersTest {
     private final ProjectId obra = Fixtures.project(organizations, company);
 
     private UserId person(String name, Role role, CompanyId in, boolean active) {
-        UserId id = new UserId(UUID.randomUUID());
-        People.member(users, memberships, id, name, Optional.empty(), role, in, active, Optional.empty());
-        return id;
+        return Fixtures.person(users, memberships, name, role, in, active);
     }
     private final ListProjectMembers list = new ListProjectMembers(organizations, users, members);
     private final UserId wanda = person("Wanda", Role.WORKER, company, true);
@@ -65,5 +60,18 @@ class ListProjectMembersTest {
 
         assertThatThrownBy(() -> list.execute(Actors.companyAdmin(other), other, obra))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void listsMembersInTheOrderTheyWereAdded() {
+        UserId ana = person("Ana", Role.WORKER, company, true);
+        UserId zoe = person("Zoe", Role.WORKER, company, true);
+        UserId mia = person("Mia", Role.WORKER, company, true);
+        members.add(obra, zoe);
+        members.add(obra, mia);
+        members.add(obra, ana);
+
+        assertThat(list.execute(Actors.companyAdmin(company), company, obra)).extracting(ProjectMemberView::userId)
+                .containsExactly(zoe, mia, ana);
     }
 }
