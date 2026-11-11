@@ -35,7 +35,9 @@
 | Decisión | Motivo | Coste si es errónea |
 |---|---|---|
 | El etiquetador es un puerto, `TopicTagger`. El adaptador habla con Ollama por HTTP | Es lo que se midió. Otro motor local sería otro adaptador | Un adaptador |
-| Mismas instrucciones y misma forma de respuesta que se midieron (`clasificar.py` con definiciones: etiquetas separadas por punto y coma, que se cotejan con la lista) | Pedir JSON o forzar valores cambiaría lo medido, y no se ha medido | Volver a medir con otra forma |
+| Las instrucciones y la forma de respuesta que se midieron (`clasificar.py` con definiciones: etiquetas separadas por punto y coma, que se cotejan con la lista), con el preámbulo generalizado: «Eres el sistema de archivo de {nombre de la empresa}. Lee este documento y asígnale…». El resto del texto, la regla de la duda incluida, va literal | Pedir JSON o forzar valores cambiaría lo medido, y no se ha medido. El preámbulo medido hablaba de fincas y de fichas de caso, y Odín es genérico. Ese cambio se vuelve a medir con la batería (apartado 8) | Volver al preámbulo medido, o medir otra forma |
+| No se añade ningún tema comodín. «Otros» existe solo si la empresa lo pone en su lista, como la de la demo (D-031) | La lista es de cada cliente | Inyectar un comodín, y medirlo |
+| Las instrucciones llevan versión (`instrucciones v1`), y el etiquetador guarda el modelo y esa versión | Saber con qué se etiquetó cada documento | Un campo |
 | `temperature 0`, `think false`, contexto de 4.096 tokens y como mucho 60 tokens de respuesta | Las condiciones de T-010 | Configuración |
 | Un documento largo se etiqueta **por tramos de páginas** que caben en el contexto, y se suman los temas de todos los tramos | Ollama recorta en silencio lo que no cabe. Sumar los temas de cada tramo sigue la regla de D-031: ante la duda, todos | Una sola llamada con un resumen, que habría que medir |
 | Si Ollama dice que el texto ocupó todo el contexto (`prompt_eval_count` igual o mayor que `num_ctx`), el tramo falla y no se etiqueta con lo recortado | No se dan por buenos temas de un texto que el modelo no leyó entero | Reducir el tamaño del tramo |
@@ -78,14 +80,18 @@
 
 - **Quién la gestiona:** el administrador de la empresa y el del grupo.
 - **Validación:**
-  - nombre y definición con texto;
+  - nombre (hasta 60 caracteres) y definición (hasta 500) con texto;
+  - como mucho 30 temas por empresa, para que la lista quepa en el contexto con un tramo de documento. La lista medida tenía 8, con definiciones de hasta unos 450 caracteres;
   - nombre único en la empresa;
   - un nombre no puede contener a otro, comparando sin tildes ni mayúsculas.
   - Mensajes:
     - 409, «Ya hay un tema con ese nombre»;
     - 400, «Un nombre de tema no puede contener a otro: <nombre>».
-- **Borrado:** lógico. Sus `DocumentTopic` dejan de salir.
-- **Versión:** cualquier cambio sube `topicListVersion`.
+- **Borrado:** lógico. Sus `DocumentTopic` dejan de salir. **No** sube la versión: no hace falta volver a etiquetar para dejar de enseñar un tema.
+- **Versión:** sube al crear un tema y al cambiar su nombre o su definición.
+  - Renombrar no crea un tema nuevo: es el mismo identificador, así que las decisiones del administrador sobre él se conservan.
+  - Varios cambios seguidos se juntan solos: un documento etiquetado con la versión 3, cuando la lista va por la 5, se etiqueta una sola vez.
+  - Volver a etiquetar una empresa entera lleva tiempo. Como cálculo, no como medida, a unos 20 s por documento (T-010), 1.000 documentos son unas 5,5 horas: una noche.
 
 ### 5.2 Etiquetado
 
@@ -93,18 +99,23 @@
   - **Ventana:** si estamos fuera de la ventana horaria, o si `isAvailable()` es falso, no toma nada.
   - **Qué toma:** con `FOR UPDATE SKIP LOCKED`, un documento `READY` cuya empresa tiene al menos un tema y que cumple una de estas:
     - no tiene `DocumentTagging`;
-    - tiene uno con una versión anterior;
-    - lleva en `TAGGING` más de su tiempo de espera.
-  - **Intentos:** como en los otros carriles. Suma uno al tomarlo y, si pasa de 3, `FAILED`.
+    - tiene uno con una versión anterior, en cualquier estado salvo `TAGGING`;
+    - lleva en `TAGGING` más allá de su plazo.
+  - **Orden:** primero los que nunca se etiquetaron y después los de versión anterior, y dentro de cada grupo, por antigüedad.
+  - **Plazo:** al tomarlo se guarda `deadlineAt`: el tiempo por tramo multiplicado por el número de tramos, más 5 minutos. Así un documento largo no se toma dos veces.
+  - **Intentos:** como en los otros carriles. Suma uno al tomarlo y, si pasa de 3, `FAILED`. Un `FAILED` con la versión actual no se vuelve a tomar solo.
+  - **Reintento manual:** `POST /v1/admin/documents/{documentId}/topics/retag` borra su `DocumentTagging` y lo deja en cola. Lo usa el panel del bloque 4.
 - **Tramos:**
   - las páginas se juntan en orden en tramos de hasta `ODIN_TAGGER_CHUNK_CHARS` caracteres (6.000 por defecto);
   - una página más larga que eso va sola, partida por el límite;
   - cada tramo es una llamada.
+  - **Si un tramo sale recortado,** se parte en dos y se reintenta, hasta un mínimo de 1.000 caracteres. Por debajo, el documento falla con «La lista de temas es demasiado larga para el modelo: acorta las definiciones».
 - **Resultado:**
   - los temas de la IA son la unión de los de todos los tramos;
   - se sustituyen los `DocumentTopic` de origen `AI` del documento;
   - nunca se toca un tema sobre el que haya decidido el administrador.
 - **Sin temas:** si la respuesta no trae ningún nombre de la lista, el documento queda `DONE` sin temas. No se inventa ninguno.
+- **Carrera con el administrador:** el guardado final del etiquetador y cada decisión del administrador bloquean la fila `document_tagging` del documento (`SELECT … FOR UPDATE`, creándola si no existe) y hacen todo en esa transacción. El etiquetador vuelve a leer las decisiones del administrador dentro de ella. Así una corrección hecha durante el etiquetado no se pierde.
 - **Errores:**
   - el servicio no responde: se devuelve el intento, como en el bloque 1;
   - fallo o texto recortado en un tramo: falla el documento entero y no se guarda nada a medias.
@@ -120,7 +131,7 @@
 
 ### 5.4 Lo que ve el trabajador
 
-- **`DescribeMe`:** gana `topics` (`id`, `name`, `definition`) y `tagging`, con el número de documentos visibles que esperan etiquetarse con la versión actual.
+- **`DescribeMe`:** gana `topics` (`id`, `name`, `definition`) y `tagging`, con el número de documentos visibles `READY` que no están `DONE` con la versión actual. Los `FAILED` cuentan como pendientes, para que una lista nunca parezca completa sin serlo.
   - El recuento solo cuenta documentos de sus proyectos visibles, para no revelar cuántos hay en un proyecto restringido.
 - **`ListDocuments`:**
   - gana el filtro opcional `topicId`;
@@ -141,6 +152,7 @@
 | `PATCH, DELETE /v1/admin/companies/{companyId}/topics/{topicId}` | Administradores | `{ name?, definition? }`; borrado lógico, 204 |
 | `GET /v1/admin/documents/{documentId}/topics` | Administradores | `DocumentTopicView[]`: tema, origen, estado, etiquetador, quién decidió y cuándo; con el `DocumentTagging` |
 | `PUT, DELETE /v1/admin/documents/{documentId}/topics/{topicId}` | Administradores | Añadir o quitar, 204 |
+| `POST /v1/admin/documents/{documentId}/topics/retag` | Administradores | Vuelve a poner el documento en cola, 202 |
 | `GET /v1/admin/companies/{companyId}/documents` | Administradores | `DocumentView` gana `taggingStatus` y `topics` activos |
 | `GET /v1/me` | Trabajador | `MeView` gana `topics` y `tagging` |
 | `GET /v1/documents?topicId=` | Trabajador | Filtro nuevo; `WorkerDocumentView` gana `topics` |
@@ -210,3 +222,14 @@
 - Nombres internos y la consulta exacta de la toma.
 - Cómo se parte una página más larga que el tramo: por párrafos o por el límite.
 - La versión fijada de la imagen de Ollama, la última estable al ejecutar.
+
+## 11. Revisión del constructor (2026-11-11)
+
+Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 7 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
+- el preámbulo generalizado, que se vuelve a medir, y sin tema comodín (2);
+- los límites de la lista y el tramo que se parte si sale recortado (5.1 y 5.2);
+- qué sube la versión, cómo se juntan los cambios y el orden de la cola (5.1 y 5.2);
+- los `FAILED` cuentan como pendientes, y hay reintento manual (5.2 y 5.4);
+- el plazo por documento según su número de tramos (5.2);
+- el bloqueo de fila contra la carrera con el administrador (5.2);
+- renombrar conserva el tema y sus decisiones (5.1).
