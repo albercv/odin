@@ -15,7 +15,7 @@
 ## Cuándo se ejecuta
 
 - Tras el cierre de la 2a y **después del bloque 2**, cuando lo diga el CEO.
-- Si el CEO responde otra cosa a las preguntas del spec 2, el CTO actualiza el spec y este plan antes de empezar.
+- Las respuestas del CEO (D-040 y D-044) ya están aplicadas. La pantalla de revisión, que pide que la nota trate del contenido, va en el bloque 4.
 
 ## Restricciones globales
 
@@ -151,6 +151,9 @@ Rama `task/fase-2-conocimiento/mis-fichas-y-preguntas`. Spec 4.2, 4.3, 5 y 6.
   - `listMyKnowledgeCards`, con `SAVE_KNOWLEDGE_CARD` y entrada `status` (`PENDING`, `APPROVED` o `REJECTED`). Descripción: «Lista las fichas que has guardado y en qué estado está su revisión. Si una está rechazada, enseña la nota del revisor tal cual.».
   - `listMyQuestions`, con `SEARCH_KNOWLEDGE` y entrada `limit`. Descripción: «Lista las consultas que tu IA ha hecho al cerebro con tu clave.».
   - `saveKnowledgeCard`: su descripción añade «Puedes ver su estado con listMyKnowledgeCards.».
+- **`INSTRUCTIONS` gana** (D-044):
+  - «Si una ficha tuya tiene la decisión CORRECT, preséntala como corregida por el administrador y enseña los dos textos: el que enviaste y el corregido.»;
+  - «Si una ficha tuya está rechazada, preséntala como rechazada y enseña la nota del revisor tal cual.».
 - `demo-client.ts`, paso nuevo:
   1. el trabajador A guarda una ficha;
   2. la encuentra con `reviewStatus: PENDING` y el trabajador de la misma empresa no la encuentra;
@@ -174,7 +177,7 @@ Rama `task/fase-2-conocimiento/mis-fichas-y-preguntas`. Spec 4.2, 4.3, 5 y 6.
     - `actorOfAnotherCompanySeesNothing`.
   - IT de PostgreSQL: `listByAuthorFiltersCompanyProjectsAndStatus` y `listByAuthorOfQuestionsFiltersCompany`.
   - `WorkerApiTest`: una prueba por ruta. `IsolationTest.keyOfOtherPersonNeverListsSomeoneElsesCardsOrQuestions`.
-  - MCP: `registeredOnlyWithCapability`, para las dos, y `sendsStatusFilter`.
+  - MCP: `registeredOnlyWithCapability`, para las dos, `sendsStatusFilter`, y la prueba de `INSTRUCTIONS` con las dos frases nuevas.
 - [ ] **Paso 2:** implementa. Regenera el contrato y los tipos.
 - [ ] **Paso 3:** `make demo` dos veces seguidas y `make check` terminan con 0.
 - [ ] **Paso 4:** commit «feat: el autor ve sus fichas y sus preguntas por MCP».
