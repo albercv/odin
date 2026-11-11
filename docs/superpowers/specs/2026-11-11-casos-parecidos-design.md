@@ -53,7 +53,10 @@
 | Documento | `Document` | Gana `caseDocument` (falso por defecto): es la ficha de un caso. Lo pone el administrador, nunca la IA |
 | Capacidad | `Capability.SIMILAR_CASES` | Nueva |
 | Pregunta registrada | `QuestionRecord` | Gana `kind`: `SEARCH` o `SIMILAR_CASES` |
-| Caso parecido | `SimilarCase` (valor) | Tipo de fuente, identificador, título, proyecto, fecha, número de páginas, páginas devueltas (número y texto literal), si se recortó y el extracto que coincidió. Sin autor |
+| Caso parecido | `SimilarCase` (valor) | Tipo de fuente, identificador, título, proyecto, `addedAt`, número de páginas, páginas devueltas (número y texto literal), si se recortó y el extracto que coincidió. Sin autor |
+
+- **`addedAt`** es cuándo entró en Odín: `uploadedAt` del documento o `createdAt` de la ficha. No es la fecha del caso. Esa está en su texto, y el cerebro no la extrae porque sería adivinarla (D-008). La instrucción del MCP lo dice.
+- **Abiertos o cerrados:** entra todo documento marcado como caso, esté como esté. El cerebro no sabe si un caso está resuelto. Lo dice el texto, y la instrucción pide a la IA que avise cuando un caso no tiene resolución o resultado.
 
 - **Migración:**
   - `document.case_document boolean NOT NULL DEFAULT false`;
@@ -78,23 +81,27 @@
 - **Qué entra:**
   - las páginas de documentos `READY` con `caseDocument`;
   - las fichas `APPROVED`, que cuentan como casos resueltos;
-  - siempre de la empresa del actor y de sus proyectos visibles, con el filtro SQL explícito y la seguridad por filas (spec 2a, 6).
+  - siempre de la empresa del actor y de sus proyectos visibles, con el filtro SQL explícito y la seguridad por filas (spec 2a, 6). Lo que no tiene proyecto lo ve toda la empresa, como en la búsqueda (D-038).
 - **Orden:**
   - se reutiliza la consulta de `PostgresKnowledgeSearch`: `odin_spanish`, `plainto_tsquery` con `|`, el canal exacto de identificadores y `ts_rank_cd`;
   - se agrupa por documento o ficha y vale su mejor página;
+  - documentos y fichas van en la misma lista, sin cupos, como ya hace la búsqueda. Si la batería muestra que unos tapan a los otros, se revisa;
   - a igual puntuación, se ordena por título y después por identificador.
   - Lo común de esa consulta se saca a un sitio compartido; no se copia.
 - **Qué devuelve cada caso:**
-  - **Documento:** sus páginas en orden, desde la primera, mientras no pasen de 3 páginas ni de 12.000 caracteres. Siempre va al menos la página con mejor puntuación, aunque sea más larga. Si falta alguna, `truncated: true` y `pageCount`, y la IA sigue con `readPage`.
+  - **Documento:** sus páginas en orden, desde la primera, mientras no pasen de 3 páginas ni de 12.000 caracteres.
+    - Si la página con mejor puntuación se queda fuera, se añade al final, aunque pase de los límites. Por ejemplo, las páginas 1, 2 y 5.
+    - Si falta alguna página, `truncated: true` y `pageCount`, y la IA sigue con `readPage`.
   - **Ficha:** su texto completo y la marca «ficha aportada por un trabajador, resumen hecho por IA».
   - **Extracto:** el que coincidió, literal, igual que en la búsqueda.
 - **Sin resultados:** `{ cases: [], noSource: true }`.
-- **Registro:** un `QuestionRecord` de tipo `SIMILAR_CASES`, con los términos y el número de casos.
+- **Registro:** un `QuestionRecord` de tipo `SIMILAR_CASES`, con los términos y el número de casos. Hoy nada lee el registro. Las estadísticas y los huecos del bloque 4 cuentan los dos tipos y los enseñan por separado.
 - **Autoría:** la respuesta no lleva ningún autor (pregunta al CEO). El texto literal del documento no se toca: si menciona a una persona, la instrucción del MCP le pide a la IA que no compare ni mencione a quien resolvió cada caso.
 
 ### 5.3 Listado de documentos
 
 - `ListDocuments` del trabajador gana el filtro opcional `caseDocument`, y cada documento lleva el campo, para que la IA pueda listar todos los casos (estudio de búsqueda, 5.1, punto 10).
+- El filtro depende de `SEARCH_KNOWLEDGE`, como el listado, y no de `SIMILAR_CASES`.
 
 ## 6. Contrato
 
@@ -105,7 +112,7 @@
 | `POST /v1/admin/companies/{companyId}/documents` | Administradores | Campo multipart nuevo `caseDocument` |
 | `PATCH /v1/admin/documents/{documentId}` | Administradores | `{ caseDocument }` → `DocumentView`, que gana `caseDocument` |
 
-`SimilarCaseView` lleva: `sourceType`, `sourceId`, `title`, `projectId`, `date`, `pageCount`, `pages` (`[{ number, text }]`, vacío en una ficha), `body` (solo en una ficha), `truncated`, `excerpt` y `origin`. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, con el texto de la marca.
+`SimilarCaseView` lleva: `sourceType`, `sourceId`, `title`, `projectId`, `addedAt`, `pageCount`, `pages` (`[{ number, text }]`, vacío en una ficha), `body` (solo en una ficha), `truncated`, `excerpt` y `origin`. `origin` es `ORIGINAL_DOCUMENT` o `KNOWLEDGE_CARD`, con el texto de la marca.
 
 ## 7. MCP
 
@@ -115,7 +122,9 @@
   - de cada caso parecido, presenta su resolución y su resultado con la cita del documento y la página;
   - si dos casos se resolvieron de forma distinta, enséñalos los dos con sus citas y su resultado, y sugiere solo el que acabó bien, citando ese resultado;
   - nunca compares ni menciones a las personas que resolvieron cada caso;
-  - una ficha aportada es un resumen hecho por IA y se presenta como tal.
+  - una ficha aportada es un resumen hecho por IA y se presenta como tal;
+  - `addedAt` es cuándo entró el documento en Odín, no la fecha del caso; esa fecha está en el texto;
+  - si un caso no tiene resolución o resultado escritos, dilo; si es el mismo caso nuevo que te han dado, descártalo.
 
 ## 8. Panel
 
@@ -139,6 +148,7 @@ La forma de medir es la misma que la de la búsqueda (T-007, T-009). No se anunc
 - **Términos:** otro subagente (Haiku), que hace de IA del trabajador, lee solo cada ficha nueva y escribe sus términos, sin ver las claves. Se guardan como fichero fijo, como `reformulaciones.json`, para que la prueba no dependa de un modelo.
 - **Medida:** porcentaje de casos esperados que salen entre los 5 primeros, y cuántos casos nuevos los tienen todos. La primera medición fija el umbral de regresión.
 - **Prueba:** `SimilarCasesBatteryIT`, con Testcontainers, junto a `SearchBatteryIT`. Ficheros en `api/odin-adapter-postgres/src/test/resources/similar-cases-battery/`.
+  - Las fichas del corpus se **copian** ahí desde la rama `feature/planificacion-tecnica` del repositorio OCR, como ya se hizo con la batería de búsqueda. La prueba no lee nada de otro repositorio.
 
 ## 10. Pruebas
 
@@ -172,3 +182,15 @@ La forma de medir es la misma que la de la búsqueda (T-007, T-009). No se anunc
 - Cómo se agrupa en SQL y cómo se cargan las páginas de los casos elegidos, siempre con el filtro de empresa y de proyectos en cada consulta.
 - Los textos exactos de la casilla y de la marca en el panel, dentro de la dirección visual.
 - El formato interno de los ficheros de la batería.
+
+## 13. Revisión del constructor (2026-11-11)
+
+Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 8 preguntas, todas técnicas, y el CTO las decidió. Ya están en el texto:
+- casos abiertos y el propio caso nuevo: entran, y la IA avisa o los descarta (4 y 7);
+- `date` pasa a `addedAt`, que es cuándo entró en Odín (4);
+- lo que no tiene proyecto lo ve toda la empresa (5.2);
+- documentos y fichas en una sola lista, sin cupos (5.2);
+- recorte con la mejor página añadida al final (5.2);
+- tipos de pregunta en las estadísticas del bloque 4 (5.2);
+- fichas de la batería copiadas al repositorio de Odín (9);
+- el filtro del listado no depende de `SIMILAR_CASES` (5.3).
