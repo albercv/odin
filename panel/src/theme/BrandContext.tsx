@@ -1,13 +1,20 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { NEUTRAL_BRAND, type Brand } from './brand';
-import type { ThemeTokens } from './deriveTheme';
+import { deriveTheme, type ThemeTokens } from './deriveTheme';
 
-const BrandContext = createContext<Brand>(NEUTRAL_BRAND);
+type BrandValue = { brand: Brand; theme: ThemeTokens };
 
-export function BrandProvider({ brand, children }: { brand: Brand; theme: ThemeTokens; children: ReactNode }) {
-  return <BrandContext.Provider value={brand}>{children}</BrandContext.Provider>;
+const BrandContext = createContext<BrandValue>({ brand: NEUTRAL_BRAND, theme: deriveTheme(NEUTRAL_BRAND.colors) });
+
+export function BrandProvider({ brand, theme, children }: BrandValue & { children: ReactNode }) {
+  const value = useMemo(() => ({ brand, theme }), [brand, theme]);
+  return <BrandContext.Provider value={value}>{children}</BrandContext.Provider>;
 }
 
 export function useBrand(): Brand {
-  return useContext(BrandContext);
+  return useContext(BrandContext).brand;
+}
+
+export function useThemeTokens(): ThemeTokens {
+  return useContext(BrandContext).theme;
 }
