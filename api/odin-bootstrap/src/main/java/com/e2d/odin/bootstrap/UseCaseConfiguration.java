@@ -4,6 +4,7 @@ import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
@@ -300,6 +301,11 @@ public class UseCaseConfiguration {
     @Bean
     RetryDocument retryDocument(DocumentRepository documents) {
         return new RetryDocument(documents);
+    }
+
+    @Bean
+    SupersedeDocument supersedeDocument(DocumentRepository documents, Clock clock) {
+        return new SupersedeDocument(documents, clock);
     }
 
     @Bean

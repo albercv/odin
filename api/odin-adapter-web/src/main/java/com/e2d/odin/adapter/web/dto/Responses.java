@@ -5,6 +5,8 @@ import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.organization.MeView;
 import com.e2d.odin.application.search.PageView;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentEntry;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
@@ -133,14 +135,23 @@ public final class Responses {
         }
     }
 
+    /** El sustituto directo de un documento sustituido, como lo ve el panel. */
+    public record DocumentLink(UUID id, String title) {
+        static DocumentLink from(DocumentRef ref) {
+            return new DocumentLink(ref.id().value(), ref.title());
+        }
+    }
+
     public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
-            int attemptCount) {
-        public static DocumentView from(Document d) {
+            int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt) {
+        public static DocumentView from(DocumentEntry entry) {
+            Document d = entry.document();
             return new DocumentView(d.id().value(), d.companyId().value(),
                     d.projectId().map(p -> p.value()).orElse(null), d.title(), d.filename(), d.format().name(),
                     d.status().name(), d.failureReason().orElse(null), d.paginated(), d.uploadedAt(),
-                    d.attemptCount());
+                    d.attemptCount(), entry.supersededBy().map(DocumentLink::from).orElse(null),
+                    d.supersededAt().orElse(null));
         }
     }
 
@@ -155,7 +166,7 @@ public final class Responses {
 
     public record Upload(DocumentView document, boolean duplicate) {
         public static Upload from(UploadOutcome o) {
-            return new Upload(DocumentView.from(o.document()), o.duplicate());
+            return new Upload(DocumentView.from(o.entry()), o.duplicate());
         }
     }
 

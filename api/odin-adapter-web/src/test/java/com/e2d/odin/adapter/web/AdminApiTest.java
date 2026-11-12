@@ -14,7 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.People;
+import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -45,6 +48,98 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.document.sha256").doesNotExist());
         mvc.perform(upload(company, admin, "contenido-uno".getBytes())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.duplicate").value(true));
+    }
+
+    private String supersededBy(Document document) {
+        return "/v1/admin/documents/" + document.id().value() + "/superseded-by";
+    }
+
+    private org.springframework.test.web.servlet.RequestBuilder supersede(Document old, Cookie admin, String body) {
+        return put(supersededBy(old)).cookie(admin).contentType(MediaType.APPLICATION_JSON).content(body);
+    }
+
+    private static String replacementJson(Document replacement) {
+        return "{\"replacementId\":\"" + replacement.id().value() + "\"}";
+    }
+
+    @Test
+    void putSupersededByReturnsTheDocumentView() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document current = Fixtures.readyDocument(w.docs, company, "póliza 2023");
+        mvc.perform(supersede(old, admin, replacementJson(current))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(old.id().value().toString()))
+                .andExpect(jsonPath("$.supersededBy.id").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.supersededBy.title").value(current.title()))
+                .andExpect(jsonPath("$.supersededAt").exists());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(old.id()).orElseThrow().supersededBy())
+                .contains(current.id());
+    }
+
+    @Test
+    void deleteSupersededByIs204EvenIfNotMarked() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        mvc.perform(delete(supersededBy(old)).cookie(admin)).andExpect(status().isNoContent());
+        w.docs.markSuperseded(company, old.id(), Fixtures.readyDocument(w.docs, company, "nueva").id(),
+                w.clock.instant());
+        mvc.perform(delete(supersededBy(old)).cookie(admin)).andExpect(status().isNoContent());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(old.id()).orElseThrow().superseded()).isFalse();
+    }
+
+    @Test
+    void supersedeWithoutOrWithBadReplacementIdIs400() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        mvc.perform(supersede(old, admin, "{}")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Indica el documento que lo sustituye"));
+        mvc.perform(supersede(old, admin, "{\"replacementId\":\"no-es-un-uuid\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").isNotEmpty());
+        mvc.perform(supersede(old, admin, "")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").isNotEmpty());
+    }
+
+    @Test
+    void supersedeConflictIs409WithItsMessage() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document processing = Fixtures.document(w.docs, company, DocumentStatus.PROCESSING);
+        mvc.perform(supersede(old, admin, replacementJson(processing))).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value(
+                        "El documento que lo sustituye aún no está listo. Márcalo cuando termine de procesarse."));
+    }
+
+    @Test
+    void supersedeWithAWorkerKeyIsRejected() throws Exception {
+        CompanyId company = newCompany();
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document current = Fixtures.readyDocument(w.docs, company, "póliza 2023");
+        mvc.perform(put(supersededBy(old)).header("Authorization", workerKey(company))
+                .contentType(MediaType.APPLICATION_JSON).content(replacementJson(current)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void documentViewCarriesSupersededByAndAt() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document current = Fixtures.readyDocument(w.docs, company, "póliza 2023");
+        w.docs.markSuperseded(company, old.id(), current.id(), w.clock.instant());
+        mvc.perform(get("/v1/admin/documents/" + old.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.supersededBy.id").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.supersededAt").exists());
+        mvc.perform(get("/v1/admin/documents/" + current.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.supersededBy").doesNotExist())
+                .andExpect(jsonPath("$.supersededAt").doesNotExist());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == '" + old.id().value() + "')].supersededBy.title")
+                        .value(current.title()));
     }
 
     @Test

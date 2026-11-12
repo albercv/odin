@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/superseded-by": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["supersede"];
+        post?: never;
+        delete: operations["unsupersede"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}": {
         parameters: {
             query?: never;
@@ -492,6 +508,39 @@ export interface components {
             currentPassword?: string;
             newPassword?: string;
         };
+        SupersedeRequest: {
+            /**
+             * Format: uuid
+             * @description El documento que lo sustituye entero.
+             */
+            replacementId?: string;
+        };
+        DocumentLink: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+        };
+        DocumentView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            companyId: string;
+            /** Format: uuid */
+            projectId?: string;
+            title: string;
+            filename: string;
+            format: string;
+            status: string;
+            failureReason?: string;
+            paginated: boolean;
+            /** Format: date-time */
+            uploadedAt: string;
+            /** Format: int32 */
+            attemptCount: number;
+            supersededBy?: components["schemas"]["DocumentLink"];
+            /** Format: date-time */
+            supersededAt?: string;
+        };
         Capabilities: {
             capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
         };
@@ -570,24 +619,6 @@ export interface components {
         Login: {
             email?: string;
             password?: string;
-        };
-        DocumentView: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            companyId: string;
-            /** Format: uuid */
-            projectId?: string;
-            title: string;
-            filename: string;
-            format: string;
-            status: string;
-            failureReason?: string;
-            paginated: boolean;
-            /** Format: date-time */
-            uploadedAt: string;
-            /** Format: int32 */
-            attemptCount: number;
         };
         NewCompany: {
             name?: string;
@@ -803,6 +834,52 @@ export interface operations {
                 "application/json": components["schemas"]["SetPassword"];
             };
         };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    supersede: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupersedeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+        };
+    };
+    unsupersede: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description No Content */
             204: {

@@ -39,6 +39,44 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void otherCompanyAdminCannotMarkOrUnmarkForeignDocument() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document old = Fixtures.readyDocument(w.docs, a, "viejo de A");
+        Document current = Fixtures.readyDocument(w.docs, a, "nuevo de A");
+        Document ownOfB = Fixtures.readyDocument(w.docs, b, "de B");
+        w.docs.markSuperseded(a, old.id(), current.id(), w.clock.instant());
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        String url = "/v1/admin/documents/" + old.id().value() + "/superseded-by";
+
+        mvc.perform(put(url).cookie(other).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"replacementId\":\"" + ownOfB.id().value() + "\"}")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Documento no encontrado"));
+        mvc.perform(delete(url).cookie(other)).andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(old.id()).orElseThrow().supersededBy())
+                .contains(current.id());
+    }
+
+    @Test
+    void companyAdminCannotUseAReplacementOfAnotherCompany() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document old = Fixtures.readyDocument(w.docs, a, "viejo de A");
+        Document foreign = Fixtures.readyDocument(w.docs, b, "ajeno");
+        var admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        var group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+
+        for (var cookie : new jakarta.servlet.http.Cookie[] {admin, group}) {
+            mvc.perform(put("/v1/admin/documents/" + old.id().value() + "/superseded-by").cookie(cookie)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"replacementId\":\"" + foreign.id().value() + "\"}"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.detail").value("Documento que lo sustituye no encontrado"));
+        }
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(old.id()).orElseThrow().superseded()).isFalse();
+    }
+
+    @Test
     void companyAdminCannotChangeACompanyCode() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
