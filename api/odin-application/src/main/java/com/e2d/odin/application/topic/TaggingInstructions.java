@@ -4,7 +4,11 @@ import com.e2d.odin.domain.topic.Topic;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/** Las instrucciones que se midieron en T-010 (clasificar.py, espacio tras los dos puntos y punto final incluidos), con el nombre de la empresa y la definición de cada tema. */
+/**
+ * La instrucción del estudio T-010 (clasificar.py) con el preámbulo generalizado: el nombre de la empresa en lugar de
+ * «administración de fincas» y «documento» en lugar de «ficha de caso». El resto del texto es el del estudio, con el
+ * espacio tras los dos puntos y el punto final incluidos, y la definición de cada tema.
+ */
 public final class TaggingInstructions {
 
     /** Cambiar el texto de {@link #build} obliga a cambiar esta versión y a volver a medir. */
