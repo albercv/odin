@@ -1,5 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 import { Companies } from './Companies';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
@@ -20,7 +21,24 @@ test('newCompanyAsksForNameAndCodeAndSendsBoth', async () => {
   await waitFor(() => expect(calls.find((c) => c.key === create)?.body).toEqual({ name: 'Acme', code: 'ACM' }));
 });
 
-const acme = { id: 'c1', name: 'Acme', code: 'ACM', capabilities: [] };
+test('pageTitleIsGrupo', async () => {
+  mockFetch({ [list]: () => [] });
+  renderWithProviders(<Companies onOpen={() => {}} />);
+  expect(await screen.findByRole('heading', { name: 'Grupo' })).toBeInTheDocument();
+});
+
+test('announcesCreatedCompanies', async () => {
+  const onChanged = vi.fn();
+  mockFetch({ [list]: () => [], [create]: () => ({ status: 201, body: { id: 'c9', name: 'Acme', code: 'ACM', capabilities: [] } }) });
+  renderWithProviders(<Companies onOpen={() => {}} onChanged={onChanged} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Nueva empresa' }));
+  await userEvent.type(screen.getByLabelText('Nombre de la empresa'), 'Acme');
+  await userEvent.type(screen.getByLabelText('Código'), 'acm');
+  await userEvent.click(screen.getByRole('button', { name: 'Crear empresa' }));
+  await waitFor(() => expect(onChanged).toHaveBeenCalled());
+});
+
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', capabilities: [], codeReviewed: true };
 const edit = async () => {
   const calls = mockFetch({ [list]: () => [acme], 'PATCH /v1/admin/companies/c1': () => acme });
   renderWithProviders(<Companies onOpen={() => {}} />);
@@ -53,4 +71,19 @@ test('rowButtonsShowShortTextAndNameTheTarget', async () => {
   expect(screen.getByRole('button', { name: 'Abrir Acme' })).toHaveTextContent(/^Abrir$/);
   expect(screen.getByRole('button', { name: 'Guardar Acme' })).toHaveTextContent(/^Guardar$/);
   expect(screen.getByRole('button', { name: 'Cancelar Acme' })).toHaveTextContent(/^Cancelar$/);
+});
+
+test('unreviewedCodeIsFlaggedUntilSaved', async () => {
+  let current = { ...acme, codeReviewed: false };
+  const calls = mockFetch({
+    [list]: () => [current],
+    'PATCH /v1/admin/companies/c1': () => { current = acme; return acme; },
+  });
+  renderWithProviders(<Companies onOpen={() => {}} />);
+  expect(await screen.findByText('Código por revisar')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Acme' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Editar Acme' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar Acme' }));
+  await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /v1/admin/companies/c1')).toBe(true));
+  await waitFor(() => expect(screen.queryByText('Código por revisar')).toBeNull());
 });

@@ -57,4 +57,12 @@ class CreateCompanyTest {
                 .isInstanceOf(ConflictException.class).hasMessage("Ya existe una empresa con ese código");
         assertThat(organizations.listCompanies(Actors.groupAdmin().scope())).hasSize(1);
     }
+
+    @Test
+    void newCompanyCodeIsReviewed() {
+        Company company = create.execute(Actors.groupAdmin(), "Talleres Demo", "TD");
+
+        assertThat(company.codeReviewed()).isTrue();
+        assertThat(organizations.findCompany(company.id())).hasValueSatisfying(stored -> assertThat(stored.codeReviewed()).isTrue());
+    }
 }

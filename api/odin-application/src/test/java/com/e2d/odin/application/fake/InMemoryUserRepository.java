@@ -39,8 +39,19 @@ public class InMemoryUserRepository implements UserRepository {
     }
 
     @Override
-    public Optional<User> findGroupAdmin() {
-        return users.values().stream().filter(u -> u.groupAdmin()).findFirst();
+    public List<User> listGroupAdmins() {
+        return users.values().stream().filter(User::groupAdmin).toList();
+    }
+
+    @Override
+    public List<User> lockGroupAdmins() {
+        return listGroupAdmins();
+    }
+
+    @Override
+    public Optional<User> findGroupAdminByEmail(String email) {
+        return listGroupAdmins().stream().filter(u -> u.email().filter(email::equalsIgnoreCase).isPresent())
+                .findFirst();
     }
 
     @Override

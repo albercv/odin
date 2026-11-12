@@ -9,11 +9,11 @@ type Me = Parameters<typeof Members>[0]['me'];
 
 afterEach(() => vi.restoreAllMocks());
 
-const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], active: true, hasPassword: false };
-const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test', hasPassword: true };
+const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], personActive: true, active: true, hasPassword: false };
+const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], personActive: true, active: false, email: 'bea@acme.test', hasPassword: true };
 const list = 'GET /v1/admin/companies/c1/members';
 const groupAdmin: Me = { userId: 'g', displayName: 'Ada', firstName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [], scannedDocumentsSupported: false };
-const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }], scannedDocumentsSupported: false };
+const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true }], scannedDocumentsSupported: false };
 
 const show = (routes: Routes, me: Me = groupAdmin, onProjectsChanged?: () => void) => {
   const calls = mockFetch(routes);
@@ -32,8 +32,8 @@ const act = async (person: string, action: string) => {
   await userEvent.click(screen.getByRole('button', { name: action }));
 };
 
-const gil = { userId: 'u5', displayName: 'Cora Gil', firstName: 'Cora', lastName: 'Gil', personCode: '7F3K', memberCode: '7F3K-ACM', email: 'cora@acme.test', roles: ['WORKER'], active: true };
-const both = { userId: 'u6', displayName: 'Dani Sol', firstName: 'Dani', lastName: 'Sol', personCode: 'DDDD', memberCode: 'DDDD-ACM', roles: ['COMPANY_ADMIN', 'WORKER'], active: true };
+const gil = { userId: 'u5', displayName: 'Cora Gil', firstName: 'Cora', lastName: 'Gil', personCode: '7F3K', memberCode: '7F3K-ACM', email: 'cora@acme.test', roles: ['WORKER'], personActive: true, active: true };
+const both = { userId: 'u6', displayName: 'Dani Sol', firstName: 'Dani', lastName: 'Sol', personCode: 'DDDD', memberCode: 'DDDD-ACM', roles: ['COMPANY_ADMIN', 'WORKER'], personActive: true, active: true };
 const projectList = 'GET /v1/admin/companies/c1/projects';
 const obra = { id: 'p1', companyId: 'c1', name: 'Obra', restricted: true };
 const reforma = { id: 'p2', companyId: 'c1', name: 'Reforma', restricted: true };
@@ -438,4 +438,30 @@ test('deletingAPersonAsksThenDeletesAndRefreshesPeopleAndProjects', async () => 
   expect(screen.queryByRole('button', { name: 'Más acciones de Ana' })).toBeNull();
   expect(onProjectsChanged).toHaveBeenCalled();
   await waitFor(() => expect(screen.getByRole('region', { name: 'Lista de personas' })).toHaveFocus());
+});
+
+const personActive = 'PATCH /v1/admin/users/u1';
+
+test('groupAdminDeactivatesInTheWholeGroupAfterConfirming', async () => {
+  const calls = show({ [list]: () => [ana], [personActive]: () => ({ ...ana, active: false, personActive: false }) });
+  const message = '¿Desactivar a Ana en todo el grupo? No podrá usar Odín en ninguna empresa hasta que se reactive. Sus claves y sus proyectos se conservan.';
+  await act('Ana', 'Desactivar en el grupo Ana');
+  await userEvent.click(within(screen.getByRole('dialog', { name: message })).getByRole('button', { name: 'Cancelar' }));
+  expect(calls.some((c) => c.key === personActive)).toBe(false);
+  await act('Ana', 'Desactivar en el grupo Ana');
+  await userEvent.click(within(screen.getByRole('dialog', { name: message })).getByRole('button', { name: 'Desactivar' }));
+  await waitFor(() => expect(calls.find((c) => c.key === personActive)?.body).toEqual({ active: false }));
+});
+
+test('hiddenForCompanyAdmins', async () => {
+  show({ [list]: () => [ana] }, companyAdmin);
+  await act('Ana', 'Desactivar Ana');
+  expect(screen.queryByRole('button', { name: 'Desactivar en el grupo Ana' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Activar en el grupo Ana' })).toBeNull();
+});
+
+test('inactivePersonIsFlagged', async () => {
+  show({ [list]: () => [{ ...ana, active: false, personActive: false }, gil] });
+  expect(await rowOf('Ana')).toHaveTextContent('Desactivada en el grupo');
+  expect(await rowOf('Cora Gil')).not.toHaveTextContent('Desactivada en el grupo');
 });

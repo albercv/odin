@@ -31,7 +31,10 @@ import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
+import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.DeleteUser;
+import com.e2d.odin.application.identity.ListGroupAdmins;
+import com.e2d.odin.application.identity.RevokeGroupAdmin;
 import com.e2d.odin.application.identity.DescribeAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
@@ -214,6 +217,18 @@ public class TestWiring {
 
     @Bean DescribeAdmin describeAdmin() {
         return new DescribeAdmin(users);
+    }
+
+    @Bean ListGroupAdmins listGroupAdmins() {
+        return new ListGroupAdmins(users);
+    }
+
+    @Bean AddGroupAdmin addGroupAdmin() {
+        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes);
+    }
+
+    @Bean RevokeGroupAdmin revokeGroupAdmin() {
+        return new RevokeGroupAdmin(users, memberships, adminSessions());
     }
 
     @Bean UpdateUser updateUser() {

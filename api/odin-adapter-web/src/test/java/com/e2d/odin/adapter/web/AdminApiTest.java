@@ -922,4 +922,40 @@ class AdminApiTest extends WebTestSupport {
         mvc.perform(get(url + "?month=2024-01").cookie(admin)).andExpect(status().isBadRequest());
         mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void groupAdminsAreListedAddedAndRevoked() throws Exception {
+        Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+        mvc.perform(get("/v1/admin/group-admins").cookie(group)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userId").isNotEmpty()).andExpect(jsonPath("$[0].personCode").isNotEmpty())
+                .andExpect(jsonPath("$[0].active").value(true)).andExpect(jsonPath("$[0].passwordHash").doesNotExist());
+
+        var added = mvc.perform(post("/v1/admin/group-admins").cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstName\":\"Gael\",\"lastName\":\"Ruiz\",\"email\":\"gael@e.test\","
+                        + "\"password\":\"clave-muy-larga-1\"}")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.alreadyExisted").value(false)).andExpect(jsonPath("$.keptPassword").value(false))
+                .andExpect(jsonPath("$.admin.displayName").value("Gael Ruiz"))
+                .andExpect(jsonPath("$.admin.email").value("gael@e.test"))
+                .andExpect(jsonPath("$.admin.personCode").value(matchesPattern("[A-Z0-9]{4}")))
+                .andExpect(jsonPath("$.password").doesNotExist()).andReturn();
+        String id = com.jayway.jsonpath.JsonPath.read(added.getResponse().getContentAsString(), "$.admin.userId");
+
+        mvc.perform(post("/v1/admin/group-admins").cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstName\":\"Gael\",\"lastName\":\"Ruiz\",\"email\":\"gael@e.test\","
+                        + "\"password\":\"clave-muy-larga-1\"}")).andExpect(status().isConflict());
+        mvc.perform(delete("/v1/admin/group-admins/" + id).cookie(group)).andExpect(status().isNoContent());
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(new UserId(UUID.fromString(id))).orElseThrow())
+                .satisfies(u -> org.assertj.core.api.Assertions.assertThat(u.groupAdmin()).isFalse());
+    }
+
+    @Test
+    void groupAdminRoutesNeedEmailAndAKnownPerson() throws Exception {
+        Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+        mvc.perform(post("/v1/admin/group-admins").cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstName\":\"Gael\",\"lastName\":\"Ruiz\",\"password\":\"clave-muy-larga-1\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("El administrador necesita correo"));
+        mvc.perform(delete("/v1/admin/group-admins/" + UUID.randomUUID()).cookie(group))
+                .andExpect(status().isNotFound());
+    }
 }
