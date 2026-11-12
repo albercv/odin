@@ -78,9 +78,10 @@ describe('buildServer', () => {
     expect(parsed.hits[0].projectName).toBe('Proyecto borrado');
   });
 
-  it('hitWithoutProjectHasNullProjectName', async () => {
-    const parsed = await search([docHit(undefined)]);
-    expect(parsed.hits[0].projectName).toBeNull();
+  it('hitWithoutProjectIsGeneralNeverDeleted', async () => {
+    const parsed = await search([docHit(undefined), { ...docHit(undefined), projectId: null }]);
+    expect(parsed.hits.map((h: { projectName: string }) => h.projectName))
+      .toEqual(['Sin proyecto (general de la empresa)', 'Sin proyecto (general de la empresa)']);
   });
 
   it('searchResultStillHasProjectId', async () => {
@@ -98,9 +99,9 @@ describe('buildServer', () => {
 
   it('listDocumentsCarriesProjectName', async () => {
     const client = await connect((r) => r.url === '/v1/me' ? meWith(ALL, 'Empresa Uno', [P1])
-      : { status: 200, body: [{ id: 'd1', projectId: 'p1', title: 'T' }, { id: 'd2', title: 'S' }] });
+      : { status: 200, body: [{ id: 'd1', projectId: 'p1', title: 'T' }, { id: 'd2', projectId: null, title: 'S' }] });
     const parsed = JSON.parse(textOf(await client.callTool({ name: 'listDocuments', arguments: {} })));
-    expect(parsed.documents.map((d: { projectName: string | null }) => d.projectName)).toEqual(['Comunidad Sol', null]);
+    expect(parsed.documents.map((d: { projectName: string | null }) => d.projectName)).toEqual(['Comunidad Sol', 'Sin proyecto (general de la empresa)']);
   });
 
   it('instructionsTellToFilterByProject', async () => {
@@ -180,7 +181,7 @@ describe('buildServer', () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [card], noSource: false } }));
     const parsed = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['truco'] } })));
     expect(parsed.hits[0]).toEqual({ sourceType: 'KNOWLEDGE_CARD', cardId: 'k1', title: 'Truco', authorName: 'Ana',
-      addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: null, excerpt: 'se hace así',
+      addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: 'Sin proyecto (general de la empresa)', excerpt: 'se hace así',
       origin: 'Ficha aportada por Ana, redactada con IA' });
   });
 
