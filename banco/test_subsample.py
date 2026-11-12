@@ -237,5 +237,31 @@ class FrontierTest(unittest.TestCase):
         self.assertIsNone(beats_single_frontier({"tokens_mean": 1.0, "accuracy_mean": 1.0, "valid": True}, singles, 0.0))
 
 
+class MeasuredOnlyCostTest(unittest.TestCase):
+    """Tokens, coste y latencia salen solo de los pares medidos: un par con error no sesga el frontera."""
+
+    def test_tokens_cost_and_latency_use_only_measured_pairs(self):
+        items = [{"id": "q1"}, {"id": "q2"}]
+        runs_by_question = {
+            "q1": [_run("main", 0, _answer("a"), duracion_s=2.0, coste=0.1,
+                        tokens={"entrada": 10, "salida": 0, "cache_lectura": 0, "cache_creacion": 0})],
+            "q2": [_run("main", 0, None, error="x", duracion_s=100.0, coste=9.0,
+                        tokens={"entrada": 1000, "salida": 0, "cache_lectura": 0, "cache_creacion": 0})],
+        }
+        row = curve(runs_by_question, items, lambda i, a: True, majority_vote, [{"main": 1}], draws=2, seed=0)[0]
+        self.assertEqual(row["tokens_mean"], 10.0)
+        self.assertAlmostEqual(row["cost_mean"], 0.1)
+        self.assertEqual(row["latency_p95"], 2.0)
+        self.assertEqual(row["tokens_by_class_mean"]["entrada"], 10.0)
+
+    def test_all_pairs_discarded_has_no_cost_or_latency(self):
+        items = [{"id": "q1"}]
+        runs_by_question = {"q1": [_run("main", 0, None, error="x", duracion_s=5.0, coste=1.0)]}
+        row = curve(runs_by_question, items, lambda i, a: True, majority_vote, [{"main": 1}], draws=2, seed=0)[0]
+        self.assertFalse(row["valid"])
+        self.assertIsNone(row["tokens_mean"])
+        self.assertIsNone(row["latency_p50"])
+
+
 if __name__ == "__main__":
     unittest.main()

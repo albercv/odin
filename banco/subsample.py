@@ -38,6 +38,8 @@ def _tokens_by_class(subset):
 
 
 def _percentiles(values):
+    if len(values) == 1:
+        return values[0], values[0]
     cuts = statistics.quantiles(values, n=100, method="inclusive")
     return cuts[49], cuts[94]
 
@@ -83,11 +85,6 @@ def _curve_row(runs_by_question, items, score, combiner, mix, draws, seed, extra
     mean, low, high = _accuracy_stats([accuracy for accuracy, _ in results])
     discarded = sum(d for _, d in results)
     pairs = len(per_draw) * len(items)
-    subsets_all = [subset for subsets in per_draw for subset in subsets.values()]
-    tokens = [sum(_tokens_by_class(s).values()) for s in subsets_all]
-    costs = [sum((r.get("coste_usd") or 0) for r in s) for s in subsets_all]
-    latencies = [latency_of(s, extra_s) for s in subsets_all]
-    p50, p95 = _percentiles(latencies)
     return {
         "mix": mix,
         "n": sum(mix.values()),
@@ -97,13 +94,27 @@ def _curve_row(runs_by_question, items, score, combiner, mix, draws, seed, extra
         "invalidDraws": discarded,
         "measuredPairs": pairs - discarded,
         "valid": discarded <= MAX_DISCARDED_SHARE * pairs,
-        "tokens_mean": _mean(tokens),
-        "cost_mean": _mean(costs),
+        **_usage_stats(_measured_subsets(per_draw), extra_s),
+    }
+
+
+def _measured_subsets(per_draw):
+    """Subconjuntos de los pares medidos: un par con error no aporta tokens, coste ni latencia."""
+    return [subset for subsets in per_draw for subset in subsets.values() if not _has_error(subset)]
+
+
+def _usage_stats(subsets, extra_s):
+    """Tokens, coste y latencia de los subconjuntos medidos; None si no hay ninguno que medir."""
+    if not subsets:
+        return {"tokens_mean": None, "cost_mean": None, "latency_p50": None, "latency_p95": None,
+                "tokens_by_class_mean": {cls: None for cls in TOKEN_CLASSES}}
+    p50, p95 = _percentiles([latency_of(s, extra_s) for s in subsets])
+    return {
+        "tokens_mean": _mean([sum(_tokens_by_class(s).values()) for s in subsets]),
+        "cost_mean": _mean([sum((r.get("coste_usd") or 0) for r in s) for s in subsets]),
         "latency_p50": p50,
         "latency_p95": p95,
-        "tokens_by_class_mean": {
-            cls: _mean([_tokens_by_class(s)[cls] for s in subsets_all]) for cls in TOKEN_CLASSES
-        },
+        "tokens_by_class_mean": {cls: _mean([_tokens_by_class(s)[cls] for s in subsets]) for cls in TOKEN_CLASSES},
     }
 
 
