@@ -16,7 +16,7 @@ from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
 from banco.layout import Layout
-from banco.ledger import Ledger, open_ledger
+from banco.ledger import CONSECUTIVE_ERRORS, Ledger, open_ledger
 from banco.medir_path import carga_mod, ejecutar
 from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, _build_jobs, run_pool
 from banco.subsample import beats_single_frontier, curve
@@ -220,6 +220,15 @@ def _quota_stop(sess, error, where):
     return False
 
 
+def _claude_streak(sess, error):
+    """Racha de errores seguidos de claude de pago: al llegar al límite, para el experimento. True si la alcanzó."""
+    if sess.ledger.note_claude(error) < CONSECUTIVE_ERRORS:
+        return False
+    if not _stopped(sess):
+        _stop(sess, f"{CONSECUTIVE_ERRORS} errores seguidos de claude: {error[:200]}")
+    return True
+
+
 def _exit_code(sess):
     return 2 if _stopped(sess) else 0
 
@@ -298,6 +307,7 @@ def _composed(sess, item, runs):
     record = _compose_paid(sess, item, runs)
     sess.ledger.charge(record.get("coste_usd"))
     _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
+    _claude_streak(sess, record.get("error"))
     if key is not None:
         sess.cache.put(key, record)
     return {**record, "cached": False}
@@ -436,7 +446,8 @@ def _charge_judge(sess, spec, record, item):
         return False
     sess.ledger.charge(record.get("coste_usd"))
     quota = _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
-    return quota or not sess.ledger.can_launch()
+    streak = _claude_streak(sess, record.get("error"))
+    return quota or streak or not sess.ledger.can_launch()
 
 
 def judge_stage(sess, finals, verdicts):

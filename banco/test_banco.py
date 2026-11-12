@@ -6,6 +6,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
@@ -650,6 +651,40 @@ class SampleAndConfigTest(Harness):
         self.assertEqual(code, 1)
         self.assertIn("reserva", errors.getvalue())
 
+
+
+TURNO = str(BANCO / "fakes" / "fake_claude_turno.py")
+
+
+class ErrorStopTest(Harness):
+    """Tres errores seguidos de claude de pago paran el experimento (código 2, PARADA.txt, sin más lanzamientos)."""
+
+    def test_three_claude_errors_in_a_row_stop_the_run(self):
+        counter = self.tmp / "contador"
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        code = self.run_cli(self.config(concurrency=1), env={"FAKE_CONTADOR": str(counter), "FAKE_MODO_DESDE": "1",
+                                                            "FAKE_MODO_DESDE_MODO": "error"})
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertEqual(len(counter.read_text(encoding="utf-8").splitlines()), 3)
+        self.assertIn("3 errores seguidos de claude: fallo cualquiera", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+
+    def test_three_composer_errors_in_a_row_stop_the_run(self):
+        failed = {"respuesta": None, "error": "fallo del redactor", "coste_usd": 0.0, "tokens": None, "duracion_s": 0.0}
+        with mock.patch("banco.run.compose", return_value=failed):
+            code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"'))
+        self.assertEqual(code, 2)
+        self.assertIn("3 errores seguidos de claude: fallo del redactor",
+                      (self.only_folder() / "PARADA.txt").read_text(encoding="utf-8"))
+
+    def test_three_judge_errors_in_a_row_stop_the_run(self):
+        failed = {"model": "haiku", "verdict": {"invalido": True, "motivo": "sin veredicto"}, "coste_usd": 0.0005,
+                  "tokens": None, "duracion_s": 1.0, "error": "fallo del juez"}
+        with mock.patch("banco.judge.run_claude_judge", return_value=failed):
+            code = self.run_cli(self.config(concurrency=1))
+        self.assertEqual(code, 2)
+        self.assertIn("3 errores seguidos de claude: fallo del juez",
+                      (self.only_folder() / "PARADA.txt").read_text(encoding="utf-8"))
 
 if __name__ == "__main__":
     unittest.main()
