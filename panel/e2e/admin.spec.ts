@@ -13,6 +13,9 @@ const CLOSED_PROJECT = 'Proyecto cerrado E2E';
 const PROJECT_PEOPLE = ['Paula Uno', 'Pedro Dos', 'Pilar Tres'];
 const WORKER = { name: 'Trabajador E2E', email: 'e2e-worker@demo.test', renamed: 'Trabajador Renombrado' };
 const COMPANY_ADMIN = { name: 'Admin E2E', email: 'e2e-admin@demo.test', password: `clave-${randomUUID()}`, newPassword: `clave-${randomUUID()}`, resetPassword: `clave-${randomUUID()}` };
+const FIRST_GROUP_ADMIN = 'Administrador Demo';
+const SECOND_GROUP_ADMIN = { name: 'Segundo Relevo', email: 'e2e-relevo@demo.test', password: `clave-${randomUUID()}` };
+const TOPIC = 'agua y humedades';
 const PROJECT = { name: 'Proyecto E2E', renamed: 'Proyecto E2E renombrado' };
 
 const usersSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Personas' }) });
@@ -197,7 +200,7 @@ async function resetCompanyAdminPasswordAndEnter(page: Page): Promise<void> {
   await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Empresa' }).selectOption({ label: COMPANY });
   await expect(page.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Empresas' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Grupo', exact: true })).toHaveCount(0);
   console.log('✓ Admin 9: contraseña restablecida; quien administra dos empresas entra, ve el selector y no ve el resto del grupo');
 }
 
@@ -213,7 +216,7 @@ async function changeOwnPassword(page: Page): Promise<void> {
 }
 
 async function samePersonInSecondCompany(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Empresas' }).click();
+  await page.getByRole('link', { name: 'Grupo', exact: true }).click();
   await createCompany(page, SECOND_COMPANY, 'E2B');
   await openCompany(page, SECOND_COMPANY);
   await createUser(page, { name: COMPANY_ADMIN.name, email: COMPANY_ADMIN.email, password: COMPANY_ADMIN.password, role: 'COMPANY_ADMIN', alsoWorker: true });
@@ -222,8 +225,9 @@ async function samePersonInSecondCompany(page: Page): Promise<void> {
   await expect(person).toContainText('Administra la empresa · Trabaja con su IA');
   await expect(person.locator('code')).toHaveText(/^[2-9A-HJKMNP-Z]{4}-E2B$/);
   await giveKey(page, COMPANY_ADMIN.name, 'clave segunda empresa');
-  await page.getByRole('link', { name: 'Empresas' }).click();
-  await openCompany(page, COMPANY);
+  await page.getByRole('combobox', { name: 'Empresa' }).selectOption({ label: COMPANY });
+  await expect(page.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Grupo', exact: true })).toBeVisible();
   console.log('✓ Admin 11: la misma persona en una segunda empresa (aviso de que ya existía), con los dos papeles y una clave en ella');
 }
 
@@ -328,9 +332,182 @@ async function uploadCaseFilesAndMarkSelection(page: Page): Promise<void> {
   console.log('✓ Admin 17: dos ficheros subidos a la vez como fichas de caso; la selección se desmarca y se vuelve a marcar por lotes');
 }
 
+const groupAdminsSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Administradores del grupo' }) });
+
+async function openGroupAdmins(page: Page, email: string, password: string): Promise<void> {
+  await page.goto(process.env.DEMO_PANEL_URL ?? '');
+  await logIn(page, email, password);
+  await page.getByRole('link', { name: 'Administración del grupo' }).click();
+  await expect(page.getByRole('heading', { name: 'Administración del grupo', level: 1 })).toBeVisible();
+}
+
+async function addSecondGroupAdmin(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Añadir administrador del grupo' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Añadir administrador del grupo' });
+  await dialog.getByLabel('Nombre', { exact: true }).fill(firstNameOf(SECOND_GROUP_ADMIN.name));
+  await dialog.getByLabel('Apellidos').fill(lastNamesOf(SECOND_GROUP_ADMIN.name));
+  await dialog.getByLabel('Correo').fill(SECOND_GROUP_ADMIN.email);
+  await dialog.getByLabel('Contraseña').fill(SECOND_GROUP_ADMIN.password);
+  await dialog.getByRole('button', { name: 'Añadir administrador' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(row(groupAdminsSection(page), SECOND_GROUP_ADMIN.name)).toContainText(SECOND_GROUP_ADMIN.email);
+  await expect(row(groupAdminsSection(page), SECOND_GROUP_ADMIN.name).locator('code')).toHaveText(/^[2-9A-HJKMNP-Z]{4}$/);
+}
+
+async function toggleGroupAdmin(page: Page, name: string, action: 'Desactivar' | 'Activar', message: string): Promise<void> {
+  const admins = groupAdminsSection(page);
+  await openActions(admins, name);
+  await admins.getByRole('button', { name: `${action} ${name}`, exact: true }).click();
+  await confirmDialog(page, message, action);
+}
+
+// Al final, porque desactivar al primero cierra su sesión: demo.spec.ts y visual.spec.ts entran con él de nuevo.
+async function groupAdminHandover(browser: Browser): Promise<void> {
+  const first = await browser.newContext();
+  const firstPage = await first.newPage();
+  await openGroupAdmins(firstPage, state.admin.email, state.admin.password);
+  await addSecondGroupAdmin(firstPage);
+  await first.close();
+  const second = await browser.newContext();
+  const page = await second.newPage();
+  await openGroupAdmins(page, SECOND_GROUP_ADMIN.email, SECOND_GROUP_ADMIN.password);
+  await expect(page.getByRole('button', { name: `Más acciones de ${SECOND_GROUP_ADMIN.name}` })).toHaveCount(0);
+  await toggleGroupAdmin(page, FIRST_GROUP_ADMIN, 'Desactivar', `¿Desactivar a ${FIRST_GROUP_ADMIN} en todo el grupo? No podrá usar Odín en ninguna empresa hasta que se reactive. Sus claves y sus proyectos se conservan.`);
+  await expect(row(groupAdminsSection(page), FIRST_GROUP_ADMIN)).toContainText('Desactivado');
+  const locked = await browser.newContext();
+  const attempt = await locked.newPage();
+  await attempt.goto(process.env.DEMO_PANEL_URL ?? '');
+  await logIn(attempt, state.admin.email, state.admin.password);
+  await expect(attempt.getByRole('alert')).toBeVisible();
+  await expect(attempt.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible();
+  await locked.close();
+  await toggleGroupAdmin(page, FIRST_GROUP_ADMIN, 'Activar', `¿Activar a ${FIRST_GROUP_ADMIN}? Vuelve a entrar en el panel y sus claves vuelven a valer.`);
+  await expect(row(groupAdminsSection(page), FIRST_GROUP_ADMIN)).toContainText('Activo');
+  await second.close();
+  console.log('✓ Admin 18: relevo del administrador del grupo: el segundo entra, desactiva al primero (que ya no entra) y lo reactiva');
+}
+
+const topicsTable = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Temas de la empresa' }) });
+
+async function addTopic(page: Page, name: string, definition: string): Promise<void> {
+  await page.getByRole('button', { name: 'Añadir tema', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Añadir tema' });
+  await dialog.getByLabel('Nombre').fill(name);
+  await dialog.getByLabel('Definición').fill(definition);
+  await dialog.getByRole('button', { name: 'Guardar tema' }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
+async function createAndEditTopics(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Temas', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Sin temas no se etiqueta ningún documento' })).toBeVisible();
+  await addTopic(page, TOPIC, 'Problemas de agua en el edificio');
+  await expect(page.getByRole('status')).toContainText('Los documentos de esta empresa se volverán a etiquetar');
+  await expect(page.getByText(/a ser etiquetados\.|Todos los documentos están etiquetados\./)).toBeVisible();
+  await addTopic(page, 'otros', 'Todo lo demás');
+  await openActions(topicsTable(page), 'otros');
+  await page.getByRole('button', { name: 'Editar otros', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Editar tema' });
+  await dialog.getByLabel('Definición').fill('Cualquier otra cosa');
+  await dialog.getByRole('button', { name: 'Guardar tema' }).click();
+  await expect(row(topicsTable(page), 'otros')).toContainText('Cualquier otra cosa');
+}
+
+async function waitForTagging(page: Page, title: string): Promise<Locator> {
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  const documentRow = page.getByRole('row').filter({ hasText: title });
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Actualizar', exact: true }).click();
+    await expect(documentRow).toContainText('Etiquetado', { timeout: 1500 });
+  }).toPass({ timeout: 60_000 });
+  return documentRow;
+}
+
+async function removeAndRecoverDocumentTopic(page: Page): Promise<void> {
+  const documentRow = await waitForTagging(page, CASE_FILES[0] ?? '');
+  await expect(documentRow.getByText('IA', { exact: true })).toBeVisible();
+  await documentRow.getByRole('button', { name: `Más acciones de ${CASE_FILES[0]}`, exact: true }).click();
+  await documentRow.getByRole('button', { name: `Ver detalle de ${CASE_FILES[0]}`, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: CASE_FILES[0] });
+  await dialog.getByRole('button', { name: `Quitar ${TOPIC}`, exact: true }).click();
+  await expect(dialog.getByText(`Quitado por ${FIRST_GROUP_ADMIN}`)).toBeVisible();
+  await dialog.getByRole('button', { name: `Recuperar ${TOPIC}`, exact: true }).click();
+  await expect(dialog.getByRole('button', { name: `Quitar ${TOPIC}`, exact: true })).toBeVisible();
+  await expect(dialog.getByText('Quitado por', { exact: false })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Cerrar' }).click();
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 19: temas de la empresa creados y editados, estado del etiquetado a la vista, y un tema de la IA quitado y recuperado en un documento');
+}
+
+const API = process.env.DEMO_API_URL ?? '';
+const GAP_QUERY = 'xqzvwk consulta sin respuesta';
+const ASKERS = ['Uso Uno', 'Uso Dos', 'Uso Tres'];
+const WITHHELD_TEXT = 'No se muestra para proteger a las personas (pocas en este periodo)';
+
+async function apiJson<T>(page: Page, method: 'post' | 'put' | 'get', path: string, data?: unknown, headers: Record<string, string> = {}): Promise<T> {
+  const response = await page.request[method](`${API}${path}`, { data, headers });
+  expect(response.ok(), `${method} ${path} ${response.status()}`).toBeTruthy();
+  return (response.status() === 204 ? undefined : await response.json()) as T;
+}
+
+// Tres personas preguntan lo mismo sin resultado (el mínimo para ver huecos) y una guarda una ficha, con sus claves reales.
+async function workersAskAndSaveCard(page: Page): Promise<void> {
+  const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
+  const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'] });
+  for (const [index, name] of ASKERS.entries()) {
+    const added = await apiJson<{ member: { userId: string } }>(page, 'post', `/v1/admin/companies/${companyId}/members`,
+      { firstName: firstNameOf(name), lastName: lastNamesOf(name), roles: ['WORKER'] });
+    const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${added.member.userId}/keys`, { label: 'uso e2e' });
+    const bearer = { Authorization: `Bearer ${key}` };
+    await apiJson(page, 'post', '/v1/search', { queries: [GAP_QUERY] }, bearer);
+    if (index === 0) await apiJson(page, 'post', '/v1/cards', { title: 'Ficha ficticia del uso', body: 'Texto ficticio de la ficha del uso.' }, bearer);
+  }
+}
+
+async function seeUsageOfTheMonth(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Uso', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Uso', level: 1 })).toBeVisible();
+  const people = page.getByRole('region', { name: 'Por persona' });
+  await expect(people.getByRole('row').filter({ hasText: 'Uso Dos' })).toContainText(/[2-9A-HJKMNP-Z]{4}-E2E/);
+  const names = await people.getByRole('row').filter({ hasText: 'Uso ' }).locator('td:first-child').allTextContents();
+  expect(names).toEqual(['Uso Dos', 'Uso Tres', 'Uso Uno']);
+  await expect(people.getByRole('button')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Empresa' }).getByRole('row').filter({ hasText: 'Preguntas de búsqueda' })).toContainText('3');
+  await expect(page.getByRole('region', { name: 'Empresa' }).getByText(WITHHELD_TEXT)).toBeVisible();
+  const volume = page.getByRole('region', { name: 'Volumen entregado a la IA del trabajador' });
+  await expect(volume.getByRole('row').filter({ hasText: 'Búsqueda' })).toContainText('3');
+  await expect(volume).toContainText('Odín no usa ninguna IA externa.');
+  console.log('✓ Admin 20: «Uso» enseña las preguntas del mes por persona (por nombre, con su código), las fichas sin desglose y el volumen entregado');
+}
+
+async function seeTheGapOfTheQuestion(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Huecos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Huecos', level: 1 })).toBeVisible();
+  const gap = page.getByRole('row').filter({ hasText: GAP_QUERY });
+  await expect(gap).toContainText('Búsqueda');
+  await expect(gap).toContainText('3');
+  await expect(gap).toContainText(new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }));
+  await expect(gap).not.toContainText(/Uso (Uno|Dos|Tres)/);
+  console.log('✓ Admin 21: «Huecos» enseña la pregunta sin resultado con sus tres veces y el día, sin autor ni hora');
+}
+
+async function rejectCardSeeingTheNoteWarning(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Revisión', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ficha ficticia del uso' })).toBeVisible();
+  await page.getByRole('button', { name: 'Rechazar', exact: true }).click();
+  await expect(page.getByText('El autor verá esta nota tal cual. Escribe sobre el contenido de la ficha, no sobre la persona.')).toBeVisible();
+  await page.getByLabel('Motivo del rechazo').fill('Falta la fuente del dato');
+  await page.getByRole('button', { name: 'Rechazar la ficha', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Ficha rechazada');
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 22: al rechazar una ficha, el panel avisa de que el autor verá la nota');
+}
+
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
 // El administrador del grupo reutiliza la sesión de prepare (sin login) y los pasos que entran de nuevo van al final.
 test('administración del panel de extremo a extremo', async ({ page, context, browser }) => {
+  test.setTimeout(120_000); // el etiquetado espera a su sondeo de 2 s
   const [name, value] = state.sessionCookie.split('=');
   await context.addCookies([{ name: name ?? '', value: value ?? '', url: process.env.DEMO_PANEL_URL ?? '' }]);
   await page.goto(process.env.DEMO_PANEL_URL ?? '');
@@ -349,6 +526,13 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await promoteWorkerWithoutPassword(page, browser);
   await deleteProjectMember(page);
   await uploadCaseFilesAndMarkSelection(page);
+  await createAndEditTopics(page);
+  await removeAndRecoverDocumentTopic(page);
+  await workersAskAndSaveCard(page);
+  await seeUsageOfTheMonth(page);
+  await seeTheGapOfTheQuestion(page);
+  await rejectCardSeeingTheNoteWarning(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);
+  await groupAdminHandover(browser);
 });

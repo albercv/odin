@@ -41,8 +41,31 @@ test('correctAndApproveOnlyAfterEditing', async () => {
   await userEvent.type(screen.getByLabelText('Texto de la ficha'), 'Mejor');
   expect(correct).toBeEnabled();
   await userEvent.click(correct);
+  expect(sent(calls, 'k1')).toBeUndefined();
+  await userEvent.click(screen.getByRole('button', { name: 'Confirmar corrección' }));
   await waitFor(() => expect(sent(calls, 'k1')).toEqual({ decision: 'CORRECT', correctedBody: 'Mejor' }));
   expect(await screen.findByRole('status')).toHaveTextContent('Ficha corregida y aprobada');
+});
+
+const WARNING = 'El autor verá esta nota tal cual. Escribe sobre el contenido de la ficha, no sobre la persona.';
+
+test('rejectDialogWarnsTheAuthorWillSeeTheNote', async () => {
+  show([card(1)]);
+  await userEvent.click(await screen.findByRole('button', { name: 'Rechazar' }));
+  const warning = screen.getByText(WARNING);
+  expect(warning.compareDocumentPosition(screen.getByLabelText('Motivo del rechazo')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Rechazar la ficha' })).toBeDisabled();
+});
+
+test('correctDialogWarnsTheAuthorWillSeeTheNote', async () => {
+  const { calls } = show([card(1)]);
+  await userEvent.type(await screen.findByLabelText('Texto de la ficha'), ' extra');
+  await userEvent.click(screen.getByRole('button', { name: 'Corregir y aprobar' }));
+  const note = screen.getByLabelText('Nota para el autor (opcional)');
+  expect(screen.getByText(WARNING).compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  await userEvent.type(note, 'Falta la fecha');
+  await userEvent.click(screen.getByRole('button', { name: 'Confirmar corrección' }));
+  await waitFor(() => expect(sent(calls, 'k1')).toEqual({ decision: 'CORRECT', correctedBody: 'Cuerpo 1 extra', note: 'Falta la fecha' }));
 });
 
 test('rejectRequiresAReason', async () => {

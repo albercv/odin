@@ -81,7 +81,7 @@ test('groupAdminSeesCompaniesAndCapabilities', async () => {
     'GET /v1/admin/companies': () => [company],
   });
   render(<App />);
-  expect(await screen.findByText('Acme')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Abrir Acme' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Nueva empresa' })).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Buscar conocimiento' })).toBeChecked();
   expect(screen.getByRole('switch', { name: 'Guardar fichas' })).not.toBeChecked();
@@ -99,7 +99,7 @@ test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
   expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Nueva empresa' })).toBeNull();
   expect(screen.queryByLabelText('Buscar conocimiento')).toBeNull();
-  expect(screen.queryByRole('link', { name: 'Empresas' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Grupo' })).toBeNull();
 });
 
 test('failedIssueKeepsTheLabel', async () => {
@@ -136,8 +136,8 @@ test('issuedKeyShownOnceWithCopy', async () => {
 test('documentsListShowsStatusAndReason', async () => {
   const calls = mockFetch({
     'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => [
-      { id: 'd1', title: 'Contrato', filename: 'c.pdf', status: 'FAILED', failureReason: 'Fichero ilegible', pagesWithoutText: [] },
-      { id: 'd2', title: 'Manual', filename: 'm.txt', status: 'READY', pagesWithoutText: [] },
+      { id: 'd1', title: 'Contrato', filename: 'c.pdf', status: 'FAILED', failureReason: 'Fichero ilegible', pagesWithoutText: [], topics: [] },
+      { id: 'd2', title: 'Manual', filename: 'm.txt', status: 'READY', pagesWithoutText: [], topics: [] },
     ],
     'GET /v1/admin/companies/c1/projects': () => [],
     'POST /v1/admin/documents/d1/retry': () => ({ id: 'd1', status: 'RECEIVED' }),
@@ -154,7 +154,7 @@ test('documentsListShowsStatusAndReason', async () => {
 });
 
 const docs = (from: number, n: number) =>
-  Array.from({ length: n }, (_, i) => ({ id: `d${from + i}`, title: `Doc ${from + i}`, filename: 'f.pdf', status: 'READY', pagesWithoutText: [] }));
+  Array.from({ length: n }, (_, i) => ({ id: `d${from + i}`, title: `Doc ${from + i}`, filename: 'f.pdf', status: 'READY', pagesWithoutText: [], topics: [] }));
 
 test('documentsListWalksAllPagesAndRefreshes', async () => {
   const calls = mockFetch({

@@ -6,6 +6,7 @@ import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -32,10 +33,11 @@ public class DeleteUser {
 
     public void execute(Actor actor, UserId id) {
         AccessPolicy.requireGroupAdmin(actor);
-        users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        User user = users.findById(id).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         if (actor.userId().equals(id)) {
             throw new ValidationException("No puedes borrarte a ti mismo");
         }
+        UserAdministration.requireAnotherActiveGroupAdmin(users, user);
         Instant now = clock.instant();
         memberships.listByUser(id).forEach(m -> {
             projectMembers.removeAllOf(m.companyId(), id);

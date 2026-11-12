@@ -5,9 +5,14 @@ import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public record Company(CompanyId id, String name, String code, Set<Capability> capabilities) {
+/** {@code codeReviewed} es falso en las empresas migradas: su código salió de las iniciales y falta revisarlo. */
+public record Company(CompanyId id, String name, String code, Set<Capability> capabilities, boolean codeReviewed) {
 
     private static final Pattern VALID_CODE = Pattern.compile("[A-Z0-9]{2,6}");
+
+    public Company(CompanyId id, String name, String code, Set<Capability> capabilities) {
+        this(id, name, code, capabilities, true);
+    }
 
     public Company {
         if (code == null || !VALID_CODE.matcher(code).matches()) {
@@ -17,14 +22,18 @@ public record Company(CompanyId id, String name, String code, Set<Capability> ca
     }
 
     public Company withName(String newName) {
-        return new Company(id, newName, code, capabilities);
+        return new Company(id, newName, code, capabilities, codeReviewed);
     }
 
     public Company withCode(String newCode) {
-        return new Company(id, name, newCode, capabilities);
+        return new Company(id, name, newCode, capabilities, codeReviewed);
     }
 
     public Company withCapabilities(Set<Capability> newCapabilities) {
-        return new Company(id, name, code, newCapabilities);
+        return new Company(id, name, code, newCapabilities, codeReviewed);
+    }
+
+    public Company withCodeReviewed(boolean reviewed) {
+        return new Company(id, name, code, capabilities, reviewed);
     }
 }

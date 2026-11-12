@@ -93,4 +93,15 @@ class UpdateCompanyTest {
         assertThatThrownBy(() -> update.execute(Actors.groupAdmin(), new CompanyId(UUID.randomUUID()), name("X")))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void savingMarksTheCodeReviewed() {
+        organizations.saveCompany(stored(company).withCodeReviewed(false));
+        update.execute(Actors.groupAdmin(), company, name("Nuevo"));
+        assertThat(stored(company).codeReviewed()).isTrue();
+
+        organizations.saveCompany(stored(company).withCodeReviewed(false));
+        update.execute(Actors.groupAdmin(), company, code("NUEVO"));
+        assertThat(stored(company).codeReviewed()).isTrue();
+    }
 }

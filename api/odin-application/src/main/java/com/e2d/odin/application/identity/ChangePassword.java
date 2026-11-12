@@ -34,6 +34,9 @@ public class ChangePassword {
             throw new ForbiddenException("Solo el administrador del grupo restablece la contraseña de otro usuario");
         }
         User user = users.findById(target).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        if (!ownPassword && user.groupAdmin()) {
+            throw new ForbiddenException("No puedes cambiar la contraseña de otro administrador del grupo");
+        }
         if (!user.groupAdmin() && UserAdministration.companiesAdministeredBy(memberships, target).isEmpty()) {
             throw new ValidationException(UserAdministration.WORKER_HAS_NO_PASSWORD);
         }
