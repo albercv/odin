@@ -691,6 +691,7 @@ export interface components {
             email?: string;
             roles: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active: boolean;
+            personActive: boolean;
             hasPassword: boolean;
         };
         KeyLabel: {
