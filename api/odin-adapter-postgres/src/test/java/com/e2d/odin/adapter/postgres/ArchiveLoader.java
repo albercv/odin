@@ -18,12 +18,19 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Carga un corpus de ficheros de texto en la base: un proyecto cerrado por carpeta, documentos {@code READY} con sus páginas. */
 final class ArchiveLoader {
 
     private static final Pattern PAGE_MARK = Pattern.compile("^=== Página (\\d+) ===\\s*$", Pattern.MULTILINE);
+    private static final JsonMapper JSON = JsonMapper.builder().build();
     private final AbstractPostgresIT it;
+    private final Map<String, LoadedDocument> documents = new LinkedHashMap<>();
+
+    private record LoadedDocument(DocumentId id, CompanyId company, Optional<ProjectId> project) {
+    }
 
     ArchiveLoader(AbstractPostgresIT it) {
         this.it = it;
@@ -47,6 +54,52 @@ final class ArchiveLoader {
         return new LoadedArchive(projectByFolder, pagesByDocument);
     }
 
+    /**
+     * Marca como sustituidos los documentos viejos de las contradicciones {@code version} de {@code claves.json} que
+     * son de {@code company}, con la hora fija de las pruebas. Devuelve ruta del viejo -> ruta del vigente.
+     */
+    Map<String, String> applySupersessions(CompanyId company, Path claves) throws IOException {
+        Map<String, String> marks = new LinkedHashMap<>();
+        for (Map.Entry<String, String> couple : versionCouples(claves).entrySet()) {
+            LoadedDocument old = documents.get(couple.getKey());
+            LoadedDocument current = documents.get(couple.getValue());
+            if (old == null || current == null) {
+                throw new IllegalStateException(couple(couple) + " no está en el corpus");
+            }
+            if (!old.company().equals(company)) {
+                continue;
+            }
+            if (!current.company().equals(company) || !(current.project().isEmpty() || current.project().equals(old.project()))) {
+                throw new IllegalStateException(couple(couple) + " no se puede marcar: otra empresa u otro proyecto");
+            }
+            it.docs.markSuperseded(company, old.id(), current.id(), AbstractPostgresIT.NOW);
+            marks.put(couple.getKey(), couple.getValue());
+        }
+        return marks;
+    }
+
+    private static String couple(Map.Entry<String, String> couple) {
+        return "La pareja " + couple.getKey() + " → " + couple.getValue();
+    }
+
+    /** Las mismas parejas que {@code pila/sustituciones.py}: cada fuente de una entrada {@code version} distinta del vigente. */
+    private static Map<String, String> versionCouples(Path claves) throws IOException {
+        Map<String, String> couples = new LinkedHashMap<>();
+        for (JsonNode entry : JSON.readTree(Files.readString(claves))) {
+            if (!"version".equals(entry.get("tipo").asString())) {
+                continue;
+            }
+            String current = entry.get("vigente").get("doc").asString();
+            for (JsonNode source : entry.get("fuentes")) {
+                String old = source.get("doc").asString();
+                if (!old.equals(current) && couples.putIfAbsent(old, current) != null) {
+                    throw new IllegalStateException("El documento " + old + " tiene dos sustitutos");
+                }
+            }
+        }
+        return couples;
+    }
+
     private ProjectId newProject(CompanyId company, String name) {
         ProjectId project = new ProjectId(UUID.randomUUID());
         it.orgs.saveProject(new Project(project, company, name, true));
@@ -59,6 +112,7 @@ final class ArchiveLoader {
                 file.getFileName().toString(), DocumentFormat.PLAIN_TEXT, UUID.randomUUID().toString(),
                 DocumentStatus.READY, Optional.empty(), true, uploader, AbstractPostgresIT.NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
         it.docs.save(d);
+        documents.put(key, new LoadedDocument(d.id(), company, project));
         Map<Integer, String> pages = splitPages(Files.readString(file));
         it.docs.replacePages(d.id(), pages.entrySet().stream()
                 .map(p -> new DocumentPage(d.id(), p.getKey(), p.getValue(), "corpus", "1")).toList());
