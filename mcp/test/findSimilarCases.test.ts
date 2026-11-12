@@ -49,6 +49,16 @@ describe('findSimilarCases', () => {
     expect(parsed.cases[0]).not.toHaveProperty('authorName');
   });
 
+  it('passesReviewStatusOfCardsAndDescriptionExplainsPending', async () => {
+    const card = { ...caseView, sourceType: 'KNOWLEDGE_CARD', sourceId: 'k1', body: 'x', pages: [], reviewStatus: 'PENDING' };
+    const client = await connect((r) => r.url === '/v1/me' ? meWith(WITH_CASES, 'E', [P1]) : { status: 200, body: { cases: [card, caseView], noSource: false } });
+    const parsed = JSON.parse(textOf(await client.callTool({ name: 'findSimilarCases', arguments: { queries: ['x'] } })));
+    expect(parsed.cases[0]).toMatchObject({ cardId: 'k1', reviewStatus: 'PENDING' });
+    expect(parsed.cases[1]).not.toHaveProperty('reviewStatus');
+    const description = (await client.listTools()).tools.find((t) => t.name === 'findSimilarCases')?.description ?? '';
+    expect(description).toContain('Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.');
+  });
+
   it('noSourceSaysNoConstan', async () => {
     const client = await connect((r) => r.url === '/v1/me' ? meWith(WITH_CASES) : { status: 200, body: { cases: [], noSource: true } });
     const result = await client.callTool({ name: 'findSimilarCases', arguments: { queries: ['x'] } });

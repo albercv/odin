@@ -468,6 +468,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myQuestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -725,6 +757,7 @@ export interface components {
             originLabel?: string;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SimilarCasesResponse: {
             cases: components["schemas"]["SimilarCaseView"][];
@@ -770,6 +803,7 @@ export interface components {
             rank: number;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
@@ -967,6 +1001,33 @@ export interface components {
         MeTagging: {
             /** Format: int32 */
             pendingDocuments: number;
+        };
+        MyQuestionView: {
+            text: string;
+            kind: string;
+            /** Format: int32 */
+            hitCount: number;
+            /** Format: date-time */
+            askedAt: string;
+        };
+        MyCardView: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            body: string;
+            originalBody?: string;
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
+            review?: components["schemas"]["MyReviewView"];
+        };
+        MyReviewView: {
+            decision: string;
+            note?: string;
+            /** Format: date-time */
+            reviewedAt: string;
         };
         Health: {
             status: string;
@@ -2124,6 +2185,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    myQuestions: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyQuestionView"][];
+                };
+            };
+        };
+    };
+    myCards: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "APPROVED" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCardView"][];
                 };
             };
         };

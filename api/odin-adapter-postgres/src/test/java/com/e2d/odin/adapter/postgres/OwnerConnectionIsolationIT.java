@@ -8,6 +8,8 @@ import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.QuestionKind;
+import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.search.SearchQuery;
 import com.e2d.odin.domain.search.SimilarCasesQuery;
 import com.e2d.odin.domain.shared.CardId;
@@ -46,6 +48,7 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     private CompanyId b;
     private Document documentOfA;
     private KnowledgeCard pendingOfA;
+    private UserId pendingAuthor;
 
     @BeforeEach
     void seedCompanyA() {
@@ -56,6 +59,9 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
                 List.of(new DocumentPage(documentOfA.id(), 1, "filtración secreta de A", "lector", "1")));
         docs.markCaseDocuments(a, Set.of(documentOfA.id()), true);
         pendingOfA = card(CardStatus.PENDING);
+        pendingAuthor = pendingOfA.authorId();
+        new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), a, pendingAuthor, "filtración", 1, NOW,
+                QuestionKind.SEARCH));
         card(CardStatus.APPROVED);
     }
 
@@ -70,14 +76,17 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         int seen = ownerDocs.findById(scope, ProjectVisibility.all(), documentOfA.id()).stream().toList().size();
         seen += ownerDocs.list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10).size();
         seen += ownerDocs.findPage(scope, ProjectVisibility.all(), documentOfA.id(), 1).stream().toList().size();
-        seen += ownerCards.findById(scope, ProjectVisibility.all(), pendingOfA.id()).stream().toList().size();
+        seen += ownerCards.findForReview(scope, ProjectVisibility.all(), pendingOfA.id()).stream().toList().size();
         seen += ownerCards.listByStatus(scope, ProjectVisibility.all(), CardStatus.PENDING).size();
         seen += ownerDocs.list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), Optional.of(true),
                 Optional.empty(), 0, 10).size();
+        seen += ownerCards.listByAuthor(scope, ProjectVisibility.all(), pendingAuthor, Optional.empty(), 100).size();
+        CompanyId asked = scope.allCompanies() ? a : scope.companies().iterator().next();
+        seen += new PostgresQuestionLog(ownerTx).listByAuthor(asked, pendingAuthor, 50).size();
         seen += ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("filtración"), scope,
-                ProjectVisibility.all(), Optional.empty(), 10)).cases().size();
-        return seen + ownerSearch.search(new SearchQuery(List.of("filtración"), scope, ProjectVisibility.all(), Optional.empty(), 10))
-                .hits().size();
+                ProjectVisibility.all(), Optional.empty(), 10, pendingAuthor)).cases().size();
+        return seen + ownerSearch.search(new SearchQuery(List.of("filtración"), scope, ProjectVisibility.all(),
+                Optional.empty(), 10, pendingAuthor)).hits().size();
     }
 
     @Test
@@ -87,8 +96,8 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
 
     @Test
     void sameConnectionStillReadsAWithItsOwnScope() {
-        assertThat(readEverything(CompanyScope.of(a))).isEqualTo(10);
-        assertThat(readEverything(CompanyScope.all())).isEqualTo(10);
+        assertThat(readEverything(CompanyScope.of(a))).isEqualTo(14);
+        assertThat(readEverything(CompanyScope.all())).isEqualTo(14);
     }
 
     @Test
@@ -110,11 +119,14 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         assertThat(ownerDocs.findById(scope, none, closed.id())).isEmpty();
         assertThat(ownerDocs.list(scope, none, Optional.of(project), Optional.empty(), 0, 10)).isEmpty();
         assertThat(ownerDocs.findPage(scope, none, closed.id(), 1)).isEmpty();
-        assertThat(ownerCards.findById(scope, none, closedCard.id())).isEmpty();
+        assertThat(ownerCards.findForReview(scope, none, closedCard.id())).isEmpty();
         assertThat(ownerCards.listByStatus(scope, none, CardStatus.PENDING))
                 .extracting(KnowledgeCard::id).doesNotContain(closedCard.id());
-        assertThat(ownerSearch.search(new SearchQuery(List.of("zafiro"), scope, none, Optional.empty(), 10))
+        assertThat(ownerSearch.search(new SearchQuery(List.of("zafiro"), scope, none, Optional.empty(), 10, user))
                 .hits()).isEmpty();
+        assertThat(ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("zafiro"), scope, none,
+                Optional.empty(), 10, user)).cases()).isEmpty();
+        assertThat(ownerCards.listByAuthor(scope, none, user, Optional.empty(), 100)).isEmpty();
     }
 
     @Test
@@ -133,11 +145,11 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         var none = ProjectVisibility.of(Set.of());
 
         assertThat(ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("zafiro"), scope, none,
-                Optional.empty(), 10)).cases()).isEmpty();
+                Optional.empty(), 10, Db.NOBODY)).cases()).isEmpty();
         assertThat(ownerDocs.list(scope, none, Optional.empty(), Optional.empty(), Optional.of(true),
                 Optional.empty(), 0, 10)).extracting(e -> e.document().id()).doesNotContain(closed.id());
         assertThat(ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("zafiro"), scope,
-                ProjectVisibility.of(Set.of(project)), Optional.empty(), 10)).cases()).hasSize(2);
+                ProjectVisibility.of(Set.of(project)), Optional.empty(), 10, Db.NOBODY)).cases()).hasSize(2);
     }
 
     @Test
@@ -196,7 +208,7 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
                     assertThat(e.replacement()).isEmpty();
                 });
         var hits = ownerSearch.search(new SearchQuery(List.of("baliza"), scope, ProjectVisibility.all(),
-                Optional.empty(), 10)).hits();
+                Optional.empty(), 10, Db.NOBODY)).hits();
         assertThat(hits).hasSize(1);
         assertThat(hits.get(0).replacement()).isEmpty();
     }
@@ -205,7 +217,7 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     void projectFilterNeverBringsCompanyWideDocumentsOfAnotherCompanyThroughAConnectionThatBypassesRls() {
         ProjectId projectOfB = newProject(b, "Obra de B");
         var query = new SearchQuery(List.of("filtración"), CompanyScope.of(b), ProjectVisibility.all(),
-                Optional.of(projectOfB), 10);
+                Optional.of(projectOfB), 10, Db.NOBODY);
         assertThat(ownerSearch.search(query).hits()).isEmpty();
     }
 

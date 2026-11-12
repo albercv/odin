@@ -62,7 +62,9 @@ import com.e2d.odin.application.organization.UpdateCompany;
 import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.search.FindSimilarCases;
+import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.search.ListDocuments;
+import com.e2d.odin.application.search.ListMyQuestions;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
@@ -97,6 +99,7 @@ public class TestWiring {
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
+    final InMemoryQuestionLog questions = new InMemoryQuestionLog();
     final InMemoryTopicRepository topics = new InMemoryTopicRepository();
     final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
     final ScriptedKnowledgeSearch search = new ScriptedKnowledgeSearch();
@@ -273,16 +276,24 @@ public class TestWiring {
         return new SaveKnowledgeCard(orgs, projectMembers, cards, ids, clock);
     }
 
+    @Bean ListMyKnowledgeCards listMyKnowledgeCards() {
+        return new ListMyKnowledgeCards(orgs, projectMembers, cards);
+    }
+
+    @Bean ListMyQuestions listMyQuestions() {
+        return new ListMyQuestions(orgs, projectMembers, questions);
+    }
+
     @Bean DescribeMe describeMe() {
         return new DescribeMe(orgs, projectMembers, topics, tagging);
     }
 
     @Bean SearchKnowledge searchKnowledge() {
-        return new SearchKnowledge(orgs, projectMembers, search, new InMemoryQuestionLog(), ids, clock);
+        return new SearchKnowledge(orgs, projectMembers, search, questions, ids, clock);
     }
 
     @Bean FindSimilarCases findSimilarCases() {
-        return new FindSimilarCases(orgs, projectMembers, search, new InMemoryQuestionLog(), ids, clock);
+        return new FindSimilarCases(orgs, projectMembers, search, questions, ids, clock);
     }
 
     @Bean ListDocuments listDocuments() {

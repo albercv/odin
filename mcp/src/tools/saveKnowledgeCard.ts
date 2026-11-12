@@ -7,7 +7,7 @@ export function registerSaveKnowledgeCard(server: McpServer, api: ApiClient): vo
   server.registerTool(
     'saveKnowledgeCard',
     {
-      description: 'Guarda una ficha de conocimiento. Queda pendiente de revisión por el administrador.',
+      description: 'Guarda una ficha de conocimiento. Queda pendiente de revisión por el administrador. Puedes ver su estado con listMyKnowledgeCards.',
       inputSchema: {
         title: z.string().min(1).describe('Título de la ficha'),
         body: z.string().min(1).describe('Contenido de la ficha'),

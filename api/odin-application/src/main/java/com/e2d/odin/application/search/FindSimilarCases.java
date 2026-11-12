@@ -49,7 +49,7 @@ public class FindSimilarCases {
         }
         int limit = WorkerAccess.cap(request.limit(), DEFAULT_LIMIT, MAX_LIMIT);
         SimilarCasesResult result = search.findSimilarCases(new SimilarCasesQuery(terms, actor.scope(),
-                access.content(), request.projectId(), limit));
+                access.content(), request.projectId(), limit, actor.userId()));
         questions.record(new QuestionRecord(ids.newId(), access.companyId(), actor.userId(), String.join(" | ", terms),
                 result.cases().size(), clock.instant(), QuestionKind.SIMILAR_CASES));
         return result;

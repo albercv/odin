@@ -24,11 +24,11 @@ afterEach(() => fake?.close());
 describe('buildServer', () => {
   it('registersOnlyEnabledCapabilities', async () => {
     const onlySave = await connect(() => meWith(['SAVE_KNOWLEDGE_CARD']));
-    expect((await onlySave.listTools()).tools.map((t) => t.name)).toEqual(['saveKnowledgeCard']);
+    expect((await onlySave.listTools()).tools.map((t) => t.name)).toEqual(['saveKnowledgeCard', 'listMyKnowledgeCards']);
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
   });
@@ -182,6 +182,22 @@ describe('buildServer', () => {
     expect(parsed.hits[0]).toEqual({ sourceType: 'KNOWLEDGE_CARD', cardId: 'k1', title: 'Truco', authorName: 'Ana',
       addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: null, excerpt: 'se hace así',
       origin: 'Ficha aportada por Ana, redactada con IA' });
+  });
+
+  it('searchCardsCarryReviewStatusAndDescriptionExplainsPending', async () => {
+    const card = { sourceType: 'KNOWLEDGE_CARD', sourceId: 'k1', title: 'Truco', paginated: false, authorName: 'Ana',
+      date: '2026-01-01T00:00:00Z', excerpt: 'x', rank: 1, superseded: false, reviewStatus: 'PENDING' };
+    const parsed = await search([card, docHit('p1')]);
+    expect(parsed.hits[0]).toMatchObject({ cardId: 'k1', reviewStatus: 'PENDING' });
+    expect(parsed.hits[1]).not.toHaveProperty('reviewStatus');
+    const tools = (await (await connect(() => meWith(ALL))).listTools()).tools;
+    expect(tools.find((t) => t.name === 'searchKnowledge')?.description).toContain(
+      'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.');
+  });
+
+  it('pendingCardRuleLivesInToolDescriptionsNotInInstructions', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).not.toContain('reviewStatus');
   });
 
   it('searchDescriptionExplainsAddedAt', async () => {

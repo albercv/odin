@@ -47,7 +47,7 @@ class FindSimilarCasesTest {
 
     private static SimilarCase aCase() {
         return new SimilarCase(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Caso", Optional.empty(),
-                Fixtures.NOW, 1, List.of(), Optional.empty(), false, "...", false, Optional.empty());
+                Fixtures.NOW, 1, List.of(), Optional.empty(), false, "...", false, Optional.empty(), Optional.empty());
     }
 
     @Test
@@ -67,6 +67,15 @@ class FindSimilarCasesTest {
         assertThat(query.visibility().allows(Optional.empty())).isTrue();
         assertThat(query.projectId()).contains(member);
         assertThat(query.limit()).isEqualTo(3);
+    }
+
+    @Test
+    void passesSearcher() {
+        Actor worker = Actors.worker(companyA);
+
+        useCase.execute(worker, request(Optional.empty(), Optional.empty()));
+
+        assertThat(search.lastSimilarCasesQuery().searcher()).isEqualTo(worker.userId());
     }
 
     @Test

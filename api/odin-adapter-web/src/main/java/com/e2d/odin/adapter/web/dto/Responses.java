@@ -23,6 +23,7 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.organization.ProjectSummary;
+import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
 import com.e2d.odin.domain.search.SourceType;
@@ -281,6 +282,38 @@ public final class Responses {
         }
     }
 
+    /** Lo que el autor ve de la revisión de su ficha: qué se decidió y por qué, sin decir quién revisó. */
+    public record MyReviewView(String decision, @Nullable String note, Instant reviewedAt) {
+        static MyReviewView from(CardReview r) {
+            return new MyReviewView(r.decision().name(), r.note().orElse(null), r.reviewedAt());
+        }
+    }
+
+    /** Una ficha propia: sin autor ni empresa, que son siempre los del que mira. */
+    public record MyCardView(UUID id, String title, String body, @Nullable String originalBody,
+            @Nullable UUID projectId, Instant createdAt, String status, @Nullable MyReviewView review) {
+        static MyCardView from(KnowledgeCard c) {
+            return new MyCardView(c.id().value(), c.title(), c.body(), c.originalBody().orElse(null),
+                    c.projectId().map(p -> p.value()).orElse(null), c.createdAt(), c.status().name(),
+                    c.review().map(MyReviewView::from).orElse(null));
+        }
+
+        public static List<MyCardView> from(List<KnowledgeCard> cards) {
+            return cards.stream().map(MyCardView::from).toList();
+        }
+    }
+
+    /** Una pregunta propia: sin autor (D-048). */
+    public record MyQuestionView(String text, String kind, int hitCount, Instant askedAt) {
+        static MyQuestionView from(QuestionRecord q) {
+            return new MyQuestionView(q.text(), q.kind().name(), q.hitCount(), q.askedAt());
+        }
+
+        public static List<MyQuestionView> from(List<QuestionRecord> questions) {
+            return questions.stream().map(MyQuestionView::from).toList();
+        }
+    }
+
     public record SavedCard(UUID id, String status, String message) {
         public static SavedCard from(KnowledgeCard c) {
             return new SavedCard(c.id().value(), c.status().name(), "Ficha guardada; queda pendiente de revisión.");
@@ -289,12 +322,13 @@ public final class Responses {
 
     public record Hit(String sourceType, UUID sourceId, String title, @Nullable Integer pageNumber, boolean paginated,
             @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank,
-            boolean superseded, @Nullable Replacement replacement) {
+            boolean superseded, @Nullable Replacement replacement, @Nullable String reviewStatus) {
         static Hit from(SearchHit h) {
             return new Hit(h.sourceType().name(), h.sourceId(), h.title(), h.pageNumber().orElse(null),
                     h.paginated(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),
                     h.excerpt(), h.rank(), h.superseded(),
-                    h.replacement().map(Replacement::from).orElse(null));
+                    h.replacement().map(Replacement::from).orElse(null),
+                    h.reviewStatus().map(Enum::name).orElse(null));
         }
     }
 
@@ -311,7 +345,7 @@ public final class Responses {
     public record SimilarCaseView(String sourceType, UUID sourceId, String title, @Nullable UUID projectId,
             Instant addedAt, int pageCount, List<CasePageView> pages, @Nullable String body, boolean truncated,
             String excerpt, String origin, @Nullable String originLabel, boolean superseded,
-            @Nullable Replacement replacement) {
+            @Nullable Replacement replacement, @Nullable String reviewStatus) {
         static final String CARD_LABEL = "Ficha aportada por un trabajador, redactada con IA";
 
         static SimilarCaseView from(SimilarCase c) {
@@ -321,7 +355,7 @@ public final class Responses {
                     c.pages().stream().map(p -> new CasePageView(p.number(), p.text())).toList(),
                     c.body().orElse(null), c.truncated(), c.excerpt(),
                     card ? "KNOWLEDGE_CARD" : "ORIGINAL_DOCUMENT", card ? CARD_LABEL : null, c.superseded(),
-                    c.replacement().map(Replacement::from).orElse(null));
+                    c.replacement().map(Replacement::from).orElse(null), c.reviewStatus().map(Enum::name).orElse(null));
         }
     }
 

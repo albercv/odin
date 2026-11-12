@@ -50,7 +50,7 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
     }
 
     @Override
-    public Optional<KnowledgeCard> findById(CompanyScope scope, ProjectVisibility visibility, CardId id) {
+    public Optional<KnowledgeCard> findForReview(CompanyScope scope, ProjectVisibility visibility, CardId id) {
         String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE id = :id AND " + Sql.inScope("company_id")
                 + " AND " + Sql.inVisibleProjects("project_id");
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
@@ -63,6 +63,17 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
                 + Sql.inScope("company_id") + " AND " + Sql.inVisibleProjects("project_id") + " ORDER BY seq";
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("status", status.name()).query((rs, n) -> card(rs)).list());
+    }
+
+    @Override
+    public List<KnowledgeCard> listByAuthor(CompanyScope scope, ProjectVisibility visibility, UserId authorId,
+            Optional<CardStatus> status, int limit) {
+        String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE author_id = :author AND "
+                + "(CAST(:status AS text) IS NULL OR status = :status) AND " + Sql.inScope("company_id") + " AND "
+                + Sql.inVisibleProjects("project_id") + " ORDER BY created_at DESC, seq DESC LIMIT :limit";
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("author", authorId.value()).param("status", status.map(Enum::name).orElse(null))
+                .param("limit", limit).query((rs, n) -> card(rs)).list());
     }
 
     private static KnowledgeCard card(ResultSet rs) throws SQLException {

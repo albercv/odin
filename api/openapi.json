@@ -1408,6 +1408,66 @@
         }
       }
     },
+    "/v1/me/questions" : {
+      "get" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "myQuestions",
+        "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MyQuestionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/cards" : {
+      "get" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "myCards",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "APPROVED", "REJECTED" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MyCardView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/health" : {
       "get" : {
         "tags" : [ "health-controller" ],
@@ -1986,6 +2046,9 @@
           },
           "replacement" : {
             "$ref" : "#/components/schemas/Replacement"
+          },
+          "reviewStatus" : {
+            "type" : "string"
           }
         },
         "required" : [ "addedAt", "excerpt", "origin", "pageCount", "pages", "sourceId", "sourceType", "superseded", "title", "truncated" ]
@@ -2108,6 +2171,9 @@
           },
           "replacement" : {
             "$ref" : "#/components/schemas/Replacement"
+          },
+          "reviewStatus" : {
+            "type" : "string"
           }
         },
         "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
@@ -2656,6 +2722,75 @@
           }
         },
         "required" : [ "pendingDocuments" ]
+      },
+      "MyQuestionView" : {
+        "type" : "object",
+        "properties" : {
+          "text" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "hitCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "askedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "askedAt", "hitCount", "kind", "text" ]
+      },
+      "MyCardView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "originalBody" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "review" : {
+            "$ref" : "#/components/schemas/MyReviewView"
+          }
+        },
+        "required" : [ "body", "createdAt", "id", "status", "title" ]
+      },
+      "MyReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "decision" : {
+            "type" : "string"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "reviewedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "decision", "reviewedAt" ]
       },
       "Health" : {
         "type" : "object",

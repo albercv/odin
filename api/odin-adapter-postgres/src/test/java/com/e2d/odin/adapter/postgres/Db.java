@@ -11,6 +11,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 final class Db {
 
+    /** Quien busca cuando la prueba no trata de autores: nadie, así que ninguna ficha pendiente es suya. */
+    static final com.e2d.odin.domain.shared.UserId NOBODY = new com.e2d.odin.domain.shared.UserId(java.util.UUID.randomUUID());
     static final String APP_PASSWORD = "app-test-password";
     private static final PostgreSQLContainer PG = new PostgreSQLContainer("postgres:17.10");
     private static final DataSource OWNER;

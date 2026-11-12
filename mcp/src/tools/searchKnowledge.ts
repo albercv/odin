@@ -13,7 +13,8 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
         'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
         'projectName es el proyecto (comunidad, cliente u obra) del resultado. ' +
         'addedAt es la fecha en que entró en Odín, no la del documento. ' +
-        'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo).',
+        'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
+        'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.',
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto; también incluye lo que no tiene proyecto'),
@@ -42,6 +43,7 @@ const toCitation = (hit: Hit, projects: ProjectNames) =>
         projectName: projects.nameOf(hit.projectId),
         excerpt: hit.excerpt,
         origin: `Ficha aportada por ${hit.authorName}, redactada con IA`,
+        ...(hit.reviewStatus ? { reviewStatus: hit.reviewStatus } : {}),
       }
     : {
         sourceType: hit.sourceType,
