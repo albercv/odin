@@ -127,3 +127,82 @@ test('listsPagesWithoutText', async () => {
   expect(within(row).getByText('Páginas sin texto, no leídas: 3, 5')).toBeInTheDocument();
   expect(within(screen.getByText('Póliza 2024', { selector: 'td' }).closest('tr')!).queryByText(/Páginas sin texto/)).toBeNull();
 });
+
+const uploadUrl = 'POST /v1/admin/companies/c1/documents';
+const pdf = (name: string) => new File(['x'], name, { type: 'application/pdf' });
+const openUpload = async (r: Routes) => {
+  const calls = show(r);
+  await userEvent.click(await screen.findByRole('button', { name: 'Subir documento' }));
+  return { calls, dialog: screen.getByRole('dialog', { name: 'Subir documento' }) };
+};
+const uploadedKeys = (calls: { key: string }[]) => calls.filter((c) => c.key.startsWith(uploadUrl)).map((c) => c.key);
+
+test('uploadSendsCaseDocument', async () => {
+  const { calls, dialog } = await openUpload(routes([old], { [`${uploadUrl}?title=Acta&caseDocument=true`]: () => ({ documentId: 'n1' }) }));
+  await userEvent.upload(within(dialog).getByLabelText('Fichero'), pdf('acta.pdf'));
+  await userEvent.type(within(dialog).getByLabelText('Título (opcional)'), 'Acta');
+  await userEvent.click(within(dialog).getByLabelText('Son fichas de caso'));
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Subir' }));
+  await waitFor(() => expect(uploadedKeys(calls)).toEqual([`${uploadUrl}?title=Acta&caseDocument=true`]));
+});
+
+test('uploadWithoutCheckboxSendsNoCaseDocument', async () => {
+  const { calls, dialog } = await openUpload(routes([old], { [`${uploadUrl}?`]: () => ({ documentId: 'n2' }) }));
+  await userEvent.upload(within(dialog).getByLabelText('Fichero'), pdf('b.pdf'));
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Subir' }));
+  await waitFor(() => expect(uploadedKeys(calls)).toEqual([`${uploadUrl}?`]));
+});
+
+test('uploadsSeveralFilesWithOneCaseCheckbox', async () => {
+  const { calls, dialog } = await openUpload(routes([old], { [`${uploadUrl}?title=uno&caseDocument=true`]: () => ({ documentId: 'n1' }), [`${uploadUrl}?title=dos&caseDocument=true`]: () => ({ documentId: 'n2' }) }));
+  await userEvent.upload(within(dialog).getByLabelText('Fichero'), [pdf('uno.pdf'), pdf('dos.pdf')]);
+  expect(within(dialog).queryByLabelText('Título (opcional)')).toBeNull();
+  await userEvent.click(within(dialog).getByLabelText('Son fichas de caso'));
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Subir' }));
+  await waitFor(() => expect(uploadedKeys(calls)).toHaveLength(2));
+  expect(uploadedKeys(calls)).toEqual([`${uploadUrl}?title=uno&caseDocument=true`, `${uploadUrl}?title=dos&caseDocument=true`]);
+  const forms = calls.filter((c) => c.key.startsWith(uploadUrl)).map((c) => ((c.body as FormData).get('file') as File).name);
+  expect(forms).toEqual(['uno.pdf', 'dos.pdf']);
+  expect(await screen.findByText('Se subieron 2 documentos.')).toBeInTheDocument();
+});
+
+test('batchUploadReportsFailuresByFile', async () => {
+  const { dialog } = await openUpload(routes([old], { [`${uploadUrl}?title=uno`]: () => ({ documentId: 'n1' }), [`${uploadUrl}?title=dos`]: () => ({ status: 400, body: { detail: 'Formato no admitido' } }) }));
+  await userEvent.upload(within(dialog).getByLabelText('Fichero'), [pdf('uno.pdf'), pdf('dos.pdf')]);
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Subir' }));
+  expect(await screen.findByText('Se subió 1 de 2 documentos. Fallaron: dos.pdf (Formato no admitido).')).toBeInTheDocument();
+});
+
+test('rowShowsCaseLabel', async () => {
+  show(routes([{ ...old, caseDocument: true }, renewed]));
+  const row = (await screen.findByText('Póliza 2022')).closest('tr')!;
+  expect(within(row).getByText('Caso')).toBeInTheDocument();
+  expect(within(screen.getByText('Póliza 2024', { selector: 'td' }).closest('tr')!).queryByText('Caso')).toBeNull();
+});
+
+test('togglesCaseMark', async () => {
+  const patch = (id: string) => `PATCH /v1/admin/documents/${id}`;
+  const calls = show(routes([{ ...old, caseDocument: true }, renewed], { [patch('d1')]: () => old, [patch('d2')]: () => renewed }));
+  await openMenu('Póliza 2024');
+  expect(screen.queryByRole('button', { name: 'Quitar marca de caso de Póliza 2024' })).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Marcar como caso Póliza 2024' }));
+  await waitFor(() => expect(calls.find((c) => c.key === patch('d2'))?.body).toEqual({ caseDocument: true }));
+  await openMenu('Póliza 2022');
+  await userEvent.click(screen.getByRole('button', { name: 'Quitar marca de caso de Póliza 2022' }));
+  await waitFor(() => expect(calls.find((c) => c.key === patch('d1'))?.body).toEqual({ caseDocument: false }));
+});
+
+test('marksSelectedDocumentsAsCases', async () => {
+  const marks = 'POST /v1/admin/companies/c1/documents/case-marks';
+  const calls = show(routes([old, renewed, draft], { [marks]: () => ({ updated: 2 }) }));
+  await screen.findByText('Póliza 2022');
+  expect(screen.queryByRole('button', { name: 'Marcar como caso' })).toBeNull();
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar Póliza 2022' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar Póliza 2024' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Marcar como caso' }));
+  await waitFor(() => expect(calls.find((c) => c.key === marks)?.body).toEqual({ documentIds: ['d1', 'd2'], caseDocument: true }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Marcar como caso' })).toBeNull());
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar Borrador' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Quitar marca de caso' }));
+  await waitFor(() => expect(calls.filter((c) => c.key === marks).at(-1)?.body).toEqual({ documentIds: ['d3'], caseDocument: false }));
+});
