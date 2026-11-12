@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiClient } from './api/client.js';
+import { createProjectNames } from './projects.js';
 import { registerListDocuments } from './tools/listDocuments.js';
 import { registerListProjects } from './tools/listProjects.js';
 import { registerReadPage } from './tools/readPage.js';
@@ -22,9 +23,10 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
   const capabilities = new Set(me.company.capabilities);
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: INSTRUCTIONS });
   if (capabilities.has('SEARCH_KNOWLEDGE')) {
-    registerSearchKnowledge(server, api);
+    const projects = createProjectNames(me);
+    registerSearchKnowledge(server, api, projects);
     registerReadPage(server, api);
-    registerListDocuments(server, api);
+    registerListDocuments(server, api, projects);
     registerListProjects(server, api);
     registerVerifyCitation(server, api);
   }
