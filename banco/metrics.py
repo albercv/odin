@@ -4,7 +4,7 @@ import statistics
 from collections import Counter
 
 from banco import judge, scoring
-from banco.combine import answer_signature
+from banco.combine import answer_signature, majority_vote
 from banco.medir_path import puntuar
 from banco.stats import cohen_kappa, false_accept_rate, false_reject_rate, ppi_mean, wilson
 from banco.subsample import TOKEN_CLASSES
@@ -100,6 +100,58 @@ def agreement_block(finals, runs):
     return {k: {"questions": len(v), "accuracy": _round(sum(v) / len(v))} for k, v in ordered}
 
 
+def _valid_runs_by_question(runs):
+    out = {}
+    for run in runs:
+        if run.get("error") is None and run.get("respuesta") is not None:
+            out.setdefault(run["id"], []).append(run)
+    return out
+
+
+def _rate(correct, total):
+    return _round(correct / total) if total else None
+
+
+def _majority_signature(group):
+    """Firma con más ejecuciones de la pregunta; None si hay empate (no hay mayoría)."""
+    top = Counter(answer_signature(r["respuesta"]) for r in group).most_common(2)
+    if len(top) == 2 and top[0][1] == top[1][1]:
+        return None
+    return top[0][0]
+
+
+def _marks(group, item, ctx):
+    """(coincide con la mayoría, acierta) por ejecución. Sin mayoría (empate), ninguna coincide."""
+    majority = _majority_signature(group)
+    return [(majority is not None and answer_signature(r["respuesta"]) == majority,
+             scoring.is_correct(item, r["respuesta"], ctx)) for r in group]
+
+
+def _level(group):
+    """Nivel de acuerdo: fracción de ejecuciones con la firma más frecuente, al menos 60 % o menos."""
+    top = max(Counter(answer_signature(r["respuesta"]) for r in group).values())
+    return "atLeast60" if top / len(group) >= 0.6 else "below60"
+
+
+def agreement_runs_block(items, runs, ctx):
+    """Acuerdo por ejecución, con las ejecuciones de buscador válidas: si coincide con la firma mayoritaria de su
+    pregunta, su acierto y la cuota de fallos fuera de la mayoría; y por pregunta, el acierto de la respuesta
+    mayoritaria según el nivel de acuerdo."""
+    marks, levels = [], {"atLeast60": [], "below60": []}
+    for question, group in _valid_runs_by_question(runs).items():
+        item = items[question]
+        marks += _marks(group, item, ctx)
+        levels[_level(group)].append(scoring.is_correct(item, majority_vote(group), ctx))
+    inside = [correct for hit, correct in marks if hit]
+    outside = [correct for hit, correct in marks if not hit]
+    failures = sum(not correct for _, correct in marks)
+    outside_failures = sum(not correct for hit, correct in marks if not hit)
+    return {"inMajority": {"runs": len(inside), "accuracy": _rate(sum(inside), len(inside))},
+            "outsideMajority": {"runs": len(outside), "accuracy": _rate(sum(outside), len(outside))},
+            "failuresOutsideMajority": _rate(outside_failures, failures),
+            "byLevel": {key: {"questions": len(v), "accuracy": _rate(sum(v), len(v))} for key, v in levels.items()}}
+
+
 def judges_block(items, finals, verdicts):
     """Kappa y tasas frente al script solo con preguntas con clave que citan; las preguntas sin clave entran en el PPI.
     Los «no consta» no los juzga el jurado: se cuentan aparte y las de sin clave van a revisión manual."""
@@ -164,6 +216,8 @@ def build_summary(items, ctx, runs, finals, verdicts, extra_runs=(), ledger=None
     measured = [f for f in finals if f["answer"] is not None]
     summary = {"byApproach": approach_block(by_id, runs, ctx, scoring.ids_by_path(ctx.doc_ruta))}
     summary["cost"] = cost_block([*runs, *extra_runs], finals, verdicts, ledger)
+    if runs:
+        summary["agreementRuns"] = agreement_runs_block(by_id, runs, ctx)
     if finals:
         summary["notMeasured"] = len(finals) - len(measured)
     if measured:

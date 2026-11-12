@@ -625,6 +625,9 @@ class SweepTest(Harness):
         self.assertEqual(len(curves["mezclas"]), 2)
         self.assertEqual(len(curves["single"]), 1)
         self.assertIn("Curvas", (folder / "informe.md").read_text(encoding="utf-8"))
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertIn("agreementRuns", summary)  # el acuerdo sale de las ejecuciones, sin redactor ni jueces
+        self.assertIn("Acierto de las ejecuciones que coinciden", (folder / "informe.md").read_text(encoding="utf-8"))
 
 
 class SampleAndConfigTest(Harness):

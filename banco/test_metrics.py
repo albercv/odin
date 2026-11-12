@@ -90,6 +90,65 @@ class AgreementTest(unittest.TestCase):
                          {"3": {"questions": 1, "accuracy": 0.0}, "2": {"questions": 1, "accuracy": 1.0}})
 
 
+def _cited(text, document):
+    return {"respuesta": text, "no_lo_se": False, "citas": [{"documentId": document, "pagina": 1}]}
+
+
+def _valid_run(question, replica, text, document, error=None):
+    return {"id": question, "approach": "main", "replica": replica, "respuesta": _cited(text, document), "error": error}
+
+
+class AgreementRunsTest(unittest.TestCase):
+    """Acuerdo por ejecución: «bien» es acierto del script; la firma es el documento citado."""
+
+    ITEMS = {"Q1": {"id": "Q1"}, "Q2": {"id": "Q2"}}
+
+    def _block(self, runs):
+        with mock.patch("banco.scoring.is_correct", side_effect=lambda item, a, ctx: a is not None and a["respuesta"] == "bien"):
+            return metrics.agreement_runs_block(self.ITEMS, runs, ctx=None)
+
+    def _runs(self):
+        return [_valid_run("Q1", 0, "bien", "d1"), _valid_run("Q1", 1, "bien", "d1"), _valid_run("Q1", 2, "mal", "d1"),
+                _valid_run("Q1", 3, "mal", "d2"),
+                _valid_run("Q2", 0, "bien", "d1"), _valid_run("Q2", 1, "mal", "d2")]
+
+    def test_splits_runs_by_majority_and_counts_failures_outside_it(self):
+        block = self._block(self._runs())
+        self.assertEqual(block["inMajority"], {"runs": 3, "accuracy": 0.6667})
+        self.assertEqual(block["outsideMajority"], {"runs": 3, "accuracy": 0.3333})
+        self.assertEqual(block["failuresOutsideMajority"], 0.6667)  # 2 de los 3 fallos quedan fuera
+
+    def test_agreement_level_splits_questions_at_sixty_percent(self):
+        block = self._block(self._runs())
+        # Q1: 3 de 4 coinciden (75 %), la mayoría acierta; Q2: empate, sin mayoría, la respuesta es «no consta»
+        self.assertEqual(block["byLevel"], {"atLeast60": {"questions": 1, "accuracy": 1.0},
+                                            "below60": {"questions": 1, "accuracy": 0.0}})
+
+    def test_runs_with_error_are_not_counted(self):
+        runs = [*self._runs(), _valid_run("Q1", 9, "mal", "d9", error="timeout")]
+        self.assertEqual(self._block(runs), self._block(self._runs()))
+
+    def test_without_valid_runs_rates_are_not_calculable(self):
+        block = self._block([_valid_run("Q1", 0, "bien", "d1", error="x")])
+        self.assertEqual(block["inMajority"], {"runs": 0, "accuracy": None})
+        self.assertIsNone(block["failuresOutsideMajority"])
+
+
+class AgreementReportTest(unittest.TestCase):
+    def test_report_shows_run_level_agreement_first(self):
+        from banco.report import render
+        block = {"inMajority": {"runs": 3, "accuracy": 0.6667}, "outsideMajority": {"runs": 1, "accuracy": 0.0},
+                 "failuresOutsideMajority": 0.5, "byLevel": {"atLeast60": {"questions": 2, "accuracy": 1.0},
+                                                            "below60": {"questions": 0, "accuracy": None}}}
+        text = render({"origen": {}, "agreementRuns": block, "cost": {"notifiedUsd": 0.0, "notifiedUsdFromRecords": 0.0,
+                       "unknownCostRecords": 0, "strategyUsdPerAnswer": None, "tokensPerAnswer": None,
+                       "searchers": {"tokensPerAnswer": None}, "combiner": {"tokensPerAnswer": None},
+                       "judges": {"tokensPerAnswer": None}}})
+        self.assertIn("Acierto de las ejecuciones que coinciden con la mayoría de su pregunta: 66,7 % (3 ejecuciones)", text)
+        self.assertIn("Fallos que quedan fuera de la mayoría: 50,0 %", text)
+        self.assertIn("al menos el 60 %: 100,0 % (2 preguntas); menos del 60 %: no calculable (0 preguntas)", text)
+
+
 class CostTest(unittest.TestCase):
     def test_notified_cost_excludes_cached_runs(self):
         runs = [{"id": "Q1", "coste_usd": 0.001, "cached": False, "tokens": {"entrada": 10, "salida": 5}},

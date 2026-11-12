@@ -104,8 +104,22 @@ def _approach_lines(summary):
     return lines + (rows or ["Sin ejecuciones de buscadores."]) + [""]
 
 
+def _agreement_run_lines(block):
+    inside, outside = block["inMajority"], block["outsideMajority"]
+    at_60, below = block["byLevel"]["atLeast60"], block["byLevel"]["below60"]
+    return [f"- Acierto de las ejecuciones que coinciden con la mayoría de su pregunta: {_pct(inside['accuracy'])} "
+            f"({inside['runs']} ejecuciones)",
+            f"- Acierto de las que no coinciden: {_pct(outside['accuracy'])} ({outside['runs']} ejecuciones)",
+            f"- Fallos que quedan fuera de la mayoría: {_pct(block['failuresOutsideMajority'])}",
+            f"- Respuesta mayoritaria por nivel de acuerdo: al menos el 60 %: {_pct(at_60['accuracy'])} "
+            f"({at_60['questions']} preguntas); menos del 60 %: {_pct(below['accuracy'])} ({below['questions']} preguntas)",
+            ""]
+
+
 def _agreement_lines(summary):
     lines = ["## Acuerdo entre buscadores", ""]
+    if "agreementRuns" in summary:
+        lines += _agreement_run_lines(summary["agreementRuns"])
     if "agreement" not in summary:
         return lines + ["Sin respuestas finales que cruzar.", ""]
     lines += ["| Buscadores que coinciden con la mayoría | Preguntas | Acierto de la respuesta final |", "|---|---|---|"]
