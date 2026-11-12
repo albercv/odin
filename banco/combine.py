@@ -13,7 +13,8 @@ def _usable(runs: list[dict]) -> list[dict]:
 def answer_signature(answer: dict) -> tuple[bool, frozenset[str]]:
     """Firma de una respuesta: abstención y conjunto de documentos o fichas citados. Sin cifras ni páginas: es la
     que mejor separa en lo medido (D-067)."""
-    sources = frozenset(c.get("documentId") or c.get("cardId") for c in answer["citas"])
+    sources = frozenset(c.get("documentId") or c.get("cardId") for c in answer["citas"]
+                        if c.get("documentId") or c.get("cardId"))  # una cita sin id no añade nada: no crea acuerdos falsos
     return (bool(answer["no_lo_se"]), sources)
 
 

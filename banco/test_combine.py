@@ -181,5 +181,11 @@ class EnglishIdentifiersTest(unittest.TestCase):
             self.assertEqual(flagged, [], name)
 
 
+class BareCitationTest(unittest.TestCase):
+    def test_citation_without_document_or_card_adds_nothing_to_the_signature(self):
+        bare = {"documentId": None, "cardId": None, "pagina": 1, "fragmento": "x"}
+        self.assertEqual(answer_signature(_answer("x", citas=[bare])), answer_signature(_answer("x")))
+
+
 if __name__ == "__main__":
     unittest.main()
