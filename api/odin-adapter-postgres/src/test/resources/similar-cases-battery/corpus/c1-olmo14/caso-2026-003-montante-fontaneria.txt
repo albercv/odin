@@ -1,0 +1,41 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS CALLE OLMO 14
+
+DATOS DEL CASO
+Número de caso: Caso 2026-003
+Comunidad: Comunidad de Propietarios Calle Olmo 14, Puerto Albar
+Tipo de incidencia: avería en instalación común de fontanería
+Fecha de apertura: 12 de enero de 2026
+Comunicante: propietaria del 1º D
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 12 de enero de 2026 la propietaria del 1º D comunicó al despacho, por correo electrónico, una caída brusca de la presión de suministro en su cocina y un ruido sordo de circulación en el patinillo de instalaciones del núcleo de escaleras. La lectura del contador general, contrastada por el administrador, mostraba un caudal nocturno sostenido de unos nueve metros cúbicos diarios con todas las viviendas en reposo, valor incompatible con el consumo habitual del edificio. El montante es de cobre de 28 milímetros, con soldadura capilar y abrazaderas metálicas fijadas en cada forjado. Tras la primera comprobación, el fontanero de la Comunidad describió el daño como una rotura del montante a la altura de la segunda planta, con corrosión por picadura en el codo de derivación a las viviendas de la letra D.
+
+ACTUACIONES REALIZADAS
+- 13 de enero de 2026: el administrador registra la incidencia y pide al fontanero habitual que acuda con detector acústico.
+- 14 de enero de 2026: visita al patinillo. Se cierra la llave de corte de la columna, se confirma la caída de presión y se abre una cata en el tabique de ladrillo hueco para acceder al tramo dañado.
+- 15 de enero de 2026: se localiza la perforación en el codo de derivación de la segunda planta, con picaduras en el cobre y depósitos de óxido verdoso.
+- 16 de enero de 2026: el fontanero entrega presupuesto para sustituir el tramo afectado por tubería multicapa con accesorios de prensar.
+
+DOCUMENTACIÓN ARCHIVADA
+- Correo electrónico de la propietaria del 1º D.
+- Informe del fontanero con fotografías del codo perforado y croquis de la columna.
+=== Página 2 ===
+RESOLUCIÓN
+La rotura se debió a corrosión por picadura en un codo de cobre con más de treinta años de servicio, junto a una abrazadera que mantenía contacto con otro metal. El fontanero sustituyó dos metros y medio de montante, con tubería multicapa de 32 milímetros, uniones de prensar, dos manguitos dieléctricos y abrazaderas con inserto de goma en cada forjado. La Comunidad abonó 1.380 euros por la sustitución del tramo y la reposición del tabique, con cargo al presupuesto ordinario de conservación. Los trabajos se ejecutaron entre el 20 y el 22 de enero de 2026. El fontanero realizó la prueba de presión del tramo a seis bares durante treinta minutos, sin descenso en el manómetro, y emitió el parte de trabajo y la factura.
+
+SEGUIMIENTO
+El 23 de enero de 2026 el administrador contrastó la lectura del contador general a primera hora de la mañana y no registró caudal alguno con las viviendas en reposo. El 30 de enero de 2026 repitió la comprobación y el valor volvió a ser nulo. La propietaria del 1º D confirmó por correo que la presión de su cocina era la habitual. El administrador comunicó por escrito el cierre a la propietaria y a la presidencia, y dejó constancia de que el resto de codos de la columna, visibles desde la cata, no presentaba picaduras.
+
+RESULTADO
+Cerrado el 2 de febrero de 2026. La reparación quedó a cargo de la Comunidad por tratarse de un elemento común. El consumo del contador general volvió a sus valores habituales en la siguiente lectura bimestral.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Parte de trabajo, acta de la prueba de presión y factura del fontanero.
+- Registro de lecturas del contador general de los días 23 y 30 de enero de 2026.
+- Circular a los vecinos sobre el corte del suministro.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

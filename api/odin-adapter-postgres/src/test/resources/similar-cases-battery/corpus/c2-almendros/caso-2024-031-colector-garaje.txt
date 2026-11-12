@@ -1,0 +1,44 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2024-031
+Comunidad: Residencial Los Almendros
+Categoría: Saneamiento y red de evacuación
+Fecha de apertura: 8 de noviembre de 2024
+Comunicante: conserje del residencial
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 8 de noviembre de 2024 el conserje del residencial comunicó al despacho, por teléfono y con fotografías enviadas desde su móvil, un rebose de la arqueta sifónica situada al pie de la rampa del garaje común. Según su relato, la arqueta devolvía residuos hacia la rejilla de la rampa cada vez que se utilizaban a la vez varias viviendas de los bloques altos, y en las plazas más cercanas a la rampa había olor a alcantarilla. La red horizontal de evacuación del garaje recoge las bajantes de los tres bloques antes de conectar con el pozo de la acera.
+
+ACTUACIONES REALIZADAS
+- 8 de noviembre de 2024: el administrador registra la incidencia y pide al conserje que acordone las plazas más próximas a la arqueta y que retire los vehículos que lo permitan.
+- 11 de noviembre de 2024: visita con el fontanero de la Comunidad. Se destapa la arqueta sifónica y se comprueba que el tramo posterior del colector no evacúa con normalidad.
+- 14 de noviembre de 2024: limpieza provisional de la arqueta con equipo de impulsión a presión, con mejoría solo transitoria, y petición de inspección de la red.
+- 20 de noviembre de 2024: el administrador contrata una empresa especializada en inspección de redes de evacuación.
+- 25 de noviembre de 2024: la empresa realiza el recorrido del colector con cámara de inspección desde la arqueta hasta el pozo de la acera, con grabación de vídeo y medición de las pendientes.
+
+DOCUMENTACIÓN ARCHIVADA
+- Fotografías enviadas por el conserje.
+- Parte de la limpieza provisional del 14 de noviembre de 2024.
+- Vídeo y planos del recorrido con cámara de inspección.
+=== Página 2 ===
+RESOLUCIÓN
+La inspección con cámara confirmó la obstrucción del colector por intrusión de raíces de los cipreses del jardín. Las imágenes muestran raíces finas que entraban por dos juntas de enchufe del colector de fibrocemento, a unos nueve metros de la arqueta, y que habían formado una maraña capaz de retener sólidos y reducir la sección útil. La empresa descartó una contrapendiente o un hundimiento de la solera, y recomendó sustituir el tramo afectado, pues la limpieza a presión solo retira la parte visible de las raíces.
+Se sustituyeron cuatro metros de colector y la Comunidad abonó 1.640 euros con cargo al fondo de reserva. La obra incluyó la apertura de zanja en la solera del garaje, la retirada del tubo dañado, la colocación de tubería de PVC de pared compacta con juntas elásticas, el relleno con arena y la reposición del pavimento de hormigón. Se fijaron las fechas con el conserje para limitar el uso de las plazas afectadas durante la obra, que se ejecutó entre el 26 y el 29 de noviembre de 2024. El jardinero recibió el aviso de no plantar especies de raíz agresiva junto al trazado.
+
+SEGUIMIENTO
+El 29 de noviembre de 2024 se repitió el recorrido con la cámara de inspección y se comprobó que el nuevo tramo quedaba limpio y con pendiente continua. El 1 de diciembre de 2024 el conserje informó de que la arqueta ya no devolvía residuos tras el uso simultáneo de las viviendas. El administrador comunicó el resultado a la junta.
+
+RESULTADO
+Cerrado el 2 de diciembre de 2024. La junta tomó nota de la recomendación de revisar cada dos años el colector con cámara.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Informe de la inspección con cámara y vídeo del segundo recorrido.
+- Parte de trabajo y factura de la obra.
+- Aviso al jardinero sobre las especies cercanas al colector.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

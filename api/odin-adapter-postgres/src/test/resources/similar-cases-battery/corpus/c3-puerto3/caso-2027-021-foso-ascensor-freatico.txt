@@ -1,0 +1,48 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2027-021
+Comunidad: Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: patología en foso de instalación elevadora
+Fecha de apertura: 6 de abril de 2027
+Comunicante: técnico de la empresa conservadora del ascensor
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 6 de abril de 2027 el técnico de la empresa conservadora del ascensor comunicó al despacho que, durante la revisión periódica, había encontrado en el foso del hueco una lámina líquida de unos ocho centímetros de espesor que cubría la base de los amortiguadores. Informó de que el nivel subía y bajaba en pocos días.
+
+El edificio se asienta en una zona próxima al muelle, con el nivel freático alto, y el foso se excava a unos dos metros por debajo de la rasante del portal. El técnico apreció además un depósito de sales blanquecinas en el arranque del muro y una ligera corrosión en las guías, en su tramo inferior.
+
+ACTUACIONES REALIZADAS
+- 7 de abril de 2027: el administrador registra el aviso y, por seguridad, solicita a la empresa conservadora que mantenga el ascensor fuera de servicio hasta la evaluación del foso.
+- 9 de abril de 2027: se extrae el contenido del foso con bomba portátil y se anota el ritmo de recuperación del nivel.
+- 14 de abril de 2027: visita de un técnico externo, que instala un piezómetro en la acera y mide el nivel freático en tres fechas.
+- 23 de abril de 2027: el técnico externo relaciona la variación del nivel del foso con las mareas vivas y propone impermeabilizar el foso con mortero de cristalización osmótica y tratar las juntas de hormigonado.
+- 27 de abril de 2027: se solicitan presupuestos.
+
+DOCUMENTACIÓN ARCHIVADA
+- Parte de la empresa conservadora, con fotografías del foso.
+- Registro de las tres mediciones del piezómetro.
+- Informe del técnico externo, de 23 de abril de 2027.
+=== Página 2 ===
+RESOLUCIÓN
+La Junta de Propietarios, reunida por vía telemática el 6 de mayo de 2027, aprobó el presupuesto de 2.750 euros presentado por una empresa especializada en impermeabilización de estructuras enterradas, con cargo al fondo de reserva. La obra se ejecutó del 17 al 21 de mayo de 2027. Comprendió el vaciado y la limpieza del foso, el picado de las zonas con sales, el tratamiento de las juntas de hormigonado con masilla expansiva, la aplicación de dos capas de mortero de cristalización osmótica en solera y muros, y el sellado del paso de cables con espuma intumescente.
+
+La empresa conservadora limpió y engrasó las guías, sustituyó el contacto de seguridad del foso por uno con mayor grado de protección y comprobó el funcionamiento de los amortiguadores y del limitador de velocidad.
+
+SEGUIMIENTO
+El técnico externo midió el foso el 8 de junio de 2027, durante unas mareas vivas, y no encontró ningún aporte: la solera estaba limpia y sin depósito de sales. La empresa conservadora repitió la comprobación en su revisión de septiembre de 2027 con el mismo resultado. El ascensor volvió al servicio el 24 de mayo de 2027, tras la prueba de funcionamiento. El administrador informó a los vecinos mediante aviso en el portal.
+
+RESULTADO
+Cerrado el 30 de septiembre de 2027. La Comunidad abonó 2.750 euros con cargo al fondo de reserva. Se recomienda mantener un registro de las comprobaciones del foso en cada revisión periódica.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Certificado de la obra de impermeabilización, con garantía de diez años.
+- Acta de la junta telemática, de 6 de mayo de 2027.
+- Informe de la empresa conservadora sobre la prueba de funcionamiento.
+- Medición del técnico externo, de 8 de junio de 2027.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

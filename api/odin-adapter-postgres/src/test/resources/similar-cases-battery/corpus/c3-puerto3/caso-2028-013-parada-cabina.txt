@@ -1,0 +1,43 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2028-013
+Comunidad: Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: parada del ascensor entre plantas con una persona en la cabina
+Fecha de apertura: 9 de marzo de 2028
+Comunicante: propietaria del 3º B
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 9 de marzo de 2028, hacia las 19:40, la cabina del ascensor se detuvo entre la segunda y la tercera planta con la propietaria del 3º B en su interior. La propietaria pulsó el botón de alarma y quedó en comunicación con la central de atención de Elevadores Bahía S.L., que avisó al técnico de guardia y llamó al despacho. La cabina permaneció inmóvil con las puertas cerradas y el alumbrado de emergencia encendido. La propietaria no sufrió ningún daño y al día siguiente pidió por escrito una revisión del ascensor.
+
+ACTUACIONES REALIZADAS
+- 9 de marzo de 2028, 19:45: la central de Elevadores Bahía S.L. avisa al técnico de guardia y mantiene la comunicación con la propietaria.
+- 9 de marzo de 2028, 20:25: llega el técnico, que realiza la maniobra de rescate desde el cuarto de control, con apertura manual del freno y nivelación de la cabina en la tercera planta. La propietaria sale a las 20:35.
+- 9 de marzo de 2028: el técnico deja el ascensor fuera de servicio y coloca un aviso en todas las plantas.
+- 10 de marzo de 2028: revisión completa del aparato. Se detecta que el contacto de enclavamiento de la puerta de la tercera planta está desajustado y que la correa del operador de puertas de la cabina presenta desgaste.
+
+DOCUMENTACIÓN ARCHIVADA
+- Escrito de la propietaria del 3º B.
+- Registro de la llamada de alarma.
+- Parte de la intervención de 9 y 10 de marzo de 2028.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico de Elevadores Bahía S.L. atribuye la parada a la apertura intermitente del contacto de enclavamiento de la puerta de la tercera planta: al perder la señal de puerta cerrada durante el viaje, la maniobra detuvo la cabina como medida de protección. El desajuste del contacto se relaciona con el desgaste de la correa del operador de puertas, que hacía que la puerta de cabina arrastrara la de planta con holgura. El 11 de marzo de 2028 se sustituyeron el contacto de enclavamiento y la correa del operador, se ajustó la cerradura de la puerta de la tercera planta y se comprobaron los contactos de las puertas del resto de plantas.
+El ascensor volvió a ponerse en servicio el 11 de marzo de 2028 a mediodía, tras las pruebas de funcionamiento. La intervención de rescate se produjo dentro del plazo de respuesta previsto en el contrato para personas atrapadas.
+
+SEGUIMIENTO
+El administrador comunicó a la propietaria del 3º B el resultado de la revisión y las piezas sustituidas. Durante las dos semanas siguientes no se registraron nuevas paradas, y la revisión mensual del 27 de marzo de 2028 confirmó el correcto funcionamiento de las puertas.
+
+RESULTADO
+Cerrado el 31 de marzo de 2028. El ascensor funciona con normalidad.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Parte de la reparación de 11 de marzo de 2028.
+- Informe de la revisión mensual de 27 de marzo de 2028.
+- Comunicación escrita a la propietaria del 3º B.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.
