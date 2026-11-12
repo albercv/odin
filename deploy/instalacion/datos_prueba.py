@@ -22,7 +22,21 @@ EXP = RAIZ / "experimentos" / "2026-11-12-archivo-ficticio"
 ARCHIVO = EXP / "datos"
 TEMAS = RAIZ / "api/odin-adapter-tagger-ollama/src/test/resources/tagging-battery/temas.json"
 ESCANEO = RAIZ / "deploy" / "demo" / "escaneo-ficticio.png"
-CREDENCIALES = RAIZ / "data" / "datos-prueba"
+
+
+
+def copia_principal():
+    """La copia principal del repositorio, la que tiene deploy/.env y data/, aunque se lance desde una worktree."""
+    try:
+        comun = subprocess.run(["git", "-C", str(RAIZ), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                               capture_output=True, text=True, check=True).stdout.strip()
+        return Path(comun).parent
+    except (OSError, subprocess.CalledProcessError):
+        return RAIZ
+
+
+PRINCIPAL = copia_principal()
+CREDENCIALES = PRINCIPAL / "data" / "datos-prueba"
 sys.path.insert(0, str(EXP / "pila"))
 import sustituciones  # noqa: E402
 
@@ -373,7 +387,7 @@ def volver_a_vacia():
 
 
 def main():
-    entorno = leer_entorno(RAIZ / os.environ.get("INSTALACION_ENV", "deploy/.env"))
+    entorno = leer_entorno(PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
     api = Api(f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}", entorno.get("ODIN_PANEL_ORIGIN", ""))
     try:
         api.pedir("GET", "/v1/health")

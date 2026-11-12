@@ -1,8 +1,11 @@
 # Funciones de las órdenes de la instalación (D-056). Se carga desde la raíz del repositorio:
 #   . deploy/instalacion/comun.sh
-# INSTALACION_PROYECTO (por defecto odin) e INSTALACION_ENV (por defecto deploy/.env) eligen la pila.
+# Actúa sobre la copia principal del repositorio (su deploy/.env, su Compose y su data/) aunque la orden se lance
+# desde una worktree. INSTALACION_PROYECTO (por defecto odin) e INSTALACION_ENV (por defecto deploy/.env) eligen la pila.
 # Las funciones devuelven error en cada paso con «|| return 1»: set -e no actúa dentro de un if ni de un trap.
 
+PRINCIPAL=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=absolute --git-common-dir 2> /dev/null || true)
+[ -n "$PRINCIPAL" ] && cd "${PRINCIPAL%/.git}"
 PROYECTO="${INSTALACION_PROYECTO:-odin}"
 ENV_FILE="${INSTALACION_ENV:-deploy/.env}"
 COPIAS=data/copias
