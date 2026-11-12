@@ -214,5 +214,16 @@ class LatencyTest(unittest.TestCase):
         self.assertEqual(metrics.latency_block(runs, finals, verdicts), {"p50": 9.0, "p95": 9.0})
 
 
+class ErroredRunsAreNotFiguresTest(unittest.TestCase):
+    """Una ejecución con error, aunque traiga respuesta, no entra en el acuerdo ni en las cifras por enfoque."""
+
+    def test_agreement_block_ignores_errored_runs_with_an_answer(self):
+        runs = [{"id": "Q1", "approach": "main", "replica": 0, "respuesta": _answer("a"), "error": None},
+                {"id": "Q1", "approach": "main", "replica": 1, "respuesta": _answer("a"), "error": "timeout"},
+                {"id": "Q1", "approach": "main", "replica": 2, "respuesta": _answer("b"), "error": "timeout"}]
+        finals = [_final("Q1", True, _answer("a"))]
+        self.assertEqual(metrics.agreement_block(finals, runs), {"1": {"questions": 1, "accuracy": 1.0}})
+
+
 if __name__ == "__main__":
     unittest.main()

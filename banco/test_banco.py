@@ -949,5 +949,64 @@ class CrashSafetyTest(Harness):
         self.assertEqual(observed[1], (1, 1))  # antes de la segunda llamada, la primera ya está en caché y en el libro
 
 
+class NoErrorsInFiguresTest(Harness):
+    """Ningún registro con error entra en la caché como bueno ni en las cifras: buscadores, redactor o jueces."""
+
+    def _cached_records(self):
+        cache = self.tmp / "cache"
+        return [json.loads(f.read_text(encoding="utf-8")) for f in cache.glob("*.json")] if cache.exists() else []
+
+    def test_searcher_error_is_not_cached_and_is_not_an_accuracy_figure(self):
+        inner = ejecutar.responder
+        calls = []
+
+        def first_fails(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 1:
+                return {"id": args[0]["id"], "respuesta": None, "error": "fallo puntual", "coste_usd": 0.001,
+                        "tokens": None, "duracion_s": 1.0, "consultas": []}
+            return inner(*args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=first_fails):
+            code = self.run_cli(self.config(concurrency=1))
+        folder = self.only_folder()
+        self.assertEqual(code, 0)
+        self.assertTrue(all(r.get("error") is None for r in self._cached_records()))
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["byApproach"]["main"]["errors"], 1)
+
+    def test_composer_error_is_not_cached_and_leaves_the_question_unmeasured(self):
+        ok = {"respuesta": {"respuesta": "Respuesta de prueba.", "no_lo_se": False, "citas": [
+            {"documentId": "doc-1", "cardId": None, "pagina": 1, "fragmento": "prueba"}]},
+            "error": None, "coste_usd": 0.0, "tokens": None, "duracion_s": 1.0}
+        failed = {"respuesta": None, "error": "fallo del redactor", "coste_usd": 0.0, "tokens": None, "duracion_s": 1.0}
+        with mock.patch("banco.run.compose", side_effect=[failed, ok, ok]):
+            code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"'))
+        folder = self.only_folder()
+        self.assertEqual(code, 0)  # un error aislado no para: la racha se reinicia con los aciertos
+        self.assertTrue(all(r.get("error") is None for r in self._cached_records()))
+        finals = self.read_jsonl(folder, "final.jsonl")
+        self.assertEqual(sum(f["answer"] is None for f in finals), 1)
+        self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8"))["notMeasured"], 1)
+
+    def test_judge_error_is_not_cached_and_does_not_vote(self):
+        real_judge = judge.run_claude_judge
+        calls = []
+
+        def first_fails(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 1:
+                return {"model": "haiku", "verdict": {"invalido": True, "motivo": "fallo"}, "coste_usd": 0.0005,
+                        "tokens": None, "duracion_s": 1.0, "error": "fallo del juez"}
+            return real_judge(*args, **kwargs)
+
+        with mock.patch("banco.judge.run_claude_judge", side_effect=first_fails):
+            self.run_cli(self.config(concurrency=1), env={"FAKE_VEREDICTO": "si"})
+        folder = self.only_folder()
+        first = self.read_jsonl(folder, "veredictos.jsonl")[0]
+        self.assertIsNotNone(first["jury"])  # el juez fallido no vota: el jurado sale de los demás
+        self.assertTrue(all(r.get("error") is None for r in self._cached_records()))
+
+
 if __name__ == "__main__":
     unittest.main()
