@@ -1,0 +1,113 @@
+{
+ "byApproach": {
+  "main": {
+   "recall": 1.0,
+   "accuracy": 1.0,
+   "errors": 0
+  },
+  "synonyms": {
+   "recall": 1.0,
+   "accuracy": 1.0,
+   "errors": 0
+  },
+  "topic": {
+   "recall": 1.0,
+   "accuracy": 0.92,
+   "errors": 0
+  }
+ },
+ "cost": {
+  "notifiedUsd": 0.5852,
+  "notifiedUsdFromRecords": 0.5852,
+  "unknownCostRecords": 0,
+  "strategyUsdPerAnswer": 0.1132,
+  "tokensPerAnswer": 1683046.8,
+  "searchers": {
+   "usdPerAnswer": 0.1072,
+   "tokensPerAnswer": 1570961.6
+  },
+  "combiner": {
+   "usdPerAnswer": 0.006,
+   "tokensPerAnswer": 80142.8
+  },
+  "judges": {
+   "usdPerAnswer": 0.0039,
+   "tokensPerAnswer": 31942.4
+  }
+ },
+ "notMeasured": 0,
+ "accuracy": {
+  "correct": 4,
+  "total": 5,
+  "rate": 0.8,
+  "wilson": [
+   0.3755,
+   0.9638
+  ]
+ },
+ "byType": {
+  "aislamiento": {
+   "correct": 1,
+   "total": 1
+  },
+  "casos_parecidos": {
+   "correct": 1,
+   "total": 1
+  },
+  "contradiccion": {
+   "correct": 1,
+   "total": 1
+  },
+  "dato_concreto": {
+   "correct": 1,
+   "total": 1
+  },
+  "ficha": {
+   "correct": 0,
+   "total": 1
+  }
+ },
+ "graveFailures": {
+  "leaks": 0,
+  "inventedCitations": 0,
+  "falseNoConsta": 1,
+  "supersededAsCurrent": 0
+ },
+ "agreement": {
+  "13": {
+   "questions": 2,
+   "accuracy": 1.0
+  },
+  "7": {
+   "questions": 1,
+   "accuracy": 1.0
+  },
+  "6": {
+   "questions": 2,
+   "accuracy": 0.5
+  }
+ },
+ "judges": {
+  "kappa": 0.5455,
+  "falseAcceptRate": 0.0,
+  "falseRejectRate": 0.25,
+  "undecided": 0,
+  "ppi": null
+ },
+ "latency": {
+  "p50": 592.1,
+  "p95": 640.3
+ },
+ "origen": {
+  "Configuración": "piloto",
+  "Rama": "feature/calidad-recuperacion",
+  "Commit": "52e4aaad22993b7d520b3213ebe8004ca119a387",
+  "Modo": "explore",
+  "Batería": "desarrollo",
+  "Archivos": "ficticio",
+  "Muestra": "5 (estrato tipo, semilla 7)",
+  "Preguntas": "5",
+  "Fecha": "2026-11-12T17:59"
+ },
+ "stopped": null
+}
