@@ -41,18 +41,26 @@ abstract class WebTestSupport {
     }
 
     String workerKey(CompanyId company) {
-        User user = People.member(w.users, w.memberships, new UserId(UUID.randomUUID()), "Wanda", Optional.empty(),
-                Role.WORKER, company, true, Optional.empty());
+        return keyOf(workerId(company), company);
+    }
+
+    /** Una clave de acceso de una persona que ya existe, para la empresa dada (donde debe ser miembro). */
+    String keyOf(UserId user, CompanyId company) {
         String prefix = String.valueOf(COUNTER.incrementAndGet());
         String secret = "secret-" + UUID.randomUUID();
-        w.keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), user.id(), company, "portatil", prefix,
+        w.keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), user, company, "portatil", prefix,
                 w.secrets.hash(secret), w.clock.instant(), Optional.empty()));
         return "Bearer odin_" + prefix + "_" + secret;
     }
 
     UserId workerId(CompanyId company) {
-        return People.member(w.users, w.memberships, new UserId(UUID.randomUUID()), "Wilma", Optional.empty(),
-                Role.WORKER, company, true, Optional.empty()).id();
+        return joinAsWorker(new UserId(UUID.randomUUID()), company);
+    }
+
+    /** Hace miembro trabajador de la empresa a la persona (la crea si no existe). */
+    UserId joinAsWorker(UserId id, CompanyId company) {
+        return People.member(w.users, w.memberships, id, "Wilma", Optional.empty(), Role.WORKER, company, true,
+                Optional.empty()).id();
     }
 
     Cookie adminCookie(Role role, Optional<CompanyId> company) {

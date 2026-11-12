@@ -1,0 +1,47 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS CALLE OLMO 14
+
+DATOS DEL CASO
+Número de caso: Caso 2027-012
+Comunidad: Comunidad de Propietarios Calle Olmo 14, Puerto Albar
+Tipo de incidencia: avería en instalación térmica centralizada
+Fecha de apertura: 11 de marzo de 2027
+Comunicante: conserje de la finca
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 11 de marzo de 2027 el conserje avisó al despacho de que la caldera de la sala de máquinas se detenía varias veces al día por presión insuficiente en el circuito primario. Además, dos propietarios del último piso informaron de radiadores fríos en la parte alta de la columna.
+
+El mantenedor de la instalación, empresa homologada por la Comunidad, comprobó que el llenado automático del circuito aportaba reposición de fluido caloportador de forma continua. El contador de reposición acumulaba un consumo anómalo, lo que indicaba una pérdida de estanqueidad en algún punto de la red. La instalación, de acero negro, tiene más de treinta años.
+
+ACTUACIONES REALIZADAS
+- 12 de marzo de 2027: el administrador registra el aviso y solicita al mantenedor una inspección completa del circuito.
+- 15 de marzo de 2027: el mantenedor cierra el llenado, purga la instalación y presuriza el circuito con nitrógeno para localizar la pérdida mediante detector de gas trazador.
+- 16 de marzo de 2027: se localiza una corrosión pasante en una unión roscada de la columna 3, dentro del falso techo de la planta baja, junto al portal. El tramo afectado mide unos sesenta centímetros.
+- 19 de marzo de 2027: el mantenedor presenta presupuesto para sustituir el tramo por tubería de acero galvanizado con uniones soldadas, e instalar una válvula de corte en la base de la columna.
+- 22 de marzo de 2027: la presidencia autoriza el presupuesto.
+
+DOCUMENTACIÓN ARCHIVADA
+- Aviso del conserje y lecturas del manómetro.
+- Informe del mantenedor con el registro del contador de reposición.
+- Presupuesto de 1.120 euros, de 19 de marzo de 2027.
+=== Página 2 ===
+RESOLUCIÓN
+La reparación se consideró una avería de un elemento común de la instalación térmica, por lo que la Comunidad abonó 1.120 euros al mantenedor. El 24 de marzo de 2027 se vació la columna 3, se retiró el tramo corroído, se soldó el tubo nuevo y se montó la válvula de corte en la base. Después se realizó la prueba de presión a una vez y media la presión de trabajo durante dos horas, sin descenso en el manómetro.
+
+El mantenedor también revisó el vaso de expansión, cuya precarga estaba por debajo del valor de diseño, y la ajustó. Recomendó por escrito analizar el estado interior de las columnas restantes mediante una inspección endoscópica, por la antigüedad del material, sin que esa recomendación haya sido aprobada por la Junta.
+
+SEGUIMIENTO
+El 25 de marzo de 2027 se rellenó el circuito con fluido tratado con inhibidor de corrosión y se purgaron los radiadores de la columna 3. El 31 de marzo de 2027 el conserje confirmó que la presión se mantenía estable y que los propietarios del último piso tenían calor en toda la columna. El mantenedor registró durante tres semanas el contador de reposición, que no volvió a mostrar consumos anómalos. El administrador informó a los propietarios afectados mediante nota en el portal.
+
+RESULTADO
+Cerrado el 16 de abril de 2027. La Comunidad asumió el coste de 1.120 euros. Queda pendiente, como asunto distinto, la decisión de la Junta sobre la inspección endoscópica del resto de columnas.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Parte de trabajo y factura del mantenedor.
+- Certificado de la prueba de presión, de 24 de marzo de 2027.
+- Nota informativa a los propietarios.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

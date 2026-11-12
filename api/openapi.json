@@ -35,6 +35,115 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/topics/{topicId}" : {
+      "put" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "addTopic",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "removeTopic",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/documents/{documentId}/superseded-by" : {
+      "put" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "supersede",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SupersedeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "unsupersede",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}" : {
       "put" : {
         "tags" : [ "project-member-controller" ],
@@ -135,6 +244,34 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CompanyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/similar-cases" : {
+      "post" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "similarCases",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SimilarCasesRequestBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimilarCasesResponse"
                 }
               }
             }
@@ -367,6 +504,26 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/topics/retag" : {
+      "post" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "retag",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
+          }
+        }
+      }
+    },
     "/v1/admin/documents/{documentId}/retry" : {
       "post" : {
         "tags" : [ "admin-document-controller" ],
@@ -434,6 +591,71 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CompanyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/topics" : {
+      "get" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "listTopics",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TopicView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "createTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TopicRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopicView"
                 }
               }
             }
@@ -725,6 +947,14 @@
             "type" : "string",
             "format" : "uuid"
           }
+        }, {
+          "name" : "caseDocument",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
         } ],
         "requestBody" : {
           "content" : {
@@ -759,6 +989,43 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Upload"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/documents/case-marks" : {
+      "post" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "markCases",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CaseMarksRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseMarksResult"
                 }
               }
             }
@@ -858,10 +1125,72 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}" : {
+      "get" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "get",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateDocumentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}" : {
       "patch" : {
         "tags" : [ "company-controller" ],
-        "operationId" : "update_1",
+        "operationId" : "update_2",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -888,6 +1217,77 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CompanyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/topics/{topicId}" : {
+      "delete" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "deleteTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "updateTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TopicPatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopicView"
                 }
               }
             }
@@ -995,7 +1395,7 @@
       },
       "patch" : {
         "tags" : [ "member-controller" ],
-        "operationId" : "update_2",
+        "operationId" : "update_3",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1055,6 +1455,66 @@
         }
       }
     },
+    "/v1/me/questions" : {
+      "get" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "myQuestions",
+        "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MyQuestionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/cards" : {
+      "get" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "myCards",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "APPROVED", "REJECTED" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MyCardView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/health" : {
       "get" : {
         "tags" : [ "health-controller" ],
@@ -1084,6 +1544,21 @@
           "schema" : {
             "type" : "string",
             "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "caseDocument",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
           }
         }, {
           "name" : "offset",
@@ -1173,10 +1648,10 @@
         }
       }
     },
-    "/v1/admin/documents/{documentId}" : {
+    "/v1/admin/documents/{documentId}/topics" : {
       "get" : {
-        "tags" : [ "admin-document-controller" ],
-        "operationId" : "get",
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "documentTopics",
         "parameters" : [ {
           "name" : "documentId",
           "in" : "path",
@@ -1192,7 +1667,68 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/DocumentView"
+                  "$ref" : "#/components/schemas/DocumentTopicsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/usage-stats" : {
+      "get" : {
+        "tags" : [ "usage-controller" ],
+        "operationId" : "usageStats",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UsageStatsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/tagging-status" : {
+      "get" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "taggingStatus",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TaggingStatusView"
                 }
               }
             }
@@ -1269,6 +1805,74 @@
                   "items" : {
                     "$ref" : "#/components/schemas/ProjectView"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/gaps" : {
+      "get" : {
+        "tags" : [ "usage-controller" ],
+        "operationId" : "gaps",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GapsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/delivered-volume" : {
+      "get" : {
+        "tags" : [ "usage-controller" ],
+        "operationId" : "deliveredVolume",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeliveredVolumeView"
                 }
               }
             }
@@ -1369,6 +1973,115 @@
           }
         }
       },
+      "SupersedeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "replacementId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "El documento que lo sustituye entero."
+          }
+        }
+      },
+      "DocumentLink" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "title" ]
+      },
+      "DocumentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "companyId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "format" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "paginated" : {
+            "type" : "boolean"
+          },
+          "uploadedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "attemptCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "supersededBy" : {
+            "$ref" : "#/components/schemas/DocumentLink"
+          },
+          "supersededAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "pagesWithoutText" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
+          },
+          "taggingStatus" : {
+            "type" : "string"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicLabelView"
+            }
+          },
+          "caseDocument" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
+      },
+      "TopicLabelView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name", "source" ]
+      },
       "Capabilities" : {
         "type" : "object",
         "properties" : {
@@ -1376,7 +2089,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
             },
             "uniqueItems" : true
           }
@@ -1399,7 +2112,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
             },
             "uniqueItems" : true
           },
@@ -1408,6 +2121,124 @@
           }
         },
         "required" : [ "capabilities", "code", "codeReviewed", "id", "name" ]
+      },
+      "SimilarCasesRequestBody" : {
+        "type" : "object",
+        "properties" : {
+          "queries" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "CasePageView" : {
+        "type" : "object",
+        "properties" : {
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "number", "text" ]
+      },
+      "Replacement" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "title" ]
+      },
+      "SimilarCaseView" : {
+        "type" : "object",
+        "properties" : {
+          "sourceType" : {
+            "type" : "string"
+          },
+          "sourceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "addedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "pageCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CasePageView"
+            }
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          },
+          "excerpt" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "originLabel" : {
+            "type" : "string"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "reviewStatus" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "addedAt", "excerpt", "origin", "pageCount", "pages", "sourceId", "sourceType", "superseded", "title", "truncated" ]
+      },
+      "SimilarCasesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "cases" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SimilarCaseView"
+            }
+          },
+          "noSource" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "cases", "noSource" ]
       },
       "Setup" : {
         "type" : "object",
@@ -1510,9 +2341,18 @@
           "rank" : {
             "type" : "number",
             "format" : "double"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "reviewStatus" : {
+            "type" : "string"
           }
         },
-        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "title" ]
+        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
       },
       "SearchResponse" : {
         "type" : "object",
@@ -1658,50 +2498,6 @@
         },
         "required" : [ "active", "displayName", "firstName", "personCode", "userId" ]
       },
-      "DocumentView" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "companyId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "projectId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "title" : {
-            "type" : "string"
-          },
-          "filename" : {
-            "type" : "string"
-          },
-          "format" : {
-            "type" : "string"
-          },
-          "status" : {
-            "type" : "string"
-          },
-          "failureReason" : {
-            "type" : "string"
-          },
-          "paginated" : {
-            "type" : "boolean"
-          },
-          "uploadedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "attemptCount" : {
-            "type" : "integer",
-            "format" : "int32"
-          }
-        },
-        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "paginated", "status", "title", "uploadedAt" ]
-      },
       "NewCompany" : {
         "type" : "object",
         "properties" : {
@@ -1713,6 +2509,33 @@
             "description" : "De 2 a 6 letras mayúsculas o cifras; único en el grupo."
           }
         }
+      },
+      "TopicRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
+          }
+        }
+      },
+      "TopicView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "definition", "id", "name" ]
       },
       "Name" : {
         "type" : "object",
@@ -1876,6 +2699,34 @@
         },
         "required" : [ "document", "duplicate" ]
       },
+      "CaseMarksRequest" : {
+        "type" : "object",
+        "properties" : {
+          "documentIds" : {
+            "type" : "array",
+            "description" : "De 1 a 500 documentos de la empresa.",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "caseDocument" : {
+            "type" : "boolean",
+            "description" : "Verdadero para marcarlos como casos, falso para quitar la marca."
+          }
+        },
+        "required" : [ "caseDocument", "documentIds" ]
+      },
+      "CaseMarksResult" : {
+        "type" : "object",
+        "properties" : {
+          "updated" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "updated" ]
+      },
       "Review" : {
         "type" : "object",
         "properties" : {
@@ -1970,6 +2821,16 @@
           }
         }
       },
+      "UpdateDocumentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "caseDocument" : {
+            "type" : "boolean",
+            "description" : "Si el documento es la ficha de un caso resuelto."
+          }
+        },
+        "required" : [ "caseDocument" ]
+      },
       "UpdateCompany" : {
         "type" : "object",
         "properties" : {
@@ -1979,6 +2840,17 @@
           "code" : {
             "type" : "string",
             "description" : "Solo lo cambia el administrador del grupo."
+          }
+        }
+      },
+      "TopicPatch" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
           }
         }
       },
@@ -2035,9 +2907,18 @@
             "items" : {
               "$ref" : "#/components/schemas/MeProject"
             }
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicView"
+            }
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/MeTagging"
           }
         },
-        "required" : [ "company", "displayName", "projects", "role", "userId" ]
+        "required" : [ "company", "displayName", "projects", "role", "tagging", "topics", "userId" ]
       },
       "MeCompany" : {
         "type" : "object",
@@ -2053,7 +2934,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
             },
             "uniqueItems" : true
           }
@@ -2072,6 +2953,85 @@
           }
         },
         "required" : [ "id", "name" ]
+      },
+      "MeTagging" : {
+        "type" : "object",
+        "properties" : {
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "pendingDocuments" ]
+      },
+      "MyQuestionView" : {
+        "type" : "object",
+        "properties" : {
+          "text" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "hitCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "askedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "askedAt", "hitCount", "kind", "text" ]
+      },
+      "MyCardView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "originalBody" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "review" : {
+            "$ref" : "#/components/schemas/MyReviewView"
+          }
+        },
+        "required" : [ "body", "createdAt", "id", "status", "title" ]
+      },
+      "MyReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "decision" : {
+            "type" : "string"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "reviewedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "decision", "reviewedAt" ]
       },
       "Health" : {
         "type" : "object",
@@ -2108,9 +3068,24 @@
           "uploadedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicLabelView"
+            }
+          },
+          "caseDocument" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "filename", "format", "id", "paginated", "title", "uploadedAt" ]
+        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -2131,9 +3106,18 @@
           },
           "text" : {
             "type" : "string"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "readerName" : {
+            "type" : "string"
           }
         },
-        "required" : [ "documentId", "pageNumber", "paginated", "text", "title" ]
+        "required" : [ "documentId", "pageNumber", "paginated", "readerName", "superseded", "text", "title" ]
       },
       "AdminMe" : {
         "type" : "object",
@@ -2167,9 +3151,12 @@
             "items" : {
               "$ref" : "#/components/schemas/CompanyRef"
             }
+          },
+          "scannedDocumentsSupported" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "userId" ]
+        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "scannedDocumentsSupported", "userId" ]
       },
       "CompanyRef" : {
         "type" : "object",
@@ -2189,6 +3176,247 @@
           }
         },
         "required" : [ "code", "codeReviewed", "id", "name" ]
+      },
+      "DocumentTopicView" : {
+        "type" : "object",
+        "properties" : {
+          "topicId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "taggerVersion" : {
+            "type" : "string"
+          },
+          "decidedByName" : {
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "name", "source", "state", "topicId" ]
+      },
+      "DocumentTopicsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DocumentTopicView"
+            }
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/TaggingInfo"
+          }
+        },
+        "required" : [ "topics" ]
+      },
+      "TaggingInfo" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "topicListVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "failureReason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "status", "topicListVersion" ]
+      },
+      "CardCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "saved" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pending" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "approved" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "corrected" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "rejected" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "withheld" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "pending", "saved", "withheld" ]
+      },
+      "CompanyUsageView" : {
+        "type" : "object",
+        "properties" : {
+          "questions" : {
+            "$ref" : "#/components/schemas/QuestionCountsView"
+          },
+          "questionsWithoutResults" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "cards" : {
+            "$ref" : "#/components/schemas/CardCountsView"
+          },
+          "documents" : {
+            "$ref" : "#/components/schemas/DocumentCountsView"
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/TaggingCountsView"
+          }
+        },
+        "required" : [ "cards", "documents", "questions", "questionsWithoutResults" ]
+      },
+      "DocumentCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "uploaded" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "ready" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "failed" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "waitingForReader" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "failed", "ready", "uploaded", "waitingForReader" ]
+      },
+      "PersonUsageView" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "memberCode" : {
+            "type" : "string"
+          },
+          "questions" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "cardsSaved" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "cardsSaved", "displayName", "questions" ]
+      },
+      "QuestionCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "search" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "similarCases" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "search", "similarCases" ]
+      },
+      "TaggingCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "tagged" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pending" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "pending", "tagged" ]
+      },
+      "UsageStatsView" : {
+        "type" : "object",
+        "properties" : {
+          "month" : {
+            "type" : "string"
+          },
+          "company" : {
+            "$ref" : "#/components/schemas/CompanyUsageView"
+          },
+          "people" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PersonUsageView"
+            }
+          }
+        },
+        "required" : [ "company", "month", "people" ]
+      },
+      "TaggingStatusView" : {
+        "type" : "object",
+        "properties" : {
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "oldestPendingSince" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "window" : {
+            "$ref" : "#/components/schemas/TaggingWindowView"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "pendingDocuments", "timezone", "window" ]
+      },
+      "TaggingWindowView" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "always" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "always" ]
       },
       "ProjectMemberView" : {
         "type" : "object",
@@ -2226,6 +3454,76 @@
           }
         },
         "required" : [ "createdAt", "id", "label", "prefix" ]
+      },
+      "GapView" : {
+        "type" : "object",
+        "properties" : {
+          "text" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "times" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "lastAskedOn" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "kind", "lastAskedOn", "text", "times" ]
+      },
+      "GapsView" : {
+        "type" : "object",
+        "properties" : {
+          "withheld" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "gaps" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/GapView"
+            }
+          }
+        },
+        "required" : [ "gaps", "withheld" ]
+      },
+      "DeliveredVolumeView" : {
+        "type" : "object",
+        "properties" : {
+          "month" : {
+            "type" : "string"
+          },
+          "totals" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DeliveryTotalView"
+            }
+          }
+        },
+        "required" : [ "month", "totals" ]
+      },
+      "DeliveryTotalView" : {
+        "type" : "object",
+        "properties" : {
+          "tool" : {
+            "type" : "string"
+          },
+          "calls" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "bytes" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "bytes", "calls", "tool" ]
       }
     }
   }

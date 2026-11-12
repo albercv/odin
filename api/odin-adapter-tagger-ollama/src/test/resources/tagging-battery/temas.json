@@ -1,0 +1,34 @@
+[
+ {
+  "name": "agua y humedades",
+  "definition": "cualquier problema en el que intervenga el agua o la humedad, aunque la ficha no use esas palabras: entrada, pérdida o acumulación de agua; pérdida de estanqueidad o de nivel en tuberías, depósitos o piscinas; fontanería, saneamiento, bajantes, colectores, arquetas y desagües; impermeabilización de cubiertas, terrazas o sótanos; condensaciones, capilaridad, eflorescencias y hongos"
+ },
+ {
+  "name": "ruido",
+  "definition": "ruidos y vibraciones molestos"
+ },
+ {
+  "name": "convivencia",
+  "definition": "conflictos entre vecinos o con usuarios: uso de zonas comunes, normas y molestias entre personas"
+ },
+ {
+  "name": "instalaciones",
+  "definition": "equipos e instalaciones comunes: ascensor, electricidad, fontanería, climatización, depuradora, bombas y ventilación"
+ },
+ {
+  "name": "estructura y fachada",
+  "definition": "elementos constructivos: cimentación, forjados, muros, fachadas, cubiertas, fisuras y desprendimientos"
+ },
+ {
+  "name": "olores y humos",
+  "definition": "olores, humos o gases molestos"
+ },
+ {
+  "name": "seguros y siniestros",
+  "definition": "intervención de una aseguradora: parte, peritaje o siniestro"
+ },
+ {
+  "name": "otros",
+  "definition": "lo que no encaje en ninguna otra"
+ }
+]

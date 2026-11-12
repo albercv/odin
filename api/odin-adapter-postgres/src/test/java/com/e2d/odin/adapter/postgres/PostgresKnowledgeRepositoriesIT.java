@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.e2d.odin.domain.knowledge.CardReview;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.shared.CardId;
@@ -34,9 +35,9 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
         KnowledgeCard c = card(a, newUser(a), "Ficha");
-        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(c);
-        assertThat(cards.findById(CompanyScope.all(), ProjectVisibility.all(), c.id())).contains(c);
-        assertThat(cards.findById(CompanyScope.of(b), ProjectVisibility.all(), c.id())).isEmpty();
+        assertThat(cards.findForReview(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(c);
+        assertThat(cards.findForReview(CompanyScope.all(), ProjectVisibility.all(), c.id())).contains(c);
+        assertThat(cards.findForReview(CompanyScope.of(b), ProjectVisibility.all(), c.id())).isEmpty();
     }
 
     @Test
@@ -47,10 +48,10 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CardReview review = new CardReview(reviewer, ReviewDecision.CORRECT, NOW.plusSeconds(5), Optional.of("nota"));
         KnowledgeCard corrected = c.correct("Cuerpo corregido", review);
         cards.save(corrected);
-        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(corrected);
+        assertThat(cards.findForReview(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(corrected);
         KnowledgeCard noNote = c.approve(new CardReview(reviewer, ReviewDecision.APPROVE, NOW, Optional.empty()));
         cards.save(noNote);
-        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(noNote);
+        assertThat(cards.findForReview(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(noNote);
     }
 
     @Test
@@ -75,11 +76,37 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
         UserId author = newUser(a);
-        QuestionRecord q = new QuestionRecord(UUID.randomUUID(), a, author, "¿Cuánto cuesta?", 2, NOW);
+        QuestionRecord q = new QuestionRecord(UUID.randomUUID(), a, author, "¿Cuánto cuesta?", 2, NOW, QuestionKind.SEARCH);
         new PostgresQuestionLog(tx).record(q);
         assertThat(questionTexts(CompanyScope.of(a))).containsExactly("¿Cuánto cuesta?");
         assertThat(questionTexts(CompanyScope.of(b))).isEmpty();
         assertThat(hitCounts()).containsExactly(2);
+    }
+
+    @Test
+    void storesKind() {
+        CompanyId a = newCompany();
+        UserId author = newUser(a);
+        PostgresQuestionLog log = new PostgresQuestionLog(tx);
+        log.record(new QuestionRecord(UUID.randomUUID(), a, author, "busca", 1, NOW, QuestionKind.SEARCH));
+        log.record(new QuestionRecord(UUID.randomUUID(), a, author, "casos", 3, NOW, QuestionKind.SIMILAR_CASES));
+
+        List<String> kinds = tx.inScope(CompanyScope.of(a), (JdbcClient jdbc) -> jdbc
+                .sql("SELECT kind FROM question_record ORDER BY text").query(String.class).list());
+
+        assertThat(kinds).containsExactly("SEARCH", "SIMILAR_CASES");
+    }
+
+    @Test
+    void kindOnlyAcceptsKnownValues() {
+        CompanyId a = newCompany();
+        UserId author = newUser(a);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> tx.runInScope(CompanyScope.of(a), jdbc -> jdbc.sql("""
+                INSERT INTO question_record (id, company_id, author_id, text, hit_count, asked_at, kind)
+                VALUES (:id, :company, :author, 'x', 0, now(), 'OTRA')""").param("id", UUID.randomUUID())
+                .param("company", a.value()).param("author", author.value()).update()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     private List<String> questionTexts(CompanyScope scope) {
@@ -109,10 +136,10 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
                 .containsExactly(free);
         assertThat(cards.listByStatus(scope, ProjectVisibility.all(), CardStatus.PENDING))
                 .containsExactly(free, inVisible, inHidden);
-        assertThat(cards.findById(scope, some, inHidden.id())).isEmpty();
-        assertThat(cards.findById(scope, some, inVisible.id())).contains(inVisible);
-        assertThat(cards.findById(scope, some, free.id())).contains(free);
-        assertThat(cards.findById(scope, ProjectVisibility.all(), inHidden.id())).contains(inHidden);
+        assertThat(cards.findForReview(scope, some, inHidden.id())).isEmpty();
+        assertThat(cards.findForReview(scope, some, inVisible.id())).contains(inVisible);
+        assertThat(cards.findForReview(scope, some, free.id())).contains(free);
+        assertThat(cards.findForReview(scope, ProjectVisibility.all(), inHidden.id())).contains(inHidden);
     }
 
     private KnowledgeCard cardIn(CompanyId company, UserId author, ProjectId project, String title) {
@@ -120,5 +147,63 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
                 "Cuerpo", Optional.empty(), author, NOW, CardStatus.PENDING, Optional.empty());
         cards.save(c);
         return c;
+    }
+
+    private KnowledgeCard cardAt(CompanyId company, UserId author, Optional<ProjectId> project, String title,
+            CardStatus status, long secondsAfterBase) {
+        KnowledgeCard c = new KnowledgeCard(new CardId(UUID.randomUUID()), company, project, title, "Cuerpo",
+                Optional.empty(), author, NOW.plusSeconds(secondsAfterBase), status, Optional.empty());
+        cards.save(c);
+        return c;
+    }
+
+    @Test
+    void listByAuthorFiltersCompanyProjectsAndStatus() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId me = newUser(a);
+        UserId colleague = newUser(a);
+        ProjectId visible = newProject(a, "Visible");
+        ProjectId hidden = newProject(a, "Oculto");
+        KnowledgeCard free = cardAt(a, me, Optional.empty(), "Libre", CardStatus.APPROVED, 1);
+        KnowledgeCard inVisible = cardAt(a, me, Optional.of(visible), "En visible", CardStatus.PENDING, 3);
+        KnowledgeCard rejected = cardAt(a, me, Optional.empty(), "Rechazada", CardStatus.REJECTED, 2);
+        cardAt(a, me, Optional.of(hidden), "En oculto", CardStatus.PENDING, 4);
+        cardAt(a, colleague, Optional.empty(), "Del compañero", CardStatus.PENDING, 5);
+        cardAt(b, me, Optional.empty(), "Con la clave de B", CardStatus.PENDING, 6);
+        ProjectVisibility onlyVisible = ProjectVisibility.of(Set.of(visible));
+
+        assertThat(cards.listByAuthor(CompanyScope.of(a), onlyVisible, me, Optional.empty(), 100))
+                .containsExactly(inVisible, rejected, free);
+        assertThat(cards.listByAuthor(CompanyScope.of(a), onlyVisible, me, Optional.of(CardStatus.REJECTED), 100))
+                .containsExactly(rejected);
+        assertThat(cards.listByAuthor(CompanyScope.of(a), onlyVisible, me, Optional.empty(), 2))
+                .containsExactly(inVisible, rejected);
+        assertThat(cards.listByAuthor(CompanyScope.of(a), ProjectVisibility.of(Set.of()), me, Optional.empty(), 100))
+                .containsExactly(rejected, free);
+        assertThat(cards.listByAuthor(CompanyScope.of(b), ProjectVisibility.all(), colleague, Optional.empty(), 100))
+                .isEmpty();
+        assertThat(cards.listByAuthor(CompanyScope.of(b), ProjectVisibility.all(), me, Optional.empty(), 100))
+                .extracting(KnowledgeCard::title).containsExactly("Con la clave de B");
+    }
+
+    @Test
+    void listByAuthorOfQuestionsFiltersCompany() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId me = newUser(a);
+        UserId colleague = newUser(a);
+        PostgresQuestionLog log = new PostgresQuestionLog(tx);
+        log.record(new QuestionRecord(UUID.randomUUID(), a, me, "vieja", 1, NOW, QuestionKind.SEARCH));
+        log.record(new QuestionRecord(UUID.randomUUID(), a, me, "nueva", 0, NOW.plusSeconds(60),
+                QuestionKind.SIMILAR_CASES));
+        log.record(new QuestionRecord(UUID.randomUUID(), a, colleague, "del compañero", 1, NOW, QuestionKind.SEARCH));
+        log.record(new QuestionRecord(UUID.randomUUID(), b, me, "con la clave de B", 1, NOW, QuestionKind.SEARCH));
+
+        assertThat(log.listByAuthor(a, me, 50)).extracting(QuestionRecord::text).containsExactly("nueva", "vieja");
+        assertThat(log.listByAuthor(a, me, 1)).extracting(QuestionRecord::kind)
+                .containsExactly(QuestionKind.SIMILAR_CASES);
+        assertThat(log.listByAuthor(b, me, 50)).extracting(QuestionRecord::text).containsExactly("con la clave de B");
+        assertThat(log.listByAuthor(b, colleague, 50)).isEmpty();
     }
 }

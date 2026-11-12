@@ -9,6 +9,7 @@ import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -35,6 +36,31 @@ class ReadPageTest {
 
         assertThat(view.document()).isEqualTo(d);
         assertThat(view.page().text()).isEqualTo("texto");
+    }
+
+    @Test
+    void pageCarriesSupersededAndReplacement() {
+        Document old = Fixtures.readyDocument(docs, companyA, "viejo");
+        Document current = Fixtures.readyDocument(docs, companyA, "vigente");
+        docs.markSuperseded(companyA, old.id(), current.id(), Fixtures.NOW);
+
+        PageView view = readPage.execute(Actors.worker(companyA), old.id(), 1);
+
+        assertThat(view.document().superseded()).isTrue();
+        assertThat(view.entry().replacement()).contains(DocumentRef.of(current));
+        assertThat(readPage.execute(Actors.worker(companyA), current.id(), 1).entry().replacement()).isEmpty();
+    }
+
+    @Test
+    void pageOfSupersededWithReplacementInAClosedProjectHasNoReplacement() {
+        Document old = Fixtures.readyDocument(docs, companyA, "viejo");
+        Document hidden = Fixtures.documentIn(docs, companyA, Fixtures.project(orgs, companyA), "oculto");
+        docs.markSuperseded(companyA, old.id(), hidden.id(), Fixtures.NOW);
+
+        PageView view = readPage.execute(Actors.worker(companyA), old.id(), 1);
+
+        assertThat(view.document().superseded()).isTrue();
+        assertThat(view.entry().replacement()).isEmpty();
     }
 
     @Test

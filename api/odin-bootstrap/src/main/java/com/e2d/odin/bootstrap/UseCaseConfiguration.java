@@ -4,6 +4,9 @@ import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.MarkCaseDocuments;
+import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
@@ -31,6 +34,7 @@ import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.UserChanges;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
+import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.organization.AddProjectMember;
@@ -49,6 +53,7 @@ import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
@@ -61,14 +66,30 @@ import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
+import com.e2d.odin.application.port.TaggingRepository;
+import com.e2d.odin.application.port.TopicRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.TokenGenerator;
+import com.e2d.odin.application.port.UsageStatistics;
 import com.e2d.odin.application.port.UserRepository;
+import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.ListDocuments;
+import com.e2d.odin.application.search.ListMyQuestions;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
+import com.e2d.odin.application.topic.CreateTopic;
+import com.e2d.odin.application.topic.DeleteTopic;
+import com.e2d.odin.application.shared.TaggingWindow;
+import com.e2d.odin.application.topic.GetTaggingStatus;
+import com.e2d.odin.application.topic.ListDocumentTopics;
+import com.e2d.odin.application.topic.ListTopics;
+import com.e2d.odin.application.topic.ReviewDocumentTopics;
+import com.e2d.odin.application.topic.UpdateTopic;
+import com.e2d.odin.application.usage.GetDeliveredVolume;
+import com.e2d.odin.application.usage.GetUsageStats;
+import com.e2d.odin.application.usage.ListGaps;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
@@ -78,7 +99,9 @@ import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -138,6 +161,61 @@ public class UseCaseConfiguration {
     @Bean
     CreateProject createProject(OrganizationRepository organizations, IdGenerator ids) {
         return new CreateProject(organizations, ids);
+    }
+
+    @Bean
+    CreateTopic createTopic(OrganizationRepository organizations, TopicRepository topics, IdGenerator ids) {
+        return new CreateTopic(organizations, topics, ids);
+    }
+
+    @Bean
+    UpdateTopic updateTopic(TopicRepository topics) {
+        return new UpdateTopic(topics);
+    }
+
+    @Bean
+    DeleteTopic deleteTopic(TopicRepository topics, Clock clock) {
+        return new DeleteTopic(topics, clock);
+    }
+
+    @Bean
+    ListTopics listTopics(TopicRepository topics) {
+        return new ListTopics(topics);
+    }
+
+    @Bean
+    ReviewDocumentTopics reviewDocumentTopics(DocumentRepository documents, TopicRepository topics,
+            TaggingRepository tagging, Clock clock) {
+        return new ReviewDocumentTopics(documents, topics, tagging, clock);
+    }
+
+    @Bean
+    ListDocumentTopics listDocumentTopics(DocumentRepository documents, TopicRepository topics,
+            TaggingRepository tagging, UserRepository users) {
+        return new ListDocumentTopics(documents, topics, tagging, users);
+    }
+
+    @Bean
+    GetTaggingStatus getTaggingStatus(TaggingRepository tagging, TaggingWindow window) {
+        return new GetTaggingStatus(tagging, window);
+    }
+
+    @Bean
+    GetUsageStats getUsageStats(OrganizationRepository organizations, UsageStatistics statistics, Clock clock,
+            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new GetUsageStats(organizations, statistics, clock, zone);
+    }
+
+    @Bean
+    GetDeliveredVolume getDeliveredVolume(OrganizationRepository organizations, DeliveryMeter meter, Clock clock,
+            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new GetDeliveredVolume(organizations, meter, clock, zone);
+    }
+
+    @Bean
+    ListGaps listGaps(OrganizationRepository organizations, UsageStatistics statistics, Clock clock,
+            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new ListGaps(organizations, statistics, clock, zone);
     }
 
     @Bean
@@ -323,8 +401,9 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ListCompanyDocuments listCompanyDocuments(DocumentRepository documents) {
-        return new ListCompanyDocuments(documents);
+    ListCompanyDocuments listCompanyDocuments(DocumentRepository documents, TopicRepository topics,
+            TaggingRepository tagging) {
+        return new ListCompanyDocuments(documents, topics, tagging);
     }
 
     @Bean
@@ -335,6 +414,21 @@ public class UseCaseConfiguration {
     @Bean
     RetryDocument retryDocument(DocumentRepository documents) {
         return new RetryDocument(documents);
+    }
+
+    @Bean
+    UpdateDocument updateDocument(DocumentRepository documents) {
+        return new UpdateDocument(documents);
+    }
+
+    @Bean
+    MarkCaseDocuments markCaseDocuments(DocumentRepository documents) {
+        return new MarkCaseDocuments(documents);
+    }
+
+    @Bean
+    SupersedeDocument supersedeDocument(DocumentRepository documents, Clock clock) {
+        return new SupersedeDocument(documents, clock);
     }
 
     @Bean
@@ -358,8 +452,21 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DescribeMe describeMe(OrganizationRepository organizations, ProjectMemberRepository projectMembers) {
-        return new DescribeMe(organizations, projectMembers);
+    ListMyKnowledgeCards listMyKnowledgeCards(OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, KnowledgeCardRepository cards) {
+        return new ListMyKnowledgeCards(organizations, projectMembers, cards);
+    }
+
+    @Bean
+    ListMyQuestions listMyQuestions(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            QuestionLog questions) {
+        return new ListMyQuestions(organizations, projectMembers, questions);
+    }
+
+    @Bean
+    DescribeMe describeMe(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            TopicRepository topics, TaggingRepository tagging) {
+        return new DescribeMe(organizations, projectMembers, topics, tagging);
     }
 
     @Bean
@@ -374,11 +481,19 @@ public class UseCaseConfiguration {
     }
 
     @Bean
+    FindSimilarCases findSimilarCases(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            KnowledgeSearch search, QuestionLog questions, IdGenerator ids, Clock clock) {
+        return new FindSimilarCases(organizations, projectMembers, search, questions, ids, clock);
+    }
+
+    @Bean
     ListDocuments listDocuments(
             OrganizationRepository organizations,
             ProjectMemberRepository projectMembers,
-            DocumentRepository documents) {
-        return new ListDocuments(organizations, projectMembers, documents);
+            DocumentRepository documents,
+            TopicRepository topics,
+            TaggingRepository tagging) {
+        return new ListDocuments(organizations, projectMembers, documents, topics, tagging);
     }
 
     @Bean

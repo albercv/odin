@@ -1,0 +1,42 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2028-003
+Comunidad: Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: olor a gas en zona común
+Fecha de apertura: 12 de enero de 2028
+Comunicante: propietario del 2º B
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 12 de enero de 2028, hacia las 21:10, el propietario del 2º B llamó al despacho para comunicar un olor intenso a gas en el rellano de la segunda planta. Según su relato, el olor era más fuerte junto al armario de contadores de gas empotrado en el rellano, que aloja los contadores de las viviendas de esa planta con sus llaves de corte. La instalación común de gas sube por el patio hasta un armario de contadores en cada planta.
+
+ACTUACIONES REALIZADAS
+- 12 de enero de 2028, 21:15: el administrador indica al propietario que no accione interruptores y que ventile la escalera, y avisa a la distribuidora de gas.
+- 12 de enero de 2028, 21:50: llega el técnico de la distribuidora, que cierra la llave de acometida del edificio y localiza con un detector portátil la pérdida de gas en la unión roscada de la llave de corte del contador del 2º B.
+- 12 de enero de 2028, 22:40: se precinta el contador del 2º B, se realiza una prueba de estanqueidad con manómetro del resto del armario y se restablece el suministro al edificio, salvo al 2º B.
+- 13 de enero de 2028: una empresa instaladora autorizada sustituye la llave de corte y la junta de la unión, y repite la prueba de estanqueidad.
+- 14 de enero de 2028: la misma empresa revisa los armarios de contadores de todas las plantas.
+
+DOCUMENTACIÓN ARCHIVADA
+- Parte de intervención de la distribuidora de gas.
+- Certificado de la prueba de estanqueidad de la empresa instaladora.
+=== Página 2 ===
+RESOLUCIÓN
+La empresa instaladora concluye que la pérdida se debía al deterioro de la junta de la unión roscada de la llave de corte del contador del 2º B, agravado por la tensión que transmitía el tubo de salida, mal sujeto dentro del armario. La llave de corte del contador forma parte de la instalación común del edificio, por lo que su sustitución corrió a cargo de la Comunidad. La empresa colocó una abrazadera nueva en el tubo de salida para eliminar la tensión. El 13 de enero de 2028 la distribuidora retiró el precinto y restableció el suministro al 2º B. En la revisión del 14 de enero de 2028 no se detectaron pérdidas en los armarios del resto de plantas, aunque se recomendó cambiar dos juntas por envejecimiento.
+
+SEGUIMIENTO
+El 20 de enero de 2028 se sustituyeron las dos juntas recomendadas. El administrador comprobó con los vecinos de la segunda planta que no había reaparecido el olor a gas en el rellano. Además, se colocó en el portal una nota con las instrucciones de actuación ante olor a gas y el teléfono de urgencias de la distribuidora, y se programó la inspección periódica de la instalación común.
+
+RESULTADO
+Cerrado el 26 de enero de 2028. La instalación común de gas quedó estanca en todas las plantas.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Facturas de la empresa instaladora.
+- Informe de la revisión de los armarios de contadores de gas.
+- Nota de instrucciones colocada en el portal.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

@@ -28,7 +28,7 @@ class DeleteProjectTest {
 
         assertThat(organizations.listProjects(company)).isEmpty();
         assertThat(organizations.findProject(company, project)).isEmpty();
-        assertThat(new DescribeMe(organizations, new InMemoryProjectMemberRepository(organizations))
+        assertThat(Fixtures.describeMe(organizations, new InMemoryProjectMemberRepository(organizations))
                 .execute(Actors.worker(company)).projects()).isEmpty();
     }
 

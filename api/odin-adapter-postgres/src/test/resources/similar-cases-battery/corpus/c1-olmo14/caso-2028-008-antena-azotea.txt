@@ -1,0 +1,41 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS CALLE OLMO 14
+
+DATOS DEL CASO
+Número de caso: Caso 2028-008
+Comunidad: Comunidad de Propietarios Calle Olmo 14, Puerto Albar
+Tipo de incidencia: avería del sistema colectivo de recepción de televisión
+Fecha de apertura: 14 de febrero de 2028
+Comunicante: propietario del 3º D
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 14 de febrero de 2028 el propietario del 3º D comunicó al despacho que desde la noche anterior su televisor no recibía la mayoría de los canales, y a lo largo de la mañana llamaron cuatro viviendas más con el mismo problema. Esa noche se habían registrado en Puerto Albar rachas de viento muy fuertes. El sistema colectivo de recepción consta de un mástil en la azotea transitable, anclado al peto de la caja de escalera, con antenas de UHF y una parábola, y de un equipo de cabecera con amplificadores en un armario de la azotea, del que parte la red de distribución hasta las tomas de las viviendas.
+
+ACTUACIONES REALIZADAS
+- 14 de febrero de 2028: el administrador avisa a la empresa de telecomunicaciones que atiende el edificio.
+- 15 de febrero de 2028: visita del técnico antenista a la azotea. Se comprueba que el mástil está doblado a media altura, que uno de los vientos de cable de acero se ha soltado de su anclaje en el peto y que la antena de UHF ha girado unos cuarenta grados.
+- 16 de febrero de 2028: medición de la señal en el equipo de cabecera y en las tomas de tres viviendas, con valores por debajo del mínimo en la mayoría de los múltiples.
+- 18 de febrero de 2028: el técnico entrega presupuesto para sustituir el mástil, los vientos y la antena de UHF.
+
+DOCUMENTACIÓN ARCHIVADA
+- Informe del técnico antenista con las mediciones de señal.
+- Presupuesto de la empresa de telecomunicaciones.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico atribuye la avería al esfuerzo del viento sobre el mástil, que había perdido uno de sus tres vientos por el aflojamiento del tensor, de modo que los dos restantes no bastaron para mantenerlo vertical durante las rachas. Recomienda sustituir el mástil por uno de mayor sección, con tres vientos nuevos de acero galvanizado y tensores con contratuerca, y anclar su base a la losa de la caja de escalera mediante placa y tacos químicos, en lugar de las abrazaderas al peto. La presidencia aprobó el presupuesto el 19 de febrero de 2028 y los trabajos se ejecutaron el 22 de febrero de 2028. Se colocó una antena de UHF nueva, se reorientó la parábola y se ajustaron los amplificadores del equipo de cabecera.
+
+SEGUIMIENTO
+El 22 de febrero de 2028 el técnico repitió las mediciones en el equipo de cabecera y en las tomas de las viviendas afectadas, con valores dentro de los márgenes de calidad en todos los múltiples. Entre el 23 y el 25 de febrero de 2028 el administrador confirmó por teléfono con los cinco propietarios que habían comunicado la avería que recibían con normalidad todos los canales. El técnico dejó en el armario de la azotea un boletín de la intervención con las nuevas mediciones.
+
+RESULTADO
+Cerrado el 28 de febrero de 2028. El sistema colectivo de recepción funciona con normalidad y el mástil quedó anclado a la losa de la caja de escalera.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Boletín de la intervención y mediciones finales.
+- Factura de la empresa de telecomunicaciones.
+- Fotografías del nuevo anclaje del mástil.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

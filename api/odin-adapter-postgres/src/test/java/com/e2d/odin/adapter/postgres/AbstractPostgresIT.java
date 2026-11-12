@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 abstract class AbstractPostgresIT {
 
@@ -72,8 +73,23 @@ abstract class AbstractPostgresIT {
     Document newDocument(CompanyId company, UserId uploader, String title, DocumentStatus status) {
         Document d = new Document(new DocumentId(UUID.randomUUID()), company, Optional.empty(), title, "f.pdf",
                 DocumentFormat.PDF, UUID.randomUUID().toString(), status, Optional.empty(), true, uploader, NOW,
-                Optional.empty(), 0);
+                Optional.empty(), 0, Optional.empty(), Optional.empty());
         docs.save(d);
         return d;
+    }
+
+    /** Pone una marca saltándose la regla de proyecto de {@code markSuperseded}: la base solo exige la misma empresa. */
+    void forceMark(Document old, Document replacement) {
+        JdbcClient.create(Db.owner()).sql("UPDATE document SET superseded_by = :r, superseded_at = now() WHERE id = :id")
+                .param("r", replacement.id().value()).param("id", old.id().value()).update();
+    }
+
+    /** Dato corrupto: una marca entre empresas, que la FK compuesta impide. Se quita la FK y se vuelve a poner sin validar. */
+    void forceMarkAcrossCompanies(Document old, Document foreign) {
+        JdbcClient jdbc = JdbcClient.create(Db.owner());
+        jdbc.sql("ALTER TABLE document DROP CONSTRAINT document_superseded_by_same_company_fk").update();
+        forceMark(old, foreign);
+        jdbc.sql("ALTER TABLE document ADD CONSTRAINT document_superseded_by_same_company_fk FOREIGN KEY "
+                + "(superseded_by, company_id) REFERENCES document (id, company_id) NOT VALID").update();
     }
 }

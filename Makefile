@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo
+.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -26,3 +26,15 @@ down:
 
 demo:
 	@deploy/demo/run-demo.sh
+
+# Batería de respuestas (experimento del encargo 12): usa la cuenta de Claude, no entra en check ni en demo.
+answer-battery:
+	@MODELO="$(MODELO)" MUESTRA="$(MUESTRA)" experimentos/2026-11-12-archivo-ficticio/medir/medir.sh
+
+# Descarga el modelo del etiquetado con el Ollama del equipo. Es la única orden del etiquetado que usa la red.
+tagger-model:
+	ollama pull $(or $(MODEL),qwen3.5:9b)
+
+# Batería del etiquetado con el modelo real (el Ollama de ODIN_TAGGER_URL). Fuera de make check; escribe api/odin-adapter-tagger-ollama/target/tagging-battery.json.
+tagging-battery:
+	cd api && mvn -q -am -pl odin-adapter-tagger-ollama verify -Dgroups=model -DexcludedGroups=

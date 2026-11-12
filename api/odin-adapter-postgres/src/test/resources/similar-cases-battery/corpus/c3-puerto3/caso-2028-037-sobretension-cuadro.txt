@@ -1,0 +1,44 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2028-037
+Comunidad: Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: daños eléctricos en servicios comunes por sobretensión
+Fecha de apertura: 31 de julio de 2028
+Comunicante: presidenta de la Comunidad
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 31 de julio de 2028 la presidenta de la Comunidad comunicó al despacho que, tras la tormenta eléctrica de la noche anterior, el videoportero no funcionaba, el alumbrado de la escalera no encendía y el ascensor estaba fuera de servicio. Varios vecinos oyeron hacia las dos de la madrugada una descarga atmosférica muy próxima al edificio. En el cuarto de contadores, el cuadro general de servicios comunes tenía el interruptor diferencial disparado y se apreciaba un ennegrecimiento en la fuente de alimentación del videoportero.
+
+ACTUACIONES REALIZADAS
+- 31 de julio de 2028: el administrador avisa al electricista de la Comunidad y a Elevadores Bahía S.L.
+- 31 de julio de 2028: el electricista rearma el diferencial y comprueba que están dañados la fuente de alimentación del videoportero, el temporizador del alumbrado de la escalera y dos luminarias de emergencia. Deja el alumbrado de la escalera en encendido manual.
+- 31 de julio de 2028: el técnico de Elevadores Bahía S.L. detecta una avería en la placa de maniobra del ascensor por sobretensión y la sustituye por una de repuesto el 1 de agosto de 2028.
+- 1 de agosto de 2028: el administrador da parte del siniestro a la aseguradora de la Comunidad por daños eléctricos, con los partes técnicos y las fotografías.
+- 8 de agosto de 2028: visita del perito de la aseguradora al cuarto de contadores y al cuarto de control del ascensor.
+
+DOCUMENTACIÓN ARCHIVADA
+- Partes técnicos del electricista y de Elevadores Bahía S.L.
+- Comunicación del siniestro a la aseguradora de la Comunidad.
+- Fotografías de los equipos dañados.
+=== Página 2 ===
+RESOLUCIÓN
+En su informe de 14 de agosto de 2028 el perito confirma que los daños se deben a una sobretensión transitoria causada por la descarga atmosférica y que quedan dentro de la garantía de daños eléctricos del seguro de la Comunidad. La aseguradora aceptó los presupuestos del electricista y de Elevadores Bahía S.L. y abonó a la Comunidad la indemnización por la sustitución de la placa de maniobra del ascensor, la fuente de alimentación del videoportero, el temporizador de la escalera y las dos luminarias de emergencia. El electricista sustituyó los equipos dañados el 18 de agosto de 2028.
+El electricista recomendó instalar un protector contra sobretensiones transitorias en el cuadro general de servicios comunes. La presidenta aprobó la propuesta, que no está incluida en la cobertura, y la Comunidad asumió su coste. Se instaló el 25 de agosto de 2028.
+
+SEGUIMIENTO
+El 28 de agosto de 2028 el administrador comprobó con la presidenta el funcionamiento del videoportero, del alumbrado de la escalera con el temporizador nuevo, de las luminarias de emergencia y del ascensor. La aseguradora abonó la indemnización el 6 de septiembre de 2028.
+
+RESULTADO
+Cerrado el 11 de septiembre de 2028. Los servicios comunes funcionan con normalidad y el cuadro general dispone de protección contra sobretensiones.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Informe del perito, de 14 de agosto de 2028.
+- Facturas del electricista y de Elevadores Bahía S.L.
+- Comunicación de pago de la aseguradora.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

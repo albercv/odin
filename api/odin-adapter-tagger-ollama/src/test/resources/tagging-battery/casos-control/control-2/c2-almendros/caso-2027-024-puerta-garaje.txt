@@ -1,0 +1,47 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2027-024
+Comunidad: Residencial Los Almendros
+Categoría: Instalaciones del garaje común
+Fecha de apertura: 3 de mayo de 2027
+Comunicante: propietario de la vivienda 27
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 3 de mayo de 2027 el propietario de la vivienda 27 comunicó al despacho que la puerta basculante de acceso al garaje común se detenía a medio recorrido y, en ocasiones, se reabría sin orden del mando. Varios vecinos confirmaron el comportamiento.
+
+La puerta tiene contrapesos laterales y operador electromecánico en el eje superior. La empresa de mantenimiento comprobó que el cuadro de maniobra emitía un código de error de fotocélulas, que el par del motor era irregular y que el final de carrera de cierre estaba desajustado, de modo que la puerta interpretaba un obstáculo inexistente en la parte baja de la rampa.
+
+ACTUACIONES REALIZADAS
+- 4 de mayo de 2027: el administrador registra el aviso y solicita visita a la empresa de mantenimiento de la puerta.
+- 6 de mayo de 2027: visita técnica. Se limpian y se realinean las fotocélulas, que habían perdido la alineación por un golpe, y se ajusta el final de carrera.
+- 10 de mayo de 2027: el fallo reaparece. La empresa mide el consumo del motor y detecta un desgaste en las escobillas y en el condensador de arranque.
+- 13 de mayo de 2027: el técnico presenta presupuesto para sustituir el motor del operador, las fotocélulas y la tarjeta electrónica del cuadro de maniobra.
+- 18 de mayo de 2027: la presidencia autoriza el presupuesto y el administrador informa a los propietarios de que la puerta funcionará en modo manual hasta la reparación.
+
+DOCUMENTACIÓN ARCHIVADA
+- Aviso del propietario de la vivienda 27.
+- Partes de visita de la empresa de mantenimiento, de 6 y 10 de mayo de 2027.
+- Presupuesto de 960 euros, de 13 de mayo de 2027.
+=== Página 2 ===
+RESOLUCIÓN
+La empresa de mantenimiento sustituyó el operador, el par de fotocélulas y la tarjeta electrónica el 25 de mayo de 2027. Además, reequilibró los contrapesos, lubricó las articulaciones y programó el cuadro con dos mandos de prueba. Comprobó el funcionamiento de la inversión de marcha ante obstáculo con una carga de ensayo, tal como exige la normativa de puertas automáticas, y emitió el certificado de la comprobación.
+
+La Comunidad abonó 960 euros, el importe íntegro del presupuesto, con cargo al presupuesto ordinario de mantenimiento. Se renovó la emisión de los mandos a distancia a los propietarios que lo solicitaron, mediante un listado gestionado por el administrador y una entrega firmada.
+
+SEGUIMIENTO
+El 1 de junio de 2027 el administrador consultó a los vecinos que habían comunicado el fallo, y todos confirmaron que la puerta abría y cerraba sin interrupciones. La empresa de mantenimiento realizó una revisión adicional a los treinta días y no encontró ninguna incidencia en el cuadro de maniobra. El propietario de la vivienda 27 agradeció por correo la rapidez con la que se restableció el acceso. El administrador propuso a la presidencia colocar una protección metálica en la columna contigua a la puerta para evitar nuevos golpes sobre las fotocélulas.
+
+RESULTADO
+Cerrado el 22 de junio de 2027. La Comunidad costeó la reparación, de 960 euros. Queda a la consideración de la próxima Junta la propuesta de protección de la columna.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Factura y certificado de la comprobación de seguridad de la puerta.
+- Listado firmado de la entrega de mandos.
+- Correo de conformidad del propietario de la vivienda 27.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

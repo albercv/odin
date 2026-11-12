@@ -22,6 +22,20 @@ public final class Requests {
     public record Name(String name) {
     }
 
+    public record SupersedeRequest(@Schema(description = "El documento que lo sustituye entero.") UUID replacementId) {
+    }
+
+    public record UpdateDocumentRequest(@Schema(description = "Si el documento es la ficha de un caso resuelto.",
+            requiredMode = Schema.RequiredMode.REQUIRED) Boolean caseDocument) {
+    }
+
+    public record CaseMarksRequest(
+            @Schema(description = "De 1 a 500 documentos de la empresa.", requiredMode = Schema.RequiredMode.REQUIRED)
+            List<UUID> documentIds,
+            @Schema(description = "Verdadero para marcarlos como casos, falso para quitar la marca.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) Boolean caseDocument) {
+    }
+
     public record Capabilities(Set<Capability> capabilities) {
     }
 
@@ -40,6 +54,12 @@ public final class Requests {
     public record UpdateProject(String name,
             @Schema(description = "Verdadero: solo lo ven sus miembros. Falso: visible para toda la empresa.")
             Boolean restricted) {
+    }
+
+    public record TopicRequest(String name, String definition) {
+    }
+
+    public record TopicPatch(String name, String definition) {
     }
 
     public record UpdateMember(Set<Role> roles, Boolean active, String password) {
@@ -70,6 +90,9 @@ public final class Requests {
     }
 
     public record SearchRequest(List<String> queries, UUID projectId, Integer limit) {
+    }
+
+    public record SimilarCasesRequestBody(List<String> queries, UUID projectId, Integer limit) {
     }
 
     public record VerifyCitation(UUID documentId, Integer pageNumber, String quote) {

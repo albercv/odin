@@ -3,17 +3,23 @@ package com.e2d.odin.adapter.web.worker;
 import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
+import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.organization.DescribeMe;
 import com.e2d.odin.application.search.ListDocuments;
+import com.e2d.odin.application.search.ListMyQuestions;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.SearchRequest;
+import com.e2d.odin.application.search.SimilarCasesRequest;
+import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.VerifyCitation;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
+import com.e2d.odin.domain.topic.TopicId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,19 +41,26 @@ public class WorkerController {
 
     private final DescribeMe describeMe;
     private final SearchKnowledge search;
+    private final FindSimilarCases findSimilarCases;
     private final ListDocuments listDocuments;
     private final ReadPage readPage;
     private final VerifyCitation verifyCitation;
     private final SaveKnowledgeCard saveCard;
+    private final ListMyKnowledgeCards listMyCards;
+    private final ListMyQuestions listMyQuestions;
 
-    public WorkerController(DescribeMe describeMe, SearchKnowledge search, ListDocuments listDocuments,
-            ReadPage readPage, VerifyCitation verifyCitation, SaveKnowledgeCard saveCard) {
+    public WorkerController(DescribeMe describeMe, SearchKnowledge search, FindSimilarCases findSimilarCases,
+            ListDocuments listDocuments, ReadPage readPage, VerifyCitation verifyCitation,
+            SaveKnowledgeCard saveCard, ListMyKnowledgeCards listMyCards, ListMyQuestions listMyQuestions) {
         this.describeMe = describeMe;
         this.search = search;
+        this.findSimilarCases = findSimilarCases;
         this.listDocuments = listDocuments;
         this.readPage = readPage;
         this.verifyCitation = verifyCitation;
         this.saveCard = saveCard;
+        this.listMyCards = listMyCards;
+        this.listMyQuestions = listMyQuestions;
     }
 
     @GetMapping("/v1/me")
@@ -63,12 +76,22 @@ public class WorkerController {
         return Responses.SearchResponse.from(search.execute(actor, searchRequest));
     }
 
+    @PostMapping("/v1/similar-cases")
+    public Responses.SimilarCasesResponse similarCases(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestBody Requests.SimilarCasesRequestBody request) {
+        SimilarCasesRequest casesRequest = new SimilarCasesRequest(validQueries(request.queries()),
+                Optional.ofNullable(request.projectId()).map(ProjectId::new), Optional.ofNullable(request.limit()));
+        return Responses.SimilarCasesResponse.from(findSimilarCases.execute(actor, casesRequest));
+    }
+
     @GetMapping("/v1/documents")
     public List<Responses.WorkerDocumentView> documents(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @RequestParam(required = false) UUID projectId, @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(required = false) Integer limit) {
-        return listDocuments.execute(actor, Optional.ofNullable(projectId).map(ProjectId::new), offset,
-                Optional.ofNullable(limit)).stream().map(Responses.WorkerDocumentView::from).toList();
+            @RequestParam(required = false) UUID projectId, @RequestParam(required = false) UUID topicId,
+            @RequestParam(required = false) Boolean caseDocument, @RequestParam(defaultValue = "0") int offset, @RequestParam(required = false) Integer limit) {
+        return listDocuments.execute(actor, Optional.ofNullable(projectId).map(ProjectId::new),
+                Optional.ofNullable(topicId).map(TopicId::new), Optional.ofNullable(caseDocument), offset,
+                Optional.ofNullable(limit)).stream()
+                .map(Responses.WorkerDocumentView::from).toList();
     }
 
     @GetMapping("/v1/documents/{documentId}/pages/{pageNumber}")
@@ -93,6 +116,18 @@ public class WorkerController {
             @RequestBody Requests.SaveCard request) {
         return Responses.SavedCard.from(saveCard.execute(actor, request.title(), request.body(),
                 Optional.ofNullable(request.projectId()).map(ProjectId::new)));
+    }
+
+    @GetMapping("/v1/me/cards")
+    public List<Responses.MyCardView> myCards(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestParam(required = false) CardStatus status) {
+        return Responses.MyCardView.from(listMyCards.execute(actor, Optional.ofNullable(status)));
+    }
+
+    @GetMapping("/v1/me/questions")
+    public List<Responses.MyQuestionView> myQuestions(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestParam(required = false) Integer limit) {
+        return Responses.MyQuestionView.from(listMyQuestions.execute(actor, Optional.ofNullable(limit)));
     }
 
     private static List<String> validQueries(List<String> queries) {

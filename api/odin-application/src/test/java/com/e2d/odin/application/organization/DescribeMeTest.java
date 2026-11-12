@@ -4,6 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryDocumentRepository;
+import com.e2d.odin.application.fake.InMemoryTaggingRepository;
+import com.e2d.odin.application.fake.InMemoryTopicRepository;
+import com.e2d.odin.domain.topic.Topic;
+import com.e2d.odin.domain.topic.TopicId;
+import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.topic.TaggingStatus;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
@@ -30,7 +37,7 @@ class DescribeMeTest {
         organizations.saveProject(project);
         Actor worker = Actors.worker(id);
 
-        MeView me = new DescribeMe(organizations, new InMemoryProjectMemberRepository(organizations)).execute(worker);
+        MeView me = Fixtures.describeMe(organizations, new InMemoryProjectMemberRepository(organizations)).execute(worker);
 
         assertThat(me.userId()).isEqualTo(worker.userId());
         assertThat(me.company().capabilities()).containsExactly(Capability.SEARCH_KNOWLEDGE);
@@ -45,7 +52,7 @@ class DescribeMeTest {
         ProjectId projectOfA = Fixtures.companyWideProject(organizations, a);
         ProjectId projectOfB = Fixtures.companyWideProject(organizations, b);
 
-        MeView me = new DescribeMe(organizations, new InMemoryProjectMemberRepository(organizations))
+        MeView me = Fixtures.describeMe(organizations, new InMemoryProjectMemberRepository(organizations))
                 .execute(Actors.worker(b));
 
         assertThat(me.company().id()).isEqualTo(b);
@@ -67,7 +74,7 @@ class DescribeMeTest {
         members.add(assigned, worker.userId());
         members.add(assignedToOther, new UserId(UUID.randomUUID()));
 
-        MeView me = new DescribeMe(organizations, members).execute(worker);
+        MeView me = Fixtures.describeMe(organizations, members).execute(worker);
 
         assertThat(me.projects()).extracting(Project::id).containsExactlyInAnyOrder(companyWide, assigned)
                 .doesNotContain(notAssigned, assignedToOther);
@@ -81,7 +88,7 @@ class DescribeMeTest {
         Project created = new CreateProject(organizations, new SequenceIdGenerator())
                 .execute(Actors.companyAdmin(company), company, "Obra");
         Actor worker = Actors.worker(company);
-        DescribeMe describe = new DescribeMe(organizations, members);
+        DescribeMe describe = Fixtures.describeMe(organizations, members);
 
         assertThat(describe.execute(worker).projects()).isEmpty();
 
@@ -98,6 +105,71 @@ class DescribeMeTest {
         Actor worker = Actors.worker(company);
         organizations.deleteProject(company, open, Fixtures.NOW);
 
-        assertThat(new DescribeMe(organizations, members).execute(worker).projects()).isEmpty();
+        assertThat(Fixtures.describeMe(organizations, members).execute(worker).projects()).isEmpty();
+    }
+
+    private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
+    private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(orgs);
+    private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
+    private final InMemoryTopicRepository topics = new InMemoryTopicRepository();
+    private final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
+    private final DescribeMe describe = new DescribeMe(orgs, projectMembers, topics, tagging);
+
+    private Topic topic(CompanyId company, String name) {
+        Topic topic = new Topic(new TopicId(UUID.randomUUID()), company, name, "Definición de " + name);
+        topics.save(topic);
+        return topic;
+    }
+
+    @Test
+    void listsTopicsAndPendingCount() {
+        CompanyId company = Fixtures.company(orgs);
+        CompanyId other = Fixtures.company(orgs);
+        Topic water = topic(company, "Agua");
+        topic(other, "Ajeno");
+        Document pending = Fixtures.readyDocument(docs, company, "uno");
+        Document done = Fixtures.readyDocument(docs, company, "dos");
+        Document failed = Fixtures.readyDocument(docs, company, "tres");
+        tagging.seedRow(done, TaggingStatus.DONE);
+        tagging.seedRow(failed, TaggingStatus.FAILED);
+
+        MeView me = describe.execute(Actors.worker(company));
+
+        assertThat(me.topics()).containsExactly(water);
+        assertThat(me.taggingPending()).isEqualTo(2);
+        assertThat(describe.execute(Actors.worker(other)).taggingPending()).isZero();
+        assertThat(pending).isNotNull();
+    }
+
+    @Test
+    void pendingCountIgnoresInvisibleProjects() {
+        CompanyId company = Fixtures.company(orgs);
+        topic(company, "Agua");
+        ProjectId closed = Fixtures.project(orgs, company);
+        ProjectId open = Fixtures.companyWideProject(orgs, company);
+        Fixtures.documentIn(docs, company, closed, "secreto");
+        Fixtures.documentIn(docs, company, open, "abierto");
+        Fixtures.readyDocument(docs, company, "sin proyecto");
+        Actor outsider = Actors.worker(company);
+        Actor member = Actors.worker(company);
+        projectMembers.add(closed, member.userId());
+
+        assertThat(describe.execute(outsider).taggingPending()).isEqualTo(2);
+        assertThat(describe.execute(member).taggingPending()).isEqualTo(3);
+    }
+
+    @Test
+    void pendingCountIncludesDocumentsOfADeletedProjectTheWorkerSaw() {
+        CompanyId company = Fixtures.company(orgs);
+        topic(company, "Agua");
+        ProjectId open = Fixtures.companyWideProject(orgs, company);
+        Fixtures.documentIn(docs, company, open, "abierto");
+        Fixtures.readyDocument(docs, company, "sin proyecto");
+        orgs.deleteProject(company, open, Fixtures.NOW);
+
+        MeView me = describe.execute(Actors.worker(company));
+
+        assertThat(me.projects()).isEmpty();
+        assertThat(me.taggingPending()).isEqualTo(2);
     }
 }

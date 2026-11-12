@@ -9,17 +9,21 @@ import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.PayloadTooLargeException;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UnsupportedFormatException;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Clock;
+import java.util.List;
 import java.util.Optional;
 
 public class UploadDocument {
@@ -44,7 +48,7 @@ public class UploadDocument {
     }
 
     public UploadOutcome execute(Actor actor, CompanyId companyId, Optional<ProjectId> projectId, String title,
-            String filename, byte[] content) {
+            String filename, byte[] content, boolean caseDocument) {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         projectId.ifPresent(id -> organizations.findProject(companyId, id)
@@ -59,9 +63,9 @@ public class UploadDocument {
         }
         Document document = new Document(new DocumentId(ids.newId()), companyId, projectId, cleanTitle, cleanFilename,
                 format, sha256, DocumentStatus.RECEIVED, Optional.empty(), false, actor.userId(), clock.instant(),
-                Optional.empty(), 0);
+                Optional.empty(), 0, Optional.empty(), Optional.empty(), List.of(), caseDocument);
         documents.save(document);
-        return new UploadOutcome(document, false);
+        return new UploadOutcome(new DocumentEntry(document, Optional.empty(), Optional.empty()), false);
     }
 
     private DocumentFormat detectFormat(byte[] content) {
@@ -74,12 +78,11 @@ public class UploadDocument {
         return detector.detect(content).orElseThrow(() -> new UnsupportedFormatException("Formato no admitido"));
     }
 
-    private Document requeueIfFailed(Document existing) {
-        if (existing.status() != DocumentStatus.FAILED) {
-            return existing;
+    private DocumentEntry requeueIfFailed(Document existing) {
+        if (existing.status() == DocumentStatus.FAILED) {
+            documents.save(existing.requeue().resetAttempts());
         }
-        Document requeued = existing.requeue().resetAttempts();
-        documents.save(requeued);
-        return requeued;
+        return documents.findEntry(CompanyScope.of(existing.companyId()), ProjectVisibility.all(), existing.id())
+                .orElseThrow();
     }
 }

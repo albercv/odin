@@ -1,6 +1,8 @@
-// Demostración de cierre de la fase 1 (spec 3.1). Fases: `prepare` (pasos 1-7c) y `confirm` (paso 9).
-// El paso 8 (panel) lo hace Playwright en panel/e2e/demo.spec.ts entre ambas fases.
-import { readFileSync, writeFileSync } from 'node:fs';
+// Demostración de cierre de la fase 1 (spec 3.1). Fases: `prepare` (pasos 1-7d) y `confirm` (pasos 9 y 10).
+// Los pasos 8 y 8b (panel) los hace Playwright en panel/e2e/demo.spec.ts entre ambas fases.
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -9,9 +11,15 @@ const API = process.env.DEMO_API_URL ?? 'http://127.0.0.1:18080';
 const SETUP_TOKEN = need('DEMO_SETUP_TOKEN');
 const STATE = need('DEMO_STATE');
 const PDF = need('DEMO_PDF');
+const RENEWED = need('DEMO_RENEWED');
+const SCAN = need('DEMO_SCAN');
 const ADMIN = { email: 'admin@demo.invalid', password: 'demo-clave-ficticia-1234' };
 const QUERY = 'franquicia daños por agua ATL-4417-2024';
+const TITLE = 'Póliza ficticia';
+const RENEWED_TITLE = 'Póliza ficticia renovada';
 const NO_SOURCE = 'No consta en los documentos de tu empresa.';
+const CASE_QUERY = 'filtración de agua desde la azotea lámina';
+const CASE_FILES = [need('DEMO_CASE_1'), need('DEMO_CASE_2')];
 const CARD = { title: 'Franquicia por daños de agua', body: 'La póliza ATL-4417-2024 aplica una franquicia de 150 euros por siniestro de daños por agua.' };
 
 function need(name: string): string {
@@ -24,6 +32,7 @@ function check(ok: boolean, text: string): void {
   if (!ok) throw new Error(`falló: ${text}`);
 }
 
+const MIME: Record<string, string> = { '.pdf': 'application/pdf', '.png': 'image/png' };
 let cookie = '';
 async function http(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Response> {
   const isRaw = body instanceof FormData;
@@ -37,9 +46,9 @@ async function json<T>(r: Response, expected: number): Promise<T> {
 }
 
 type Id = { id: string };
-async function createCompany(name: string, code: string): Promise<string> {
+async function createCompany(name: string, code: string, extra: string[] = []): Promise<string> {
   const c = await json<Id>(await http('POST', '/v1/admin/companies', { name, code }), 201);
-  const caps = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'];
+  const caps = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', ...extra];
   await http('PUT', `/v1/admin/companies/${c.id}/capabilities`, { capabilities: caps });
   return c.id;
 }
@@ -50,11 +59,11 @@ async function createWorker(companyId: string, firstName: string, lastName: stri
   const k = await json<{ key: string }>(await http('POST', `/v1/admin/companies/${companyId}/members/${userId}/keys`, { label: 'demo' }), 201);
   return { id: userId, key: k.key };
 }
-async function uploadPdf(companyId: string, projectId?: string): Promise<string> {
+async function uploadFile(companyId: string, path: string, title: string, projectId?: string, caseDocument = false): Promise<string> {
   const form = new FormData();
-  form.append('file', new Blob([readFileSync(PDF)], { type: 'application/pdf' }), 'poliza-ficticia.pdf');
-  const scope = projectId ? `&projectId=${projectId}` : '';
-  const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent('Póliza ficticia')}${scope}`, form);
+  form.append('file', new Blob([readFileSync(path)], { type: MIME[path.slice(path.lastIndexOf('.'))] ?? 'text/plain' }), basename(path));
+  const scope = (projectId ? `&projectId=${projectId}` : '') + (caseDocument ? '&caseDocument=true' : '');
+  const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent(title)}${scope}`, form);
   return (await json<{ document: Id }>(r, 201)).document.id;
 }
 async function waitReady(companyId: string, docId: string): Promise<void> {
@@ -105,12 +114,119 @@ async function closedProjectStep(): Promise<void> {
   const project = await json<Id>(await http('POST', `/v1/admin/companies/${c}/projects`, { name: 'Proyecto cerrado' }), 201);
   const assign = await http('PUT', `/v1/admin/companies/${c}/projects/${project.id}/members/${assigned.id}`);
   if (assign.status !== 204) throw new Error(`HTTP ${assign.status} al asignar el proyecto: ${await assign.text()}`);
-  const docId = await uploadPdf(c, project.id);
+  const docId = await uploadFile(c, PDF, TITLE, project.id);
   await waitReady(c, docId);
   const found = await searchAsA(assigned.key, docId);
   check(found.verified, 'Paso 7b: el trabajador asignado al proyecto cerrado encuentra su documento y la cita se verifica');
   const outBlind = await withMcp(outsider.key, (call) => call('searchKnowledge', { queries: [QUERY] }));
   check(outBlind === NO_SOURCE, 'Paso 7c: el trabajador no asignado recibe «No consta en los documentos de tu empresa.»');
+}
+
+async function scannedStep(): Promise<void> {
+  const companyId = await createCompany('Empresa D', 'ED');
+  const { key } = await createWorker(companyId, 'Trabajadora', 'Escaneos', 'escaneos@demo.invalid');
+  const scanId = await uploadFile(companyId, SCAN, 'Acta ficticia escaneada');
+  await waitReady(companyId, scanId);
+  const found = await withMcp(key, async (call) => {
+    const { hits } = JSON.parse(await call('searchKnowledge', { queries: ['bajante del patio'] })) as { hits: Hit[] };
+    const hit = hits.find((h) => h.documentId === scanId && h.pageNumber === 1);
+    const page = hit && (JSON.parse(await call('readPage', { documentId: scanId, pageNumber: 1 })) as { readerName?: string });
+    return { hit, readerName: page?.readerName };
+  });
+  check(!!found.hit, 'Paso 7e: el escaneado ficticio se lee con el lector de prueba y searchKnowledge lo encuentra en la página 1');
+  check(found.readerName === 'reader-stub', 'Paso 7f: readPage devuelve readerName «reader-stub»');
+}
+
+type TaggedDoc = { id: string; topics: { name: string; source: string }[] };
+type DocTopics = { topics: { topicId: string; state: string }[]; tagging: { status: string } | null };
+
+async function createTopic(companyId: string, name: string, definition: string): Promise<string> {
+  return (await json<Id>(await http('POST', `/v1/admin/companies/${companyId}/topics`, { name, definition }), 201)).id;
+}
+async function waitTagged(companyId: string, docId: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    const docs = await json<{ id: string; taggingStatus: string | null }[]>(await http('GET', `/v1/admin/companies/${companyId}/documents`), 200);
+    const status = docs.find((d) => d.id === docId)?.taggingStatus;
+    if (status === 'DONE') return;
+    if (status === 'FAILED') throw new Error('el etiquetado ha fallado');
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error('el documento no llegó a DONE en 60 s');
+}
+async function listedByTopic(key: string, docId: string): Promise<TaggedDoc | undefined> {
+  const { documents } = await withMcp(key, async (call) => JSON.parse(await call('listDocuments', { topic: 'agua y humedades' })) as { documents: TaggedDoc[] });
+  return documents.find((d) => d.id === docId);
+}
+
+// El etiquetador de prueba responde «agua y humedades» si el texto lleva «filtración» o «fuga»: prueba el camino de Odín, no el modelo.
+async function taggingStep(): Promise<void> {
+  const companyId = await createCompany('Empresa E', 'EE');
+  const { key } = await createWorker(companyId, 'Trabajadora', 'Temas', 'temas@demo.invalid');
+  const water = await createTopic(companyId, 'agua y humedades', 'Problemas de agua en el edificio');
+  await createTopic(companyId, 'otros', 'Todo lo demás');
+  const file = join(mkdtempSync(join(tmpdir(), 'odin-demo-')), 'incidencia-ficticia.txt');
+  writeFileSync(file, 'Incidencia ficticia: se detectó una filtración en la bajante del patio.');
+  const docId = await uploadFile(companyId, file, 'Incidencia ficticia');
+  await waitTagged(companyId, docId);
+  const found = await listedByTopic(key, docId);
+  check(found?.topics.some((t) => t.name === 'agua y humedades' && t.source === 'AI') === true,
+    'Paso 11: el documento con «filtración» llega a DONE y listDocuments(topic: "agua y humedades") lo devuelve con source AI');
+  const base = `/v1/admin/documents/${docId}/topics`;
+  check((await http('DELETE', `${base}/${water}`)).status === 204 && (await http('POST', `${base}/retag`)).status === 202,
+    'Paso 11b: el administrador quita el tema y pide volver a etiquetar');
+  await waitTagged(companyId, docId);
+  const after = await json<DocTopics>(await http('GET', base), 200);
+  check(after.topics.find((t) => t.topicId === water)?.state === 'REMOVED' && (await listedByTopic(key, docId)) === undefined,
+    'Paso 11c: al terminar de etiquetar, el tema sigue quitado');
+}
+
+type SimilarCase = { documentId: string; title: string; pages: { number: number; text: string }[]; authorName?: string };
+
+async function addProject(companyId: string, name: string, workerId: string): Promise<string> {
+  const project = await json<Id>(await http('POST', `/v1/admin/companies/${companyId}/projects`, { name }), 201);
+  const member = await http('PUT', `/v1/admin/companies/${companyId}/projects/${project.id}/members/${workerId}`);
+  if (member.status !== 204) throw new Error(`HTTP ${member.status} al hacer miembro del proyecto: ${await member.text()}`);
+  return project.id;
+}
+
+// La duda que se repite entre comunidades: el trabajador es miembro de las dos (D-047) y ve sus casos; el documento que no es caso no sale.
+async function similarCasesStep(): Promise<void> {
+  const companyId = await createCompany('Empresa F', 'EF', ['SIMILAR_CASES']);
+  const worker = await createWorker(companyId, 'Trabajadora', 'Casos', 'casos@demo.invalid');
+  const [olmo, almendros] = [await addProject(companyId, 'Comunidad Olmo 14', worker.id), await addProject(companyId, 'Comunidad Los Almendros', worker.id)];
+  const file = join(mkdtempSync(join(tmpdir(), 'odin-demo-')), 'acta-ficticia.txt');
+  writeFileSync(file, 'Acta ficticia de junta: se habló de la filtración de agua desde la azotea y de la lámina, sin ficha de caso.');
+  const ids = [await uploadFile(companyId, CASE_FILES[0]!, 'Caso azotea Olmo 14', olmo, true),
+    await uploadFile(companyId, CASE_FILES[1]!, 'Caso azotea Los Almendros', almendros, true),
+    await uploadFile(companyId, file, 'Acta de junta', olmo)];
+  for (const id of ids) await waitReady(companyId, id);
+  const found = await withMcp(worker.key, async (call) => JSON.parse(await call('findSimilarCases', { queries: [CASE_QUERY] })) as { cases: SimilarCase[] });
+  const returned = found.cases.map((c) => c.documentId).sort();
+  check(JSON.stringify(returned) === JSON.stringify([ids[0], ids[1]].sort()), 'Paso 12: findSimilarCases devuelve las dos fichas de caso y no el documento que no es caso');
+  check(found.cases.every((c) => c.pages.length > 0 && c.pages[0]!.text.length > 0 && !('authorName' in c)), 'Paso 12b: cada caso trae sus páginas y ninguno lleva autor');
+}
+
+// El autor ve su ficha pendiente marcada, su compañero no la ve; rechazada, el autor ve la nota y ya no la encuentra (D-036).
+async function authorStep(): Promise<void> {
+  const companyId = await createCompany('Empresa G', 'EG');
+  const author = await createWorker(companyId, 'Autora', 'Fichas', 'autora@demo.invalid');
+  const colleague = await createWorker(companyId, 'Compañero', 'Fichas', 'companero@demo.invalid');
+  const card = { title: 'Reparto de llaves del garaje', body: 'Las llaves del garaje las custodia la portería desde la junta de marzo.' };
+  const saved = JSON.parse(await withMcp(author.key, (call) => call('saveKnowledgeCard', card))) as { id: string };
+  const search = (key: string, query = 'llaves del garaje') => withMcp(key, async (call) =>
+    JSON.parse((await call('searchKnowledge', { queries: [query] })).replace(/^No consta.*$/, '{"hits":[]}')) as { hits: { cardId?: string; reviewStatus?: string }[] });
+  const own = await search(author.key);
+  check(own.hits.some((h) => h.cardId === saved.id && h.reviewStatus === 'PENDING'), 'Paso 13: el autor encuentra su ficha con reviewStatus PENDING');
+  check((await search(colleague.key)).hits.length === 0, 'Paso 13b: el compañero de la misma empresa no la encuentra');
+  const note = 'Falta la fecha de la junta';
+  await json(await http('POST', `/v1/admin/cards/${saved.id}/review`, { decision: 'REJECT', note }), 200);
+  const mine = await withMcp(author.key, async (call) => JSON.parse(await call('listMyKnowledgeCards', { status: 'REJECTED' })) as { cards: { cardId: string; status: string; review: { note: string } }[] });
+  check(mine.cards.some((c) => c.cardId === saved.id && c.status === 'REJECTED' && c.review.note === note), 'Paso 13c: el autor ve su ficha como REJECTED con la nota del revisor');
+  check((await search(author.key, 'portería del garaje')).hits.length === 0, 'Paso 13d: la ficha rechazada ya no sale en su búsqueda');
+  const questions = await withMcp(author.key, async (call) => JSON.parse(await call('listMyQuestions', {})) as { questions: { text: string }[] });
+  check(questions.questions.map((q) => q.text).join('|') === 'portería del garaje|llaves del garaje', 'Paso 13e: listMyQuestions devuelve sus dos consultas, la primera la más reciente');
+  check((await withMcp(colleague.key, async (call) => JSON.parse(await call('listMyQuestions', {})) as { questions: unknown[] })).questions.length === 1,
+    'Paso 13f: el compañero solo ve su propia consulta');
 }
 
 async function prepare(): Promise<void> {
@@ -124,7 +240,7 @@ async function prepare(): Promise<void> {
   const wa = await createWorker(a, 'Trabajadora', 'A', 'a@demo.invalid');
   const wb = await createWorker(b, 'Trabajador', 'B', 'b@demo.invalid');
   check(!!wa.key && !!wb.key, 'Paso 3: empresas A y B, un trabajador cada una y sus claves personales');
-  const docId = await uploadPdf(a);
+  const docId = await uploadFile(a, PDF, TITLE);
   await waitReady(a, docId);
   check(true, 'Paso 4: PDF ficticio subido a la empresa A y procesado (READY)');
   const found = await searchAsA(wa.key, docId);
@@ -141,7 +257,14 @@ async function prepare(): Promise<void> {
   const saved = await withMcp(wa.key, (call) => call('saveKnowledgeCard', CARD));
   check(saved.includes('PENDING') && saved.includes('Ficha guardada; queda pendiente de revisión.'), 'Paso 7: MCP de A guarda la ficha, queda PENDING');
   await closedProjectStep();
-  writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie }));
+  const renewedId = await uploadFile(a, RENEWED, RENEWED_TITLE);
+  await waitReady(a, renewedId);
+  check(true, 'Paso 7d: póliza ficticia renovada subida a la empresa A y procesada (READY)');
+  await scannedStep();
+  await taggingStep();
+  await similarCasesStep();
+  await authorStep();
+  writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie, workerKey: wa.key, oldId: docId, renewedId }));
 }
 
 async function confirm(): Promise<void> {
@@ -149,6 +272,20 @@ async function confirm(): Promise<void> {
   cookie = (await http('POST', '/v1/admin/session', ADMIN).then((r) => r.headers.get('set-cookie') ?? '')).split(';')[0] ?? '';
   const cards = await json<{ title: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/cards?status=APPROVED`), 200);
   check(cards.some((c) => c.title === CARD.title), 'Paso 9: la API confirma que la ficha está APPROVED');
+  await confirmSuperseded(JSON.parse(readFileSync(STATE, 'utf8')) as State);
+}
+
+type State = { workerKey: string; oldId: string; renewedId: string };
+type DocHit = { documentId: string; superseded?: boolean; replacement?: { documentId: string; title: string } | null };
+
+async function confirmSuperseded({ workerKey, oldId, renewedId }: State): Promise<void> {
+  const { hits } = await withMcp(workerKey, async (call) => JSON.parse(await call('searchKnowledge', { queries: [QUERY] })) as { hits: DocHit[] });
+  const firstSuperseded = hits.findIndex((h) => h.superseded);
+  const lastCurrent = hits.map((h) => !h.superseded).lastIndexOf(true);
+  const oldHits = hits.filter((h) => h.documentId === oldId);
+  check(hits.some((h) => h.documentId === renewedId) && firstSuperseded > lastCurrent, 'Paso 10: la renovada sale y ningún sustituido sale delante de un vigente');
+  check(oldHits.length > 0 && oldHits.every((h) => h.superseded === true && h.replacement?.documentId === renewedId && h.replacement.title === RENEWED_TITLE),
+    'Paso 10b: cada resultado de la póliza antigua sale marcado como sustituido y con la renovada como sustituto');
 }
 
 const phase = process.argv[2];

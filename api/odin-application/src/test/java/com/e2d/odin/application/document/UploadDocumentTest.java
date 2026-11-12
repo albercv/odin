@@ -13,6 +13,7 @@ import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.document.DocumentFormat;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -40,7 +41,11 @@ class UploadDocumentTest {
     private final Actor adminA = Actors.companyAdmin(companyA);
 
     private UploadOutcome send(Actor actor, CompanyId company, byte[] content) {
-        return upload.execute(actor, company, Optional.empty(), "Manual", "manual.pdf", content);
+        return upload.execute(actor, company, Optional.empty(), "Manual", "manual.pdf", content, false);
+    }
+
+    private UploadOutcome sendAsCase(byte[] content, boolean caseDocument) {
+        return upload.execute(adminA, companyA, Optional.empty(), "Manual", "manual.pdf", content, caseDocument);
     }
 
     @Test
@@ -72,6 +77,44 @@ class UploadDocumentTest {
         assertThat(other.document().id()).isNotEqualTo(first.document().id());
         assertThat(other.document().sha256()).isEqualTo(first.document().sha256());
         assertThat(store.size()).isEqualTo(1);
+    }
+
+    @Test
+    void duplicateUploadKeepsTheMark() {
+        UploadOutcome old = send(adminA, companyA, CONTENT);
+        UploadOutcome renewed = send(adminA, companyA, "otra-poliza".getBytes());
+        docs.markSuperseded(companyA, old.document().id(), renewed.document().id(), Fixtures.NOW);
+
+        UploadOutcome again = send(adminA, companyA, CONTENT);
+
+        assertThat(again.duplicate()).isTrue();
+        assertThat(again.document().supersededBy()).contains(renewed.document().id());
+        assertThat(again.entry().supersededBy()).contains(DocumentRef.of(renewed.document()));
+        assertThat(docs.get(old.document().id()).orElseThrow().supersededBy()).contains(renewed.document().id());
+    }
+
+    @Test
+    void uploadStoresCaseDocument() {
+        UploadOutcome marked = sendAsCase(CONTENT, true);
+        UploadOutcome plain = sendAsCase("otro".getBytes(), false);
+
+        assertThat(marked.document().caseDocument()).isTrue();
+        assertThat(docs.get(marked.document().id()).orElseThrow().caseDocument()).isTrue();
+        assertThat(plain.document().caseDocument()).isFalse();
+    }
+
+    @Test
+    void duplicateUploadKeepsCaseDocument() {
+        UploadOutcome first = sendAsCase(CONTENT, true);
+        UploadOutcome again = sendAsCase(CONTENT, false);
+        UploadOutcome unmarked = sendAsCase("otro".getBytes(), false);
+        UploadOutcome unmarkedAgain = sendAsCase("otro".getBytes(), true);
+
+        assertThat(again.duplicate()).isTrue();
+        assertThat(again.document().caseDocument()).isTrue();
+        assertThat(docs.get(first.document().id()).orElseThrow().caseDocument()).isTrue();
+        assertThat(unmarkedAgain.duplicate()).isTrue();
+        assertThat(docs.get(unmarked.document().id()).orElseThrow().caseDocument()).isFalse();
     }
 
     @Test
@@ -107,7 +150,7 @@ class UploadDocumentTest {
     void rejectsProjectOfOtherCompany() {
         var projectOfB = Fixtures.project(orgs, companyB);
 
-        assertThatThrownBy(() -> upload.execute(adminA, companyA, Optional.of(projectOfB), "M", "m.pdf", CONTENT))
+        assertThatThrownBy(() -> upload.execute(adminA, companyA, Optional.of(projectOfB), "M", "m.pdf", CONTENT, false))
                 .isInstanceOf(NotFoundException.class);
     }
 

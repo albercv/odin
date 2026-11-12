@@ -84,15 +84,35 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
-  upload: (id: string, file: File, title: string, projectId: string) => {
+  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false) => {
     const q = new URLSearchParams();
     if (title) q.set('title', title);
     if (projectId) q.set('projectId', projectId);
+    if (caseDocument) q.set('caseDocument', 'true');
     const form = new FormData();
     form.append('file', file);
     return request<S['Upload']>('POST', `${co(id)}/documents?${q}`, form);
   },
+  markCase: (documentId: string, caseDocument: boolean) =>
+    request<S['DocumentView']>('PATCH', `${a}/documents/${documentId}`, { caseDocument }),
+  markCases: (id: string, documentIds: string[], caseDocument: boolean) =>
+    request<S['CaseMarksResult']>('POST', `${co(id)}/documents/case-marks`, { documentIds, caseDocument }),
   retry: (documentId: string) => request<S['DocumentView']>('POST', `${a}/documents/${documentId}/retry`),
+  supersede: (documentId: string, replacementId: string) =>
+    request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/superseded-by`, { replacementId }),
+  unsupersede: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/superseded-by`),
   pendingCards: (id: string) => request<S['CardView'][]>('GET', `${co(id)}/cards?status=PENDING`),
+  topics: (id: string) => request<S['TopicView'][]>('GET', `${co(id)}/topics`),
+  createTopic: (id: string, b: S['TopicRequest']) => request<S['TopicView']>('POST', `${co(id)}/topics`, b),
+  updateTopic: (id: string, topicId: string, b: S['TopicPatch']) => request<S['TopicView']>('PATCH', `${co(id)}/topics/${topicId}`, b),
+  deleteTopic: (id: string, topicId: string) => request<void>('DELETE', `${co(id)}/topics/${topicId}`),
+  taggingStatus: (id: string) => request<S['TaggingStatusView']>('GET', `${co(id)}/tagging-status`),
+  documentTopics: (documentId: string) => request<S['DocumentTopicsResponse']>('GET', `${a}/documents/${documentId}/topics`),
+  addDocumentTopic: (documentId: string, topicId: string) => request<void>('PUT', `${a}/documents/${documentId}/topics/${topicId}`),
+  removeDocumentTopic: (documentId: string, topicId: string) => request<void>('DELETE', `${a}/documents/${documentId}/topics/${topicId}`),
+  retag: (documentId: string) => request<void>('POST', `${a}/documents/${documentId}/topics/retag`),
+  usageStats: (id: string, month: string) => request<S['UsageStatsView']>('GET', `${co(id)}/usage-stats?month=${month}`),
+  gaps: (id: string, month: string) => request<S['GapsView']>('GET', `${co(id)}/gaps?month=${month}`),
+  deliveredVolume: (id: string, month: string) => request<S['DeliveredVolumeView']>('GET', `${co(id)}/delivered-volume?month=${month}`),
   review: (cardId: string, b: S['Review']) => request<S['CardView']>('POST', `${a}/cards/${cardId}/review`, b),
 };

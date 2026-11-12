@@ -37,7 +37,20 @@ export async function startFakeApi(handler: Handler): Promise<FakeApi> {
   return fake;
 }
 
-export const meWith = (capabilities: string[], companyName = 'Empresa Uno') => ({
+export interface MeExtras {
+  topics?: { id: string; name: string; definition: string }[];
+  pendingDocuments?: number;
+}
+
+export const meWith = (
+  capabilities: string[],
+  companyName = 'Empresa Uno',
+  projects: { id: string; name: string }[] = [],
+  { topics = [], pendingDocuments = 0 }: MeExtras = {},
+) => ({
   status: 200,
-  body: { userId: 'u1', displayName: 'Ana', role: 'WORKER', company: { id: 'c1', name: companyName, capabilities }, projects: [] },
+  body: {
+    userId: 'u1', displayName: 'Ana', role: 'WORKER', company: { id: 'c1', name: companyName, capabilities }, projects,
+    topics, tagging: { pendingDocuments },
+  },
 });

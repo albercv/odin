@@ -32,6 +32,11 @@ Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplo
 | `make down` | La para |
 | `make check` | Pruebas, Checkstyle, ArchUnit, ESLint y tipos de los tres proyectos |
 | `make demo` | Demostración de cierre y prueba de extremo a extremo de la administración del panel, en una pila desechable aparte |
+| `make answer-battery MODELO=haiku\|sonnet [MUESTRA=N]` | Mide si Odín da datos correctos con el archivo ficticio: levanta una pila desechable (`odin-medicion`), carga, deja responder a `claude -p`, puntúa en `experimentos/2026-11-12-archivo-ficticio/resultados/` y baja la pila. Gasta cuota de Claude; no entra en `make check` |
+
+El lector de prueba (`reader-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el puente real con Unlimited-OCR 2.
+
+El etiquetador de prueba (`tagger-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el modelo real.
 
 ## Primer arranque
 
@@ -160,10 +165,31 @@ Hoy el panel usa un token aleatorio y opaco, en una cookie `HttpOnly` con `SameS
 
 Esa lógica está detrás del puerto `AdminSessions` (`api/odin-application/src/main/java/com/e2d/odin/application/port/AdminSessions.java`), implementado por `StoredAdminSessions`. Para pasar a JWT bastará con escribir otra clase que implemente `AdminSessions` y cambiar una línea en `UseCaseConfiguration`. `closeAllOf` exigirá entonces una versión de sesión por usuario, para seguir cerrando todas las sesiones de una persona sin consultar cada token.
 
+## Lector OCR
+
+Sin lector, los PDF escaneados y las imágenes no se leen: quedan «Esperando al lector OCR» y el panel dice «Esta instalación no lee documentos escaneados».
+
+Para leerlos, arranca el puente en el Mac, desde el repositorio OCR: `make serve`. En este equipo la URL del puente, vista desde Docker, va en `deploy/.env` (`ODIN_READER_URL`, y `ODIN_READER_TOKEN` si el puente lleva token). Al llegar el lector, los documentos que esperaban se leen solos. Un PDF con algunas páginas sin texto queda listo y el panel dice cuáles no se han leído.
+
+## Etiquetado por tema
+
+Cada empresa tiene su lista de temas (con una definición de cada uno) y un modelo local pone a cada documento leído los temas que le encajan. Lo hace el Ollama que ya está en el equipo, por defecto con `qwen3.5:9b` (con poca memoria, `qwen3.5:4b-q4_K_M`).
+
+1. Descarga el modelo una vez: `make tagger-model MODEL=qwen3.5:9b` (única orden del etiquetado que usa la red).
+2. Pon en `deploy/.env` `ODIN_TAGGER_URL=http://host.docker.internal:11434` (el Ollama del equipo visto desde Docker; no hay servicio de Ollama en Compose) y reinicia la API. Las demás variables están comentadas en `deploy/.env.example`.
+
+El equipo tiene que estar encendido durante la ventana del etiquetado (por defecto de 22:00 a 07:00, hora de `ODIN_TIMEZONE`), o hay que cambiar `ODIN_TAGGER_WINDOW`. Sin eso los documentos se pueden buscar, pero no tienen temas.
+
+## Casos parecidos
+
+Un caso es un documento que el administrador marca como «Caso» (una ficha de incidencia resuelta, por ejemplo). Con la capacidad «Casos parecidos» activada en la empresa, la IA del trabajador tiene la herramienta `findSimilarCases`: le pasa los términos del problema y recibe los casos resueltos parecidos con su texto literal y sus páginas, sin nombres de autores. Solo ve casos de sus proyectos y de lo que no tiene proyecto.
+
+- **Marcar:** en «Subir documento» se pueden elegir varios ficheros a la vez y marcar la casilla «Son fichas de caso». En la lista, «Marcar como caso» y «Quitar marca de caso» actúan sobre un documento o, con la casilla de cada fila, sobre los seleccionados (hasta 500).
+- **Listar:** `listDocuments` acepta `caseDocument` para ver solo los casos, o solo lo que no lo es.
+
 ## Fuera de la fase 1
 
-- El lector OCR: los PDF escaneados y las imágenes quedan en «Pendiente de lector» hasta la fase 2.
-- Lo demás de la fase 2: etiquetado por tema, casos parecidos, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
+- Lo demás de la fase 2: compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
 - Fuera de alcance: acceso desde internet, TLS y SSO.
 
 ## Datos

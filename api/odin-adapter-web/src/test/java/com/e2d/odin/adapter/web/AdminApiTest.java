@@ -14,12 +14,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.People;
+import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CardDecisions;
+import com.e2d.odin.application.usage.CompanyUsage;
+import com.e2d.odin.application.usage.DocumentCounts;
+import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.GapReport;
+import com.e2d.odin.application.usage.PersonUsage;
+import com.e2d.odin.application.usage.QuestionCounts;
+import com.e2d.odin.application.usage.TaggingCounts;
+import com.e2d.odin.application.usage.WorkerTool;
+import com.e2d.odin.domain.knowledge.QuestionKind;
+import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import jakarta.servlet.http.Cookie;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -45,6 +61,181 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.document.sha256").doesNotExist());
         mvc.perform(upload(company, admin, "contenido-uno".getBytes())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.duplicate").value(true));
+    }
+
+    @Test
+    void uploadAcceptsCaseDocumentField() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        mvc.perform(upload(company, admin, "es-un-caso".getBytes()).param("caseDocument", "true"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.document.caseDocument").value(true));
+        mvc.perform(upload(company, admin, "no-es-caso".getBytes())).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.document.caseDocument").value(false));
+        // un duplicado ignora el valor nuevo
+        mvc.perform(upload(company, admin, "es-un-caso".getBytes()).param("caseDocument", "false"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.duplicate").value(true))
+                .andExpect(jsonPath("$.document.caseDocument").value(true));
+    }
+
+    @Test
+    void patchDocumentMarksCase() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document d = Fixtures.readyDocument(w.docs, company, "caso");
+        String url = "/v1/admin/documents/" + d.id().value();
+
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(d.id().value().toString()))
+                .andExpect(jsonPath("$.caseDocument").value(true));
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(d.id()).orElseThrow().caseDocument()).isTrue();
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":false}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.caseDocument").value(false));
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/v1/admin/documents/" + UUID.randomUUID()).cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":true}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(patch(url).header("Authorization", workerKey(company)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"caseDocument\":true}")).andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void caseMarksMarksBatch() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document one = Fixtures.readyDocument(w.docs, company, "uno");
+        Document two = Fixtures.readyDocument(w.docs, company, "dos");
+        String url = "/v1/admin/companies/" + company.value() + "/documents/case-marks";
+        String ids = "\"documentIds\":[\"" + one.id().value() + "\",\"" + two.id().value() + "\"]";
+
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{" + ids + ",\"caseDocument\":true}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.updated").value(2));
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(one.id()).orElseThrow().caseDocument()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(two.id()).orElseThrow().caseDocument()).isTrue();
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{" + ids + ",\"caseDocument\":false}")).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(one.id()).orElseThrow().caseDocument()).isFalse();
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentIds\":[],\"caseDocument\":true}")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Elige entre 1 y 500 documentos"));
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{" + ids + "}")).andExpect(status().isBadRequest());
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentIds\":[null],\"caseDocument\":true}")).andExpect(status().isBadRequest());
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentIds\":[\"" + UUID.randomUUID() + "\"],\"caseDocument\":true}"))
+                .andExpect(status().isNotFound());
+    }
+
+    private String supersededBy(Document document) {
+        return "/v1/admin/documents/" + document.id().value() + "/superseded-by";
+    }
+
+    private org.springframework.test.web.servlet.RequestBuilder supersede(Document old, Cookie admin, String body) {
+        return put(supersededBy(old)).cookie(admin).contentType(MediaType.APPLICATION_JSON).content(body);
+    }
+
+    private static String replacementJson(Document replacement) {
+        return "{\"replacementId\":\"" + replacement.id().value() + "\"}";
+    }
+
+    @Test
+    void putSupersededByReturnsTheDocumentView() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document current = Fixtures.readyDocument(w.docs, company, "póliza 2023");
+        mvc.perform(supersede(old, admin, replacementJson(current))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(old.id().value().toString()))
+                .andExpect(jsonPath("$.supersededBy.id").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.supersededBy.title").value(current.title()))
+                .andExpect(jsonPath("$.supersededAt").exists());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(old.id()).orElseThrow().supersededBy())
+                .contains(current.id());
+    }
+
+    @Test
+    void deleteSupersededByIs204EvenIfNotMarked() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        mvc.perform(delete(supersededBy(old)).cookie(admin)).andExpect(status().isNoContent());
+        w.docs.markSuperseded(company, old.id(), Fixtures.readyDocument(w.docs, company, "nueva").id(),
+                w.clock.instant());
+        mvc.perform(delete(supersededBy(old)).cookie(admin)).andExpect(status().isNoContent());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(old.id()).orElseThrow().superseded()).isFalse();
+    }
+
+    @Test
+    void supersedeWithoutOrWithBadReplacementIdIs400() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        mvc.perform(supersede(old, admin, "{}")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Indica el documento que lo sustituye"));
+        mvc.perform(supersede(old, admin, "{\"replacementId\":\"no-es-un-uuid\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").isNotEmpty());
+        mvc.perform(supersede(old, admin, "")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").isNotEmpty());
+    }
+
+    @Test
+    void supersedeConflictIs409WithItsMessage() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document processing = Fixtures.document(w.docs, company, DocumentStatus.PROCESSING);
+        mvc.perform(supersede(old, admin, replacementJson(processing))).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value(
+                        "El documento que lo sustituye aún no está listo. Márcalo cuando termine de procesarse."));
+    }
+
+    @Test
+    void supersedeWithAWorkerKeyIsRejected() throws Exception {
+        CompanyId company = newCompany();
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document current = Fixtures.readyDocument(w.docs, company, "póliza 2023");
+        mvc.perform(put(supersededBy(old)).header("Authorization", workerKey(company))
+                .contentType(MediaType.APPLICATION_JSON).content(replacementJson(current)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void documentViewCarriesSupersededByAndAt() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document old = Fixtures.readyDocument(w.docs, company, "póliza 2022");
+        Document current = Fixtures.readyDocument(w.docs, company, "póliza 2023");
+        w.docs.markSuperseded(company, old.id(), current.id(), w.clock.instant());
+        mvc.perform(get("/v1/admin/documents/" + old.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.supersededBy.id").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.supersededAt").exists());
+        mvc.perform(get("/v1/admin/documents/" + current.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.supersededBy").doesNotExist())
+                .andExpect(jsonPath("$.supersededAt").doesNotExist());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == '" + old.id().value() + "')].supersededBy.title")
+                        .value(current.title()));
+    }
+
+    @Test
+    void meSaysWhetherScannedDocumentsAreSupported() throws Exception {
+        CompanyId company = newCompany();
+        mvc.perform(get("/v1/admin/me").cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.scannedDocumentsSupported").value(true));
+    }
+
+    @Test
+    void documentViewIncludesPagesWithoutText() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document mixed = Fixtures.document(w.docs, company, DocumentStatus.READY);
+        w.docs.save(mixed.markReady(true, java.util.List.of(3, 5)));
+        mvc.perform(get("/v1/admin/documents/" + mixed.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.pagesWithoutText[0]").value(3))
+                .andExpect(jsonPath("$.pagesWithoutText[1]").value(5));
     }
 
     @Test
@@ -410,6 +601,120 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.detail").value("Ya existe un proyecto con ese nombre"));
     }
 
+    private String createTopic(Cookie admin, CompanyId company, String name) throws Exception {
+        var created = mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + name + "\",\"definition\":\"Todo lo de " + name + "\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        return com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void topicsAreCreatedListedPatchedAndDeleted() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String id = createTopic(admin, company, "Agua");
+        String base = "/v1/admin/companies/" + company.value() + "/topics";
+
+        mvc.perform(get(base).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(id)).andExpect(jsonPath("$[0].name").value("Agua"))
+                .andExpect(jsonPath("$[0].definition").value("Todo lo de Agua"));
+        mvc.perform(patch(base + "/" + id).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"definition\":\"Fugas y humedades\"}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Agua"))
+                .andExpect(jsonPath("$.definition").value("Fugas y humedades"));
+        mvc.perform(delete(base + "/" + id).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(base).cookie(admin)).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(delete(base + "/" + id).cookie(admin)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void duplicateTopicNameIs409() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        createTopic(admin, company, "Agua");
+
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"agua\",\"definition\":\"x\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.detail").value("Ya hay un tema con ese nombre"));
+    }
+
+    @Test
+    void topicNameContainingAnotherIs400() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        createTopic(admin, company, "Agua");
+
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Agua y humedades\",\"definition\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Un nombre de tema no puede contener a otro: Agua"));
+    }
+
+    @Test
+    void taggingStatusViewHasWindowShape() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        createTopic(admin, company, "Agua");
+        Document pending = Fixtures.readyDocument(w.docs, company, "uno");
+        String url = "/v1/admin/companies/" + company.value() + "/tagging-status";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendingDocuments").value(1))
+                .andExpect(jsonPath("$.oldestPendingSince").value(pending.uploadedAt().toString()))
+                .andExpect(jsonPath("$.window.from").value("22:00")).andExpect(jsonPath("$.window.to").value("07:00"))
+                .andExpect(jsonPath("$.window.always").value(false))
+                .andExpect(jsonPath("$.timezone").value("Europe/Madrid"));
+        mvc.perform(get(url).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(newCompany()))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void documentViewIncludesTopicsAndTaggingStatus() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String water = createTopic(admin, company, "Agua");
+        Document tagged = Fixtures.readyDocument(w.docs, company, "uno");
+        w.tagging.seed(tagged.id(), new com.e2d.odin.domain.topic.TopicId(UUID.fromString(water)),
+                com.e2d.odin.domain.topic.TopicSource.AI, com.e2d.odin.domain.topic.TopicState.ACTIVE);
+        w.tagging.seedRow(tagged, com.e2d.odin.domain.topic.TaggingStatus.DONE);
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].taggingStatus").value("DONE"))
+                .andExpect(jsonPath("$[0].topics[0].id").value(water))
+                .andExpect(jsonPath("$[0].topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$[0].topics[0].source").value("AI"));
+    }
+
+    @Test
+    void documentTopicsAreReviewedListedAndRetagged() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String water = createTopic(admin, company, "Agua");
+        Document document = Fixtures.readyDocument(w.docs, company, "uno");
+        w.tagging.seedRow(document, com.e2d.odin.domain.topic.TaggingStatus.DONE);
+        String base = "/v1/admin/documents/" + document.id().value() + "/topics";
+
+        mvc.perform(put(base + "/" + water).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(base).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.topics[0].topicId").value(water))
+                .andExpect(jsonPath("$.topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$.topics[0].source").value("ADMIN"))
+                .andExpect(jsonPath("$.topics[0].state").value("ACTIVE"))
+                .andExpect(jsonPath("$.topics[0].decidedByName").value("Admin Pérez"))
+                .andExpect(jsonPath("$.tagging.status").value("DONE"))
+                .andExpect(jsonPath("$.tagging.topicListVersion").value(1));
+        mvc.perform(delete(base + "/" + water).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(base).cookie(admin)).andExpect(jsonPath("$.topics[0].state").value("REMOVED"));
+        mvc.perform(post(base + "/retag").cookie(admin)).andExpect(status().isAccepted());
+        mvc.perform(get(base).cookie(admin)).andExpect(jsonPath("$.tagging").doesNotExist())
+                .andExpect(jsonPath("$.topics[0].state").value("REMOVED"));
+        mvc.perform(put(base + "/" + UUID.randomUUID()).cookie(admin)).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Tema no encontrado"));
+    }
+
     private static org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder upload(
             CompanyId company, Cookie admin, byte[] bytes) {
         return multipart("/v1/admin/companies/" + company.value() + "/documents")
@@ -501,6 +806,121 @@ class AdminApiTest extends WebTestSupport {
                 "{\"firstName\":\"Pepe\",\"lastName\":\"Gil\",\"roles\":[\"WORKER\"],\"projectIds\":[\"" + UUID.randomUUID()
                         + "\"]}")).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("Proyecto no encontrado"));
+    }
+    private CompanyUsage someUsage() {
+        return new CompanyUsage(new QuestionCounts(5, 2), 1, new CardCounts(3, 0, Optional.of(new CardDecisions(1, 1, 1)), false),
+                new DocumentCounts(4, 3, 1, 0), Optional.of(new TaggingCounts(2, 1)));
+    }
+
+    @Test
+    void usageStatsRoute() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        UserId ana = new UserId(UUID.randomUUID());
+        w.usage.seed(company, someUsage(), List.of(
+                new PersonUsage(Optional.of(ana), "Ana Pérez", Optional.of("7F3K-E2D"), 4, 1, false),
+                PersonUsage.departed(3, 2)));
+        String url = "/v1/admin/companies/" + company.value() + "/usage-stats";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.month").value("2026-11"))
+                .andExpect(jsonPath("$.company.questions.search").value(5))
+                .andExpect(jsonPath("$.company.questions.similarCases").value(2))
+                .andExpect(jsonPath("$.company.questionsWithoutResults").value(1))
+                .andExpect(jsonPath("$.company.cards.corrected").value(1))
+                .andExpect(jsonPath("$.company.documents.waitingForReader").value(0))
+                .andExpect(jsonPath("$.company.tagging.pending").value(1))
+                .andExpect(jsonPath("$.people[0].userId").value(ana.value().toString()))
+                .andExpect(jsonPath("$.people[0].displayName").value("Ana Pérez"))
+                .andExpect(jsonPath("$.people[0].memberCode").value("7F3K-E2D"))
+                .andExpect(jsonPath("$.people[0].questions").value(4))
+                .andExpect(jsonPath("$.people[0].cardsSaved").value(1))
+                .andExpect(jsonPath("$.people[1].displayName").value("Personas dadas de baja"))
+                .andExpect(jsonPath("$.people[1].userId").doesNotExist())
+                .andExpect(jsonPath("$.people[1].memberCode").doesNotExist());
+        mvc.perform(get(url + "?month=2026-10").cookie(admin)).andExpect(jsonPath("$.month").value("2026-10"));
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void usageStatsAndGapsRejectBadMonths() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        for (String route : new String[] {"usage-stats", "gaps"}) {
+            String url = "/v1/admin/companies/" + company.value() + "/" + route;
+            mvc.perform(get(url + "?month=2026-13").cookie(admin)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("El mes tiene que tener la forma AAAA-MM"));
+            mvc.perform(get(url + "?month=2024-01").cookie(admin)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("Solo se pueden consultar los 12 últimos meses"));
+        }
+    }
+
+    @Test
+    void gapsRoute() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        w.usage.seedGaps(company, List.of(new GapGroup("goteras", QuestionKind.SIMILAR_CASES, 3,
+                LocalDate.of(2026, 11, 8))));
+        String url = "/v1/admin/companies/" + company.value() + "/gaps";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.gaps", hasSize(1)))
+                .andExpect(jsonPath("$.withheld").value(false)).andExpect(jsonPath("$.reason").doesNotExist())
+                .andExpect(jsonPath("$.gaps[0].text").value("goteras"))
+                .andExpect(jsonPath("$.gaps[0].kind").value("SIMILAR_CASES"))
+                .andExpect(jsonPath("$.gaps[0].times").value(3));
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/v1/admin/companies/" + UUID.randomUUID() + "/gaps").cookie(adminCookie(Role.GROUP_ADMIN,
+                Optional.empty()))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void withheldGapsAndCardBreakdownCarryTheIndicatorAndNoData() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        w.usage.seedGapReport(company, new GapReport(List.of(), true));
+        w.usage.seed(company, new CompanyUsage(new QuestionCounts(1, 0), 1,
+                new CardCounts(2, 1, Optional.empty(), true), new DocumentCounts(0, 0, 0, 0), Optional.empty()),
+                List.of());
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/gaps").cookie(admin))
+                .andExpect(jsonPath("$.withheld").value(true)).andExpect(jsonPath("$.reason").value("FEW_PEOPLE"))
+                .andExpect(jsonPath("$.gaps", hasSize(0)));
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/usage-stats").cookie(admin))
+                .andExpect(jsonPath("$.company.cards.saved").value(2))
+                .andExpect(jsonPath("$.company.cards.withheld").value(true))
+                .andExpect(jsonPath("$.company.cards.reason").value("FEW_PEOPLE"))
+                .andExpect(jsonPath("$.company.cards.approved").doesNotExist())
+                .andExpect(jsonPath("$.company.cards.corrected").doesNotExist())
+                .andExpect(jsonPath("$.company.cards.rejected").doesNotExist());
+    }
+
+    @Test
+    void gapViewHasDateWithoutTime() throws Exception {
+        CompanyId company = newCompany();
+        w.usage.seedGaps(company, List.of(new GapGroup("goteras", QuestionKind.SEARCH, 1, LocalDate.of(2026, 11, 8))));
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/gaps")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company))))
+                .andExpect(jsonPath("$.gaps[0].lastAskedOn").value("2026-11-08"))
+                .andExpect(jsonPath("$.gaps[0].authorId").doesNotExist())
+                .andExpect(jsonPath("$.gaps[0].userId").doesNotExist())
+                .andExpect(jsonPath("$.gaps[0].askedAt").doesNotExist());
+    }
+    @Test
+    void deliveredVolumeRoute() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        w.meter.record(company, WorkerTool.SEARCH, 120, w.clock.instant());
+        w.meter.record(company, WorkerTool.SEARCH, 30, w.clock.instant());
+        String url = "/v1/admin/companies/" + company.value() + "/delivered-volume";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.month").value("2026-11"))
+                .andExpect(jsonPath("$.totals", hasSize(WorkerTool.values().length)))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].calls").value(2))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(150))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'MY_CARDS')].bytes").value(0))
+                .andExpect(jsonPath("$.totals[0].userId").doesNotExist());
+        mvc.perform(get(url + "?month=2024-01").cookie(admin)).andExpect(status().isBadRequest());
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
     }
 
     @Test

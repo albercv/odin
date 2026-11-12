@@ -10,6 +10,7 @@ import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.NewSession;
 import com.e2d.odin.application.organization.ListCompanies;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -37,14 +38,16 @@ public class SessionController {
     private final LoginRateLimiter limiter;
     private final ListCompanies listCompanies;
     private final DescribeAdmin describeAdmin;
+    private final InstallationSettings installation;
 
     public SessionController(LogInAdmin logIn, LogOutAdmin logOut, LoginRateLimiter limiter,
-            ListCompanies listCompanies, DescribeAdmin describeAdmin) {
+            ListCompanies listCompanies, DescribeAdmin describeAdmin, InstallationSettings installation) {
         this.logIn = logIn;
         this.logOut = logOut;
         this.limiter = limiter;
         this.listCompanies = listCompanies;
         this.describeAdmin = describeAdmin;
+        this.installation = installation;
     }
 
     @PostMapping("/session")
@@ -79,7 +82,8 @@ public class SessionController {
 
     @GetMapping("/me")
     public Responses.AdminMe me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor) {
-        return Responses.AdminMe.from(actor, describeAdmin.execute(actor), listCompanies.execute(actor));
+        return Responses.AdminMe.from(actor, describeAdmin.execute(actor), listCompanies.execute(actor),
+                installation.scannedDocumentsSupported());
     }
 
     private static ResponseCookie cookie(String value, boolean expire) {

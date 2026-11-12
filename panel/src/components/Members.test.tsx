@@ -12,8 +12,8 @@ afterEach(() => vi.restoreAllMocks());
 const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], personActive: true, active: true, hasPassword: false };
 const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], personActive: true, active: false, email: 'bea@acme.test', hasPassword: true };
 const list = 'GET /v1/admin/companies/c1/members';
-const groupAdmin: Me = { userId: 'g', displayName: 'Ada', firstName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
-const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true }] };
+const groupAdmin: Me = { userId: 'g', displayName: 'Ada', firstName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [], scannedDocumentsSupported: false };
+const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true }], scannedDocumentsSupported: false };
 
 const show = (routes: Routes, me: Me = groupAdmin, onProjectsChanged?: () => void) => {
   const calls = mockFetch(routes);

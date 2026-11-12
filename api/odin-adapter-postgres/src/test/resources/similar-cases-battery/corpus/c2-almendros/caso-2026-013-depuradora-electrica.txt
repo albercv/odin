@@ -1,0 +1,42 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2026-013
+Comunidad: Residencial Los Almendros
+Tipo de incidencia: avería eléctrica en instalaciones de la piscina
+Fecha de apertura: 27 de mayo de 2026
+Comunicante: vocal de la junta, encargado del seguimiento de la piscina
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 27 de mayo de 2026 el vocal encargado de la piscina comunicó al despacho que la depuradora no arrancaba en el temporizador de la mañana y que el cuadro eléctrico de la sala de depuración mostraba el diferencial de la línea del motor disparado. A tres semanas de la apertura de la temporada, el filtro y la recirculación permanecían parados. El cuadro alimenta una bomba trifásica de 2,2 kilovatios, un cuadro de maniobra con contactor, un reloj programador y un cuadro de protección con interruptor magnetotérmico. El electricista describió el defecto como un deterioro del aislamiento de los devanados del motor de la bomba, que provocaba derivación a tierra, junto con un contactor de mando con los contactos soldados.
+
+ACTUACIONES REALIZADAS
+- 28 de mayo de 2026: el administrador registra la incidencia y solicita visita al electricista de mantenimiento de la Comunidad.
+- 29 de mayo de 2026: primera visita. Se mide el aislamiento del motor con megóhmetro a 500 voltios y se obtiene un valor muy inferior al mínimo admisible. Se verifica que el contactor no abre.
+- 1 de junio de 2026: se revisan el cableado de la línea, la toma de tierra y los bornes del cuadro, sin anomalías en los conductores.
+- 3 de junio de 2026: el electricista entrega presupuesto para rebobinar o sustituir el motor y cambiar el contactor y el reloj programador.
+
+DOCUMENTACIÓN ARCHIVADA
+- Comunicación del vocal encargado de la piscina.
+- Informe del electricista con las mediciones de aislamiento.
+- Presupuesto del electricista, de 3 de junio de 2026.
+=== Página 2 ===
+RESOLUCIÓN
+El electricista sustituyó el motor de la bomba por uno nuevo de la misma potencia con protección térmica integrada, cambió el contactor de mando y el reloj programador y reapretó todos los bornes del cuadro. Se verificó el sentido de giro, la intensidad de cada fase, el disparo del diferencial a treinta miliamperios y la continuidad de la toma de tierra. La Comunidad abonó 1.560 euros por los trabajos, con cargo al fondo de reserva. Se ejecutaron el 9 y el 10 de junio de 2026. La empresa emitió el boletín de la instalación, el parte de trabajo y la factura.
+
+SEGUIMIENTO
+El 11 de junio de 2026 la depuradora arrancó en el horario programado y el electricista midió la intensidad de cada fase con la bomba en régimen, sin desequilibrios. El 15 de junio de 2026 el vocal encargado de la piscina comprobó que el diferencial no volvía a saltar durante tres jornadas seguidas. El administrador informó a la junta por escrito de la resolución y de que la piscina podía abrir en la fecha prevista por los estatutos.
+
+RESULTADO
+Cerrado el 16 de junio de 2026. La reparación quedó a cargo de la Comunidad por tratarse de un elemento común. La depuradora funciona en el horario programado sin disparos del diferencial.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Boletín de la instalación, parte de trabajo y factura del electricista.
+- Hoja de mediciones de intensidad del 11 de junio de 2026.
+- Registro de comprobación del diferencial.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.
