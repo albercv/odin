@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from banco import metrics, scoring
+from banco import metrics, scoring, tanda
 
 
 def _read_jsonl(path):
@@ -26,7 +26,8 @@ def read_folder(folder):
             "curves": json.loads(curves_file.read_text(encoding="utf-8")) if curves_file.exists() else None,
             "origin": _read_origin(folder),
             "ledger": json.loads((folder / "libro.json").read_text(encoding="utf-8")) if (folder / "libro.json").exists() else None,
-            "stopped": stop_file.read_text(encoding="utf-8").strip() if stop_file.exists() else None}
+            "stopped": stop_file.read_text(encoding="utf-8").strip() if stop_file.exists() else None,
+            "batches": tanda.read_batches(folder)}
 
 
 def rebuild(folder, layout):
@@ -38,7 +39,7 @@ def rebuild(folder, layout):
     items = [i for i in json.loads(layout.battery_file.read_text(encoding="utf-8")) if i["id"] in wanted]
     summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"],
                                     ledger=data["ledger"])
-    summary.update(origen=data["origin"], stopped=data["stopped"])
+    summary.update(origen=data["origin"], stopped=data["stopped"], batches=data["batches"])
     if data["curves"] is not None:
         summary["curvas"] = data["curves"]
     write_report(folder, summary)
@@ -104,8 +105,22 @@ def _approach_lines(summary):
     return lines + (rows or ["Sin ejecuciones de buscadores."]) + [""]
 
 
+def _agreement_run_lines(block):
+    inside, outside = block["inMajority"], block["outsideMajority"]
+    at_60, below = block["byLevel"]["atLeast60"], block["byLevel"]["below60"]
+    return [f"- Acierto de las ejecuciones que coinciden con la mayoría de su pregunta: {_pct(inside['accuracy'])} "
+            f"({inside['runs']} ejecuciones)",
+            f"- Acierto de las que no coinciden: {_pct(outside['accuracy'])} ({outside['runs']} ejecuciones)",
+            f"- Fallos que quedan fuera de la mayoría: {_pct(block['failuresOutsideMajority'])}",
+            f"- Respuesta mayoritaria por nivel de acuerdo: al menos el 60 %: {_pct(at_60['accuracy'])} "
+            f"({at_60['questions']} preguntas); menos del 60 %: {_pct(below['accuracy'])} ({below['questions']} preguntas)",
+            ""]
+
+
 def _agreement_lines(summary):
     lines = ["## Acuerdo entre buscadores", ""]
+    if "agreementRuns" in summary:
+        lines += _agreement_run_lines(summary["agreementRuns"])
     if "agreement" not in summary:
         return lines + ["Sin respuestas finales que cruzar.", ""]
     lines += ["| Buscadores que coinciden con la mayoría | Preguntas | Acierto de la respuesta final |", "|---|---|---|"]
@@ -148,23 +163,57 @@ def _cost_lines(summary):
     return lines + [""]
 
 
+def _batch_lines(summary):
+    batches = summary.get("batches") or []
+    lines = ["## Tandas", ""]
+    if not batches:
+        return lines + ["Sin tandas registradas.", ""]
+    lines.append("Se hizo en una sola tanda." if len(batches) == 1 else f"Se hizo en {len(batches)} tandas.")
+    for number, batch in enumerate(batches, start=1):
+        lines.append(f"- Tanda {number}: de {batch['inicio']} a {batch['fin'] or 'sin cerrar'}; motivo: "
+                     f"{batch['motivo'] or 'sin cerrar (corte)'}; llamadas de pago: {_count_or_unknown(batch['llamadas_pago'])}")
+    return lines + [""]
+
+
+def _count_or_unknown(value):
+    return "no consta" if value is None else str(value)
+
+
 def _mix_text(mix):
     return ", ".join(f"{approach} ×{count}" for approach, count in mix.items())
 
 
+def _beats_text(row):
+    if not row["valid"]:
+        return "no válida: errores"
+    return "no aplica" if row["supera_single"] is None else ("sí" if row["supera_single"] else "no")
+
+
+def _shown(value, format_value):
+    """Valor de una curva: «—» si no hay medida (mezcla sin pares medidos, banda de ruido ausente)."""
+    return "—" if value is None else format_value(value)
+
+
+def _latency_text(row):
+    if row["latency_p50"] is None:
+        return "—"
+    return f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s"
+
+
 def _curve_lines(curves):
     lines = ["## Curvas", "", f"Variación de single por defecto (media de la mitad del intervalo): "
-             f"{_pct(curves['variacion'])}.", "",
+             f"{_shown(curves['variacion'], _pct)}.", "",
              "| Mezcla | Ejecuciones | Acierto medio [mín, máx] | Tokens medios | Coste medio | Latencia p50 / p95 | Supera single |",
              "|---|---|---|---|---|---|---|"]
     for row in curves["mezclas"]:
-        beats = "no aplica" if row["supera_single"] is None else ("sí" if row["supera_single"] else "no")
-        lines.append(f"| {_mix_text(row['mix'])} | {row['n']} | {_pct(row['accuracy_mean'])} "
-                     f"[{_pct(row['accuracy_min'])}, {_pct(row['accuracy_max'])}] | {_tokens(row['tokens_mean'])} | "
-                     f"{_usd(row['cost_mean'])} | {_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | {beats} |")
-    lines += ["", "| Turnos máximos | Acierto | Tokens medios | Latencia p50 / p95 |", "|---|---|---|---|"]
-    lines += [f"| {row['max_turns']} | {_pct(row['accuracy_mean'])} | {_tokens(row['tokens_mean'])} | "
-              f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s |" for row in curves["single"]]
+        lines.append(f"| {_mix_text(row['mix'])} | {row['n']} | {_shown(row['accuracy_mean'], _pct)} "
+                     f"[{_shown(row['accuracy_min'], _pct)}, {_shown(row['accuracy_max'], _pct)}] | "
+                     f"{_shown(row['tokens_mean'], _tokens)} | {_shown(row['cost_mean'], _usd)} | "
+                     f"{_latency_text(row)} | {_beats_text(row)} |")
+    lines += ["", "| Turnos máximos | Acierto | Tokens medios | Latencia p50 / p95 | Válida |", "|---|---|---|---|---|"]
+    lines += [f"| {row['max_turns']} | {_shown(row['accuracy_mean'], _pct)} | {_shown(row['tokens_mean'], _tokens)} | "
+              f"{_latency_text(row)} | {'sí' if row['valid'] else 'no válida: errores'} |"
+              for row in curves["single"]]
     return lines + [""]
 
 
@@ -172,7 +221,7 @@ def render(summary):
     origin = summary.get("origen", {})
     parts = [f"# Informe del banco: {origin.get('Configuración', '')}", ""]
     parts += _origin_lines(summary) + _accuracy_lines(summary) + _grave_lines(summary) + _approach_lines(summary)
-    parts += _agreement_lines(summary) + _judge_lines(summary) + _cost_lines(summary)
+    parts += _agreement_lines(summary) + _judge_lines(summary) + _cost_lines(summary) + _batch_lines(summary)
     if "curvas" in summary:
         parts += _curve_lines(summary["curvas"])
     if summary.get("stopped"):

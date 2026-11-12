@@ -11,6 +11,7 @@ make banco CONFIG=banco/configs/piloto.toml          # run: buscadores, respuest
 make banco-barrido CONFIG=banco/configs/piloto.toml  # sweep: curvas de mezclas y de turnos (sin redactor ni jueces)
 make banco-informe RESULTADOS=banco/resultados/<carpeta>   # reescribe resumen.json e informe.md sin IA
 make banco-abajo                        # baja la pila sin tocar otros proyectos de Docker
+make banco-reanudar CONFIG=banco/configs/barrido-40.toml   # continúa la última tanda parada (ver «Parar y reanudar»)
 ```
 
 Equivalente sin make: `python3 banco/banco.py run|sweep --config X` y `python3 banco/banco.py report --results DIR`.
@@ -82,7 +83,7 @@ En `[[judges]]`, `think` (false por defecto) se envía a Ollama como `"think"` e
 - **Semilla de los jueces:** `sample.seed + índice del juez` (0 sin muestra). Cada juez baraja las fuentes con su propia semilla.
 - **Recuperación por enfoque:** de las preguntas que ese enfoque midió (con alguna ejecución sin error) y que tienen citas resueltas, las que tienen alguna página esperada vista o citada. Las preguntas sin citas (abstenciones) no cuentan. El denominador es ese conjunto, no toda la batería.
 - **Acierto por enfoque:** sobre las ejecuciones sin error, igual que el acierto global. Las ejecuciones con error se cuentan aparte (`errors`).
-- **Firma de mayoría:** `answer_signature` = (`no_lo_se`, cifras normalizadas, conjunto de páginas citadas `(documentId, pagina)`). Así, dos respuestas sin cifras que citan páginas distintas no coinciden; la redacción sigue sin contar.
+- **Firma de mayoría:** `answer_signature` = (`no_lo_se`, conjunto de documentos o fichas citados: `documentId` o `cardId`). Sin cifras ni páginas: la redacción, las cifras y la página citada no cuentan, solo el documento o la ficha. Es la firma que mejor separa en lo medido (D-067): en la mayoría, 132/132 en el barrido y 91/91 en el piloto; fuera de la mayoría, 14/19 y 7/9.
 - **Acuerdo entre buscadores:** `k` = cuántos buscadores coinciden con la firma mayoritaria. El acierto de cada grupo es el de la respuesta final, no el del buscador.
 - **«No consta» sin juzgar:** una respuesta final con `no_lo_se` o sin citas no llega al jurado: no se lanza ningún juez (ni de pago ni de Ollama), la fila lleva `motivo: "no juzgable: no consta"` y `jury` nulo. En `resumen.json`, `judges.notJudgedNoConsta` cuenta esas preguntas y `judges.manualReview` lista las que no tienen clave (sin veredicto del script ni del jurado; hay que revisarlas a mano). Donde hay clave, decide el script como siempre.
 - **Parada durante los jueces:** si una cuota, el presupuesto o un coste desconocido para el experimento ocurre durante los jueces de una pregunta (también en su último juez de pago), esa pregunta queda sin veredicto (`jury` nulo, `motivo: "parada"`), aunque ya haya veredictos parciales. Esos registros de jueces sí se guardan en `veredictos.jsonl`.
@@ -91,6 +92,19 @@ En `[[judges]]`, `think` (false por defecto) se envía a Ollama como `"think"` e
 - **Sin medir:** las preguntas sin respuesta final (parada o error) no son fallos. Quedan fuera de todos los denominadores de acierto, de tipo, de acuerdo y de jueces, y se cuentan aparte como «no medidas (parada o error)» (`notMeasured`).
 - **Latencia estimada (jueces en paralelo):** por respuesta, el buscador más lento, más el redactor, más el juez más lento, como si los jueces corrieran en paralelo como en el producto. Las ejecuciones de caché usan su duración guardada, igual que su coste. Percentiles 50 y 95 con `statistics.quantiles`.
 - **Barrido:** un tramo de `single` por cada tope de turnos (un buscador `main`, réplica 0). La variación es la mitad del intervalo de acierto de `single` con la configuración por defecto. Una mezcla con un solo buscador se resuelve con su única respuesta, sin IA.
+
+## Parar y reanudar
+
+Un experimento puede parar a mitad (límite de la suscripción, tres errores seguidos de `claude`, cuota, llamada de prueba fallida, presupuesto agotado) y continuar después en otra ventana, sin repetir ni volver a pagar lo ya hecho.
+
+- **Estado.** Al empezar cada tanda y al parar, se escribe `banco/estado/reanudar-<nombre>.json`: configuración, modo, carpeta de resultados, huella del código, `stack_digest`, motivo de la parada, hora de renovación (si el aviso la trae, p. ej. «resets 9:50pm (Europe/Madrid)») y lo hecho. Al terminar sin parada, se borra. Un corte de golpe deja el estado de la tanda abierta, y se puede reanudar igual.
+- **Tandas.** Cada orden (`run`, `sweep`, `reanudar`) es una tanda. La carpeta de resultados guarda `batches.json` con inicio, fin, motivo («completa» o la parada) y llamadas de pago de cada tanda; `resumen.json` las copia y el informe tiene la sección «Tandas». La parada de la tanda anterior se archiva como `PARADA-<fecha>.txt`.
+- **Cómo se reanuda.** `make banco-reanudar CONFIG=<config>` (o `python3 banco/banco.py reanudar --config <config>`). Vuelve a ejecutar el mismo modo en la misma carpeta: lo hecho sale de la caché a coste 0, solo se lanzan las llamadas que faltaban, la llamada de prueba se repite y el libro sigue con lo ya gastado.
+- **Se niega (código 2, con el motivo) si:** no hay estado guardado, o está dañado; la configuración (su sha256) cambió desde la última tanda; la huella del código cambió («el código cambió»); la pila se recargó y los ids cambiaron («la pila se recargó»); o la lista de preguntas seleccionadas ya no es la de `ids.json`. En esos casos la caché no serviría: hay que volver a lanzar el experimento entero. Tampoco reanuda si el libro ya llegó al tope.
+- **Reglas entre tandas.** No cambiar el código ni hacer commits entre tandas del mismo experimento: cambia la huella y `reanudar` se niega. No bajar ni recargar la pila entre tandas (`make banco-abajo` solo cuando el experimento esté completo): cambian los ids y la caché no sirve.
+- **Corte de golpe.** Si el proceso muere a mitad, hasta `concurrency` llamadas en vuelo no se cobran ni se guardan en caché: al reanudar se vuelven a pagar. Es un coste acotado, de unos 0,005 USD por llamada. Una prueba sin coste notificado se anota con coste 0 y su motivo (`nota`), y no bloquea el libro.
+- **Costes de la caché.** Un acierto de caché conserva su coste original con `cached: true`. El gasto real (libro y `notifiedUsd`) lo excluye; el coste por respuesta lo incluye.
+- **Qué no se guarda.** Ninguna respuesta con error entra en la caché, en las cifras, en el acuerdo, en las curvas ni en el jurado. La caché y el libro se escriben llamada a llamada; todo fichero de estado se escribe de forma atómica.
 
 ## Límites conocidos
 

@@ -11,12 +11,12 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
-from banco import combine, judge, report, scoring
+from banco import combine, judge, preflight, report, scoring, tanda
 from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
 from banco.layout import Layout
-from banco.ledger import Ledger, open_ledger
+from banco.ledger import CONSECUTIVE_ERRORS, Ledger, open_ledger
 from banco.medir_path import carga_mod, ejecutar
 from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, _build_jobs, run_pool
 from banco.subsample import beats_single_frontier, curve
@@ -49,10 +49,21 @@ class Session:
     cache: RunCache
     ledger: Ledger
     sweep: SweepSpec | None = None
+    config_path: Path | None = None
+    config_sha: str = ""  # sha256 de los bytes de la configuración: otra configuración no reanuda la tanda
+    charges_start: int = 0  # cargos del libro al abrir la tanda: sus llamadas de pago son las de esta tanda
 
     @property
     def stop_file(self):
         return self.folder / "PARADA.txt"
+
+    @property
+    def state_file(self):
+        return tanda.state_path(self.layout.state_dir, self.cfg.name)
+
+    @property
+    def mode(self):
+        return "sweep" if self.sweep else "run"
 
     @property
     def seed(self):
@@ -108,7 +119,19 @@ def _load_stack(layout):
     return carga_mod.leer(path)
 
 
-def draw_sample(items, strata, size, seed):
+def draw_sample(items, strata, size, seed, include=()):
+    """Las preguntas de `include` siempre están y cuentan en su estrato; el resto del tamaño sale del reparto
+    estratificado de siempre, con la misma semilla. Sin `include`, es exactamente la muestra de siempre."""
+    by_id = {item["id"]: item for item in items}
+    missing = [q for q in include if q not in by_id]
+    if missing:
+        raise ConfigError(f"«include» pide preguntas que no existen en la batería: {', '.join(missing)}")
+    forced = [by_id[q] for q in include]
+    rest = [item for item in items if item["id"] not in set(include)]
+    return forced + _round_robin(rest, strata, size - len(forced), seed)
+
+
+def _round_robin(items, strata, size, seed):
     """Estratos por el campo `strata`, en orden alfabético; cada estrato se baraja y se reparte por turnos."""
     rng = random.Random(seed)
     groups = {}
@@ -125,7 +148,7 @@ def _select_items(layout, cfg):
     items = json.loads(layout.battery_file.read_text(encoding="utf-8"))
     if cfg.sample is None:
         return items
-    return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed)
+    return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed, cfg.sample.include)
 
 
 CODE_PATHS = ("banco", "experimentos/2026-11-12-archivo-ficticio/medir")
@@ -174,9 +197,49 @@ def _write_start(sess, branch, commit):
     (sess.folder / "ids.json").write_text(json.dumps(ids, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-def prepare(config_path, layout, sweep=False, reset_budget=False):
+class ResumeError(Exception):
+    """La reanudación se niega: no hay estado, o el código o la pila cambiaron desde la última tanda."""
+
+
+def _saved_questions(folder):
+    """Preguntas de la tanda anterior (ids.json de la carpeta); un fichero ausente o ilegible se niega en español."""
+    path = folder / "ids.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))["preguntas"]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ResumeError(f"no se puede leer {path.name} de la carpeta de resultados ({error}): no se puede reanudar") from error
+
+
+def _check_resume(resume, commit, digest, config_sha, question_ids):
+    """La caché solo sirve si la configuración, el código, la pila y las preguntas son los de la tanda anterior."""
+    if not Path(resume["carpeta"]).is_dir():
+        raise ResumeError(f"no existe la carpeta de resultados {resume['carpeta']}")
+    if "config_sha256" not in resume:
+        raise ResumeError("estado de una versión anterior del banco: relanza el experimento entero")
+    if resume["config_sha256"] != config_sha:
+        raise ResumeError("la configuración cambió desde la última tanda: vuelve a lanzar el experimento entero")
+    if _saved_questions(Path(resume["carpeta"])) != question_ids:
+        raise ResumeError("las preguntas seleccionadas cambiaron desde la última tanda (ids.json): "
+                          "vuelve a lanzar el experimento entero")
+    if resume["huella"] != commit:
+        raise ResumeError("el código cambió desde la última tanda: la caché no serviría; "
+                          "vuelve a lanzar el experimento entero")
+    if resume["stack_digest"] != digest:
+        raise ResumeError("la pila se recargó: los ids cambiaron y la caché no serviría; "
+                          "vuelve a lanzar el experimento entero")
+
+
+def _archive_stop(folder):
+    """La parada de la tanda anterior se guarda con su nombre: la nueva tanda no debe nacer parada."""
+    stop = folder / "PARADA.txt"
+    if stop.exists():
+        stop.rename(folder / f"PARADA-{datetime.now():%Y%m%d-%H%M%S}.txt")
+
+
+def prepare(config_path, layout, sweep=False, reset_budget=False, resume=None):
     """Valida todo lo que puede fallar antes de crear la carpeta de resultados. El libro del experimento se abre
-    antes de crearla: si ya se gastó el tope, no queda carpeta a medias."""
+    antes de crearla: si ya se gastó el tope, no queda carpeta a medias. Con `resume`, la carpeta es la de la
+    tanda anterior y no se escribe de nuevo su inicio."""
     cfg = load_config(Path(config_path), layout.banco)
     _check_supported(cfg)
     _check_main(cfg, sweep)
@@ -188,11 +251,18 @@ def prepare(config_path, layout, sweep=False, reset_budget=False):
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
                             budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit,
                             stack_digest=stack_digest(stack))
+    config_sha = hashlib.sha256(Path(config_path).read_bytes()).hexdigest()
+    if resume is not None:
+        _check_resume(resume, commit, settings.stack_digest, config_sha, [item["id"] for item in items])
     ledger = open_ledger(layout.state_dir / f"libro-{cfg.name}.json", cfg.budget_usd, reset_budget)
-    folder = _new_folder(layout.results_dir, cfg.name)
+    folder = Path(resume["carpeta"]) if resume is not None else _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,
-                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec)
-    _write_start(sess, branch, commit)
+                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec, config_path=Path(config_path),
+                   config_sha=config_sha)
+    if resume is None:
+        _write_start(sess, branch, commit)
+    else:
+        _archive_stop(folder)
     return sess
 
 
@@ -220,6 +290,75 @@ def _quota_stop(sess, error, where):
     return False
 
 
+def _claude_streak(sess, error):
+    """Racha de errores seguidos de claude de pago: al llegar al límite, para el experimento. True si la alcanzó."""
+    if sess.ledger.note_claude(error) < CONSECUTIVE_ERRORS:
+        return False
+    if not _stopped(sess):
+        _stop(sess, f"{CONSECUTIVE_ERRORS} errores seguidos de claude: {error[:200]}")
+    return True
+
+
+def _counts(folder):
+    """Lo hecho: respuestas finales medidas y buscadores válidos por enfoque (sin errores)."""
+    data = report.read_folder(folder)
+    valid = Counter(r["approach"] for r in data["runs"] if r.get("error") is None and r.get("respuesta") is not None)
+    return {"respuestas_finales": sum(f["answer"] is not None for f in data["finals"]), "buscadores_validos": dict(valid)}
+
+
+def _state(sess, started, reason=None, counts=None):
+    """Lo que hace falta para continuar en la misma carpeta: se escribe al empezar la tanda y al parar."""
+    return {"config": str(sess.config_path), "config_sha256": sess.config_sha, "mode": sess.mode, "carpeta": str(sess.folder),
+            "huella": sess.settings.odin_commit, "stack_digest": sess.settings.stack_digest,
+            "motivo": reason, "renovacion": tanda.renewal_time(reason), "fecha_tanda": started, "recuentos": counts}
+
+
+def _open_batch(sess):
+    """Antes de la primera llamada de pago, el estado de reanudación ya existe: un corte de golpe deja algo que reanudar.
+    La tanda se anota en batches.json de la carpeta."""
+    now = datetime.now().isoformat(timespec="seconds")
+    sess.charges_start = len(sess.ledger.charges)
+    batches = tanda.read_batches(sess.folder)
+    batches.append({"inicio": now, "fin": None, "motivo": None, "llamadas_pago": None})
+    tanda.write_batches(sess.folder, batches)
+    tanda.save_state(sess.state_file, _state(sess, now))
+
+
+def _batch_reason(sess, done):
+    if _stopped(sess):
+        return sess.stop_file.read_text(encoding="utf-8").strip()
+    return "completa" if done else "interrumpida"
+
+
+def _close_batch_record(sess, reason):
+    batches = tanda.read_batches(sess.folder)
+    batches[-1].update(fin=datetime.now().isoformat(timespec="seconds"), motivo=reason,
+                       llamadas_pago=len(sess.ledger.charges) - sess.charges_start)
+    tanda.write_batches(sess.folder, batches)
+
+
+def _started_date(sess):
+    """Fecha de inicio de la tanda, guardada al abrirla; si el estado se perdió o está dañado, la de ahora."""
+    try:
+        state = tanda.read_state(sess.state_file)
+    except ValueError:
+        state = None
+    return (state or {}).get("fecha_tanda") or datetime.now().isoformat(timespec="seconds")
+
+
+def _finish_batch(sess, done):
+    """Al parar, el estado de reanudación guarda el motivo, la hora de renovación y lo hecho; al terminar completo, se borra.
+    En ambos casos la tanda se cierra en batches.json."""
+    reason = _batch_reason(sess, done)
+    _close_batch_record(sess, reason)
+    if done and not _stopped(sess):
+        tanda.delete_state(sess.state_file)
+    else:
+        started = _started_date(sess)
+        tanda.save_state(sess.state_file, _state(sess, started, reason, _counts(sess.folder)))
+    report.rebuild(sess.folder, sess.layout)  # el resumen ya lleva la tanda cerrada
+
+
 def _exit_code(sess):
     return 2 if _stopped(sess) else 0
 
@@ -240,6 +379,17 @@ def _merged(records, cached):
     key = lambda r: (r["id"], r["approach"], r["replica"])
     seen = {key(r) for r in records}
     return [*records, *(r for r in cached if key(r) not in seen)]
+
+
+def _preflight(sess, sin_prueba):
+    """Llamada de prueba antes del primer grupo. Si falla, PARADA.txt y ningún grupo se lanza. True si se puede seguir."""
+    if sin_prueba:
+        return True
+    error = preflight.run_preflight(sess.layout.claude_bin, sess.cfg.searchers[0].model, sess.layout.timeout, sess.ledger)
+    if error is None:
+        return True
+    _stop(sess, f"la llamada de prueba falló: {error}")
+    return False
 
 
 def _pool(sess, specs, settings, sink):
@@ -294,10 +444,11 @@ def _composed(sess, item, runs):
     key = None if None in usable else _final_key(sess, item, usable)
     hit = None if key is None else sess.cache.get(key)
     if hit is not None:
-        return {**hit, "coste_usd": 0.0, "cached": True}
+        return {**hit, "cached": True}  # conserva su coste original: el gasto real lo excluye por «cached»
     record = _compose_paid(sess, item, runs)
     sess.ledger.charge(record.get("coste_usd"))
     _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
+    _claude_streak(sess, record.get("error"))
     if key is not None:
         sess.cache.put(key, record)
     return {**record, "cached": False}
@@ -372,7 +523,7 @@ def _verdict_key(sess, index, spec, rubric, item, answer):
 def _cached_verdict(sess, index, spec, rubric, item, answer):
     """Veredicto guardado con esta misma configuración: sale a coste 0, así que no necesita presupuesto."""
     hit = sess.cache.get(_verdict_key(sess, index, spec, rubric, item, answer))
-    return None if hit is None else {**hit, "coste_usd": 0.0, "cached": True}
+    return None if hit is None else {**hit, "cached": True}
 
 
 def _call_judge(sess, index, spec, rubric, item, answer):
@@ -436,7 +587,8 @@ def _charge_judge(sess, spec, record, item):
         return False
     sess.ledger.charge(record.get("coste_usd"))
     quota = _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
-    return quota or not sess.ledger.can_launch()
+    streak = _claude_streak(sess, record.get("error"))
+    return quota or streak or not sess.ledger.can_launch()
 
 
 def judge_stage(sess, finals, verdicts):
@@ -475,17 +627,22 @@ def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
     report.rebuild(sess.folder, sess.layout)
 
 
-def run_experiment(config_path, layout, reset_budget=False):
-    sess = prepare(config_path, layout, reset_budget=reset_budget)
+def run_experiment(config_path, layout, reset_budget=False, sin_prueba=False, resume=None):
+    sess = prepare(config_path, layout, reset_budget=reset_budget, resume=resume)
+    _open_batch(sess)
     runs, finals, verdicts = [], [], []
+    done = False
     try:
-        _pool(sess, sess.cfg.searchers, sess.settings, runs)
+        if _preflight(sess, sin_prueba):
+            _pool(sess, sess.cfg.searchers, sess.settings, runs)
         if not _stopped(sess):
             answer_stage(sess, runs, finals)
         if finals:  # también con parada: los veredictos guardados no cuestan nada y se sirven igual
             judge_stage(sess, finals, verdicts)
+        done = True
     finally:
         _write_outputs(sess, runs, finals, verdicts)
+        _finish_batch(sess, done)
     return _exit_code(sess)
 
 
@@ -517,6 +674,13 @@ def _turn_runs(sess, sink):
             break
 
 
+def _noise_band(default):
+    """Mitad del intervalo de acierto de single por defecto; None si esa fila no es válida o no tiene acierto."""
+    if not default["valid"] or default["accuracy_min"] is None or default["accuracy_max"] is None:
+        return None
+    return (default["accuracy_max"] - default["accuracy_min"]) / 2
+
+
 def _curves(sess, runs, turn_runs):
     score = lambda item, answer: scoring.is_correct(item, answer, sess.ctx)
     draws, seed, items = sess.sweep.draws, sess.seed, sess.items
@@ -531,22 +695,55 @@ def _curves(sess, runs, turn_runs):
         turn_rows.append({**curve(by_question, items, score, combine.single, [{"main": 1}], 1, seed)[0],
                           "max_turns": turns})
     default = curve(main, items, score, _single_run, [{"main": 1}], draws, seed)[0]
-    variation = (default["accuracy_max"] - default["accuracy_min"]) / 2
+    variation = _noise_band(default)
     mix_rows = [{**row, "supera_single": beats_single_frontier(row, turn_rows, variation)} for row in multi_rows]
     mix_rows += [{**row, "supera_single": None} for row in single_mix_rows]
     return {"variacion": variation, "mezclas": mix_rows, "single": turn_rows, "single_por_defecto": default}
 
 
-def sweep_experiment(config_path, layout, reset_budget=False):
-    sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget)
+def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False, resume=None):
+    sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget, resume=resume)
+    _open_batch(sess)
     runs, turn_runs = [], []
+    done = False
     try:
-        _pool(sess, sess.cfg.searchers, sess.settings, runs)
+        if _preflight(sess, sin_prueba):
+            _pool(sess, sess.cfg.searchers, sess.settings, runs)
         if not _stopped(sess):
             _turn_runs(sess, turn_runs)
         if not _stopped(sess):
             (sess.folder / "curvas.json").write_text(
                 json.dumps(_curves(sess, runs, turn_runs), ensure_ascii=False, indent=1), encoding="utf-8")
+        done = True
     finally:
         _write_outputs(sess, runs, [], [], turn_runs)
+        _finish_batch(sess, done)
     return _exit_code(sess)
+
+
+REQUIRED_STATE_FIELDS = ("mode", "carpeta", "huella", "stack_digest")
+
+
+def _read_saved_state(path):
+    """El estado guardado, o None si no hay. Un estado ilegible o incompleto se niega con un motivo en español."""
+    try:
+        state = tanda.read_state(path)
+    except ValueError as error:
+        raise ResumeError(f"el estado de reanudación está dañado ({error}): no se puede reanudar") from error
+    if state is not None and not isinstance(state, dict):
+        raise ResumeError("el estado de reanudación está dañado: no es un objeto: no se puede reanudar")
+    if state is not None and not all(field in state for field in REQUIRED_STATE_FIELDS):
+        raise ResumeError("el estado de reanudación está dañado: le faltan campos: no se puede reanudar")
+    return state
+
+
+def resume_experiment(config_path, layout):
+    """Reanuda el experimento desde su estado guardado: misma carpeta, lo hecho sale de la caché y la llamada de
+    prueba se repite. Sin estado, o con el código o la pila cambiados, se niega."""
+    name = load_config(Path(config_path), layout.banco).name
+    state = _read_saved_state(tanda.state_path(layout.state_dir, name))
+    if state is None:
+        raise ResumeError(f"no hay estado de reanudación para «{name}»: no hay nada que reanudar; "
+                          "lanza el experimento con «run» o «sweep»")
+    order = sweep_experiment if state["mode"] == "sweep" else run_experiment
+    return order(Path(config_path), layout, resume=state)

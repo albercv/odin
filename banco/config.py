@@ -42,6 +42,7 @@ class SampleSpec:
     size: int
     strata: str
     seed: int
+    include: tuple = ()  # preguntas obligatorias: siempre en la muestra, dentro de su tamaño
 
 
 @dataclass(frozen=True)
@@ -196,11 +197,21 @@ def _sample(raw: dict, mode: str) -> SampleSpec | None:
     seed = _need(table, "seed", "[sample]")
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise ConfigError("«seed» en [sample] debe ser un entero")
-    return SampleSpec(
-        size=_positive(table, "size", "[sample]", int),
-        strata=_text(table, "strata", "[sample]"),
-        seed=seed,
-    )
+    size = _positive(table, "size", "[sample]", int)
+    include = _include(table, size)
+    return SampleSpec(size=size, strata=_text(table, "strata", "[sample]"), seed=seed, include=include)
+
+
+def _include(table, size):
+    """«include» opcional: ids de preguntas obligatorias, sin repetir y dentro del tamaño de la muestra."""
+    include = table.get("include", [])
+    if not isinstance(include, list) or not all(isinstance(q, str) for q in include):
+        raise ConfigError("«include» en [sample] debe ser una lista de ids de pregunta")
+    if len(set(include)) != len(include):
+        raise ConfigError("«include» en [sample] repite alguna pregunta")
+    if len(include) > size:
+        raise ConfigError(f"«include» en [sample] tiene {len(include)} preguntas, más que «size» ({size})")
+    return tuple(include)
 
 
 def _check_battery(battery: str, mode: str) -> None:

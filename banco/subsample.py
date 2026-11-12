@@ -5,6 +5,7 @@ import statistics
 from bisect import bisect_left
 
 TOKEN_CLASSES = ("entrada", "salida", "cache_lectura", "cache_creacion")
+MAX_DISCARDED_SHARE = 0.05  # una mezcla con más pares pregunta-sorteo descartados por error no es válida
 
 
 def draw_subsets(runs_by_question, mix, draws, seed):
@@ -37,6 +38,8 @@ def _tokens_by_class(subset):
 
 
 def _percentiles(values):
+    if len(values) == 1:
+        return values[0], values[0]
     cuts = statistics.quantiles(values, n=100, method="inclusive")
     return cuts[49], cuts[94]
 
@@ -45,13 +48,28 @@ def _mean(values):
     return sum(values) / len(values)
 
 
+def _accuracy_stats(per_draw_accuracies):
+    known = [a for a in per_draw_accuracies if a is not None]
+    return (_mean(known) if known else None, min(known, default=None), max(known, default=None))
+
+
+def _has_error(subset):
+    return any(run.get("error") is not None for run in subset)
+
+
 def _accuracy(items, subset_by_question, score, combiner):
-    correct = 0
+    """Acierto de un sorteo sobre sus pares sin error, y cuántos pares descartó por error (no son fallos)."""
+    correct = measured = 0
     for item in items:
-        answer = combiner(subset_by_question[item["id"]])
+        subset = subset_by_question[item["id"]]
+        if _has_error(subset):
+            continue
+        measured += 1
+        answer = combiner(subset)
         if answer is not None and score(item, answer):
             correct += 1
-    return correct / len(items)
+    discarded = len(items) - measured
+    return (correct / measured if measured else None), discarded
 
 
 def curve(runs_by_question, items, score, combiner, mixes, draws, seed, extra_s=0.0):
@@ -63,25 +81,40 @@ def curve(runs_by_question, items, score, combiner, mixes, draws, seed, extra_s=
 
 def _curve_row(runs_by_question, items, score, combiner, mix, draws, seed, extra_s):
     per_draw = draw_subsets(runs_by_question, mix, draws, seed)
-    accuracies = [_accuracy(items, subsets, score, combiner) for subsets in per_draw]
-    subsets_all = [subset for subsets in per_draw for subset in subsets.values()]
-    tokens = [sum(_tokens_by_class(s).values()) for s in subsets_all]
-    costs = [sum((r.get("coste_usd") or 0) for r in s) for s in subsets_all]
-    latencies = [latency_of(s, extra_s) for s in subsets_all]
-    p50, p95 = _percentiles(latencies)
+    results = [_accuracy(items, subsets, score, combiner) for subsets in per_draw]
+    mean, low, high = _accuracy_stats([accuracy for accuracy, _ in results])
+    discarded = sum(d for _, d in results)
+    pairs = len(per_draw) * len(items)
     return {
         "mix": mix,
         "n": sum(mix.values()),
-        "accuracy_mean": _mean(accuracies),
-        "accuracy_min": min(accuracies),
-        "accuracy_max": max(accuracies),
-        "tokens_mean": _mean(tokens),
-        "cost_mean": _mean(costs),
+        "accuracy_mean": mean,
+        "accuracy_min": low,
+        "accuracy_max": high,
+        "invalidDraws": discarded,
+        "measuredPairs": pairs - discarded,
+        "valid": discarded <= MAX_DISCARDED_SHARE * pairs,
+        **_usage_stats(_measured_subsets(per_draw), extra_s),
+    }
+
+
+def _measured_subsets(per_draw):
+    """Subconjuntos de los pares medidos: un par con error no aporta tokens, coste ni latencia."""
+    return [subset for subsets in per_draw for subset in subsets.values() if not _has_error(subset)]
+
+
+def _usage_stats(subsets, extra_s):
+    """Tokens, coste y latencia de los subconjuntos medidos; None si no hay ninguno que medir."""
+    if not subsets:
+        return {"tokens_mean": None, "cost_mean": None, "latency_p50": None, "latency_p95": None,
+                "tokens_by_class_mean": {cls: None for cls in TOKEN_CLASSES}}
+    p50, p95 = _percentiles([latency_of(s, extra_s) for s in subsets])
+    return {
+        "tokens_mean": _mean([sum(_tokens_by_class(s).values()) for s in subsets]),
+        "cost_mean": _mean([sum((r.get("coste_usd") or 0) for r in s) for s in subsets]),
         "latency_p50": p50,
         "latency_p95": p95,
-        "tokens_by_class_mean": {
-            cls: _mean([_tokens_by_class(s)[cls] for s in subsets_all]) for cls in TOKEN_CLASSES
-        },
+        "tokens_by_class_mean": {cls: _mean([_tokens_by_class(s)[cls] for s in subsets]) for cls in TOKEN_CLASSES},
     }
 
 
@@ -106,7 +139,12 @@ def _frontier_at(points, x):
 
 
 def beats_single_frontier(row, single_rows, variation):
+    """Solo filas válidas: una mezcla no válida no tiene veredicto y las filas no válidas no definen la frontera."""
     if not single_rows:
         raise ValueError("hacen falta filas de un solo buscador para la frontera")
-    points = sorted((r["tokens_mean"], r["accuracy_mean"]) for r in single_rows)
+    valid_singles = [r for r in single_rows if r["valid"] and r["accuracy_mean"] is not None and r["tokens_mean"] is not None]
+    if (variation is None or not row["valid"] or row["accuracy_mean"] is None or row["tokens_mean"] is None
+            or not valid_singles):
+        return None
+    points = sorted((r["tokens_mean"], r["accuracy_mean"]) for r in valid_singles)
     return row["accuracy_mean"] > _frontier_at(points, row["tokens_mean"]) + variation

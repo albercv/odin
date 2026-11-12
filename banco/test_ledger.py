@@ -74,5 +74,28 @@ class PersistedLedgerTest(unittest.TestCase):
         self.assertAlmostEqual(json.loads(archived[0].read_text(encoding="utf-8"))["total_usd"], 0.5)
 
 
+
+class ClaudeErrorStreakTest(unittest.TestCase):
+    """La racha de errores seguidos de claude de pago: un éxito la pone a 0; el límite es 3."""
+
+    def test_three_errors_in_a_row_count_up_and_a_success_resets(self):
+        ledger = Ledger(100.0)
+        self.assertEqual([ledger.note_claude("fallo") for _ in range(3)], [1, 2, 3])
+        self.assertEqual(ledger.note_claude(None), 0)
+        self.assertEqual(ledger.note_claude("fallo"), 1)
+
+    def test_limit_is_three(self):
+        from banco.ledger import CONSECUTIVE_ERRORS
+        self.assertEqual(CONSECUTIVE_ERRORS, 3)
+
+
+class ChargeNoteTest(unittest.TestCase):
+    def test_note_is_stored_with_the_charge(self):
+        ledger = Ledger(10.0)
+        ledger.charge(0.0, note="prueba sin coste notificado")
+        self.assertEqual(ledger.charges[0]["nota"], "prueba sin coste notificado")
+        self.assertTrue(ledger.can_launch())  # una prueba sin coste no bloquea el libro
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,9 @@ class BudgetAlreadySpent(Exception):
     """El libro del experimento ya alcanzó el tope (o tiene un coste desconocido): la orden no arranca."""
 
 
+CONSECUTIVE_ERRORS = 3  # errores seguidos de claude de pago que paran el experimento
+
+
 def _numeric(cost):
     return isinstance(cost, (int, float)) and not isinstance(cost, bool)
 
@@ -26,6 +29,7 @@ class Ledger:
         self.spent = 0.0
         self.unknown = 0
         self.charges = []
+        self.streak = 0  # errores seguidos de claude de pago (buscadores, redactor y jueces de Claude)
         self.lock = threading.Lock()
         if self.path is not None and self.path.exists():
             self._load()
@@ -49,15 +53,26 @@ class Ledger:
         with self.lock:
             return self.unknown == 0 and self.spent < self.cap
 
-    def charge(self, cost):
-        """Suma un coste real. Un coste que no es un número cuenta como desconocido, no como 0."""
+    def note_claude(self, error):
+        """Racha de errores seguidos de claude de pago: un error suma y un éxito (error None) la pone a 0.
+        Devuelve la racha. Los aciertos de caché y los jueces de Ollama no llegan aquí."""
+        with self.lock:
+            self.streak = self.streak + 1 if error else 0
+            return self.streak
+
+    def charge(self, cost, note=None):
+        """Suma un coste real. Un coste que no es un número cuenta como desconocido, no como 0; solo una llamada
+        marcada con `note` (la prueba sin coste notificado) puede anotarse como 0 con su motivo."""
         with self.lock:
             if _numeric(cost):
                 self.spent += cost
             else:
                 self.unknown += 1
                 cost = None
-            self.charges.append({"fecha": datetime.now().isoformat(timespec="seconds"), "coste_usd": cost})
+            entry = {"fecha": datetime.now().isoformat(timespec="seconds"), "coste_usd": cost}
+            if note is not None:
+                entry["nota"] = note
+            self.charges.append(entry)
             if self.path is not None:
                 self._save()
 

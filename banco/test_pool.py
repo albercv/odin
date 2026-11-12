@@ -237,5 +237,27 @@ class PoolTest(unittest.TestCase):
         self.assertNotEqual(before, after)
 
 
+    def test_three_consecutive_claude_errors_stop_the_pool(self):
+        with self.assertRaises(PoolStopped):
+            self._run(specs=(SearcherSpec("main", 5, "haiku"),), items=ITEMS[:1], FAKE_CONTADOR=str(self.counter),
+                      FAKE_MODO_DESDE="1", FAKE_MODO_DESDE_MODO="error")
+        self.assertEqual(_launches(self.counter), 3)
+        self.assertIn("3 errores seguidos de claude: fallo cualquiera", self._stop_text())
+
+    def test_isolated_errors_mixed_with_successes_do_not_stop(self):
+        real = ejecutar.responder
+        outcomes = itertools.cycle([True, False])
+
+        def alternate(item, carga, args, temp_dir, text=""):
+            record = real(item, carga, args, temp_dir, text)
+            if next(outcomes):
+                record["error"], record["respuesta"] = "fallo aislado", None
+            return record
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=alternate):
+            records = self._run(specs=(SearcherSpec("main", 10, "haiku"),), items=ITEMS[:1])
+        self.assertEqual(len(records), 10)
+        self.assertFalse(self.stop.exists())
+
 if __name__ == "__main__":
     unittest.main()

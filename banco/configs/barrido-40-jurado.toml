@@ -3,7 +3,7 @@ name = "barrido-40-jurado"
 archives = ["ficticio"]
 battery = "desarrollo"
 mode = "explore"
-sample = { size = 40, strata = "tipo", seed = 7 }
+sample = { size = 40, strata = "tipo", seed = 7, include = ["Q138", "Q147", "Q153"] }
 repetitions = 1
 budgetUsd = 0.6
 concurrency = 4

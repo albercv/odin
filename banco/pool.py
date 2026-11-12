@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from banco.cache import RunCache, run_key
 from banco.config import SearcherSpec
-from banco.ledger import Ledger
+from banco.ledger import CONSECUTIVE_ERRORS, Ledger
 from banco.medir_path import ejecutar
 
 
@@ -98,6 +98,13 @@ def _claim_launch(state):
         return True
 
 
+def _count_claude(state, record):
+    """Racha de errores seguidos de claude de pago: al llegar al límite, el grupo para sin lanzar más."""
+    streak = state.ledger.note_claude(record.get("error"))
+    if streak >= CONSECUTIVE_ERRORS and not state.stop.is_set():
+        _halt(state, f"{CONSECUTIVE_ERRORS} errores seguidos de claude: {record['error'][:200]}")
+
+
 def _process_job(job, carga, cache, temp_dir, state):
     previous = cache.get(job.key)
     if previous is not None:
@@ -111,6 +118,8 @@ def _process_job(job, carga, cache, temp_dir, state):
         raise
     if _never_launched(record):
         record["coste_usd"] = 0.0
+    else:
+        _count_claude(state, record)
     state.ledger.charge(record.get("coste_usd"))
     if record["error"] and ejecutar.LIMITE.search(record["error"]):
         _halt(state, f"cuota o límite en {job.item['id']}: {record['error'][:200]}")
