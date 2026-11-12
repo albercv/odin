@@ -105,7 +105,7 @@ def judges_block(items, finals, verdicts):
     Los «no consta» no los juzga el jurado: se cuentan aparte y las de sin clave van a revisión manual."""
     jury = {v["id"]: v["jury"] for v in verdicts}
     not_judged = [f for f in finals if judge.is_no_consta(f["answer"])]
-    judged = [f for f in finals if f not in not_judged and jury.get(f["id"]) is not None]
+    judged = [f for f in finals if not judge.is_no_consta(f["answer"]) and jury.get(f["id"]) is not None]
     keyed = [f for f in judged if _keyed(items[f["id"]])]
     judge_keyed = [jury[f["id"]] for f in keyed]
     truth = [bool(f["correcta_script"]) for f in keyed]
