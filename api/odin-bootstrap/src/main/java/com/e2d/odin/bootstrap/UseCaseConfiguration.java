@@ -49,6 +49,7 @@ import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
@@ -82,6 +83,7 @@ import com.e2d.odin.application.topic.ListDocumentTopics;
 import com.e2d.odin.application.topic.ListTopics;
 import com.e2d.odin.application.topic.ReviewDocumentTopics;
 import com.e2d.odin.application.topic.UpdateTopic;
+import com.e2d.odin.application.usage.GetDeliveredVolume;
 import com.e2d.odin.application.usage.GetUsageStats;
 import com.e2d.odin.application.usage.ListGaps;
 import com.e2d.odin.application.shared.InstallationSettings;
@@ -197,6 +199,12 @@ public class UseCaseConfiguration {
     GetUsageStats getUsageStats(OrganizationRepository organizations, UsageStatistics statistics, Clock clock,
             @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
         return new GetUsageStats(organizations, statistics, clock, zone);
+    }
+
+    @Bean
+    GetDeliveredVolume getDeliveredVolume(OrganizationRepository organizations, DeliveryMeter meter, Clock clock,
+            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new GetDeliveredVolume(organizations, meter, clock, zone);
     }
 
     @Bean

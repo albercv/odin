@@ -660,6 +660,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/delivered-volume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["deliveredVolume"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/cards": {
         parameters: {
             query?: never;
@@ -1225,6 +1241,17 @@ export interface components {
             times: number;
             /** Format: date */
             lastAskedOn: string;
+        };
+        DeliveredVolumeView: {
+            month: string;
+            totals: components["schemas"]["DeliveryTotalView"][];
+        };
+        DeliveryTotalView: {
+            tool: string;
+            /** Format: int64 */
+            calls: number;
+            /** Format: int64 */
+            bytes: number;
         };
     };
     responses: never;
@@ -2553,6 +2580,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GapView"][];
+                };
+            };
+        };
+    };
+    deliveredVolume: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveredVolumeView"];
                 };
             };
         };

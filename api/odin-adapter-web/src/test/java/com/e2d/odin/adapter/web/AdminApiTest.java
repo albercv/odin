@@ -23,6 +23,7 @@ import com.e2d.odin.application.usage.GapGroup;
 import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.application.usage.TaggingCounts;
+import com.e2d.odin.application.usage.WorkerTool;
 import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentStatus;
@@ -877,5 +878,22 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$[0].lastAskedOn").value("2026-11-08"))
                 .andExpect(jsonPath("$[0].authorId").doesNotExist()).andExpect(jsonPath("$[0].userId").doesNotExist())
                 .andExpect(jsonPath("$[0].askedAt").doesNotExist());
+    }
+    @Test
+    void deliveredVolumeRoute() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        w.meter.record(company, WorkerTool.SEARCH, 120, w.clock.instant());
+        w.meter.record(company, WorkerTool.SEARCH, 30, w.clock.instant());
+        String url = "/v1/admin/companies/" + company.value() + "/delivered-volume";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.month").value("2026-11"))
+                .andExpect(jsonPath("$.totals", hasSize(WorkerTool.values().length)))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].calls").value(2))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(150))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'MY_CARDS')].bytes").value(0))
+                .andExpect(jsonPath("$.totals[0].userId").doesNotExist());
+        mvc.perform(get(url + "?month=2024-01").cookie(admin)).andExpect(status().isBadRequest());
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
     }
 }

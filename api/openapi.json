@@ -1802,6 +1802,40 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/delivered-volume" : {
+      "get" : {
+        "tags" : [ "usage-controller" ],
+        "operationId" : "deliveredVolume",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeliveredVolumeView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/cards" : {
       "get" : {
         "tags" : [ "admin-card-controller" ],
@@ -3295,6 +3329,38 @@
           }
         },
         "required" : [ "kind", "lastAskedOn", "text", "times" ]
+      },
+      "DeliveredVolumeView" : {
+        "type" : "object",
+        "properties" : {
+          "month" : {
+            "type" : "string"
+          },
+          "totals" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DeliveryTotalView"
+            }
+          }
+        },
+        "required" : [ "month", "totals" ]
+      },
+      "DeliveryTotalView" : {
+        "type" : "object",
+        "properties" : {
+          "tool" : {
+            "type" : "string"
+          },
+          "calls" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "bytes" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "bytes", "calls", "tool" ]
       }
     }
   }

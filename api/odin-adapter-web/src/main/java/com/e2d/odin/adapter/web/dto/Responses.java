@@ -12,6 +12,8 @@ import com.e2d.odin.application.topic.TaggingStatusReport;
 import com.e2d.odin.application.topic.TopicLabel;
 import com.e2d.odin.application.usage.CardCounts;
 import com.e2d.odin.application.usage.CompanyUsage;
+import com.e2d.odin.application.usage.DeliveredVolumeReport;
+import com.e2d.odin.application.usage.DeliveryTotal;
 import com.e2d.odin.application.usage.DocumentCounts;
 import com.e2d.odin.application.usage.GapGroup;
 import com.e2d.odin.application.usage.PersonUsage;
@@ -301,6 +303,20 @@ public final class Responses {
     public record GapView(String text, String kind, int times, LocalDate lastAskedOn) {
         public static GapView from(GapGroup g) {
             return new GapView(g.text(), g.kind().name(), g.times(), g.lastAskedOn());
+        }
+    }
+
+    public record DeliveryTotalView(String tool, long calls, long bytes) {
+        static DeliveryTotalView from(DeliveryTotal t) {
+            return new DeliveryTotalView(t.tool().name(), t.calls(), t.bytes());
+        }
+    }
+
+    /** Volumen entregado a la IA del trabajador: por herramienta, nunca por persona. */
+    public record DeliveredVolumeView(String month, List<DeliveryTotalView> totals) {
+        public static DeliveredVolumeView from(DeliveredVolumeReport report) {
+            return new DeliveredVolumeView(report.month().toString(),
+                    report.totals().stream().map(DeliveryTotalView::from).toList());
         }
     }
 

@@ -16,6 +16,7 @@ import com.e2d.odin.application.usage.CompanyUsage;
 import com.e2d.odin.application.usage.DocumentCounts;
 import com.e2d.odin.application.usage.GapGroup;
 import com.e2d.odin.application.usage.QuestionCounts;
+import com.e2d.odin.application.usage.WorkerTool;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.knowledge.CardStatus;
@@ -422,5 +423,21 @@ class IsolationTest extends WebTestSupport {
         mvc.perform(get("/v1/admin/companies/" + b.value() + "/usage-stats").cookie(group))
                 .andExpect(jsonPath("$.company.questions.search").value(1));
         mvc.perform(get("/v1/admin/companies/" + b.value() + "/gaps").cookie(group)).andExpect(jsonPath("$", hasSize(0)));
+    }
+    @Test
+    void otherCompanyAdminCannotReadDeliveredVolume() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        w.meter.record(a, WorkerTool.SEARCH, 500, w.clock.instant());
+        w.meter.record(b, WorkerTool.SEARCH, 7, w.clock.instant());
+        String urlOfA = "/v1/admin/companies/" + a.value() + "/delivered-volume";
+        var group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+
+        mvc.perform(get(urlOfA).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(b)))).andExpect(status().isForbidden());
+        mvc.perform(get(urlOfA).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(a))))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(500));
+        mvc.perform(get(urlOfA).cookie(group)).andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(500));
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/delivered-volume").cookie(group))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(7));
     }
 }
