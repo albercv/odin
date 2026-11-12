@@ -72,6 +72,32 @@ Rama `task/administracion-grupo/codigos-migrados`, que sale de la tarea 2. Spec 
 - [ ] **Paso 2:** escribe `V11` e implementa `Company.codeReviewed`, el contrato, los tipos y el panel.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0. Commit «feat: códigos de empresa migrados por revisar».
 
+## Tarea 4: Selector de empresa en el menú y «Grupo» (B-008, B-009) · Haiku
+
+Rama `task/administracion-grupo/menu-grupo`. Petición del propietario, transmitida por el CEO el 2026-11-12. Solo panel.
+
+**Valores:**
+- **Administrador del grupo:** en el hueco de la empresa de la barra lateral, siempre un selector con la etiqueta «Empresa» y todas las empresas del grupo.
+  - Si no ha elegido ninguna, la primera opción es «Elige una empresa».
+  - Al elegir una, se abre «Empresa».
+  - La empresa actual queda a la vista.
+  - Si se crea o se renombra una empresa, la lista se actualiza.
+- **Administrador de empresa:** como hoy. Con una sola empresa, el nombre; con varias, el selector.
+- **Sin empresa elegida:** el aviso pasa a ser «Elige una empresa en el menú.».
+- **«Empresas» pasa a «Grupo»:** en el enlace del menú y en el título de la página. Los identificadores en inglés no cambian.
+- El selector sigue el estilo de `CompanySwitcher` sobre la barra oscura.
+
+- [ ] **Paso 1:** pruebas que fallan:
+  - `Sidebar.test.tsx`: `groupAdminAlwaysSeesTheSwitcherWithAllCompanies`, `noCompanyChosenShowsThePrompt` y `menuSaysGrupo`;
+  - `AppShell` o `CompanySwitcher`: `choosingACompanyOpensIt`;
+  - `Companies.test.tsx`: `pageTitleIsGrupo`.
+- [ ] **Paso 2:** implementa el selector y el cambio de nombre.
+- [ ] **Paso 3:**
+  - en `admin.spec.ts`, el administrador del grupo elige una empresa en el selector del menú, se abre «Empresa» con su nombre, y el menú dice «Grupo»;
+  - actualiza los selectores que buscaban «Empresas»;
+  - axe del selector del administrador del grupo en `visual.spec.ts`.
+- [ ] **Paso 4:** `make check` y `make demo` terminan con 0. Commit «feat: selector de empresa en el menú y «Grupo» (B-008, B-009)».
+
 ## Orden
 
 Las tareas van en serie. Revisión de la feature con Opus, centrada en los permisos de la tarea 1. Después, `make check` y `make demo` ejecutados por el CTO.
