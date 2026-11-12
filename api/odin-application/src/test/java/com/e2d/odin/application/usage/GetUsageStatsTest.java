@@ -31,7 +31,8 @@ class GetUsageStatsTest {
 
     @Test
     void returnsCompanyAndPeople() {
-        var counts = new CompanyUsage(new QuestionCounts(5, 2), 1, new CardCounts(3, 1, 1, 1, 0),
+        var counts = new CompanyUsage(new QuestionCounts(5, 2), 1,
+                new CardCounts(3, 0, Optional.of(new CardDecisions(1, 1, 1)), false),
                 new DocumentCounts(4, 3, 1, 0), Optional.empty());
         var ana = new PersonUsage(Optional.of(new UserId(UUID.randomUUID())), "Ana Pérez", Optional.of("7F3K-E2D"), 4, 1,
                 false);
@@ -64,7 +65,8 @@ class GetUsageStatsTest {
     @Test
     void adminOfAnotherCompanyIsForbidden() {
         var other = Actors.companyAdmin(Fixtures.company(orgs));
-        statistics.seed(company, new CompanyUsage(new QuestionCounts(9, 9), 9, new CardCounts(9, 9, 9, 9, 9),
+        statistics.seed(company, new CompanyUsage(new QuestionCounts(9, 9), 9,
+                new CardCounts(9, 9, Optional.empty(), false),
                 new DocumentCounts(9, 9, 9, 9), Optional.empty()), List.of());
 
         assertThatThrownBy(() -> usage.execute(other, company, Optional.empty())).isInstanceOf(ForbiddenException.class);

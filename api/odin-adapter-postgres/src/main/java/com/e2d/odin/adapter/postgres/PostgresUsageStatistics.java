@@ -1,10 +1,12 @@
 package com.e2d.odin.adapter.postgres;
 
 import com.e2d.odin.application.port.UsageStatistics;
-import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CardDecisions;
+import com.e2d.odin.application.usage.Disclosure;
 import com.e2d.odin.application.usage.CompanyUsage;
 import com.e2d.odin.application.usage.DocumentCounts;
 import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.GapReport;
 import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.application.usage.TaggingCounts;
@@ -45,7 +47,8 @@ public class PostgresUsageStatistics implements UsageStatistics {
             SELECT count(*) AS saved, count(*) FILTER (WHERE decision = 'APPROVE') AS approved,
                 count(*) FILTER (WHERE decision = 'CORRECT') AS corrected,
                 count(*) FILTER (WHERE status = 'REJECTED') AS rejected,
-                count(*) FILTER (WHERE status = 'PENDING') AS pending
+                count(*) FILTER (WHERE status = 'PENDING') AS pending,
+                count(DISTINCT author_id) AS authors
             FROM knowledge_card WHERE %s AND %s""".formatted(
             Sql.inScope("company_id") + IN_RANGE.formatted("created_at", "created_at"),
             Sql.inVisibleProjects("project_id"));
@@ -76,13 +79,18 @@ public class PostgresUsageStatistics implements UsageStatistics {
             Sql.inScope("company_id") + IN_RANGE.formatted("asked_at", "asked_at"),
             Sql.inScope("company_id") + IN_RANGE.formatted("created_at", "created_at"),
             Sql.inVisibleProjects("project_id"), Sql.inScope("m.company_id"));
-    /** Sin autor en ninguna columna. El texto del grupo es el menor de los que lo forman. */
+    private static final String GAP_SCOPE = "hit_count = 0 AND "
+            + Sql.inScope("company_id") + IN_RANGE.formatted("asked_at", "asked_at");
+    private static final String GAP_ASKERS = "SELECT count(DISTINCT author_id) FROM question_record WHERE " + GAP_SCOPE;
+    /**
+     * Sin autor en ninguna columna. Solo devuelve filas si las preguntaron al menos {@code :minPeople} personas
+     * distintas, comprobado en la misma consulta. El texto del grupo es el menor de los que lo forman.
+     */
     private static final String GAPS = """
             SELECT min(text) AS text, kind, count(*) AS times, (max(asked_at) AT TIME ZONE :zone)::date AS last_day
-            FROM question_record WHERE hit_count = 0 AND %s
+            FROM question_record WHERE %s AND (%s) >= :minPeople
             GROUP BY btrim(regexp_replace(lower(unaccent(text)), '\\s+', ' ', 'g')), kind
-            ORDER BY max(asked_at) DESC, min(text) LIMIT :limit""".formatted(
-            Sql.inScope("company_id") + IN_RANGE.formatted("asked_at", "asked_at"));
+            ORDER BY max(asked_at) DESC, min(text) LIMIT :limit""".formatted(GAP_SCOPE, GAP_ASKERS);
 
     private record Person(User user, boolean departed, int questions, int cards) {
         PersonUsage view(String companyCode) {
@@ -102,9 +110,9 @@ public class PostgresUsageStatistics implements UsageStatistics {
         return read(companyId, month, zone, (jdbc, scope) -> {
             int[] q = counts(spec(jdbc, QUESTIONS, scope, month, zone), "search", "similar_cases", "without_results");
             int[] c = counts(spec(jdbc, CARDS, scope, month, zone), "saved", "approved", "corrected", "rejected",
-                    "pending");
+                    "pending", "authors");
             int[] d = counts(spec(jdbc, DOCUMENTS, scope, month, zone), "uploaded", "ready", "failed", "waiting");
-            return new CompanyUsage(new QuestionCounts(q[0], q[1]), q[2], new CardCounts(c[0], c[1], c[2], c[3], c[4]),
+            return new CompanyUsage(new QuestionCounts(q[0], q[1]), q[2], Disclosure.cards(c[0], c[4], new CardDecisions(c[1], c[2], c[3]), c[5]),
                     new DocumentCounts(d[0], d[1], d[2], d[3]), tagging(jdbc, scope));
         });
     }
@@ -119,9 +127,13 @@ public class PostgresUsageStatistics implements UsageStatistics {
     }
 
     @Override
-    public List<GapGroup> gaps(CompanyId companyId, YearMonth month, ZoneId zone, int limit) {
-        return read(companyId, month, zone, (jdbc, scope) -> spec(jdbc, GAPS, scope, month, zone)
-                .param("limit", limit).query((rs, n) -> gap(rs)).list());
+    public GapReport gaps(CompanyId companyId, YearMonth month, ZoneId zone, int limit) {
+        return read(companyId, month, zone, (jdbc, scope) -> {
+            List<GapGroup> groups = spec(jdbc, GAPS, scope, month, zone).param("limit", limit)
+                    .param("minPeople", Disclosure.MIN_PEOPLE_FOR_GAPS).query((rs, n) -> gap(rs)).list();
+            int askers = spec(jdbc, GAP_ASKERS, scope, month, zone).query(Integer.class).single();
+            return Disclosure.gaps(groups, askers);
+        });
     }
 
     private <T> T read(CompanyId companyId, YearMonth month, ZoneId zone, Reader<T> reader) {
@@ -170,12 +182,9 @@ public class PostgresUsageStatistics implements UsageStatistics {
                         .thenComparing(p -> p.user().personCode()))
                 .map(p -> p.view(companyCode)).toList();
         List<Person> departed = people.stream().filter(Person::departed).toList();
-        if (departed.isEmpty()) {
-            return live;
-        }
-        PersonUsage row = PersonUsage.departed(departed.stream().mapToInt(Person::questions).sum(),
+        var row = Disclosure.departedRow(departed.size(), departed.stream().mapToInt(Person::questions).sum(),
                 departed.stream().mapToInt(Person::cards).sum());
-        return java.util.stream.Stream.concat(live.stream(), java.util.stream.Stream.of(row)).toList();
+        return java.util.stream.Stream.concat(live.stream(), row.stream()).toList();
     }
 
     private static Person person(ResultSet rs) throws SQLException {

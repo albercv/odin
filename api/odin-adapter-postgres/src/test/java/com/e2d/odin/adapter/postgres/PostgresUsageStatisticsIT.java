@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.identity.MemberView;
 import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CardDecisions;
 import com.e2d.odin.application.usage.CompanyUsage;
 import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.GapReport;
 import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Membership;
@@ -72,6 +74,12 @@ class PostgresUsageStatisticsIT extends AbstractPostgresIT {
         save(company, author, IN_NOVEMBER, status, Optional.of(review));
     }
 
+    /** Tres personas distintas de la empresa, el mínimo para que los huecos y el desglose de fichas se enseñen. */
+    private List<UserId> threePeople(CompanyId company) {
+        return List.of(person(company, "Ana", "Pérez"), person(company, "Beatriz", "Mora"),
+                person(company, "Carlos", "Ruiz"));
+    }
+
     private List<PersonUsage> people(CompanyId company) {
         return usage.peopleUsage(company, NOVEMBER, MADRID);
     }
@@ -96,17 +104,36 @@ class PostgresUsageStatisticsIT extends AbstractPostgresIT {
     @Test
     void countsCardsByStatusAtCompanyLevelOnly() {
         CompanyId company = newCompany();
-        UserId ana = person(company, "Ana", "Pérez");
+        List<UserId> authors = threePeople(company);
+        UserId ana = authors.get(0);
         saveCard(company, ana, IN_NOVEMBER);
-        saveDecided(company, ana, ReviewDecision.APPROVE, CardStatus.APPROVED);
-        saveDecided(company, ana, ReviewDecision.CORRECT, CardStatus.APPROVED);
+        saveDecided(company, authors.get(1), ReviewDecision.APPROVE, CardStatus.APPROVED);
+        saveDecided(company, authors.get(2), ReviewDecision.CORRECT, CardStatus.APPROVED);
         saveDecided(company, ana, ReviewDecision.REJECT, CardStatus.REJECTED);
         saveCard(company, ana, Instant.parse("2026-10-10T09:00:00Z"));
 
-        assertThat(usage.companyUsage(company, NOVEMBER, MADRID).cards()).isEqualTo(new CardCounts(4, 1, 1, 1, 1));
-        assertThat(people(company)).singleElement().satisfies(p -> assertThat(p.cardsSaved()).isEqualTo(4));
+        assertThat(usage.companyUsage(company, NOVEMBER, MADRID).cards()).isEqualTo(
+                new CardCounts(4, 1, Optional.of(new CardDecisions(1, 1, 1)), false));
+        assertThat(people(company)).filteredOn(p -> p.userId().equals(Optional.of(ana)))
+                .singleElement().satisfies(p -> assertThat(p.cardsSaved()).isEqualTo(2));
         assertThat(PersonUsage.class.getRecordComponents()).extracting(c -> c.getName()).containsExactly("userId",
                 "displayName", "memberCode", "questions", "cardsSaved", "departed");
+    }
+
+    @Test
+    void cardBreakdownIsWithheldWithTwoAuthorsAndShownWithThree() {
+        CompanyId company = newCompany();
+        List<UserId> authors = threePeople(company);
+        saveDecided(company, authors.get(0), ReviewDecision.APPROVE, CardStatus.APPROVED);
+        saveDecided(company, authors.get(1), ReviewDecision.REJECT, CardStatus.REJECTED);
+
+        assertThat(usage.companyUsage(company, NOVEMBER, MADRID).cards())
+                .isEqualTo(new CardCounts(2, 0, Optional.empty(), true));
+
+        saveDecided(company, authors.get(2), ReviewDecision.CORRECT, CardStatus.APPROVED);
+
+        assertThat(usage.companyUsage(company, NOVEMBER, MADRID).cards())
+                .isEqualTo(new CardCounts(3, 0, Optional.of(new CardDecisions(1, 1, 1)), false));
     }
 
     @Test
@@ -183,10 +210,8 @@ class PostgresUsageStatisticsIT extends AbstractPostgresIT {
         ask(company, bea, "b", 1, IN_NOVEMBER);
         ask(company, carlos, "c", 1, IN_NOVEMBER);
         saveCard(company, carlos, IN_NOVEMBER);
-        memberships.delete(bea, company, IN_NOVEMBER);
-        memberships.delete(carlos, company, IN_NOVEMBER);
-        users.delete(bea, IN_NOVEMBER);
-        users.delete(carlos, IN_NOVEMBER);
+        depart(company, bea);
+        depart(company, carlos);
 
         List<PersonUsage> result = people(company);
 
@@ -197,16 +222,40 @@ class PostgresUsageStatisticsIT extends AbstractPostgresIT {
     }
 
     @Test
-    void gapsGroupIgnoringAccentsCaseAndSpaces() {
+    void departedRowIsDroppedWithOnePersonAndShownWithTwo() {
         CompanyId company = newCompany();
         UserId ana = person(company, "Ana", "Pérez");
-        ask(company, ana, "Cuánto cuesta  el AGUA", 0, Instant.parse("2026-11-03T09:00:00Z"));
-        ask(company, ana, "cuanto cuesta el agua", 0, Instant.parse("2026-11-05T09:00:00Z"));
-        ask(company, ana, " CUANTO   cuesta el agua ", 0, Instant.parse("2026-11-04T09:00:00Z"));
-        ask(company, ana, "otra cosa", 0, Instant.parse("2026-11-08T09:00:00Z"), QuestionKind.SIMILAR_CASES);
-        ask(company, ana, "con resultados", 4, Instant.parse("2026-11-09T09:00:00Z"));
+        UserId bea = person(company, "Beatriz", "Mora");
+        UserId carlos = person(company, "Carlos", "Ruiz");
+        ask(company, bea, "a", 1, IN_NOVEMBER);
+        ask(company, carlos, "c", 1, IN_NOVEMBER);
+        depart(company, bea);
 
-        List<GapGroup> gaps = usage.gaps(company, NOVEMBER, MADRID, 200);
+        assertThat(people(company)).extracting(PersonUsage::userId)
+                .containsExactly(Optional.of(ana), Optional.of(carlos));
+
+        depart(company, carlos);
+
+        assertThat(people(company)).hasSize(2).last().isEqualTo(PersonUsage.departed(2, 0));
+        assertThat(people(company).get(0).userId()).contains(ana);
+    }
+
+    private void depart(CompanyId company, UserId person) {
+        memberships.delete(person, company, IN_NOVEMBER);
+        users.delete(person, IN_NOVEMBER);
+    }
+
+    @Test
+    void gapsGroupIgnoringAccentsCaseAndSpaces() {
+        CompanyId company = newCompany();
+        List<UserId> askers = threePeople(company);
+        ask(company, askers.get(0), "Cuánto cuesta  el AGUA", 0, Instant.parse("2026-11-03T09:00:00Z"));
+        ask(company, askers.get(1), "cuanto cuesta el agua", 0, Instant.parse("2026-11-05T09:00:00Z"));
+        ask(company, askers.get(2), " CUANTO   cuesta el agua ", 0, Instant.parse("2026-11-04T09:00:00Z"));
+        ask(company, askers.get(0), "otra cosa", 0, Instant.parse("2026-11-08T09:00:00Z"), QuestionKind.SIMILAR_CASES);
+        ask(company, askers.get(0), "con resultados", 4, Instant.parse("2026-11-09T09:00:00Z"));
+
+        List<GapGroup> gaps = usage.gaps(company, NOVEMBER, MADRID, 200).groups();
 
         assertThat(gaps.get(0).text()).isEqualTo("otra cosa");
         assertThat(gaps.get(1).text()).isIn("Cuánto cuesta  el AGUA", "cuanto cuesta el agua",
@@ -214,20 +263,37 @@ class PostgresUsageStatisticsIT extends AbstractPostgresIT {
         assertThat(gaps).extracting(GapGroup::times).containsExactly(1, 3);
         assertThat(gaps).extracting(GapGroup::kind).containsExactly(QuestionKind.SIMILAR_CASES, QuestionKind.SEARCH);
         assertThat(gaps.get(1).lastAskedOn()).isEqualTo(LocalDate.of(2026, 11, 5));
-        assertThat(usage.gaps(company, NOVEMBER, MADRID, 1)).hasSize(1);
+        assertThat(usage.gaps(company, NOVEMBER, MADRID, 1).groups()).hasSize(1);
     }
 
     @Test
     void gapsHaveNoAuthorAndOnlyTheDay() {
         CompanyId company = newCompany();
-        UserId ana = person(company, "Ana", "Pérez");
-        ask(company, ana, "algo", 0, Instant.parse("2026-11-10T23:30:00Z"));
+        List<UserId> askers = threePeople(company);
+        askers.forEach(a -> ask(company, a, "algo", 0, Instant.parse("2026-11-10T23:30:00Z")));
 
-        GapGroup gap = usage.gaps(company, NOVEMBER, MADRID, 200).get(0);
+        GapGroup gap = usage.gaps(company, NOVEMBER, MADRID, 200).groups().get(0);
 
         assertThat(gap.lastAskedOn()).isEqualTo(LocalDate.of(2026, 11, 11));
         assertThat(GapGroup.class.getRecordComponents()).extracting(c -> c.getName())
                 .containsExactly("text", "kind", "times", "lastAskedOn");
+    }
+
+    @Test
+    void gapsAreWithheldWithTwoPeopleAndShownWithThree() {
+        CompanyId company = newCompany();
+        List<UserId> askers = threePeople(company);
+        ask(company, askers.get(0), "uno", 0, IN_NOVEMBER);
+        ask(company, askers.get(0), "dos", 0, IN_NOVEMBER);
+        ask(company, askers.get(1), "tres", 0, IN_NOVEMBER);
+
+        assertThat(usage.gaps(company, NOVEMBER, MADRID, 200)).isEqualTo(new GapReport(List.of(), true));
+
+        ask(company, askers.get(2), "cuatro", 0, IN_NOVEMBER);
+
+        GapReport shown = usage.gaps(company, NOVEMBER, MADRID, 200);
+        assertThat(shown.withheld()).isFalse();
+        assertThat(shown.groups()).hasSize(4);
     }
 
     @Test
@@ -249,21 +315,23 @@ class PostgresUsageStatisticsIT extends AbstractPostgresIT {
         assertThat(result.documents().uploaded()).isZero();
         assertThat(people(mine)).extracting(PersonUsage::displayName).containsExactly("Ana Pérez");
         assertThat(people(mine)).extracting(PersonUsage::questions).containsExactly(0);
-        assertThat(usage.gaps(mine, NOVEMBER, MADRID, 200)).isEmpty();
+        assertThat(usage.gaps(mine, NOVEMBER, MADRID, 200)).isEqualTo(new GapReport(List.of(), false));
     }
 
     @Test
     void monthBoundaryUsesInstallationZone() {
         CompanyId company = newCompany();
-        UserId ana = person(company, "Ana", "Pérez");
-        ask(company, ana, "madrugada de noviembre", 0, Instant.parse("2026-10-31T23:30:00Z"));
-        ask(company, ana, "madrugada de diciembre", 0, Instant.parse("2026-11-30T23:30:00Z"));
+        List<UserId> askers = threePeople(company);
+        for (UserId asker : askers) {
+            ask(company, asker, "madrugada de noviembre", 0, Instant.parse("2026-10-31T23:30:00Z"));
+            ask(company, asker, "madrugada de diciembre", 0, Instant.parse("2026-11-30T23:30:00Z"));
+        }
 
-        assertThat(usage.companyUsage(company, NOVEMBER, MADRID).questions().search()).isEqualTo(1);
-        assertThat(usage.gaps(company, NOVEMBER, MADRID, 200)).extracting(GapGroup::text)
+        assertThat(usage.companyUsage(company, NOVEMBER, MADRID).questions().search()).isEqualTo(3);
+        assertThat(usage.gaps(company, NOVEMBER, MADRID, 200).groups()).extracting(GapGroup::text)
                 .containsExactly("madrugada de noviembre");
-        assertThat(usage.companyUsage(company, NOVEMBER, ZoneId.of("UTC")).questions().search()).isEqualTo(1);
-        assertThat(usage.gaps(company, NOVEMBER, ZoneId.of("UTC"), 200)).extracting(GapGroup::text)
+        assertThat(usage.companyUsage(company, NOVEMBER, ZoneId.of("UTC")).questions().search()).isEqualTo(3);
+        assertThat(usage.gaps(company, NOVEMBER, ZoneId.of("UTC"), 200).groups()).extracting(GapGroup::text)
                 .containsExactly("madrugada de diciembre");
     }
 }

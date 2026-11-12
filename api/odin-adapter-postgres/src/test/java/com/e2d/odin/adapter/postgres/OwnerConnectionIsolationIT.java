@@ -281,8 +281,10 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         var zone = java.time.ZoneId.of("Europe/Madrid");
         var ownerUsage = new PostgresUsageStatistics(ownerTx);
         var ownerMeter = new PostgresDeliveryMeter(ownerTx, zone);
-        new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), a, pendingAuthor, "hueco secreto", 0,
-                NOW, QuestionKind.SEARCH));
+        for (int i = 0; i < 3; i++) {
+            new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), a, newUser(a), "hueco secreto", 0,
+                    NOW, QuestionKind.SEARCH));
+        }
         ownerMeter.record(a, com.e2d.odin.application.usage.WorkerTool.SEARCH, 500, NOW);
 
         var usageOfB = ownerUsage.companyUsage(b, month, zone);
@@ -291,12 +293,13 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         assertThat(usageOfB.cards().saved()).isZero();
         assertThat(usageOfB.documents().uploaded()).isZero();
         assertThat(ownerUsage.peopleUsage(b, month, zone)).isEmpty();
-        assertThat(ownerUsage.gaps(b, month, zone, 200)).isEmpty();
+        assertThat(ownerUsage.gaps(b, month, zone, 200).groups()).isEmpty();
         assertThat(ownerMeter.totals(b, month)).isEmpty();
 
-        assertThat(ownerUsage.companyUsage(a, month, zone).questionsWithoutResults()).isEqualTo(1);
+        assertThat(ownerUsage.companyUsage(a, month, zone).questionsWithoutResults()).isEqualTo(3);
         assertThat(ownerUsage.peopleUsage(a, month, zone)).isNotEmpty();
-        assertThat(ownerUsage.gaps(a, month, zone, 200)).extracting(g -> g.text()).containsExactly("hueco secreto");
+        assertThat(ownerUsage.gaps(a, month, zone, 200).groups()).extracting(g -> g.text())
+                .containsExactly("hueco secreto");
         assertThat(ownerMeter.totals(a, month)).hasSize(1);
     }
 }

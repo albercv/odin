@@ -7,7 +7,6 @@ import com.e2d.odin.application.usage.GetUsageStats;
 import com.e2d.odin.application.usage.ListGaps;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,8 +42,8 @@ public class UsageController {
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/gaps")
-    public List<Responses.GapView> gaps(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+    public Responses.GapsView gaps(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam Optional<String> month) {
-        return gaps.execute(actor, new CompanyId(companyId), month).stream().map(Responses.GapView::from).toList();
+        return Responses.GapsView.from(gaps.execute(actor, new CompanyId(companyId), month));
     }
 }

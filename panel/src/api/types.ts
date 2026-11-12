@@ -1153,13 +1153,15 @@ export interface components {
             /** Format: int32 */
             saved: number;
             /** Format: int32 */
-            approved: number;
-            /** Format: int32 */
-            corrected: number;
-            /** Format: int32 */
-            rejected: number;
-            /** Format: int32 */
             pending: number;
+            /** Format: int32 */
+            approved?: number;
+            /** Format: int32 */
+            corrected?: number;
+            /** Format: int32 */
+            rejected?: number;
+            withheld: boolean;
+            reason?: string;
         };
         CompanyUsageView: {
             questions: components["schemas"]["QuestionCountsView"];
@@ -1241,6 +1243,11 @@ export interface components {
             times: number;
             /** Format: date */
             lastAskedOn: string;
+        };
+        GapsView: {
+            withheld: boolean;
+            reason?: string;
+            gaps: components["schemas"]["GapView"][];
         };
         DeliveredVolumeView: {
             month: string;
@@ -2579,7 +2586,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GapView"][];
+                    "application/json": components["schemas"]["GapsView"];
                 };
             };
         };

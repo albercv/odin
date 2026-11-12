@@ -17,9 +17,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CardDecisions;
 import com.e2d.odin.application.usage.CompanyUsage;
 import com.e2d.odin.application.usage.DocumentCounts;
 import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.GapReport;
 import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.application.usage.TaggingCounts;
@@ -806,7 +808,7 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.detail").value("Proyecto no encontrado"));
     }
     private CompanyUsage someUsage() {
-        return new CompanyUsage(new QuestionCounts(5, 2), 1, new CardCounts(3, 1, 1, 1, 0),
+        return new CompanyUsage(new QuestionCounts(5, 2), 1, new CardCounts(3, 0, Optional.of(new CardDecisions(1, 1, 1)), false),
                 new DocumentCounts(4, 3, 1, 0), Optional.of(new TaggingCounts(2, 1)));
     }
 
@@ -860,12 +862,35 @@ class AdminApiTest extends WebTestSupport {
                 LocalDate.of(2026, 11, 8))));
         String url = "/v1/admin/companies/" + company.value() + "/gaps";
 
-        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].text").value("goteras")).andExpect(jsonPath("$[0].kind").value("SIMILAR_CASES"))
-                .andExpect(jsonPath("$[0].times").value(3));
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.gaps", hasSize(1)))
+                .andExpect(jsonPath("$.withheld").value(false)).andExpect(jsonPath("$.reason").doesNotExist())
+                .andExpect(jsonPath("$.gaps[0].text").value("goteras"))
+                .andExpect(jsonPath("$.gaps[0].kind").value("SIMILAR_CASES"))
+                .andExpect(jsonPath("$.gaps[0].times").value(3));
         mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
         mvc.perform(get("/v1/admin/companies/" + UUID.randomUUID() + "/gaps").cookie(adminCookie(Role.GROUP_ADMIN,
                 Optional.empty()))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void withheldGapsAndCardBreakdownCarryTheIndicatorAndNoData() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        w.usage.seedGapReport(company, new GapReport(List.of(), true));
+        w.usage.seed(company, new CompanyUsage(new QuestionCounts(1, 0), 1,
+                new CardCounts(2, 1, Optional.empty(), true), new DocumentCounts(0, 0, 0, 0), Optional.empty()),
+                List.of());
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/gaps").cookie(admin))
+                .andExpect(jsonPath("$.withheld").value(true)).andExpect(jsonPath("$.reason").value("FEW_PEOPLE"))
+                .andExpect(jsonPath("$.gaps", hasSize(0)));
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/usage-stats").cookie(admin))
+                .andExpect(jsonPath("$.company.cards.saved").value(2))
+                .andExpect(jsonPath("$.company.cards.withheld").value(true))
+                .andExpect(jsonPath("$.company.cards.reason").value("FEW_PEOPLE"))
+                .andExpect(jsonPath("$.company.cards.approved").doesNotExist())
+                .andExpect(jsonPath("$.company.cards.corrected").doesNotExist())
+                .andExpect(jsonPath("$.company.cards.rejected").doesNotExist());
     }
 
     @Test
@@ -875,9 +900,10 @@ class AdminApiTest extends WebTestSupport {
 
         mvc.perform(get("/v1/admin/companies/" + company.value() + "/gaps")
                 .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company))))
-                .andExpect(jsonPath("$[0].lastAskedOn").value("2026-11-08"))
-                .andExpect(jsonPath("$[0].authorId").doesNotExist()).andExpect(jsonPath("$[0].userId").doesNotExist())
-                .andExpect(jsonPath("$[0].askedAt").doesNotExist());
+                .andExpect(jsonPath("$.gaps[0].lastAskedOn").value("2026-11-08"))
+                .andExpect(jsonPath("$.gaps[0].authorId").doesNotExist())
+                .andExpect(jsonPath("$.gaps[0].userId").doesNotExist())
+                .andExpect(jsonPath("$.gaps[0].askedAt").doesNotExist());
     }
     @Test
     void deliveredVolumeRoute() throws Exception {

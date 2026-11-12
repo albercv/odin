@@ -405,9 +405,9 @@ class IsolationTest extends WebTestSupport {
     void otherCompanyAdminCannotReadUsageOrGaps() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
-        w.usage.seed(a, new CompanyUsage(new QuestionCounts(7, 0), 0, new CardCounts(0, 0, 0, 0, 0),
+        w.usage.seed(a, new CompanyUsage(new QuestionCounts(7, 0), 0, new CardCounts(0, 0, Optional.empty(), false),
                 new DocumentCounts(0, 0, 0, 0), Optional.empty()), List.of());
-        w.usage.seed(b, new CompanyUsage(new QuestionCounts(1, 0), 0, new CardCounts(0, 0, 0, 0, 0),
+        w.usage.seed(b, new CompanyUsage(new QuestionCounts(1, 0), 0, new CardCounts(0, 0, Optional.empty(), false),
                 new DocumentCounts(0, 0, 0, 0), Optional.empty()), List.of());
         w.usage.seedGaps(a, List.of(new GapGroup("secreto de A", QuestionKind.SEARCH, 1, LocalDate.of(2026, 11, 1))));
         var ownerOfA = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
@@ -422,10 +422,10 @@ class IsolationTest extends WebTestSupport {
         mvc.perform(get(stats).cookie(group)).andExpect(jsonPath("$.company.questions.search").value(7));
         mvc.perform(get("/v1/admin/companies/" + b.value() + "/usage-stats").cookie(group))
                 .andExpect(jsonPath("$.company.questions.search").value(1));
-        mvc.perform(get("/v1/admin/companies/" + b.value() + "/gaps").cookie(group)).andExpect(jsonPath("$", hasSize(0)));
-        mvc.perform(get(gaps).cookie(ownerOfA)).andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].text").value("secreto de A"));
-        mvc.perform(get(gaps).cookie(group)).andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/gaps").cookie(group)).andExpect(jsonPath("$.gaps", hasSize(0)));
+        mvc.perform(get(gaps).cookie(ownerOfA)).andExpect(jsonPath("$.gaps", hasSize(1)))
+                .andExpect(jsonPath("$.gaps[0].text").value("secreto de A"));
+        mvc.perform(get(gaps).cookie(group)).andExpect(jsonPath("$.gaps", hasSize(1)));
         for (String route : new String[] {"usage-stats", "gaps", "delivered-volume"}) {
             mvc.perform(get("/v1/admin/companies/" + a.value() + "/" + route).header("Authorization", workerKey(a)))
                     .andExpect(status().isUnauthorized());

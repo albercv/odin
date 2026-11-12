@@ -1,5 +1,7 @@
 package com.e2d.odin.application.usage;
 
-/** Fichas aportadas en el mes y cómo van. Solo por empresa: por persona nunca se cuentan las decididas. */
-public record CardCounts(int saved, int approved, int corrected, int rejected, int pending) {
+import java.util.Optional;
+
+/** Fichas aportadas en el mes. El desglose de decididas falta, con {@code withheld}, si hay pocos autores. */
+public record CardCounts(int saved, int pending, Optional<CardDecisions> decisions, boolean withheld) {
 }

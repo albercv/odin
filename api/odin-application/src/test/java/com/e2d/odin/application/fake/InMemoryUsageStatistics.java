@@ -5,6 +5,7 @@ import com.e2d.odin.application.usage.CardCounts;
 import com.e2d.odin.application.usage.CompanyUsage;
 import com.e2d.odin.application.usage.DocumentCounts;
 import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.GapReport;
 import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -19,11 +20,11 @@ import java.util.Optional;
 public class InMemoryUsageStatistics implements UsageStatistics {
 
     private static final CompanyUsage EMPTY = new CompanyUsage(new QuestionCounts(0, 0), 0,
-            new CardCounts(0, 0, 0, 0, 0), new DocumentCounts(0, 0, 0, 0), Optional.empty());
+            new CardCounts(0, 0, Optional.empty(), false), new DocumentCounts(0, 0, 0, 0), Optional.empty());
 
     private final Map<CompanyId, CompanyUsage> companies = new HashMap<>();
     private final Map<CompanyId, List<PersonUsage>> people = new HashMap<>();
-    private final Map<CompanyId, List<GapGroup>> gaps = new HashMap<>();
+    private final Map<CompanyId, GapReport> gaps = new HashMap<>();
     private int calls;
     private YearMonth lastMonth;
     private ZoneId lastZone;
@@ -35,7 +36,11 @@ public class InMemoryUsageStatistics implements UsageStatistics {
     }
 
     public void seedGaps(CompanyId company, List<GapGroup> groups) {
-        gaps.put(company, groups);
+        gaps.put(company, new GapReport(groups, false));
+    }
+
+    public void seedGapReport(CompanyId company, GapReport report) {
+        gaps.put(company, report);
     }
 
     public int calls() {
@@ -67,10 +72,10 @@ public class InMemoryUsageStatistics implements UsageStatistics {
     }
 
     @Override
-    public List<GapGroup> gaps(CompanyId companyId, YearMonth month, ZoneId zone, int limit) {
+    public GapReport gaps(CompanyId companyId, YearMonth month, ZoneId zone, int limit) {
         noteCall(month, zone);
         lastGapLimit = limit;
-        return gaps.getOrDefault(companyId, List.of());
+        return gaps.getOrDefault(companyId, new GapReport(List.of(), false));
     }
 
     private void noteCall(YearMonth month, ZoneId zone) {

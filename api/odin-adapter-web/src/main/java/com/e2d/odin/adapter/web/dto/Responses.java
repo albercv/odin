@@ -14,8 +14,10 @@ import com.e2d.odin.application.usage.CardCounts;
 import com.e2d.odin.application.usage.CompanyUsage;
 import com.e2d.odin.application.usage.DeliveredVolumeReport;
 import com.e2d.odin.application.usage.DeliveryTotal;
+import com.e2d.odin.application.usage.Disclosure;
 import com.e2d.odin.application.usage.DocumentCounts;
 import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.GapReport;
 import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.application.usage.TaggingCounts;
@@ -255,9 +257,14 @@ public final class Responses {
         }
     }
 
-    public record CardCountsView(int saved, int approved, int corrected, int rejected, int pending) {
+    /** Con {@code withheld}, el desglose va nulo: hubo pocos autores para enseñarlo sin deducir nada. */
+    public record CardCountsView(int saved, int pending, @Nullable Integer approved, @Nullable Integer corrected,
+            @Nullable Integer rejected, boolean withheld, @Nullable String reason) {
         static CardCountsView from(CardCounts c) {
-            return new CardCountsView(c.saved(), c.approved(), c.corrected(), c.rejected(), c.pending());
+            return new CardCountsView(c.saved(), c.pending(), c.decisions().map(d -> d.approved()).orElse(null),
+                    c.decisions().map(d -> d.corrected()).orElse(null),
+                    c.decisions().map(d -> d.rejected()).orElse(null), c.withheld(),
+                    c.withheld() ? Disclosure.WITHHELD_REASON : null);
         }
     }
 
@@ -303,6 +310,14 @@ public final class Responses {
     public record GapView(String text, String kind, int times, LocalDate lastAskedOn) {
         public static GapView from(GapGroup g) {
             return new GapView(g.text(), g.kind().name(), g.times(), g.lastAskedOn());
+        }
+    }
+
+    /** Con {@code withheld}, sin huecos: los preguntaron muy pocas personas. */
+    public record GapsView(boolean withheld, @Nullable String reason, List<GapView> gaps) {
+        public static GapsView from(GapReport report) {
+            return new GapsView(report.withheld(), report.withheld() ? Disclosure.WITHHELD_REASON : null,
+                    report.groups().stream().map(GapView::from).toList());
         }
     }
 

@@ -35,12 +35,23 @@ class ListGapsTest {
         var gap = new GapGroup("goteras en el techo", QuestionKind.SEARCH, 2, LocalDate.of(2026, 11, 10));
         statistics.seedGaps(company, List.of(gap));
 
-        List<GapGroup> result = gaps.execute(Actors.companyAdmin(company), company, Optional.empty());
+        GapReport result = gaps.execute(Actors.companyAdmin(company), company, Optional.empty());
 
-        assertThat(result).containsExactly(gap);
+        assertThat(result.groups()).containsExactly(gap);
+        assertThat(result.withheld()).isFalse();
         assertThat(Arrays.stream(GapGroup.class.getRecordComponents()).map(RecordComponent::getName))
                 .containsExactly("text", "kind", "times", "lastAskedOn");
         assertThat(statistics.lastGapLimit()).isEqualTo(200);
+    }
+
+    @Test
+    void passesOnTheWithheldFlagWithoutGroups() {
+        statistics.seedGapReport(company, new GapReport(List.of(), true));
+
+        GapReport result = gaps.execute(Actors.groupAdmin(), company, Optional.empty());
+
+        assertThat(result.withheld()).isTrue();
+        assertThat(result.groups()).isEmpty();
     }
 
     @Test

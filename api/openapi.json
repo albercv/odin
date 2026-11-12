@@ -1791,10 +1791,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/GapView"
-                  }
+                  "$ref" : "#/components/schemas/GapsView"
                 }
               }
             }
@@ -3105,6 +3102,10 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "pending" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "approved" : {
             "type" : "integer",
             "format" : "int32"
@@ -3117,12 +3118,14 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "pending" : {
-            "type" : "integer",
-            "format" : "int32"
+          "withheld" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
           }
         },
-        "required" : [ "approved", "corrected", "pending", "rejected", "saved" ]
+        "required" : [ "pending", "saved", "withheld" ]
       },
       "CompanyUsageView" : {
         "type" : "object",
@@ -3329,6 +3332,24 @@
           }
         },
         "required" : [ "kind", "lastAskedOn", "text", "times" ]
+      },
+      "GapsView" : {
+        "type" : "object",
+        "properties" : {
+          "withheld" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "gaps" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/GapView"
+            }
+          }
+        },
+        "required" : [ "gaps", "withheld" ]
       },
       "DeliveredVolumeView" : {
         "type" : "object",

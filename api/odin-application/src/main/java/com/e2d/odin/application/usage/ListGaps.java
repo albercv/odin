@@ -9,7 +9,6 @@ import com.e2d.odin.domain.shared.NotFoundException;
 import java.time.Clock;
 import java.time.YearMonth;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 
 /** Las consultas que no encontraron nada, sin autor: huecos de la documentación. */
@@ -29,7 +28,7 @@ public class ListGaps {
         this.zone = zone;
     }
 
-    public List<GapGroup> execute(Actor actor, CompanyId companyId, Optional<String> month) {
+    public GapReport execute(Actor actor, CompanyId companyId, Optional<String> month) {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         YearMonth resolved = ReportMonth.resolve(month, clock, zone);
