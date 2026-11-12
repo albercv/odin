@@ -251,6 +251,34 @@
         }
       }
     },
+    "/v1/similar-cases" : {
+      "post" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "similarCases",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SimilarCasesRequestBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimilarCasesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/setup" : {
       "post" : {
         "tags" : [ "setup-controller" ],
@@ -1419,6 +1447,13 @@
             "format" : "uuid"
           }
         }, {
+          "name" : "caseDocument",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
           "name" : "offset",
           "in" : "query",
           "required" : false,
@@ -1855,6 +1890,121 @@
         },
         "required" : [ "capabilities", "code", "id", "name" ]
       },
+      "SimilarCasesRequestBody" : {
+        "type" : "object",
+        "properties" : {
+          "queries" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "CasePageView" : {
+        "type" : "object",
+        "properties" : {
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "number", "text" ]
+      },
+      "Replacement" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "title" ]
+      },
+      "SimilarCaseView" : {
+        "type" : "object",
+        "properties" : {
+          "sourceType" : {
+            "type" : "string"
+          },
+          "sourceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "addedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "pageCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CasePageView"
+            }
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          },
+          "excerpt" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "originLabel" : {
+            "type" : "string"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          }
+        },
+        "required" : [ "addedAt", "excerpt", "origin", "pageCount", "pages", "sourceId", "sourceType", "superseded", "title", "truncated" ]
+      },
+      "SimilarCasesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "cases" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SimilarCaseView"
+            }
+          },
+          "noSource" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "cases", "noSource" ]
+      },
       "Setup" : {
         "type" : "object",
         "properties" : {
@@ -1961,19 +2111,6 @@
           }
         },
         "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
-      },
-      "Replacement" : {
-        "type" : "object",
-        "properties" : {
-          "documentId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "title" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "documentId", "title" ]
       },
       "SearchResponse" : {
         "type" : "object",
@@ -2567,9 +2704,12 @@
             "items" : {
               "$ref" : "#/components/schemas/TopicLabelView"
             }
+          },
+          "caseDocument" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
+        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",

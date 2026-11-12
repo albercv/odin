@@ -92,6 +92,24 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void workerOfBNeverGetsCasesOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        var closedOfA = Fixtures.project(w.orgs, a);
+        var key = workerKey(b);
+
+        mvc.perform(post("/v1/similar-cases").header("Authorization", key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"filtración\"]}")).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(w.search.lastSimilarCasesQuery().scope())
+                .isEqualTo(com.e2d.odin.domain.shared.CompanyScope.of(b));
+        org.assertj.core.api.Assertions.assertThat(w.search.lastSimilarCasesQuery().visibility().includes(closedOfA))
+                .isFalse();
+        mvc.perform(post("/v1/similar-cases").header("Authorization", key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"filtración\"],\"projectId\":\"" + closedOfA.value() + "\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void companyAdminCannotUseAReplacementOfAnotherCompany() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();

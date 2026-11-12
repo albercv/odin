@@ -85,6 +85,9 @@ public final class Requests {
     public record SearchRequest(List<String> queries, UUID projectId, Integer limit) {
     }
 
+    public record SimilarCasesRequestBody(List<String> queries, UUID projectId, Integer limit) {
+    }
+
     public record VerifyCitation(UUID documentId, Integer pageNumber, String quote) {
     }
 

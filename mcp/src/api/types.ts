@@ -84,6 +84,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/similar-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["similarCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/setup": {
         parameters: {
             query?: never;
@@ -673,6 +689,47 @@ export interface components {
             code: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
         };
+        SimilarCasesRequestBody: {
+            queries?: string[];
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: int32 */
+            limit?: number;
+        };
+        CasePageView: {
+            /** Format: int32 */
+            number: number;
+            text: string;
+        };
+        Replacement: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+        };
+        SimilarCaseView: {
+            sourceType: string;
+            /** Format: uuid */
+            sourceId: string;
+            title: string;
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: date-time */
+            addedAt: string;
+            /** Format: int32 */
+            pageCount: number;
+            pages: components["schemas"]["CasePageView"][];
+            body?: string;
+            truncated: boolean;
+            excerpt: string;
+            origin: string;
+            originLabel?: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+        };
+        SimilarCasesResponse: {
+            cases: components["schemas"]["SimilarCaseView"][];
+            noSource: boolean;
+        };
         Setup: {
             setupToken?: string;
             groupName?: string;
@@ -713,11 +770,6 @@ export interface components {
             rank: number;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
-        };
-        Replacement: {
-            /** Format: uuid */
-            documentId: string;
-            title: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
@@ -933,6 +985,7 @@ export interface components {
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
             topics: components["schemas"]["TopicLabelView"][];
+            caseDocument: boolean;
         };
         Page: {
             /** Format: uuid */
@@ -1202,6 +1255,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyView"];
+                };
+            };
+        };
+    };
+    similarCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimilarCasesRequestBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimilarCasesResponse"];
                 };
             };
         };
@@ -2076,6 +2153,7 @@ export interface operations {
             query?: {
                 projectId?: string;
                 topicId?: string;
+                caseDocument?: boolean;
                 offset?: number;
                 limit?: number;
             };

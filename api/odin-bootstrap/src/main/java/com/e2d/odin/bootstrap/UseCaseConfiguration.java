@@ -66,6 +66,7 @@ import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.TokenGenerator;
 import com.e2d.odin.application.port.UserRepository;
+import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
@@ -403,6 +404,12 @@ public class UseCaseConfiguration {
             IdGenerator ids,
             Clock clock) {
         return new SearchKnowledge(organizations, projectMembers, search, questions, ids, clock);
+    }
+
+    @Bean
+    FindSimilarCases findSimilarCases(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            KnowledgeSearch search, QuestionLog questions, IdGenerator ids, Clock clock) {
+        return new FindSimilarCases(organizations, projectMembers, search, questions, ids, clock);
     }
 
     @Bean

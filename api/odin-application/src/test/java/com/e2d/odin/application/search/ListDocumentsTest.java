@@ -85,6 +85,34 @@ class ListDocumentsTest {
     }
 
     @Test
+    void filtersByCaseDocument() {
+        Document plain = Fixtures.readyDocument(docs, companyA, "suelto");
+        Document marked = Fixtures.readyDocument(docs, companyA, "caso");
+        docs.markCaseDocuments(companyA, java.util.Set.of(marked.id()), true);
+        Actor worker = Actors.worker(companyA);
+
+        assertThat(list.execute(worker, Optional.empty(), Optional.empty(), Optional.of(true), 0, Optional.empty())
+                .stream().map(t -> t.entry().document().id())).containsExactly(marked.id());
+        assertThat(list.execute(worker, Optional.empty(), Optional.empty(), Optional.of(false), 0, Optional.empty())
+                .stream().map(t -> t.entry().document().id())).containsExactly(plain.id());
+        assertThat(list.execute(worker, Optional.empty(), Optional.empty(), Optional.empty(), 0, Optional.empty()))
+                .hasSize(2);
+        assertThat(list.execute(worker, Optional.empty(), Optional.empty(), Optional.of(true), 0, Optional.empty())
+                .get(0).entry().document().caseDocument()).isTrue();
+    }
+
+    @Test
+    void caseFilterNeedsSearchCapabilityNotSimilarCases() {
+        CompanyId onlySearch = Fixtures.companyWith(orgs, java.util.EnumSet.of(
+                com.e2d.odin.domain.organization.Capability.SEARCH_KNOWLEDGE));
+        Document marked = Fixtures.readyDocument(docs, onlySearch, "caso");
+        docs.markCaseDocuments(onlySearch, java.util.Set.of(marked.id()), true);
+
+        assertThat(list.execute(Actors.worker(onlySearch), Optional.empty(), Optional.empty(), Optional.of(true), 0,
+                Optional.empty())).hasSize(1);
+    }
+
+    @Test
     void capsLimitAt500() {
         IntStream.range(0, 510).forEach(i -> Fixtures.document(docs, companyA, DocumentStatus.READY));
 

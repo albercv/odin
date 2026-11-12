@@ -154,12 +154,14 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
-            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit) {
+            Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
+            int limit) {
         lastListScope = scope;
         return documents.values().stream()
                 .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId())
                         && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
+                .filter(d -> caseDocument.map(flag -> d.caseDocument() == flag).orElse(true))
                 .filter(d -> topicId.isEmpty() || activeTopic.test(d.id(), topicId.get()))
                 .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
                 .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();

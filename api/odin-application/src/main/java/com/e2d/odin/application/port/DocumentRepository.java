@@ -43,13 +43,22 @@ public interface DocumentRepository {
 
     Optional<Document> findBySha256(CompanyId companyId, String sha256);
 
-    /** Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. */
+    /**
+     * Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. Con {@code caseDocument}, solo los
+     * que tienen esa marca de ficha de caso.
+     */
     List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
-            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit);
+            Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
+            int limit);
+
+    default List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
+            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit) {
+        return list(scope, visibility, projectId, topicId, Optional.empty(), status, offset, limit);
+    }
 
     default List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<DocumentStatus> status, int offset, int limit) {
-        return list(scope, visibility, projectId, Optional.empty(), status, offset, limit);
+        return list(scope, visibility, projectId, Optional.empty(), Optional.empty(), status, offset, limit);
     }
 
     Optional<DocumentPage> findPage(CompanyScope scope, ProjectVisibility visibility, DocumentId id, int pageNumber);

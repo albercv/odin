@@ -9,6 +9,8 @@ import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.SearchRequest;
+import com.e2d.odin.application.search.SimilarCasesRequest;
+import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.VerifyCitation;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -36,15 +38,17 @@ public class WorkerController {
 
     private final DescribeMe describeMe;
     private final SearchKnowledge search;
+    private final FindSimilarCases findSimilarCases;
     private final ListDocuments listDocuments;
     private final ReadPage readPage;
     private final VerifyCitation verifyCitation;
     private final SaveKnowledgeCard saveCard;
 
-    public WorkerController(DescribeMe describeMe, SearchKnowledge search, ListDocuments listDocuments,
-            ReadPage readPage, VerifyCitation verifyCitation, SaveKnowledgeCard saveCard) {
+    public WorkerController(DescribeMe describeMe, SearchKnowledge search,
+            FindSimilarCases findSimilarCases, ListDocuments listDocuments, ReadPage readPage, VerifyCitation verifyCitation, SaveKnowledgeCard saveCard) {
         this.describeMe = describeMe;
         this.search = search;
+        this.findSimilarCases = findSimilarCases;
         this.listDocuments = listDocuments;
         this.readPage = readPage;
         this.verifyCitation = verifyCitation;
@@ -64,12 +68,21 @@ public class WorkerController {
         return Responses.SearchResponse.from(search.execute(actor, searchRequest));
     }
 
+    @PostMapping("/v1/similar-cases")
+    public Responses.SimilarCasesResponse similarCases(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestBody Requests.SimilarCasesRequestBody request) {
+        SimilarCasesRequest casesRequest = new SimilarCasesRequest(validQueries(request.queries()),
+                Optional.ofNullable(request.projectId()).map(ProjectId::new), Optional.ofNullable(request.limit()));
+        return Responses.SimilarCasesResponse.from(findSimilarCases.execute(actor, casesRequest));
+    }
+
     @GetMapping("/v1/documents")
     public List<Responses.WorkerDocumentView> documents(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @RequestParam(required = false) UUID projectId, @RequestParam(required = false) UUID topicId,
-            @RequestParam(defaultValue = "0") int offset, @RequestParam(required = false) Integer limit) {
+            @RequestParam(required = false) Boolean caseDocument, @RequestParam(defaultValue = "0") int offset, @RequestParam(required = false) Integer limit) {
         return listDocuments.execute(actor, Optional.ofNullable(projectId).map(ProjectId::new),
-                Optional.ofNullable(topicId).map(TopicId::new), offset, Optional.ofNullable(limit)).stream()
+                Optional.ofNullable(topicId).map(TopicId::new), Optional.ofNullable(caseDocument), offset,
+                Optional.ofNullable(limit)).stream()
                 .map(Responses.WorkerDocumentView::from).toList();
     }
 

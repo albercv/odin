@@ -138,7 +138,8 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
-            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit) {
+            Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
+            int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
                 + SupersessionSql.joins("d.superseded_by", "d.company_id") + """
@@ -146,11 +147,13 @@ public class PostgresDocumentRepository implements DocumentRepository {
                   AND (CAST(:topic AS uuid) IS NULL OR EXISTS (SELECT 1 FROM document_topic x
                       JOIN topic p ON p.id = x.topic_id AND p.deleted_at IS NULL
                       WHERE x.document_id = d.id AND x.topic_id = :topic AND x.state = 'ACTIVE'))
+                  AND (CAST(:caseDocument AS boolean) IS NULL OR d.case_document = :caseDocument)
                   AND (CAST(:status AS text) IS NULL OR d.status = :status) AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
                 Sql.inVisibleProjects("d.project_id"));
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
+                .param("caseDocument", caseDocument.orElse(null))
                 .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
                 .param("limit", limit).query((rs, n) -> entry(rs)).list());
     }
