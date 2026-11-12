@@ -11,7 +11,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
-from banco import combine, judge, preflight, report, scoring
+from banco import combine, judge, preflight, report, scoring, tanda
 from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
@@ -49,10 +49,19 @@ class Session:
     cache: RunCache
     ledger: Ledger
     sweep: SweepSpec | None = None
+    config_path: Path | None = None
 
     @property
     def stop_file(self):
         return self.folder / "PARADA.txt"
+
+    @property
+    def state_file(self):
+        return tanda.state_path(self.layout.state_dir, self.cfg.name)
+
+    @property
+    def mode(self):
+        return "sweep" if self.sweep else "run"
 
     @property
     def seed(self):
@@ -191,7 +200,7 @@ def prepare(config_path, layout, sweep=False, reset_budget=False):
     ledger = open_ledger(layout.state_dir / f"libro-{cfg.name}.json", cfg.budget_usd, reset_budget)
     folder = _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,
-                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec)
+                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec, config_path=Path(config_path))
     _write_start(sess, branch, commit)
     return sess
 
@@ -227,6 +236,26 @@ def _claude_streak(sess, error):
     if not _stopped(sess):
         _stop(sess, f"{CONSECUTIVE_ERRORS} errores seguidos de claude: {error[:200]}")
     return True
+
+
+def _counts(folder):
+    """Lo hecho: respuestas finales medidas y buscadores válidos por enfoque (sin errores)."""
+    data = report.read_folder(folder)
+    valid = Counter(r["approach"] for r in data["runs"] if r.get("error") is None and r.get("respuesta") is not None)
+    return {"respuestas_finales": sum(f["answer"] is not None for f in data["finals"]), "buscadores_validos": dict(valid)}
+
+
+def _finish_batch(sess, done):
+    """Al parar, el estado de reanudación guarda el motivo, la hora de renovación y lo hecho; al terminar completo, se borra."""
+    if done and not _stopped(sess):
+        tanda.delete_state(sess.state_file)
+        return
+    reason = sess.stop_file.read_text(encoding="utf-8").strip() if _stopped(sess) else "interrumpida"
+    state = {"config": str(sess.config_path), "mode": sess.mode, "carpeta": str(sess.folder),
+             "huella": sess.settings.odin_commit, "stack_digest": sess.settings.stack_digest,
+             "motivo": reason, "renovacion": tanda.renewal_time(reason),
+             "fecha_tanda": datetime.now().isoformat(timespec="seconds"), "recuentos": _counts(sess.folder)}
+    tanda.save_state(sess.state_file, state)
 
 
 def _exit_code(sess):
@@ -500,6 +529,7 @@ def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
 def run_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
     sess = prepare(config_path, layout, reset_budget=reset_budget)
     runs, finals, verdicts = [], [], []
+    done = False
     try:
         if _preflight(sess, sin_prueba):
             _pool(sess, sess.cfg.searchers, sess.settings, runs)
@@ -507,8 +537,10 @@ def run_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
             answer_stage(sess, runs, finals)
         if finals:  # también con parada: los veredictos guardados no cuestan nada y se sirven igual
             judge_stage(sess, finals, verdicts)
+        done = True
     finally:
         _write_outputs(sess, runs, finals, verdicts)
+        _finish_batch(sess, done)
     return _exit_code(sess)
 
 
@@ -563,6 +595,7 @@ def _curves(sess, runs, turn_runs):
 def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
     sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget)
     runs, turn_runs = [], []
+    done = False
     try:
         if _preflight(sess, sin_prueba):
             _pool(sess, sess.cfg.searchers, sess.settings, runs)
@@ -571,6 +604,8 @@ def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
         if not _stopped(sess):
             (sess.folder / "curvas.json").write_text(
                 json.dumps(_curves(sess, runs, turn_runs), ensure_ascii=False, indent=1), encoding="utf-8")
+        done = True
     finally:
         _write_outputs(sess, runs, [], [], turn_runs)
+        _finish_batch(sess, done)
     return _exit_code(sess)

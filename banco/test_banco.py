@@ -780,5 +780,39 @@ class CurveReportTest(unittest.TestCase):
         self.assertEqual(text.count("no válida: errores"), 2)
 
 
+class ReanudarStateTest(Harness):
+    """Estado de reanudación: al parar guarda motivo, hora de renovación y recuentos; al terminar completo se borra."""
+
+    RESET = "You've hit your 5-hour limit · resets 9:50pm (Europe/Madrid)"
+
+    def state_file(self):
+        return self.state_dir / "reanudar-prueba.json"
+
+    def failing(self):
+        def failing(item, *args, **kwargs):
+            return {"id": item["id"], "respuesta": None, "error": self.RESET, "coste_usd": 0.001, "tokens": None,
+                    "duracion_s": 1.0, "consultas": [], "modelo": None}
+        return mock.patch("banco.medir_path.ejecutar.responder", side_effect=failing)
+
+    def test_stop_saves_reason_renewal_and_counts(self):
+        from banco.run import stack_digest
+        with self.failing():
+            code = self.run_cli(self.config(concurrency=1))
+        state = json.loads(self.state_file().read_text(encoding="utf-8"))
+        self.assertEqual(code, 2)
+        self.assertEqual(state["mode"], "run")
+        self.assertEqual(state["carpeta"], str(self.only_folder()))
+        self.assertEqual(state["huella"], code_fingerprint(BANCO.parent)[0])
+        carga = json.loads((self.state_dir / "carga.json").read_text(encoding="utf-8"))
+        self.assertEqual(state["stack_digest"], stack_digest(carga))
+        self.assertIn("3 errores seguidos de claude", state["motivo"])
+        self.assertEqual(state["renovacion"], "9:50pm (Europe/Madrid)")
+        self.assertEqual(state["recuentos"], {"respuestas_finales": 0, "buscadores_validos": {}})
+
+    def test_completed_run_deletes_the_state(self):
+        self.assertEqual(self.run_cli(self.config()), 0)
+        self.assertFalse(self.state_file().exists())
+
+
 if __name__ == "__main__":
     unittest.main()
