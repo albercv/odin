@@ -50,6 +50,69 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.duplicate").value(true));
     }
 
+    @Test
+    void uploadAcceptsCaseDocumentField() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        mvc.perform(upload(company, admin, "es-un-caso".getBytes()).param("caseDocument", "true"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.document.caseDocument").value(true));
+        mvc.perform(upload(company, admin, "no-es-caso".getBytes())).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.document.caseDocument").value(false));
+        // un duplicado ignora el valor nuevo
+        mvc.perform(upload(company, admin, "es-un-caso".getBytes()).param("caseDocument", "false"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.duplicate").value(true))
+                .andExpect(jsonPath("$.document.caseDocument").value(true));
+    }
+
+    @Test
+    void patchDocumentMarksCase() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document d = Fixtures.readyDocument(w.docs, company, "caso");
+        String url = "/v1/admin/documents/" + d.id().value();
+
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(d.id().value().toString()))
+                .andExpect(jsonPath("$.caseDocument").value(true));
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(d.id()).orElseThrow().caseDocument()).isTrue();
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":false}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.caseDocument").value(false));
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/v1/admin/documents/" + UUID.randomUUID()).cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":true}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(patch(url).header("Authorization", workerKey(company)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"caseDocument\":true}")).andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void caseMarksMarksBatch() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document one = Fixtures.readyDocument(w.docs, company, "uno");
+        Document two = Fixtures.readyDocument(w.docs, company, "dos");
+        String url = "/v1/admin/companies/" + company.value() + "/documents/case-marks";
+        String ids = "\"documentIds\":[\"" + one.id().value() + "\",\"" + two.id().value() + "\"]";
+
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{" + ids + ",\"caseDocument\":true}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.updated").value(2));
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(one.id()).orElseThrow().caseDocument()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(two.id()).orElseThrow().caseDocument()).isTrue();
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{" + ids + ",\"caseDocument\":false}")).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(one.id()).orElseThrow().caseDocument()).isFalse();
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentIds\":[],\"caseDocument\":true}")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Elige entre 1 y 500 documentos"));
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{" + ids + "}")).andExpect(status().isBadRequest());
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentIds\":[\"" + UUID.randomUUID() + "\"],\"caseDocument\":true}"))
+                .andExpect(status().isNotFound());
+    }
+
     private String supersededBy(Document document) {
         return "/v1/admin/documents/" + document.id().value() + "/superseded-by";
     }

@@ -167,6 +167,21 @@ class MigrationFromPhaseOneIT {
     }
 
     @Test
+    void migrationGivesSimilarCasesToExistingCompanies() {
+        assertThat(jdbc.sql("SELECT count(*) FROM company").query(Long.class).single()).isEqualTo(4);
+        assertThat(jdbc.sql("SELECT count(DISTINCT company_id) FROM company_capability WHERE capability = 'SIMILAR_CASES'")
+                .query(Long.class).single()).isEqualTo(4);
+        assertThat(jdbc.sql("SELECT capability FROM company_capability WHERE company_id = :id ORDER BY capability")
+                .param("id", COMPANY).query(String.class).list()).containsExactly("SEARCH_KNOWLEDGE", "SIMILAR_CASES");
+    }
+
+    @Test
+    void migrationLeavesExistingDocumentsAndQuestionsAsTheyWere() {
+        assertThat(jdbc.sql("SELECT case_document FROM document WHERE id = :id").param("id", MIXED_PDF)
+                .query(Boolean.class).single()).isFalse();
+    }
+
+    @Test
     void everyUserWithCompanyGetsOneMembershipWithItsRole() {
         assertThat(membership(COMPANY_ADMIN)).containsEntry("company_id", COMPANY)
                 .containsEntry("is_company_admin", true).containsEntry("is_worker", false)

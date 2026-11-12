@@ -176,7 +176,8 @@ public final class Responses {
     public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
             int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt,
-            List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics) {
+            List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics,
+            boolean caseDocument) {
         public static DocumentView from(DocumentEntry entry) {
             return from(new TaggedDocument(entry, Optional.empty(), List.of()));
         }
@@ -190,7 +191,7 @@ public final class Responses {
                     d.attemptCount(), entry.supersededBy().map(DocumentLink::from).orElse(null),
                     d.supersededAt().orElse(null), d.pagesWithoutText(),
                     tagged.tagging().map(t -> t.status().name()).orElse(null),
-                    tagged.topics().stream().map(TopicLabelView::from).toList());
+                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
         }
     }
 
@@ -251,6 +252,9 @@ public final class Responses {
                     tagged.entry().replacement().map(Replacement::from).orElse(null),
                     tagged.topics().stream().map(TopicLabelView::from).toList());
         }
+    }
+
+    public record CaseMarksResult(int updated) {
     }
 
     public record Upload(DocumentView document, boolean duplicate) {

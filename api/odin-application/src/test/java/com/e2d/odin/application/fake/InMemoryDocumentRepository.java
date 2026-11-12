@@ -9,6 +9,7 @@ import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.topic.TopicId;
@@ -20,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
@@ -71,9 +73,10 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public void save(Document document) {
         Document stored = documents.get(document.id());
-        // Como el upsert de PostgreSQL: guardar no escribe ni borra la marca.
+        // Como el upsert de PostgreSQL: guardar no escribe ni borra la marca de sustituido ni la de caso (la primera vez sí guarda la de caso).
         documents.put(document.id(), stored == null ? document.withSupersession(Optional.empty(), Optional.empty())
-                : document.withSupersession(stored.supersededBy(), stored.supersededAt()));
+                : document.withSupersession(stored.supersededBy(), stored.supersededAt())
+                        .withCaseDocument(stored.caseDocument()));
     }
 
     @Override
@@ -92,6 +95,17 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         if (d != null && d.companyId().equals(companyId)) {
             documents.put(id, d.withSupersession(by, at));
         }
+    }
+
+    @Override
+    public int markCaseDocuments(CompanyId companyId, Set<DocumentId> ids, boolean caseDocument) {
+        boolean allOurs = ids.stream().allMatch(id -> documents.containsKey(id)
+                && documents.get(id).companyId().equals(companyId));
+        if (!allOurs) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+        ids.forEach(id -> documents.put(id, documents.get(id).withCaseDocument(caseDocument)));
+        return ids.size();
     }
 
     @Override

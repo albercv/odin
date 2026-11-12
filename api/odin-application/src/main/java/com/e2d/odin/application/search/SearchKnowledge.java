@@ -7,6 +7,7 @@ import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.shared.WorkerAccess;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.search.SearchQuery;
@@ -48,7 +49,7 @@ public class SearchKnowledge {
         SearchResult result = search.search(new SearchQuery(terms, actor.scope(), access.content(),
                 request.projectId(), limit));
         questions.record(new QuestionRecord(ids.newId(), access.companyId(), actor.userId(), String.join(" | ", terms),
-                result.hits().size(), clock.instant()));
+                result.hits().size(), clock.instant(), QuestionKind.SEARCH));
         return result;
     }
 }

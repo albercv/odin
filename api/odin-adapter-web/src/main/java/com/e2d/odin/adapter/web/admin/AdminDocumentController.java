@@ -6,7 +6,9 @@ import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.domain.identity.Actor;
@@ -18,12 +20,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,14 +47,18 @@ public class AdminDocumentController {
     private final GetDocument get;
     private final RetryDocument retry;
     private final SupersedeDocument supersede;
+    private final UpdateDocument update;
+    private final MarkCaseDocuments markCases;
 
     public AdminDocumentController(UploadDocument upload, ListCompanyDocuments list, GetDocument get,
-            RetryDocument retry, SupersedeDocument supersede) {
+            RetryDocument retry, SupersedeDocument supersede, UpdateDocument update, MarkCaseDocuments markCases) {
         this.upload = upload;
         this.list = list;
         this.get = get;
         this.retry = retry;
         this.supersede = supersede;
+        this.update = update;
+        this.markCases = markCases;
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/documents")
@@ -65,12 +74,12 @@ public class AdminDocumentController {
     @ApiResponse(responseCode = "200", description = "El mismo fichero ya estaba en la empresa (duplicate: true)")
     public ResponseEntity<Responses.Upload> upload(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam("file") MultipartFile file,
-            @RequestParam(required = false) String title, @RequestParam(required = false) UUID projectId)
-            throws IOException {
+            @RequestParam(required = false) String title, @RequestParam(required = false) UUID projectId,
+            @RequestParam(defaultValue = "false") boolean caseDocument) throws IOException {
         String name = title == null || title.isBlank() ? file.getOriginalFilename() : title;
         UploadOutcome outcome = upload.execute(actor, new CompanyId(companyId),
                 Optional.ofNullable(projectId).map(ProjectId::new), name, file.getOriginalFilename(),
-                file.getBytes());
+                file.getBytes(), caseDocument);
         return ResponseEntity.status(outcome.duplicate() ? HttpStatus.OK : HttpStatus.CREATED)
                 .body(Responses.Upload.from(outcome));
     }
@@ -79,6 +88,27 @@ public class AdminDocumentController {
     public Responses.DocumentView get(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID documentId) {
         return Responses.DocumentView.from(get.execute(actor, new DocumentId(documentId)));
+    }
+
+    @PatchMapping("/v1/admin/documents/{documentId}")
+    public Responses.DocumentView update(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId, @RequestBody Requests.UpdateDocumentRequest request) {
+        if (request.caseDocument() == null) {
+            throw new ValidationException("Indica si el documento es la ficha de un caso");
+        }
+        return Responses.DocumentView.from(update.execute(actor, new DocumentId(documentId), request.caseDocument()));
+    }
+
+    @PostMapping("/v1/admin/companies/{companyId}/documents/case-marks")
+    public Responses.CaseMarksResult markCases(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @RequestBody Requests.CaseMarksRequest request) {
+        if (request.caseDocument() == null) {
+            throw new ValidationException("Indica si se marcan o se quitan como casos");
+        }
+        Set<DocumentId> ids = request.documentIds() == null ? null
+                : request.documentIds().stream().map(DocumentId::new).collect(Collectors.toSet());
+        return new Responses.CaseMarksResult(
+                markCases.execute(actor, new CompanyId(companyId), ids, request.caseDocument()));
     }
 
     @PostMapping("/v1/admin/documents/{documentId}/retry")

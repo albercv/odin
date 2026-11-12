@@ -3,7 +3,9 @@ package com.e2d.odin.adapter.web;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
@@ -244,6 +246,14 @@ public class TestWiring {
 
     @Bean RetryDocument retryDocument() {
         return new RetryDocument(docs);
+    }
+
+    @Bean UpdateDocument updateDocument() {
+        return new UpdateDocument(docs);
+    }
+
+    @Bean MarkCaseDocuments markCaseDocuments() {
+        return new MarkCaseDocuments(docs);
     }
 
     @Bean SupersedeDocument supersedeDocument() {

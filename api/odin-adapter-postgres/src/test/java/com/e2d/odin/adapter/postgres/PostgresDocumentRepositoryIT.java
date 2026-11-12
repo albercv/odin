@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
+import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
@@ -13,6 +14,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
@@ -41,6 +43,46 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         Document failed = d.markFailed("roto");
         docs.save(failed);
         assertThat(docs.findById(CompanyScope.of(a), ProjectVisibility.all(), d.id())).contains(failed);
+    }
+
+    @Test
+    void storesAndListsCaseDocument() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        Document plain = newDocument(a, ua, "Aaa", DocumentStatus.READY);
+        Document marked = new Document(new DocumentId(UUID.randomUUID()), a, Optional.empty(), "Bbb", "f.pdf",
+                DocumentFormat.PDF, UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(), true, ua, NOW,
+                Optional.empty(), 0, Optional.empty(), Optional.empty()).withCaseDocument(true);
+        docs.save(marked);
+
+        assertThat(docs.findById(CompanyScope.of(a), ProjectVisibility.all(), plain.id()).orElseThrow().caseDocument())
+                .isFalse();
+        assertThat(docs.findById(CompanyScope.of(a), ProjectVisibility.all(), marked.id()).orElseThrow().caseDocument())
+                .isTrue();
+        // guardar otra vez no cambia la marca guardada, como la de sustituido
+        docs.save(marked.withCaseDocument(false));
+        assertThat(docs.findBySha256(a, marked.sha256()).orElseThrow().caseDocument()).isTrue();
+        assertThat(listed(CompanyScope.of(a), ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10)
+                .stream().filter(Document::caseDocument).map(Document::id)).containsExactly(marked.id());
+    }
+
+    @Test
+    void markCaseDocumentsIsAllOrNothing() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document one = newDocument(a, newUser(a), "Uno", DocumentStatus.READY);
+        Document two = newDocument(a, newUser(a), "Dos", DocumentStatus.READY);
+        Document foreign = newDocument(b, newUser(b), "Ajeno", DocumentStatus.READY);
+
+        assertThat(docs.markCaseDocuments(a, Set.of(one.id(), two.id()), true)).isEqualTo(2);
+        assertThatThrownBy(() -> docs.markCaseDocuments(a, Set.of(one.id(), foreign.id()), false))
+                .isInstanceOf(NotFoundException.class).hasMessage("Documento no encontrado");
+        assertThatThrownBy(() -> docs.markCaseDocuments(a, Set.of(one.id(), new DocumentId(UUID.randomUUID())), false))
+                .isInstanceOf(NotFoundException.class);
+
+        assertThat(docs.findBySha256(a, one.sha256()).orElseThrow().caseDocument()).isTrue();
+        assertThat(docs.findBySha256(a, two.sha256()).orElseThrow().caseDocument()).isTrue();
+        assertThat(docs.findBySha256(b, foreign.sha256()).orElseThrow().caseDocument()).isFalse();
     }
 
     @Test

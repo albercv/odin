@@ -23,6 +23,7 @@ import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UnsupportedFormatException;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Clock;
+import java.util.List;
 import java.util.Optional;
 
 public class UploadDocument {
@@ -47,7 +48,7 @@ public class UploadDocument {
     }
 
     public UploadOutcome execute(Actor actor, CompanyId companyId, Optional<ProjectId> projectId, String title,
-            String filename, byte[] content) {
+            String filename, byte[] content, boolean caseDocument) {
         AccessPolicy.requireAdminOf(actor, companyId);
         organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         projectId.ifPresent(id -> organizations.findProject(companyId, id)
@@ -62,7 +63,7 @@ public class UploadDocument {
         }
         Document document = new Document(new DocumentId(ids.newId()), companyId, projectId, cleanTitle, cleanFilename,
                 format, sha256, DocumentStatus.RECEIVED, Optional.empty(), false, actor.userId(), clock.instant(),
-                Optional.empty(), 0, Optional.empty(), Optional.empty());
+                Optional.empty(), 0, Optional.empty(), Optional.empty(), List.of(), caseDocument);
         documents.save(document);
         return new UploadOutcome(new DocumentEntry(document, Optional.empty(), Optional.empty()), false);
     }

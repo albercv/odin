@@ -12,6 +12,7 @@ import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.search.SearchHit;
@@ -69,6 +70,14 @@ class SearchKnowledgeTest {
         assertThat(record.companyId()).isEqualTo(companyA);
         assertThat(record.text()).isEqualTo("franquicia | seguro");
         assertThat(record.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void recordsQuestionOfKindSearch() {
+        useCase.execute(Actors.worker(companyA), request(Optional.empty()));
+
+        assertThat(log.records()).hasSize(1);
+        assertThat(log.records().get(0).kind()).isEqualTo(QuestionKind.SEARCH);
     }
 
     @Test

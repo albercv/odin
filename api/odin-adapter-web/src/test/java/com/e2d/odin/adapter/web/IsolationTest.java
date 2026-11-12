@@ -58,6 +58,40 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void otherCompanyAdminCannotMarkForeignDocument() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document ofA = Fixtures.readyDocument(w.docs, a, "caso de A");
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+
+        mvc.perform(patch("/v1/admin/documents/" + ofA.id().value()).cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":true}"))
+                .andExpect(status().isForbidden());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(ofA.id()).orElseThrow().caseDocument()).isFalse();
+    }
+
+    @Test
+    void otherCompanyAdminCannotMarkForeignBatch() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document ofA = Fixtures.readyDocument(w.docs, a, "caso de A");
+        Document ofB = Fixtures.readyDocument(w.docs, b, "caso de B");
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        String body = "{\"documentIds\":[\"" + ofA.id().value() + "\"],\"caseDocument\":true}";
+
+        // por la ruta de la empresa ajena: 403
+        mvc.perform(post("/v1/admin/companies/" + a.value() + "/documents/case-marks").cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        // por la propia empresa pero con un documento ajeno en el lote: 404 y no cambia ninguno
+        String mixed = "{\"documentIds\":[\"" + ofA.id().value() + "\",\"" + ofB.id().value()
+                + "\"],\"caseDocument\":true}";
+        mvc.perform(post("/v1/admin/companies/" + b.value() + "/documents/case-marks").cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content(mixed)).andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(ofA.id()).orElseThrow().caseDocument()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(ofB.id()).orElseThrow().caseDocument()).isFalse();
+    }
+
+    @Test
     void companyAdminCannotUseAReplacementOfAnotherCompany() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();

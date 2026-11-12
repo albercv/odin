@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 
 public interface DocumentRepository {
@@ -36,6 +37,9 @@ public interface DocumentRepository {
     <T> T withDocumentsLocked(CompanyId companyId, DocumentId first, DocumentId second, Supplier<T> work);
 
     void clearSuperseded(CompanyId companyId, DocumentId id);
+
+    /** Marca o desmarca la ficha de caso de todos los documentos de la empresa en una transacción; si falta alguno, 404 y no cambia ninguno. */
+    int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument);
 
     Optional<Document> findBySha256(CompanyId companyId, String sha256);
 
