@@ -201,14 +201,24 @@ class ResumeError(Exception):
     """La reanudación se niega: no hay estado, o el código o la pila cambiaron desde la última tanda."""
 
 
+def _saved_questions(folder):
+    """Preguntas de la tanda anterior (ids.json de la carpeta); un fichero ausente o ilegible se niega en español."""
+    path = folder / "ids.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))["preguntas"]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ResumeError(f"no se puede leer {path.name} de la carpeta de resultados ({error}): no se puede reanudar") from error
+
+
 def _check_resume(resume, commit, digest, config_sha, question_ids):
     """La caché solo sirve si la configuración, el código, la pila y las preguntas son los de la tanda anterior."""
     if not Path(resume["carpeta"]).is_dir():
         raise ResumeError(f"no existe la carpeta de resultados {resume['carpeta']}")
-    if resume.get("config_sha256") != config_sha:
+    if "config_sha256" not in resume:
+        raise ResumeError("estado de una versión anterior del banco: relanza el experimento entero")
+    if resume["config_sha256"] != config_sha:
         raise ResumeError("la configuración cambió desde la última tanda: vuelve a lanzar el experimento entero")
-    saved = json.loads((Path(resume["carpeta"]) / "ids.json").read_text(encoding="utf-8"))["preguntas"]
-    if saved != question_ids:
+    if _saved_questions(Path(resume["carpeta"])) != question_ids:
         raise ResumeError("las preguntas seleccionadas cambiaron desde la última tanda (ids.json): "
                           "vuelve a lanzar el experimento entero")
     if resume["huella"] != commit:
@@ -720,6 +730,8 @@ def _read_saved_state(path):
         state = tanda.read_state(path)
     except ValueError as error:
         raise ResumeError(f"el estado de reanudación está dañado ({error}): no se puede reanudar") from error
+    if state is not None and not isinstance(state, dict):
+        raise ResumeError("el estado de reanudación está dañado: no es un objeto: no se puede reanudar")
     if state is not None and not all(field in state for field in REQUIRED_STATE_FIELDS):
         raise ResumeError("el estado de reanudación está dañado: le faltan campos: no se puede reanudar")
     return state

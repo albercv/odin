@@ -1225,5 +1225,92 @@ class ForcedSampleTest(unittest.TestCase):
         self.assertTrue(set(FORCED) <= set(selections[0]))
 
 
+class NoneCurvesTest(Harness):
+    """Una mezcla sin pares medidos no rompe la orden ni el informe: sus valores son «—»."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+
+    def test_sweep_with_a_mix_without_measured_pairs_completes_and_reports(self):
+        topic_text = (BANCO / "enfoques" / "topic.txt").read_text(encoding="utf-8")
+        topic_calls = []
+        inner = ejecutar.responder
+
+        def first_topic_fails(item, carga, args, temp_dir, text=""):
+            if text == topic_text:
+                topic_calls.append(1)
+                if len(topic_calls) % 2 == 1:  # réplica 0 de cada pregunta: error; la 1 va bien (sin racha)
+                    return {"id": item["id"], "respuesta": None, "error": "fallo de topic", "coste_usd": 0.001,
+                            "tokens": None, "duracion_s": 1.0, "consultas": [], "modelo": None}
+            return inner(item, carga, args, temp_dir, text)
+
+        path = self.config(concurrency=1, sweep='\n[sweep]\nmixes = [{ main = 1 }, { topic = 2 }]\ndraws = 2\nsingleMaxTurns = [10]\n')
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "[combiner]", '[[searchers]]\napproach = "topic"\ncount = 2\nmodel = "haiku"\n\n[combiner]'), encoding="utf-8")
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=first_topic_fails):
+            code = banco.main(["sweep", "--sin-prueba", "--config", str(path)], layout=self.layout)
+        folder = self.only_folder()
+        self.assertEqual(code, 0)
+        curves = json.loads((folder / "curvas.json").read_text(encoding="utf-8"))
+        row = next(r for r in curves["mezclas"] if r["mix"] == {"topic": 2})
+        self.assertEqual((row["valid"], row["tokens_mean"], row["supera_single"]), (False, None, None))
+        self.assertIn("—", (folder / "informe.md").read_text(encoding="utf-8"))
+        self.assertEqual(banco.main(["report", "--results", str(folder)], layout=self.layout), 0)
+
+
+class ResumeFailuresTest(Harness):
+    """Estados y ids.json ilegibles, y estados de una versión anterior, se niegan en español (código 2)."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        self.path = self.config(concurrency=1)
+        self.state = self.state_dir / "reanudar-prueba.json"
+
+    def _stop_first_batch(self):
+        def failing(item, *args, **kwargs):
+            return {"id": item["id"], "respuesta": None, "error": "fallo cualquiera", "coste_usd": 0.001, "tokens": None,
+                    "duracion_s": 1.0, "consultas": [], "modelo": None}
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=failing):
+            self.assertEqual(self.run_cli(self.path), 2)
+
+    def _resume(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = banco.main(["reanudar", "--config", str(self.path)], layout=self.layout)
+        return code, err.getvalue()
+
+    def test_state_that_is_not_an_object_is_a_clear_error(self):
+        self.state.write_text("[]", encoding="utf-8")
+        code, message = self._resume()
+        self.assertEqual(code, 2)
+        self.assertIn("estado de reanudación está dañado", message)
+
+    def test_corrupt_ids_json_is_a_clear_error(self):
+        self._stop_first_batch()
+        (self.only_folder() / "ids.json").write_text("{roto", encoding="utf-8")
+        code, message = self._resume()
+        self.assertEqual(code, 2)
+        self.assertIn("ids.json", message)
+
+    def test_missing_ids_json_is_a_clear_error(self):
+        self._stop_first_batch()
+        (self.only_folder() / "ids.json").unlink()
+        code, message = self._resume()
+        self.assertEqual(code, 2)
+        self.assertIn("ids.json", message)
+
+    def test_legacy_state_without_config_hash_asks_to_relaunch(self):
+        self._stop_first_batch()
+        state = json.loads(self.state.read_text(encoding="utf-8"))
+        del state["config_sha256"]
+        self.state.write_text(json.dumps(state), encoding="utf-8")
+        code, message = self._resume()
+        self.assertEqual(code, 2)
+        self.assertIn("estado de una versión anterior del banco: relanza el experimento", message)
+        self.assertNotIn("la configuración cambió", message)
+
+
 if __name__ == "__main__":
     unittest.main()

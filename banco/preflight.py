@@ -29,7 +29,7 @@ def _result(stdout):
     return None
 
 
-PRUEBA_SIN_COSTE = "prueba sin coste notificado"  # su coste no se conoce: se anota con 0 y no bloquea el libro
+PREFLIGHT_NO_COST_NOTE = "prueba sin coste notificado"  # su coste no se conoce: se anota con 0 y no bloquea el libro
 
 
 def _call(claude_bin, model, timeout):
@@ -52,14 +52,14 @@ def run_preflight(claude_bin, model, timeout, ledger):
     (sin resultado, sin total_cost_usd o tiempo agotado), se anota con 0 y el motivo, y el libro sigue usable."""
     proc, error = _call(claude_bin, model, timeout)
     if proc is None:
-        ledger.charge(0.0, note=PRUEBA_SIN_COSTE)
+        ledger.charge(0.0, note=PREFLIGHT_NO_COST_NOTE)
         return error
     result = _result(proc.stdout)
     cost = None if result is None else result.get("total_cost_usd")
     if isinstance(cost, (int, float)) and not isinstance(cost, bool):
         ledger.charge(cost)
     else:
-        ledger.charge(0.0, note=PRUEBA_SIN_COSTE)
+        ledger.charge(0.0, note=PREFLIGHT_NO_COST_NOTE)
     if result is None:
         return f"sin resultado (código {proc.returncode}): {proc.stderr[-300:]}"
     if result.get("is_error"):

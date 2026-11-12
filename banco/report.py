@@ -189,19 +189,30 @@ def _beats_text(row):
     return "no aplica" if row["supera_single"] is None else ("sí" if row["supera_single"] else "no")
 
 
+def _shown(value, format_value):
+    """Valor de una curva: «—» si no hay medida (mezcla sin pares medidos, banda de ruido ausente)."""
+    return "—" if value is None else format_value(value)
+
+
+def _latency_text(row):
+    if row["latency_p50"] is None:
+        return "—"
+    return f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s"
+
+
 def _curve_lines(curves):
     lines = ["## Curvas", "", f"Variación de single por defecto (media de la mitad del intervalo): "
-             f"{_pct(curves['variacion'])}.", "",
+             f"{_shown(curves['variacion'], _pct)}.", "",
              "| Mezcla | Ejecuciones | Acierto medio [mín, máx] | Tokens medios | Coste medio | Latencia p50 / p95 | Supera single |",
              "|---|---|---|---|---|---|---|"]
     for row in curves["mezclas"]:
-        lines.append(f"| {_mix_text(row['mix'])} | {row['n']} | {_pct(row['accuracy_mean'])} "
-                     f"[{_pct(row['accuracy_min'])}, {_pct(row['accuracy_max'])}] | {_tokens(row['tokens_mean'])} | "
-                     f"{_usd(row['cost_mean'])} | {_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | "
-                     f"{_beats_text(row)} |")
+        lines.append(f"| {_mix_text(row['mix'])} | {row['n']} | {_shown(row['accuracy_mean'], _pct)} "
+                     f"[{_shown(row['accuracy_min'], _pct)}, {_shown(row['accuracy_max'], _pct)}] | "
+                     f"{_shown(row['tokens_mean'], _tokens)} | {_shown(row['cost_mean'], _usd)} | "
+                     f"{_latency_text(row)} | {_beats_text(row)} |")
     lines += ["", "| Turnos máximos | Acierto | Tokens medios | Latencia p50 / p95 | Válida |", "|---|---|---|---|---|"]
-    lines += [f"| {row['max_turns']} | {_pct(row['accuracy_mean'])} | {_tokens(row['tokens_mean'])} | "
-              f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | {'sí' if row['valid'] else 'no válida: errores'} |"
+    lines += [f"| {row['max_turns']} | {_shown(row['accuracy_mean'], _pct)} | {_shown(row['tokens_mean'], _tokens)} | "
+              f"{_latency_text(row)} | {'sí' if row['valid'] else 'no válida: errores'} |"
               for row in curves["single"]]
     return lines + [""]
 

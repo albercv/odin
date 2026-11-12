@@ -280,5 +280,13 @@ class NoiseBandTest(unittest.TestCase):
         self.assertIsNone(beats_single_frontier(row, [{"tokens_mean": 100.0, "accuracy_mean": None, "valid": True}], 0.0))
 
 
+class NoneTokensFrontierTest(unittest.TestCase):
+    def test_single_rows_without_tokens_are_ignored_and_none_row_has_no_verdict(self):
+        singles = [{"tokens_mean": None, "accuracy_mean": 0.9, "valid": True},
+                   {"tokens_mean": 100.0, "accuracy_mean": 0.6, "valid": True}]
+        self.assertTrue(beats_single_frontier({"tokens_mean": 100.0, "accuracy_mean": 0.9, "valid": True}, singles, 0.0))
+        self.assertIsNone(beats_single_frontier({"tokens_mean": None, "accuracy_mean": 0.9, "valid": True}, singles, 0.0))
+
+
 if __name__ == "__main__":
     unittest.main()
