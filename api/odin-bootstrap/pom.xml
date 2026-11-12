@@ -26,6 +26,11 @@
     </dependency>
     <dependency>
       <groupId>com.e2d.odin</groupId>
+      <artifactId>odin-adapter-reader-service</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.e2d.odin</groupId>
       <artifactId>odin-adapter-web</artifactId>
       <version>${project.version}</version>
     </dependency>

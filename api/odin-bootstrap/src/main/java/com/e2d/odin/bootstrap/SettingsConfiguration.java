@@ -18,8 +18,9 @@ public class SettingsConfiguration {
     }
 
     @Bean
-    InstallationSettings installationSettings(@Value("${odin.setup-token:}") String setupToken) {
-        return new InstallationSettings(setupToken);
+    InstallationSettings installationSettings(@Value("${odin.setup-token:}") String setupToken,
+            @Value("${odin.reader.url:}") String readerUrl) {
+        return new InstallationSettings(setupToken, !readerUrl.isBlank());
     }
 
     @Bean
