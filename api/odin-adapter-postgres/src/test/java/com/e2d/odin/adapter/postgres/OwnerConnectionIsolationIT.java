@@ -84,7 +84,7 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         UserId user = newUser(a);
         Document closed = new Document(new DocumentId(UUID.randomUUID()), a, Optional.of(project), "Cerrado",
                 "f.pdf", DocumentFormat.PDF, UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(),
-                true, user, NOW, Optional.empty(), 0);
+                true, user, NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
         docs.save(closed);
         docs.replacePages(closed.id(), List.of(new DocumentPage(closed.id(), 1, "zafiro cerrado", "lector", "1")));
         KnowledgeCard closedCard = new KnowledgeCard(new CardId(UUID.randomUUID()), a, Optional.of(project),

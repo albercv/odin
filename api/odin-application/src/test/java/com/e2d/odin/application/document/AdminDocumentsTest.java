@@ -14,6 +14,7 @@ import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class AdminDocumentsTest {
@@ -76,7 +77,7 @@ class AdminDocumentsTest {
         Document failed = Fixtures.document(docs, companyA, DocumentStatus.FAILED).markFailed("x");
         docs.save(new Document(failed.id(), failed.companyId(), failed.projectId(), failed.title(), failed.filename(),
                 failed.format(), failed.sha256(), failed.status(), failed.failureReason(), true, failed.uploadedBy(),
-                failed.uploadedAt(), failed.processingStartedAt(), 3));
+                failed.uploadedAt(), failed.processingStartedAt(), 3, Optional.empty(), Optional.empty()));
 
         Document result = retry.execute(Actors.companyAdmin(companyA), failed.id());
 

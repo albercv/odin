@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
@@ -153,7 +154,7 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         Document d = new Document(new DocumentId(UUID.randomUUID()), company,
                 Optional.of(project), "Doc cerrado", "f.pdf", DocumentFormat.PDF,
                 UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(), true, user, NOW,
-                Optional.empty(), 0);
+                Optional.empty(), 0, Optional.empty(), Optional.empty());
         docs.save(d);
         closedDocument = d;
         docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, "texto cerrado", "lector", "1")));
@@ -231,6 +232,33 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         assertThat(docs.findPage(scope, ProjectVisibility.of(Set.of()), closedDocument.id(), 1)).isEmpty();
         assertThat(docs.list(scope, ProjectVisibility.of(Set.of()), Optional.empty(), Optional.empty(), 0, 10))
                 .hasSize(1);
+    }
+
+    @Test
+    void replacementInHiddenProjectIsNullEvenWithoutTheExplicitFilter() {
+        UserId user = newUser(a);
+        ProjectId hidden = newProject(a, "Oculto");
+        Document old = newDocument(a, user, "Viejo", DocumentStatus.READY);
+        Document free = newDocument(a, user, "Nuevo", DocumentStatus.READY);
+        Document replacement = new Document(free.id(), a, Optional.of(hidden), free.title(), free.filename(),
+                free.format(), free.sha256(), free.status(), Optional.empty(), true, user, NOW, Optional.empty(), 0,
+                Optional.empty(), Optional.empty());
+        docs.save(replacement);
+        docs.markSuperseded(a, old.id(), replacement.id(), NOW);
+
+        // El filtro explícito deja pasar todo (ProjectVisibility.all()): solo la RLS esconde el proyecto.
+        assertThat(resolve(old, ProjectVisibility.of(Set.of()))).containsExactly(Optional.empty(), Optional.empty());
+        assertThat(resolve(old, ProjectVisibility.of(Set.of(hidden))))
+                .containsExactly(Optional.of(DocumentRef.of(replacement)), Optional.of(DocumentRef.of(replacement)));
+    }
+
+    private List<Optional<DocumentRef>> resolve(Document old, ProjectVisibility rlsVisibility) {
+        String sql = "SELECT d.id, " + SupersessionSql.COLUMNS + " FROM document d "
+                + SupersessionSql.joins("d.superseded_by") + " WHERE d.id = :id";
+        CompanyScope scope = CompanyScope.of(a);
+        return tx.inScope(scope, rlsVisibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope),
+                ProjectVisibility.all()).param("id", old.id().value()).query((rs, n) -> List.of(
+                        SupersessionSql.direct(rs), SupersessionSql.current(rs))).single());
     }
 
     @Test

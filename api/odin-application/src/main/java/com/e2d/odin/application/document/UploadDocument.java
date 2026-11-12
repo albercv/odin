@@ -59,7 +59,7 @@ public class UploadDocument {
         }
         Document document = new Document(new DocumentId(ids.newId()), companyId, projectId, cleanTitle, cleanFilename,
                 format, sha256, DocumentStatus.RECEIVED, Optional.empty(), false, actor.userId(), clock.instant(),
-                Optional.empty(), 0);
+                Optional.empty(), 0, Optional.empty(), Optional.empty());
         documents.save(document);
         return new UploadOutcome(document, false);
     }

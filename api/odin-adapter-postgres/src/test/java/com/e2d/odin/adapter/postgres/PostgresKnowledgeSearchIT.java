@@ -187,7 +187,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     private void inProject(Document d, ProjectId project) {
         docs.save(new Document(d.id(), d.companyId(), Optional.of(project), d.title(), d.filename(), d.format(),
                 d.sha256(), d.status(), d.failureReason(), d.paginated(), d.uploadedBy(), d.uploadedAt(),
-                d.processingStartedAt(), 0));
+                d.processingStartedAt(), 0, Optional.empty(), Optional.empty()));
     }
 
     private void cardIn(CompanyId company, ProjectId project, String title, String body) {

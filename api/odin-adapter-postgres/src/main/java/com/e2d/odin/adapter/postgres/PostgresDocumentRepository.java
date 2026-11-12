@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.postgres;
 
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
@@ -15,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,8 +25,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 public class PostgresDocumentRepository implements DocumentRepository {
 
     private static final String COLUMNS = """
-            id, company_id, project_id, title, filename, format, sha256, status, failure_reason, paginated,
-            uploaded_by, uploaded_at, processing_started_at, attempt_count""";
+            d.id, d.company_id, d.project_id, d.title, d.filename, d.format, d.sha256, d.status, d.failure_reason,
+            d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
+            d.superseded_at""";
     private final ScopedTransactions tx;
 
     public PostgresDocumentRepository(ScopedTransactions tx) {
@@ -52,32 +55,56 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
-        String sql = "SELECT " + COLUMNS + " FROM document WHERE id = :id AND " + Sql.inScope("company_id")
-                + " AND " + Sql.inVisibleProjects("project_id");
+        return findEntry(scope, visibility, id).map(DocumentEntry::document);
+    }
+
+    @Override
+    public Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
+        String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
+                + SupersessionSql.joins("d.superseded_by") + " WHERE d.id = :id AND " + Sql.inScope("d.company_id")
+                + " AND " + Sql.inVisibleProjects("d.project_id");
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
-                .param("id", id.value()).query((rs, n) -> document(rs)).optional());
+                .param("id", id.value()).query((rs, n) -> entry(rs)).optional());
+    }
+
+    @Override
+    public void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at) {
+        updateSupersession(companyId, id, replacementId.value(), Sql.ts(at));
+    }
+
+    @Override
+    public void clearSuperseded(CompanyId companyId, DocumentId id) {
+        updateSupersession(companyId, id, null, null);
+    }
+
+    private void updateSupersession(CompanyId companyId, DocumentId id, UUID replacement, OffsetDateTime at) {
+        tx.runInScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                UPDATE document SET superseded_by = :replacement, superseded_at = :at
+                WHERE id = :id AND company_id = :company""").param("replacement", replacement).param("at", at)
+                .param("id", id.value()).param("company", companyId.value()).update());
     }
 
     @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
-                .sql("SELECT " + COLUMNS + " FROM document WHERE company_id = :company AND sha256 = :sha")
+                .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha")
                 .param("company", companyId.value()).param("sha", sha256).query((rs, n) -> document(rs)).optional());
     }
 
     @Override
-    public List<Document> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
+    public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<DocumentStatus> status, int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
-        String sql = "SELECT " + COLUMNS + """
-                 FROM document WHERE (CAST(:project AS uuid) IS NULL OR project_id = :project)
-                  AND (CAST(:status AS text) IS NULL OR status = :status) AND %s AND %s
-                ORDER BY title, id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("company_id"),
-                Sql.inVisibleProjects("project_id"));
+        String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
+                + SupersessionSql.joins("d.superseded_by") + """
+                 WHERE (CAST(:project AS uuid) IS NULL OR d.project_id = :project)
+                  AND (CAST(:status AS text) IS NULL OR d.status = :status) AND %s AND %s
+                ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
+                Sql.inVisibleProjects("d.project_id"));
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("project", project)
                 .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
-                .param("limit", limit).query((rs, n) -> document(rs)).list());
+                .param("limit", limit).query((rs, n) -> entry(rs)).list());
     }
 
     @Override
@@ -97,9 +124,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
     @Override
     public Optional<Document> claimNextForProcessing(Instant now, Duration staleAfter) {
         return tx.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS + """
-                 FROM document WHERE status = 'RECEIVED' OR (status = 'PROCESSING'
-                    AND (processing_started_at IS NULL OR processing_started_at <= :threshold))
-                ORDER BY seq LIMIT 1 FOR UPDATE SKIP LOCKED""")
+                 FROM document d WHERE d.status = 'RECEIVED' OR (d.status = 'PROCESSING'
+                    AND (d.processing_started_at IS NULL OR d.processing_started_at <= :threshold))
+                ORDER BY d.seq LIMIT 1 FOR UPDATE SKIP LOCKED""")
                 .param("threshold", Sql.ts(now.minus(staleAfter))).query((rs, n) -> document(rs)).optional()
                 .map(d -> d.startProcessing(now)).map(claimed -> {
                     upsert(jdbc, claimed);
@@ -125,12 +152,18 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 .param("attempts", d.attemptCount()).update();
     }
 
+    private static DocumentEntry entry(ResultSet rs) throws SQLException {
+        return new DocumentEntry(document(rs), SupersessionSql.direct(rs), SupersessionSql.current(rs));
+    }
+
     private static Document document(ResultSet rs) throws SQLException {
         return new Document(new DocumentId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), rs.getString("title"),
                 rs.getString("filename"), DocumentFormat.valueOf(rs.getString("format")), rs.getString("sha256"),
                 DocumentStatus.valueOf(rs.getString("status")), Optional.ofNullable(rs.getString("failure_reason")),
                 rs.getBoolean("paginated"), new UserId(Sql.uuid(rs, "uploaded_by")), Sql.instant(rs, "uploaded_at"),
-                Sql.optionalInstant(rs, "processing_started_at"), rs.getInt("attempt_count"));
+                Sql.optionalInstant(rs, "processing_started_at"), rs.getInt("attempt_count"),
+                Optional.ofNullable(Sql.uuid(rs, "superseded_by")).map(DocumentId::new),
+                Sql.optionalInstant(rs, "superseded_at"));
     }
 }

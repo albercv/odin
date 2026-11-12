@@ -248,6 +248,12 @@ class MigrationFromPhaseOneIT {
     }
 
     @Test
+    void existingDocumentsAreNotSuperseded() {
+        assertThat(jdbc.sql("SELECT superseded_by IS NULL AND superseded_at IS NULL FROM document WHERE id = :id")
+                .param("id", DOCUMENT_IN_DELETED_PROJECT).query(Boolean.class).single()).isTrue();
+    }
+
+    @Test
     void reactivatingAMigratedInactiveWorkerShowsTheirProjects() {
         ScopedTransactions tx = new ScopedTransactions(database);
         assertThat(new PostgresProjectMemberRepository(tx).projectsOf(new CompanyId(COMPANY),

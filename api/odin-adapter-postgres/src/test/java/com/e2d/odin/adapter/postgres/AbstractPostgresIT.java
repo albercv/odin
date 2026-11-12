@@ -72,7 +72,7 @@ abstract class AbstractPostgresIT {
     Document newDocument(CompanyId company, UserId uploader, String title, DocumentStatus status) {
         Document d = new Document(new DocumentId(UUID.randomUUID()), company, Optional.empty(), title, "f.pdf",
                 DocumentFormat.PDF, UUID.randomUUID().toString(), status, Optional.empty(), true, uploader, NOW,
-                Optional.empty(), 0);
+                Optional.empty(), 0, Optional.empty(), Optional.empty());
         docs.save(d);
         return d;
     }
