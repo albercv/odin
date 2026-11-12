@@ -1628,6 +1628,40 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/usage-stats" : {
+      "get" : {
+        "tags" : [ "usage-controller" ],
+        "operationId" : "usageStats",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UsageStatsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/tagging-status" : {
       "get" : {
         "tags" : [ "document-topic-controller" ],
@@ -1723,6 +1757,43 @@
                   "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/ProjectView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/gaps" : {
+      "get" : {
+        "tags" : [ "usage-controller" ],
+        "operationId" : "gaps",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/GapView"
                   }
                 }
               }
@@ -2993,6 +3064,146 @@
         },
         "required" : [ "status", "topicListVersion" ]
       },
+      "CardCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "saved" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "approved" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "corrected" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "rejected" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pending" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "approved", "corrected", "pending", "rejected", "saved" ]
+      },
+      "CompanyUsageView" : {
+        "type" : "object",
+        "properties" : {
+          "questions" : {
+            "$ref" : "#/components/schemas/QuestionCountsView"
+          },
+          "questionsWithoutResults" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "cards" : {
+            "$ref" : "#/components/schemas/CardCountsView"
+          },
+          "documents" : {
+            "$ref" : "#/components/schemas/DocumentCountsView"
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/TaggingCountsView"
+          }
+        },
+        "required" : [ "cards", "documents", "questions", "questionsWithoutResults" ]
+      },
+      "DocumentCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "uploaded" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "ready" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "failed" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "waitingForReader" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "failed", "ready", "uploaded", "waitingForReader" ]
+      },
+      "PersonUsageView" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "memberCode" : {
+            "type" : "string"
+          },
+          "questions" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "cardsSaved" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "cardsSaved", "displayName", "questions" ]
+      },
+      "QuestionCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "search" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "similarCases" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "search", "similarCases" ]
+      },
+      "TaggingCountsView" : {
+        "type" : "object",
+        "properties" : {
+          "tagged" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pending" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "pending", "tagged" ]
+      },
+      "UsageStatsView" : {
+        "type" : "object",
+        "properties" : {
+          "month" : {
+            "type" : "string"
+          },
+          "company" : {
+            "$ref" : "#/components/schemas/CompanyUsageView"
+          },
+          "people" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PersonUsageView"
+            }
+          }
+        },
+        "required" : [ "company", "month", "people" ]
+      },
       "TaggingStatusView" : {
         "type" : "object",
         "properties" : {
@@ -3064,6 +3275,26 @@
           }
         },
         "required" : [ "createdAt", "id", "label", "prefix" ]
+      },
+      "GapView" : {
+        "type" : "object",
+        "properties" : {
+          "text" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "times" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "lastAskedOn" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "kind", "lastAskedOn", "text", "times" ]
       }
     }
   }

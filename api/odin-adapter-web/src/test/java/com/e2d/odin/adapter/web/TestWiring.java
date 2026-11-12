@@ -20,6 +20,7 @@ import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryQuestionLog;
 import com.e2d.odin.application.fake.InMemoryTaggingRepository;
 import com.e2d.odin.application.fake.InMemoryTopicRepository;
+import com.e2d.odin.application.fake.InMemoryUsageStatistics;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
@@ -76,6 +77,8 @@ import com.e2d.odin.application.topic.ListTopics;
 import com.e2d.odin.application.topic.ReviewDocumentTopics;
 import com.e2d.odin.application.shared.TaggingWindow;
 import com.e2d.odin.application.topic.UpdateTopic;
+import com.e2d.odin.application.usage.GetUsageStats;
+import com.e2d.odin.application.usage.ListGaps;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
@@ -102,6 +105,7 @@ public class TestWiring {
     final InMemoryQuestionLog questions = new InMemoryQuestionLog();
     final InMemoryTopicRepository topics = new InMemoryTopicRepository();
     final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
+    final InMemoryUsageStatistics usage = new InMemoryUsageStatistics();
     final ScriptedKnowledgeSearch search = new ScriptedKnowledgeSearch();
     final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     final MutableClock clock = new MutableClock();
@@ -338,5 +342,13 @@ public class TestWiring {
 
     @Bean GetTaggingStatus getTaggingStatus() {
         return new GetTaggingStatus(tagging, taggingWindow());
+    }
+
+    @Bean GetUsageStats getUsageStats() {
+        return new GetUsageStats(orgs, usage, clock, ZoneId.of("Europe/Madrid"));
+    }
+
+    @Bean ListGaps listGaps() {
+        return new ListGaps(orgs, usage, clock, ZoneId.of("Europe/Madrid"));
     }
 }

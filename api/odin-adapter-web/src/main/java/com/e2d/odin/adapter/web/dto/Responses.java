@@ -10,6 +10,14 @@ import com.e2d.odin.application.topic.DocumentTopicsReport;
 import com.e2d.odin.application.topic.TaggedDocument;
 import com.e2d.odin.application.topic.TaggingStatusReport;
 import com.e2d.odin.application.topic.TopicLabel;
+import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CompanyUsage;
+import com.e2d.odin.application.usage.DocumentCounts;
+import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.PersonUsage;
+import com.e2d.odin.application.usage.QuestionCounts;
+import com.e2d.odin.application.usage.TaggingCounts;
+import com.e2d.odin.application.usage.UsageReport;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentRef;
@@ -35,6 +43,7 @@ import com.e2d.odin.domain.topic.Topic;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -235,6 +244,63 @@ public final class Responses {
             return new TaggingStatusView(report.backlog().pendingDocuments(),
                     report.backlog().oldestPendingSince().orElse(null), TaggingWindowView.from(report.window()),
                     report.window().zone().getId());
+        }
+    }
+
+    public record QuestionCountsView(int search, int similarCases) {
+        static QuestionCountsView from(QuestionCounts c) {
+            return new QuestionCountsView(c.search(), c.similarCases());
+        }
+    }
+
+    public record CardCountsView(int saved, int approved, int corrected, int rejected, int pending) {
+        static CardCountsView from(CardCounts c) {
+            return new CardCountsView(c.saved(), c.approved(), c.corrected(), c.rejected(), c.pending());
+        }
+    }
+
+    public record DocumentCountsView(int uploaded, int ready, int failed, int waitingForReader) {
+        static DocumentCountsView from(DocumentCounts c) {
+            return new DocumentCountsView(c.uploaded(), c.ready(), c.failed(), c.waitingForReader());
+        }
+    }
+
+    public record TaggingCountsView(int tagged, int pending) {
+        static TaggingCountsView from(TaggingCounts c) {
+            return new TaggingCountsView(c.tagged(), c.pending());
+        }
+    }
+
+    /** {@code tagging} falta si la empresa no tiene temas. */
+    public record CompanyUsageView(QuestionCountsView questions, int questionsWithoutResults, CardCountsView cards,
+            DocumentCountsView documents, @Nullable TaggingCountsView tagging) {
+        static CompanyUsageView from(CompanyUsage u) {
+            return new CompanyUsageView(QuestionCountsView.from(u.questions()), u.questionsWithoutResults(),
+                    CardCountsView.from(u.cards()), DocumentCountsView.from(u.documents()),
+                    u.tagging().map(TaggingCountsView::from).orElse(null));
+        }
+    }
+
+    /** Solo dos recuentos por persona. La fila de bajas va sin {@code userId} ni {@code memberCode}. */
+    public record PersonUsageView(@Nullable UUID userId, String displayName, @Nullable String memberCode, int questions,
+            int cardsSaved) {
+        static PersonUsageView from(PersonUsage p) {
+            return new PersonUsageView(p.userId().map(id -> id.value()).orElse(null), p.displayName(),
+                    p.memberCode().orElse(null), p.questions(), p.cardsSaved());
+        }
+    }
+
+    public record UsageStatsView(String month, CompanyUsageView company, List<PersonUsageView> people) {
+        public static UsageStatsView from(UsageReport report) {
+            return new UsageStatsView(report.month().toString(), CompanyUsageView.from(report.company()),
+                    report.people().stream().map(PersonUsageView::from).toList());
+        }
+    }
+
+    /** Un hueco: sin autor y con el día, sin la hora. */
+    public record GapView(String text, String kind, int times, LocalDate lastAskedOn) {
+        public static GapView from(GapGroup g) {
+            return new GapView(g.text(), g.kind().name(), g.times(), g.lastAskedOn());
         }
     }
 

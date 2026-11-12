@@ -16,6 +16,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.People;
+import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CompanyUsage;
+import com.e2d.odin.application.usage.DocumentCounts;
+import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.PersonUsage;
+import com.e2d.odin.application.usage.QuestionCounts;
+import com.e2d.odin.application.usage.TaggingCounts;
+import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Role;
@@ -23,6 +31,8 @@ import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import jakarta.servlet.http.Cookie;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -793,5 +803,79 @@ class AdminApiTest extends WebTestSupport {
                 "{\"firstName\":\"Pepe\",\"lastName\":\"Gil\",\"roles\":[\"WORKER\"],\"projectIds\":[\"" + UUID.randomUUID()
                         + "\"]}")).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("Proyecto no encontrado"));
+    }
+    private CompanyUsage someUsage() {
+        return new CompanyUsage(new QuestionCounts(5, 2), 1, new CardCounts(3, 1, 1, 1, 0),
+                new DocumentCounts(4, 3, 1, 0), Optional.of(new TaggingCounts(2, 1)));
+    }
+
+    @Test
+    void usageStatsRoute() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        UserId ana = new UserId(UUID.randomUUID());
+        w.usage.seed(company, someUsage(), List.of(
+                new PersonUsage(Optional.of(ana), "Ana Pérez", Optional.of("7F3K-E2D"), 4, 1, false),
+                PersonUsage.departed(3, 2)));
+        String url = "/v1/admin/companies/" + company.value() + "/usage-stats";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.month").value("2026-11"))
+                .andExpect(jsonPath("$.company.questions.search").value(5))
+                .andExpect(jsonPath("$.company.questions.similarCases").value(2))
+                .andExpect(jsonPath("$.company.questionsWithoutResults").value(1))
+                .andExpect(jsonPath("$.company.cards.corrected").value(1))
+                .andExpect(jsonPath("$.company.documents.waitingForReader").value(0))
+                .andExpect(jsonPath("$.company.tagging.pending").value(1))
+                .andExpect(jsonPath("$.people[0].userId").value(ana.value().toString()))
+                .andExpect(jsonPath("$.people[0].displayName").value("Ana Pérez"))
+                .andExpect(jsonPath("$.people[0].memberCode").value("7F3K-E2D"))
+                .andExpect(jsonPath("$.people[0].questions").value(4))
+                .andExpect(jsonPath("$.people[0].cardsSaved").value(1))
+                .andExpect(jsonPath("$.people[1].displayName").value("Personas dadas de baja"))
+                .andExpect(jsonPath("$.people[1].userId").doesNotExist())
+                .andExpect(jsonPath("$.people[1].memberCode").doesNotExist());
+        mvc.perform(get(url + "?month=2026-10").cookie(admin)).andExpect(jsonPath("$.month").value("2026-10"));
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void usageStatsAndGapsRejectBadMonths() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        for (String route : new String[] {"usage-stats", "gaps"}) {
+            String url = "/v1/admin/companies/" + company.value() + "/" + route;
+            mvc.perform(get(url + "?month=2026-13").cookie(admin)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("El mes tiene que tener la forma AAAA-MM"));
+            mvc.perform(get(url + "?month=2024-01").cookie(admin)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("Solo se pueden consultar los 12 últimos meses"));
+        }
+    }
+
+    @Test
+    void gapsRoute() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        w.usage.seedGaps(company, List.of(new GapGroup("goteras", QuestionKind.SIMILAR_CASES, 3,
+                LocalDate.of(2026, 11, 8))));
+        String url = "/v1/admin/companies/" + company.value() + "/gaps";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].text").value("goteras")).andExpect(jsonPath("$[0].kind").value("SIMILAR_CASES"))
+                .andExpect(jsonPath("$[0].times").value(3));
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/v1/admin/companies/" + UUID.randomUUID() + "/gaps").cookie(adminCookie(Role.GROUP_ADMIN,
+                Optional.empty()))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void gapViewHasDateWithoutTime() throws Exception {
+        CompanyId company = newCompany();
+        w.usage.seedGaps(company, List.of(new GapGroup("goteras", QuestionKind.SEARCH, 1, LocalDate.of(2026, 11, 8))));
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/gaps")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company))))
+                .andExpect(jsonPath("$[0].lastAskedOn").value("2026-11-08"))
+                .andExpect(jsonPath("$[0].authorId").doesNotExist()).andExpect(jsonPath("$[0].userId").doesNotExist())
+                .andExpect(jsonPath("$[0].askedAt").doesNotExist());
     }
 }

@@ -580,6 +580,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/usage-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["usageStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/tagging-status": {
         parameters: {
             query?: never;
@@ -620,6 +636,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["projects_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["gaps"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1101,6 +1133,63 @@ export interface components {
             topicListVersion: number;
             failureReason?: string;
         };
+        CardCountsView: {
+            /** Format: int32 */
+            saved: number;
+            /** Format: int32 */
+            approved: number;
+            /** Format: int32 */
+            corrected: number;
+            /** Format: int32 */
+            rejected: number;
+            /** Format: int32 */
+            pending: number;
+        };
+        CompanyUsageView: {
+            questions: components["schemas"]["QuestionCountsView"];
+            /** Format: int32 */
+            questionsWithoutResults: number;
+            cards: components["schemas"]["CardCountsView"];
+            documents: components["schemas"]["DocumentCountsView"];
+            tagging?: components["schemas"]["TaggingCountsView"];
+        };
+        DocumentCountsView: {
+            /** Format: int32 */
+            uploaded: number;
+            /** Format: int32 */
+            ready: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            waitingForReader: number;
+        };
+        PersonUsageView: {
+            /** Format: uuid */
+            userId?: string;
+            displayName: string;
+            memberCode?: string;
+            /** Format: int32 */
+            questions: number;
+            /** Format: int32 */
+            cardsSaved: number;
+        };
+        QuestionCountsView: {
+            /** Format: int32 */
+            search: number;
+            /** Format: int32 */
+            similarCases: number;
+        };
+        TaggingCountsView: {
+            /** Format: int32 */
+            tagged: number;
+            /** Format: int32 */
+            pending: number;
+        };
+        UsageStatsView: {
+            month: string;
+            company: components["schemas"]["CompanyUsageView"];
+            people: components["schemas"]["PersonUsageView"][];
+        };
         TaggingStatusView: {
             /** Format: int32 */
             pendingDocuments: number;
@@ -1128,6 +1217,14 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             revokedAt?: string;
+        };
+        GapView: {
+            text: string;
+            kind: string;
+            /** Format: int32 */
+            times: number;
+            /** Format: date */
+            lastAskedOn: string;
         };
     };
     responses: never;
@@ -2344,6 +2441,30 @@ export interface operations {
             };
         };
     };
+    usageStats: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageStatsView"];
+                };
+            };
+        };
+    };
     taggingStatus: {
         parameters: {
             query?: never;
@@ -2408,6 +2529,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectView"][];
+                };
+            };
+        };
+    };
+    gaps: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GapView"][];
                 };
             };
         };

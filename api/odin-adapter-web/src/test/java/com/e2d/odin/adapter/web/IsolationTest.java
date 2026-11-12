@@ -11,6 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.People;
+import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CompanyUsage;
+import com.e2d.odin.application.usage.DocumentCounts;
+import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.knowledge.CardStatus;
@@ -20,6 +25,8 @@ import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -392,5 +399,28 @@ class IsolationTest extends WebTestSupport {
 
         mvc.perform(put(base + "/" + topicOfB).cookie(adminOfA)).andExpect(status().isNotFound());
         mvc.perform(get(base).cookie(adminOfA)).andExpect(jsonPath("$.topics.length()").value(0));
+    }
+    @Test
+    void otherCompanyAdminCannotReadUsageOrGaps() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        w.usage.seed(a, new CompanyUsage(new QuestionCounts(7, 0), 0, new CardCounts(0, 0, 0, 0, 0),
+                new DocumentCounts(0, 0, 0, 0), Optional.empty()), List.of());
+        w.usage.seed(b, new CompanyUsage(new QuestionCounts(1, 0), 0, new CardCounts(0, 0, 0, 0, 0),
+                new DocumentCounts(0, 0, 0, 0), Optional.empty()), List.of());
+        w.usage.seedGaps(a, List.of(new GapGroup("secreto de A", QuestionKind.SEARCH, 1, LocalDate.of(2026, 11, 1))));
+        var ownerOfA = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        var group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+        String stats = "/v1/admin/companies/" + a.value() + "/usage-stats";
+        String gaps = "/v1/admin/companies/" + a.value() + "/gaps";
+
+        mvc.perform(get(stats).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(gaps).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(stats).cookie(ownerOfA)).andExpect(jsonPath("$.company.questions.search").value(7));
+        mvc.perform(get(stats).cookie(group)).andExpect(jsonPath("$.company.questions.search").value(7));
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/usage-stats").cookie(group))
+                .andExpect(jsonPath("$.company.questions.search").value(1));
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/gaps").cookie(group)).andExpect(jsonPath("$", hasSize(0)));
     }
 }
