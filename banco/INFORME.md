@@ -76,6 +76,6 @@ singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 
 
 - El redactor se ejecuta pregunta a pregunta, sin concurrencia. Con la batería completa, el paso de respuesta final puede ser lento.
 - Los jueces se paralelizan por pregunta, con `concurrency`.
-- Un fallo inesperado en una pregunta (redactor o juez) queda registrado en su fila (`error`); el coste de esa llamada queda desconocido y para el experimento por presupuesto. Una cuota o límite detectado en el redactor sí para. Los jueces no exponen el texto del error, así que una cuota en un juez aparece como veredicto inválido, no como parada.
+- Un fallo inesperado en una pregunta (redactor o juez) queda registrado en su fila (`error`); el coste de esa llamada queda desconocido y para el experimento por presupuesto. Una cuota o límite detectado en el redactor o en un juez de Claude sí para: el registro del juez lleva el texto del error (`error`) y se aplica el mismo patrón que a los buscadores (`PARADA.txt` y código 2). Los jueces de Ollama no tienen cuota.
 - `banco/resultados/` se versiona como el resto de experimentos (decisión del controlador); solo la reserva queda fuera.
 - La variable `ODIN_BANCO_CLAUDE_JUEZ` conserva su nombre en español por ser un ajuste de entorno.

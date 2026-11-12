@@ -325,25 +325,32 @@ def _unjudged(item, records, error):
     return {"id": item["id"], "judges": records, "jury": None, "error": error}
 
 
+def _may_launch(sess, spec):
+    """Un juez de pago arranca solo sin parada y con presupuesto; los de Ollama son gratis y siguen."""
+    return not _is_paid(spec) or (not _stopped(sess) and sess.ledger.can_launch())
+
+
 def _judge_question(sess, jobs, item, answer):
     """Veredictos de los jueces de una pregunta. Devuelve (fila, motivo de parada o None, llamadas de pago sin lanzar).
-    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo; la pregunta queda sin veredicto."""
+    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo; la pregunta queda sin veredicto.
+    Una cuota en un juez de Claude para el experimento, igual que en el redactor."""
     records, skipped = [], 0
     try:
         for index, spec, rubric in jobs:
-            if _is_paid(spec) and not sess.ledger.can_launch():
+            if not _may_launch(sess, spec):
                 skipped += 1
                 continue
             record = _call_judge(sess, index, spec, rubric, item, answer)
             if _is_paid(spec):
                 sess.ledger.charge(record.get("coste_usd"))
+                _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
             records.append(record)
     except ejecutar.Aislamiento as error:
         return _unjudged(item, records, str(error)), f"AISLAMIENTO ROTO en juez: {error}", skipped
     except Exception as error:  # un juez roto no pierde los veredictos de las demás preguntas
         return _unjudged(item, records, repr(error)), None, skipped
     if skipped:
-        return _unjudged(item, records, "presupuesto agotado"), BUDGET, skipped
+        return _unjudged(item, records, "parada o presupuesto agotado"), BUDGET, skipped
     jury = judge.aggregate([r["verdict"] for r in records], sess.cfg.aggregation)
     return {"id": item["id"], "judges": records, "jury": jury, "error": None}, None, 0
 

@@ -111,7 +111,7 @@ class Harness(unittest.TestCase):
         return folders[0]
 
     def run_cli(self, config, env=None):
-        with fake_env(FAKE_VEREDICTO="si", **(env or {})):
+        with fake_env(**{"FAKE_VEREDICTO": "si", **(env or {})}):
             return banco.main(["run", "--config", str(config)], layout=self.layout)
 
 
@@ -196,6 +196,15 @@ class RunTest(Harness):
         # sin presupuesto, los jueces de Claude no corren, pero el de Ollama (gratis) sí
         self.assertEqual([len(v["judges"]) for v in verdicts], [3, 1, 1])
         self.assertIsNone(verdicts[1]["jury"])
+
+    def test_judge_quota_error_is_stop_reason(self):
+        code = self.run_cli(self.config(), env={"FAKE_VEREDICTO": "limite"})
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("cuota o límite en el juez", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        verdicts = self.read_jsonl(folder, "veredictos.jsonl")
+        self.assertIn("usage limit", verdicts[0]["judges"][0]["error"])
+        self.assertTrue((folder / "resumen.json").exists())
 
     def test_sweep_cap_is_cumulative_across_pools(self):
         # el grupo principal (0,006 USD) no pasa de 0,0075; los turnos suman hasta cruzarlo

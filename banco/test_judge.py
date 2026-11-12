@@ -90,6 +90,16 @@ class ClaudeJudgeTest(unittest.TestCase):
         self.assertEqual(record["coste_usd"], 0.0005)
         self.assertEqual(record["tokens"]["entrada"], 120)
 
+    def test_quota_error_text_is_kept_in_record(self):
+        with fake_env(FAKE_VEREDICTO="limite"):
+            record = self._judge()
+        self.assertTrue(record["verdict"]["invalido"])
+        self.assertEqual(record["error"], "Claude AI usage limit reached")
+
+    def test_ok_record_has_no_error(self):
+        with fake_env(FAKE_VEREDICTO="si"):
+            self.assertIsNone(self._judge()["error"])
+
     def test_invalid_structured_output_is_marked_invalid(self):
         with fake_env(FAKE_VEREDICTO="invalido"):
             self.assertTrue(self._judge()["verdict"]["invalido"])
