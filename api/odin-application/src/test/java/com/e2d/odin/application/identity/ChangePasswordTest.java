@@ -93,6 +93,29 @@ class ChangePasswordTest {
     }
 
     @Test
+    void groupAdminCannotChangeThePasswordOfAnotherGroupAdmin() {
+        UserId otherId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, otherId, "Gael", Optional.of("g@demo.test"), true,
+                Optional.of(passwords.hash(OLD)));
+
+        assertThatThrownBy(() -> change.execute(Actors.groupAdmin(), otherId, Optional.empty(), NEW))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("No puedes cambiar la contraseña de otro administrador del grupo");
+        assertThat(users.findById(otherId).orElseThrow().passwordHash()).contains(passwords.hash(OLD));
+    }
+
+    @Test
+    void groupAdminChangesOwnPassword() {
+        UserId ownId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, ownId, "Gael", Optional.of("g@demo.test"), true, Optional.of(passwords.hash(OLD)));
+        Actor own = new Actor(ownId, "Gael", Role.GROUP_ADMIN, Set.of());
+
+        change.execute(own, ownId, Optional.of(OLD), NEW);
+
+        assertThat(users.findById(ownId).orElseThrow().passwordHash()).contains(passwords.hash(NEW));
+    }
+
+    @Test
     void companyAdminOfAnotherCompanyIsForbidden() {
         Actor stranger = Actors.companyAdmin(new CompanyId(UUID.randomUUID()));
 

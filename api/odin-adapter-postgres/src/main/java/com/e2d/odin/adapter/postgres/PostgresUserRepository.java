@@ -66,6 +66,13 @@ public class PostgresUserRepository implements UserRepository {
     }
 
     @Override
+    public List<User> lockGroupAdmins() {
+        return tx.inScope(ALL, jdbc -> jdbc
+                .sql("SELECT " + COLUMNS + " FROM app_user WHERE group_admin AND deleted_at IS NULL ORDER BY id FOR UPDATE")
+                .query((rs, n) -> user(rs)).list());
+    }
+
+    @Override
     public Optional<User> findGroupAdminByEmail(String email) {
         return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT " + COLUMNS
                 + " FROM app_user WHERE group_admin AND lower(email) = lower(:email) AND deleted_at IS NULL")

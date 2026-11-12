@@ -86,7 +86,7 @@ final class UserAdministration {
         }
     }
 
-    /** Sobre quien es el administrador del grupo solo actúa él mismo, aunque trabaje en una empresa. */
+    /** Sobre un administrador del grupo solo actúa un administrador del grupo. */
     static void requireGroupAdminToActOn(Actor actor, User person) {
         if (person.groupAdmin() && !actor.isGroupAdmin()) {
             throw new ForbiddenException("Solo el administrador del grupo puede editar a esta persona");
@@ -121,7 +121,7 @@ final class UserAdministration {
 
     /** Quien deja de poder administrar el grupo no puede ser el último administrador activo. */
     static void requireAnotherActiveGroupAdmin(UserRepository users, User user) {
-        if (user.groupAdmin() && user.active() && users.listGroupAdmins().stream()
+        if (user.groupAdmin() && user.active() && users.lockGroupAdmins().stream()
                 .noneMatch(other -> other.active() && !other.id().equals(user.id()))) {
             throw new ConflictException(LAST_GROUP_ADMIN);
         }

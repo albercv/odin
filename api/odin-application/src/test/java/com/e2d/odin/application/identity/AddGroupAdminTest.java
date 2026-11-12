@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.SequencePersonCodeGenerator;
+import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -25,7 +27,8 @@ class AddGroupAdminTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final FakePasswordHasher passwords = new FakePasswordHasher();
-    private final AddGroupAdmin add = new AddGroupAdmin(users, passwords, new SequenceIdGenerator(),
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final AddGroupAdmin add = new AddGroupAdmin(users, memberships, passwords, new SequenceIdGenerator(),
             new SequencePersonCodeGenerator("7F3K", "9ZQ2"));
 
     private static NewGroupAdmin person(String email, String password) {
@@ -60,6 +63,18 @@ class AddGroupAdminTest {
         assertThat(stored.groupAdmin()).isTrue();
         assertThat(stored.displayName()).isEqualTo("Wanda Pérez");
         assertThat(stored.personCode()).isEqualTo("WAN1");
+    }
+
+    @Test
+    void personWhoAdministersACompanyCannotGetTheMark() {
+        UserId id = new UserId(UUID.randomUUID());
+        People.member(users, memberships, id, "Olga", Optional.of("o@demo.test"), Role.COMPANY_ADMIN,
+                new CompanyId(UUID.randomUUID()), true, Optional.of("pw:suya"));
+
+        assertThatThrownBy(() -> add.execute(Actors.groupAdmin(), person("o@demo.test", null)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Quítale antes la administración de sus empresas");
+        assertThat(users.findById(id).orElseThrow().groupAdmin()).isFalse();
     }
 
     @Test

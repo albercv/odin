@@ -12,6 +12,7 @@ import { MemberAccesses } from './MemberAccesses';
 import { EditForm, ResetPasswordForm, RolesForm } from './MemberEditors';
 import { MemberForm } from './MemberForm';
 import { Notice } from './Notice';
+import { confirmDeactivatePerson, confirmDeletePerson } from './personConfirmations';
 import { useAction, useLoad } from './useLoad';
 import styles from './Members.module.css';
 
@@ -50,7 +51,7 @@ function useRemovals(companyId: string, u: Member, onRemoved: RowProps['onRemove
     if (await act(() => api.removeMember(companyId, u.userId))) onRemoved(`Se ha quitado a ${u.displayName} de esta empresa`);
   };
   const erase = async () => {
-    const message = `¿Borrar a ${u.displayName}? Desaparece de todas las empresas y de sus proyectos, y sus claves dejan de valer. No se puede deshacer.`;
+    const message = confirmDeletePerson(u.displayName);
     if (!(await confirm({ message, confirmLabel: 'Borrar', danger: true }))) return;
     if (await act(() => api.deleteUser(u.userId))) onRemoved(`Se ha borrado a ${u.displayName}`);
   };
@@ -62,7 +63,7 @@ function useGroupToggle(u: Member, act: ReturnType<typeof useAction>['act'], onC
   const confirm = useConfirm();
   return async () => {
     if (u.personActive) {
-      const message = `¿Desactivar a ${u.displayName} en todo el grupo? No podrá usar Odín en ninguna empresa hasta que se reactive. Sus claves y sus proyectos se conservan.`;
+      const message = confirmDeactivatePerson(u.displayName);
       if (!(await confirm({ message, confirmLabel: 'Desactivar', danger: true }))) return;
     }
     if (await act(() => api.updateUser(u.userId, { active: !u.personActive }))) onChanged();
