@@ -9,21 +9,23 @@
 - Al leer, el repositorio y la búsqueda resuelven en la misma consulta el sustituto directo y el vigente del final de la cadena, con el filtro explícito y bajo la seguridad por filas. El SQL de la cadena está en una sola pieza compartida.
 - Un caso de uso, `SupersedeDocument`, hace las comprobaciones del spec 5.1 en su orden.
 - La búsqueda elige por relevancia como hoy y después pone los sustituidos detrás.
-- Las baterías del bloque 6 miden el antes y el después.
+- La batería de respuestas del archivo ficticio (bloque 6) mide el antes y el después con Haiku. Las marcas salen de las contradicciones de tipo `version` de ese archivo.
 
 **Tecnología:** Java 21, Spring Boot 4.1.2, PostgreSQL 17.10 con Flyway y seguridad por filas, TypeScript con el SDK de MCP, React 19, Vitest y Playwright.
 
-**Diseño:** `docs/superpowers/specs/2026-11-11-documentos-sustituidos-design.md` (aquí, «spec»), que amplía el spec base y el de la 2a. Se mide con las baterías de `2026-11-11-datos-correctos-medidos-design.md` («spec 6») y de su plan. Quien ejecute una tarea lee el spec y, en las tareas 1 y 5, también el spec 6 y el plan del bloque 6.
+**Diseño:** `docs/superpowers/specs/2026-11-11-documentos-sustituidos-design.md` (aquí, «spec»), que amplía el spec base y el de la 2a. Se mide con la batería del archivo del encargo 12 (informe `docs/informes/2026-11-12-medicion-archivo-ficticio.md`, `experimentos/2026-11-12-archivo-ficticio/`), según `2026-11-11-datos-correctos-medidos-design.md` («spec 6»), cuyo apartado 14 (D-052) manda, y el plan del bloque 6. Quien ejecute una tarea lee el spec y, en las tareas 1 y 5, también el apartado 14 del spec 6 y el plan del bloque 6.
 
 ## Cuándo se ejecuta
 
-- Después del cierre del bloque 6 y antes del bloque 2, cuando lo diga el CEO. El bloque 7 espera su validación (D-037).
-- `feature/fase-2-conocimiento` ya tiene los bloques 1, 3 y 6.
-- **Nombres que dejan otros bloques.** Este plan parte de la punta de la 2a (f6c5019). Donde los bloques 1, 3 y 6 cambiaron algo, se sigue lo suyo:
-  - `Document` ya lleva `pagesWithoutText` (bloque 1): los componentes nuevos van detrás;
-  - `ListCompanyDocuments` y `DocumentView` ya llevan temas y estado del etiquetado (bloque 3): `DocumentEntry` ocupa el lugar de `Document` en lo que devuelvan;
-  - el cargador compartido, los juegos y la cuenta aparte de sustituidos son los del plan del bloque 6. Aquí se llaman `CorpusLoader`, `sustituidos` y `sustituidos-escala`.
-  - Si algo no encaja, el CTO corrige este plan antes de la tarea afectada.
+- Justo después del bloque 6 y antes de los bloques 1 y 3 (orden de D-052, `2026-11-11-fase-2-orden.md`). Va cuando lo diga el CEO; el bloque 7 está validado (D-050, con los cambios de D-052).
+- `feature/fase-2-conocimiento` solo tiene hecho el bloque 6. Este plan no da por hechos los bloques 1 y 3: ni lector OCR, ni temas, ni filtro por tema, ni `DescribeMe` del bloque 3.
+- **Lo que encuentra hecho del bloque 6** (spec 6, apartado 14):
+  - el MCP con `listProjects`, `projectName` y `addedAt` (en lugar de `date`) en `searchKnowledge`, `readPage` y `listDocuments`, y las reglas de cita y de fuente parcial en `INSTRUCTIONS`. La API no cambió: el MCP saca `projectName` de `GET /v1/me`;
+  - la batería de respuestas del archivo (`make answer-battery`): el ejecutor, el puntuador de Python con «sustituido presentado como vigente» y «no consta» falsos aparte, y el cargador de la pila (`pila/cargar.py`);
+  - la batería de búsqueda determinista del archivo, en `make check`, con su umbral fijado por la primera medición, y el cargador de Java compartido con `SearchBatteryIT`. Sustituye a `SearchScaleBatteryIT`;
+  - la medición completa con Haiku del cierre del bloque 6: es la medición «antes» de este bloque, sin marcas.
+- **Nombres que dejan los bloques 1 y 3:** ninguno. `Document` no lleva `pagesWithoutText`, y `ListCompanyDocuments`, `DocumentView` y `ListDocuments` no llevan temas. `DocumentEntry` ocupa el lugar de `Document` en lo que devuelven. Los bloques 1 y 3, que van después, añadirán lo suyo sobre `DocumentEntry`.
+- Si el plan del bloque 6 nombra algo de otra manera (cargador de Java, clase de la batería de búsqueda del archivo), se sigue su nombre. Si algo no encaja, el CTO corrige este plan antes de la tarea afectada.
 
 ## Restricciones globales
 
@@ -42,16 +44,16 @@
 - **Lo decide una persona (D-049):** solo `SupersedeDocument` pone o quita la marca. Ni la subida, ni el procesado, ni la IA la tocan.
 - **La marca no pasa por `save`:** el `upsert` no la escribe ni la borra (spec 2).
 - **Contrato:** si cambia la API, en la misma tarea se regeneran `api/openapi.json` (`cd api && mvn -q verify -Dodin.updateOpenApi=true`) y los tipos (`npm run generate:types` en `panel/` y en `mcp/`).
-- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, `SearchBatteryIT` mantiene 27 de 30 y `SearchScaleBatteryIT` cumple su umbral.
+- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, `SearchBatteryIT` mantiene 27 de 30 y la batería de búsqueda del archivo (bloque 6) cumple su umbral, sin ningún sustituido delante de un vigente.
 - **Dónde se trabaja:** en `.worktrees/fase-2` (`feature/fase-2-conocimiento`). No se ejecutan `make up` ni `make down` y no se toca `deploy/.env`. Nada global.
 - **Git:**
   - cada tarea en su rama `task/fase-2-conocimiento/<tarea>`;
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V11__superseded_documents.sql`, o la siguiente libre si el orden cambió (en el orden de D-052, este bloque va antes de los bloques 1 y 3).
+- **Migración:** `V11__superseded_documents.sql` (la 2a terminó en V10 y el bloque 6 no migra). Los bloques 1 y 3, que van después, toman V12 y V13.
 - **Panel:** con los componentes y las reglas de la dirección visual (D-039): `FormDialog`, `Field`, `StatusPill`, `RowActions`, `Notice` y `Button`.
-- **Datos:** solo ficticios.
+- **Datos:** solo ficticios. El archivo ficticio se genera con su generador: no se editan a mano `datos/bateria.json` ni `datos/claves.json`.
 
 ## Foco de revisión
 
@@ -123,60 +125,46 @@ Responses.Replacement(UUID documentId, String title)   // replacement del trabaj
 
 ---
 
-### Tarea 1: Juego de sustituidos y su comprobación, medidos antes del cambio · Sonnet
+### Tarea 1: Las parejas viejo → vigente del archivo, medidas antes del cambio · Sonnet
 
-Rama `task/fase-2-conocimiento/medicion-sustituidos`. Spec 8.
+Rama `task/fase-2-conocimiento/medicion-sustituidos`. Spec 8 y spec 6, apartado 14.
 
-**Ficheros:**
-- **Crear:**
-  - `api/odin-adapter-postgres/src/test/resources/search-battery/sustituciones.json`;
-  - `api/odin-adapter-postgres/src/test/resources/search-battery-scale/sustituciones.json`;
-  - `mcp/scripts/answer-battery/data/bateria_sustituidos.json`.
-- **Modificar:**
-  - el puntuador (`mcp/scripts/answer-battery/score.ts`) y su prueba;
-  - el ejecutor (`run.ts`) y, si enumera los juegos, `AnswerBatteryIT`;
-  - `mcp/scripts/answer-battery/results/`, con la medición de partida (paso 5).
+No se crean juegos nuevos ni `sustituciones.json`: las marcas salen de las contradicciones de tipo `version` de `datos/claves.json` del archivo (47 en el del encargo 12), con su pareja viejo → vigente.
 
-**Interfaces que consume:** el puntuador, el ejecutor, el mapa de identificador a fichero del corpus y la cuenta aparte de sustituidos del bloque 6 (spec 6, 6.2 a 6.5).
+**Ficheros** (todo en `experimentos/2026-11-12-archivo-ficticio/`):
+- **Crear:** `pila/sustituciones.py` y su prueba.
+- **Modificar, solo si hace falta:** `generar/generar.py`, con `datos/` regenerado, para la pregunta nueva; y el puntuador (`medir/puntuar.py`) y su prueba, si la comprobación no cubre lo de abajo.
+
+**Interfaces que consume:** `datos/claves.json`, `datos/manifiesto.json` y `datos/bateria.json`; el puntuador, que ya cuenta «sustituido presentado como vigente» con el campo `sustituidos` de cada pregunta.
 
 **Interfaces que produce:**
 
-```ts
-// clave del corpus del viejo → clave del sustituto
-export function readSupersessions(file: string): Map<string, string>;
-// las claves citadas que están sustituidas, si la respuesta no dice «sustituido» ni «sustituida»
-export function supersededAsCurrent(answer: string, citedKeys: string[], supersededBy: Map<string, string>): string[];
+```python
+# pila/sustituciones.py
+def parejas(claves: list[dict], manifiesto: dict) -> list[tuple[str, str]]:
+    # (ruta del viejo, ruta del vigente) por cada entrada de tipo `version`. El viejo es la fuente `doc`
+    # distinta de `vigente.doc`. Las rutas son las de `manifiesto.json`.
+    ...
 ```
 
 **Valores:**
-- `sustituciones.json`: lista de `{ "documento": <clave>, "sustituidoPor": <clave> }`. La clave es carpeta de la comunidad y fichero, la misma que el cargador pone de título.
-  - Corpus pequeño: `c2-almendros/poliza-seguro-2022.txt` → `c2-almendros/poliza-seguro-2024.txt`.
-  - Corpus a escala: la misma pareja en `c2-almendros` y en cada carpeta `c2-*` del corpus, que son las 30 copias de Los Almendros: 31 parejas. Se sacan una vez listando esas carpetas, no a mano.
-- `bateria_sustituidos.json`, con el formato de `bateria_resuelta.json`:
-  - `E1`, copiada tal cual de `bateria_resuelta.json`: espera `franquicia de 150 euros por siniestro`, en la póliza de 2024, página 2;
-  - `S1`, nueva:
-    - pregunta: «¿Qué franquicia por daños por agua tenía la póliza de Los Almendros de 2022?»;
-    - `categoria`: `sustituido`;
-    - cita: `c2-almendros/poliza-seguro-2022.txt`, con `con una franquicia de 200 euros por siniestro`, página 2;
-    - `claves`: `[["200"], ["sustituida", "sustituido"]]`.
-- **Juegos nuevos:** `sustituidos` (corpus pequeño) y `sustituidos-escala` (corpus a escala), los dos con `bateria_sustituidos.json` y con el proyecto deducido como en el bloque 6.
-  - Tienen su propia cuenta y no entran en el mínimo de D-049, que se calcula solo con las preguntas del estudio (spec 6, 6.5).
-- **Comprobación «sustituido presentado como vigente»:**
-  - va en todos los juegos;
-  - el puntuador lee el `sustituciones.json` del corpus del juego;
-  - la palabra se busca en toda la respuesta, con la normalización del puntuador (minúsculas y sin tildes);
-  - suma a la cuenta aparte del bloque 6, y la pregunta falla con la regla de 2 de 3.
+- **Cada pareja tiene que poder marcarse con `PUT .../superseded-by`** (spec 5.1): las dos de la misma empresa, el sustituto en el mismo proyecto que el viejo o sin proyecto, y las dos `READY` (en el archivo, todas lo son). Una pareja que no cumpla se lista en el informe y se deja fuera de las marcas; no se fuerza.
+- **Comprobación del puntuador:**
+  - cada pregunta de tipo `version` lleva en `sustituidos` el viejo de su entrada de `claves.json`. Si falta alguno, se corrige en el generador, no a mano;
+  - la palabra se busca en toda la respuesta, con la normalización del puntuador. Ya está hecho y validado con las cifras del estudio: aquí solo se comprueba que lo cubre.
+- **Pregunta nueva, solo si hace falta:** si ninguna pregunta de la batería pide el valor del documento viejo (por ejemplo, la franquicia de la póliza antigua), se añade al generador, no a un juego aparte. Lleva cita del documento viejo, la clave con el valor viejo y la palabra «sustituida» o «sustituido». El CTO fija cuántas al ver el paso 1; si ya hay, no se añade ninguna.
+  - Añadir preguntas cambia el total de 216. Las comparaciones con la medición de partida (146/216) se hacen sobre las 216 originales, por identificador.
 
-- [ ] **Paso 1:** pruebas en la prueba del puntuador; comprueba que fallan:
-  - `supersededCitedWithoutTheWordIsCounted`;
-  - `sustituidaOrSustituidoAnywhereIsAccepted`, con «Sustituida» y «SUSTITUIDO»;
-  - `answerWithoutSupersededCitationsIsNotChecked`;
-  - `supersessionFilesPointToCorpusFiles`: cada clave de los dos `sustituciones.json` existe en su corpus, y el de escala tiene 31 parejas;
-  - `supersededSetsDoNotCountForTheMinimum`.
-- [ ] **Paso 2:** escribe los tres ficheros de datos e implementa la comprobación y los juegos.
+- [ ] **Paso 1:** pruebas de `sustituciones.py` y del puntuador; comprueba que fallan:
+  - `oneCouplePerVersionEntry`: tantas parejas como entradas `version`, con viejo distinto del vigente;
+  - `couplesPointToManifestDocuments`;
+  - `couplesAreMarkable`: misma empresa y mismo proyecto o sin proyecto el vigente;
+  - `versionQuestionsListTheOldDocumentAsSuperseded`;
+  - `supersededCitedWithoutTheWordIsCounted` y `sustituidaOrSustituidoAnywhereIsAccepted` (con «Sustituida» y «SUSTITUIDO»), si el puntuador aún no las tiene.
+- [ ] **Paso 2:** implementa `sustituciones.py` y los cambios del generador y del puntuador que salgan de las pruebas.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0.
-- [ ] **Paso 4:** commit «test: juego de documentos sustituidos y comprobación de sustituido presentado como vigente».
-- [ ] **Paso 5 (lo ejecuta el CTO):** `make answer-battery` con los juegos `sustituidos` y `sustituidos-escala` y los dos modelos, con el Odín de este momento. Es la medición «antes». Los resultados se versionan con el commit «test: medición de partida del juego de sustituidos».
+- [ ] **Paso 4:** commit «test: parejas de documentos sustituidos del archivo ficticio y su comprobación».
+- [ ] **Paso 5 (lo ejecuta el CTO):** la medición «antes» es la última medición completa con Haiku del cierre del bloque 6, sin marcas, si el Odín no ha cambiado desde entonces. Si ha cambiado, se repite (unos 14 minutos). Si la pregunta nueva existe, se mide con ella. Se anotan el porcentaje, los sustituidos presentados como vigentes (7 en la medición de partida, con 146/216) y los «no consta» falsos (35 en la de partida). Los resultados se versionan con el commit «test: medición de partida del bloque de sustituidos».
 
 ### Tarea 2: La marca en el documento: modelo, migración y repositorio · Sonnet
 
@@ -245,7 +233,7 @@ final class SupersessionSql {   // adapter/postgres
   - `RowLevelSecurityIT.replacementInHiddenProjectIsNullEvenWithoutTheExplicitFilter`: una consulta con `SupersessionSql.joins` se lanza en un `tx.inScope` sin el proyecto del sustituto, pero con los parámetros del filtro explícito de `ProjectVisibility.all()`. El vigente sale nulo.
   - Prueba de migración, `existingDocumentsAreNotSuperseded`: un documento insertado antes de `V11` sale sin marca.
 - [ ] **Paso 4:** escribe `V11`, `SupersessionSql` y el repositorio.
-- [ ] **Paso 5:** `make check` y `make demo` terminan con 0; `SearchBatteryIT` da 27 de 30 y `SearchScaleBatteryIT` cumple su umbral.
+- [ ] **Paso 5:** `make check` y `make demo` terminan con 0; `SearchBatteryIT` da 27 de 30 y la batería de búsqueda del archivo cumple su umbral.
 - [ ] **Paso 6:** commit «feat: marca de documento sustituido en el modelo y el repositorio».
 
 ### Tarea 3: Marcar y desmarcar desde la administración · Sonnet
@@ -329,7 +317,7 @@ Rama `task/fase-2-conocimiento/sustituidos-trabajador`. Spec 5.2, 6 y 7.
   - aplicación: `ListDocuments`, `ReadPage` y `PageView`, con sus pruebas, y `SearchKnowledgeTest`, por el constructor de `SearchHit`;
   - PostgreSQL: `PostgresKnowledgeSearch` y `PostgresKnowledgeSearchIT`;
   - web: `WorkerController`, `Responses` y `WorkerApiTest`;
-  - MCP: `mcp/src/tools/searchKnowledge.ts`, `mcp/src/server.ts` y sus pruebas (`mcp/test/server.test.ts`, o el fichero de cada herramienta si los bloques anteriores los separaron);
+  - MCP: `mcp/src/tools/searchKnowledge.ts`, `mcp/src/server.ts` y sus pruebas (`mcp/test/server.test.ts`, o el fichero de cada herramienta si el bloque 6 los separó);
   - contrato y tipos.
 
 **Interfaces que consume:** `DocumentEntry`, `DocumentRef`, `SupersessionSql`, `findEntry` y `list` (tarea 2).
@@ -347,9 +335,9 @@ Rama `task/fase-2-conocimiento/sustituidos-trabajador`. Spec 5.2, 6 y 7.
 - `ListDocuments` devuelve `List<DocumentEntry>`, y `ReadPage` lee con `findEntry` en lugar de `findById`, los dos con `access.content()`.
 - Web: `Hit`, `Page` y `WorkerDocumentView` ganan `superseded` y `replacement`, que es `Replacement { documentId, title }` o nulo.
 - **MCP:**
-  - `searchKnowledge` añade `superseded` y `replacement` (o `null`) a los resultados de documento. Las fichas no los llevan;
-  - `readPage` y `listDocuments` ya devuelven el JSON de la API y no cambian; sus pruebas fijan los dos campos;
-  - `INSTRUCTIONS` gana, en este orden, las dos frases del spec 7, literales.
+  - `searchKnowledge` añade `superseded` y `replacement` (o `null`) a los resultados de documento, junto a los `projectName` y `addedAt` que ya puso el bloque 6. Las fichas no los llevan;
+  - `readPage` y `listDocuments` devuelven el JSON de la API con lo que el bloque 6 les añadió (`projectName`, `addedAt`): no cambian, y sus pruebas fijan los dos campos nuevos sin tocar los del 6;
+  - `INSTRUCTIONS` gana las dos frases del spec 7, literales, detrás de las del bloque 6 (filtrar por proyecto con `listProjects`, reglas de cita y fuente parcial). Las frases del 6 no se tocan.
 
 - [ ] **Paso 1:** pruebas; comprueba que fallan:
   - `PostgresKnowledgeSearchIT`:
@@ -367,48 +355,57 @@ Rama `task/fase-2-conocimiento/sustituidos-trabajador`. Spec 5.2, 6 y 7.
     - `readPageAndListDocumentsPassSupersededAndReplacement`;
     - `instructionsTellHowToTreatSupersededAndConflictingSources`, con las dos frases literales.
 - [ ] **Paso 2:** implementa.
-- [ ] **Paso 3:** regenera el contrato y los tipos. `make check` y `make demo` terminan con 0, y las líneas de resultado de las dos baterías de búsqueda (aciertos y fallos) no cambian.
+- [ ] **Paso 3:** regenera el contrato y los tipos. `make check` y `make demo` terminan con 0, y las líneas de resultado de `SearchBatteryIT` y de la batería de búsqueda del archivo (aciertos y fallos) no cambian.
 - [ ] **Paso 4:** commit «feat: los documentos sustituidos salen detrás y marcados en la búsqueda, la lectura y la lista».
 
-### Tarea 5: Las marcas en las baterías de búsqueda · Sonnet
+### Tarea 5: Las marcas en el archivo y en su batería de búsqueda · Sonnet
 
-Rama `task/fase-2-conocimiento/baterias-sustituidos`. Spec 8.
+Rama `task/fase-2-conocimiento/baterias-sustituidos`. Spec 8 y spec 6, apartado 14.
 
 **Ficheros:**
-- **Crear:** `SupersessionCheck.java` y `SupersessionCheckTest`, junto al cargador compartido del bloque 6.
-- **Modificar:** el cargador compartido (`CorpusLoader`), `SearchBatteryIT` y `SearchScaleBatteryIT`.
+- **Crear:** `SupersessionCheck.java` y `SupersessionCheckTest`, junto al cargador de Java compartido del bloque 6.
+- **Modificar:**
+  - el cargador de Java compartido (hoy `ArchiveLoader` en el plan del 6), la batería de búsqueda del archivo y, si la usan, `SearchBatteryIT`;
+  - `experimentos/2026-11-12-archivo-ficticio/pila/cargar.py`.
 
-**Interfaces que consume:** `DocumentRepository.markSuperseded` (tarea 2), `SearchHit.superseded` y `replacement` (tarea 4) y los `sustituciones.json` (tarea 1).
+**Interfaces que consume:** `DocumentRepository.markSuperseded` (tarea 2), `SearchHit.superseded` y `replacement` (tarea 4), la ruta `PUT /v1/admin/documents/{documentId}/superseded-by` (tarea 3) y `parejas` de `pila/sustituciones.py` (tarea 1).
 
 **Interfaces que produce:**
 
 ```java
-// CorpusLoader gana:
-Map<String, String> applySupersessions(CompanyId company, Path supersessionsFile); // clave del viejo → clave del sustituto
+// cargador de Java compartido, gana:
+Map<String, String> applySupersessions(CompanyId company, Path claves); // ruta del viejo → ruta del vigente
 // apoyo de pruebas
 final class SupersessionCheck {
     static List<String> problems(String questionId, List<SearchHit> hits, Map<String, String> supersededBy);
 }
 ```
 
+```python
+# pila/cargar.py gana la opción --marcar: aplica las parejas de sustituciones.parejas con el PUT
+```
+
 **Valores:**
-- El cargador aplica `sustituciones.json` si está en la carpeta de la batería, después de cargar el corpus, con `markSuperseded` y la hora fija de las pruebas.
-  - Si una clave no está en el corpus, para con «La pareja <viejo> → <nuevo> no está en el corpus».
-  - La batería de respuestas usa el mismo cargador, así que también carga las marcas.
+- **Las marcas son las del archivo:** las parejas viejo → vigente de las entradas `version` de `datos/claves.json`, las mismas en Java y en Python.
+  - `cargar.py --marcar` las pone con el `PUT .../superseded-by` con la sesión de administrador que ya usa la carga. Si responde 409 o 404, para con «La pareja <viejo> → <vigente> no se puede marcar: <mensaje>». La medición «sin marcas» es la carga sin `--marcar`.
+  - Solo si hiciera falta medir sin la ruta, las marcas pueden ponerse por SQL (`UPDATE document SET superseded_by, superseded_at`), con el mismo resultado.
+  - El cargador de Java las aplica después de cargar el corpus, con `markSuperseded` y la hora fija de las pruebas. Si una ruta no está en el corpus, para con «La pareja <viejo> → <vigente> no está en el corpus».
 - `SupersessionCheck.problems` devuelve un texto, con la pregunta y el título, por cada:
   - resultado sustituido que sale delante de uno vigente;
-  - resultado de un documento de `sustituciones.json` sin `superseded`, o con un `replacement` cuyo título no es la clave del sustituto;
-  - resultado con `superseded` que no está en `sustituciones.json`.
-- Cada batería junta los problemas de todas sus consultas y falla al final si hay alguno, con la lista en el mensaje. La cuenta y el umbral siguen igual.
+  - resultado de un documento viejo de las parejas sin `superseded`, o con un `replacement` cuyo título no es el del vigente;
+  - resultado con `superseded` que no está en las parejas.
+- La batería de búsqueda del archivo (con el filtro de proyecto de cada pregunta) junta los problemas de todas sus consultas y falla al final si hay alguno, con la lista en el mensaje. Es la comprobación nueva: ningún sustituido sale delante de un vigente. La cuenta y el umbral siguen igual.
+- No hay `sustituciones.json` ni juego aparte.
 
 - [ ] **Paso 1:** `SupersessionCheckTest`; comprueba que falla:
   - `acceptsCurrentFirstAndMarkedSuperseded`;
   - `reportsSupersededBeforeCurrent`;
   - `reportsMissingMarkOrWrongReplacement`;
   - `reportsUnexpectedMark`.
-- [ ] **Paso 2:** implementa la comprobación y la carga de las marcas, y llama a la comprobación desde las dos baterías.
-- [ ] **Paso 3:** ejecuta las dos baterías. Sus líneas de resultado (aciertos, total y fallos) son las mismas que antes del bloque, y no hay problemas de orden. Copia al informe del bloque las líneas de antes y de ahora.
-- [ ] **Paso 4:** `make check` y `make demo` terminan con 0. Commit «test: las baterías de búsqueda cargan las marcas de sustitución y comprueban el orden».
+- [ ] **Paso 2:** implementa la comprobación y la carga de las marcas en Java y en `cargar.py --marcar`, y llama a la comprobación desde la batería de búsqueda del archivo.
+- [ ] **Paso 3:** ejecuta la batería de búsqueda del archivo, y `SearchBatteryIT` si carga marcas. Sus líneas de resultado (aciertos, total y fallos) son las mismas que antes del bloque, y no hay problemas de orden. Copia al informe las de antes y las de ahora.
+- [ ] **Paso 4:** `make check` y `make demo` terminan con 0. Commit «test: la batería de búsqueda del archivo carga las marcas de sustitución y comprueba el orden».
+- [ ] **Paso 5 (lo ejecuta el CTO):** pila `odin-medicion` con `cargar.py --marcar` y `make answer-battery` con Haiku completo. Es la medición «después». Se compara con la «antes» de la tarea 1 y con la de partida (146/216, 7 sustituidos como vigentes). Se versiona con el commit «test: medición del bloque de sustituidos, con marcas».
 
 ### Tarea 6: Panel y demostración · Sonnet
 
@@ -468,15 +465,16 @@ Rama `task/fase-2-conocimiento/sustituidos-panel`. Spec 5.3 y 9.
   - que la marca no entra en `save` ni en el `upsert`;
   - que el SQL de la cadena solo está en `SupersessionSql`.
 - `make check` y `make demo`, ejecutados por el CTO.
-- Baterías de búsqueda: las mismas cifras y los mismos fallos que al cerrar el bloque 6, sin problemas de orden.
-- **Batería de respuestas (lo ejecuta el CTO):** `make answer-battery`, con todos los juegos y los dos modelos.
-  - Se compara con la última medición del bloque 6 y con la medición «antes» de la tarea 1.
-  - Ningún umbral empeora: ni el porcentaje ni las cuentas aparte de ningún juego y modelo.
-  - E1 da la franquicia de 150 euros de la póliza de 2024, en los dos corpus y con los dos modelos.
-  - Los juegos de sustituidos dan su propia cuenta, fuera del mínimo.
+- Baterías de búsqueda: las mismas cifras y los mismos fallos que al cerrar el bloque 6, y ningún sustituido delante de un vigente.
+- **Batería de respuestas (lo ejecuta el CTO):** `make answer-battery` con Haiku completo, con marcas (tarea 5, paso 5).
+  - Se compara con la medición «antes» (sin marcas, tarea 1) y con la de partida (146/216, 7 sustituidos presentados como vigentes).
+  - Ningún umbral empeora: ni el porcentaje ni los fallos graves (los «no consta» falsos y los sustituidos presentados como vigentes).
+  - Los sustituidos presentados como vigentes bajan de 7; el objetivo es 0, y lo que quede se analiza pregunta a pregunta en el informe.
+  - La pregunta nueva, si se añadió, da su propio resultado.
+  - Sonnet, en la muestra de 30 preguntas, sin empeorar. La completa con Sonnet es del cierre de la recuperación.
   - Si algo empeora, el bloque no se cierra y el informe lo analiza.
 - Plan del bloque 2: el CTO comprueba que `SimilarCaseView` lleva `superseded` y `replacement` con el mismo orden (spec 5.2), con `SupersessionSql`.
-- Informe del bloque en `docs/informes/`, con el antes y el después. Entrada en el registro técnico del repositorio OCR, con el siguiente número libre. Copia del informe en la carpeta de notas para el CEO.
+- Informe del bloque en `docs/informes/`, con la partida, el antes y el después. Entrada en el registro técnico del repositorio OCR, con el siguiente número libre. Copia del informe en la carpeta de notas para el CEO.
 
 ## Orden y paralelismo
 
@@ -499,17 +497,28 @@ El spec no cambia. Esto es lo que el plan decide donde el spec lo deja abierto o
 4. **La cadena circular se detecta en el caso de uso,** recorriendo las marcas con `findById`. Dos marcas cruzadas a la vez no se bloquean; el tope evita que una cadena circular cuelgue las lecturas. Coste si es erróneo: un bloqueo por empresa al marcar.
 5. **Textos que el spec no fija:** 400 «Un documento no puede sustituirse a sí mismo», 400 «Indica el documento que lo sustituye» y 404 «Documento que lo sustituye no encontrado».
 6. **La subida duplicada y el reintento también devuelven la marca,** porque usan el mismo `DocumentView`: `UploadOutcome` y `RetryDocument` pasan a `DocumentEntry`.
-7. **Un caso de uso con dos métodos,** `SupersedeDocument.mark` y `unmark`, como `ReviewDocumentTopics` del bloque 3.
+7. **Un caso de uso con dos métodos,** `SupersedeDocument.mark` y `unmark` (el bloque 3, que va después, seguirá el mismo patrón con `ReviewDocumentTopics`).
 8. **El doble en memoria imita al `upsert`:** `save` conserva la marca guardada, para que las pruebas de aplicación vean lo mismo que PostgreSQL.
 9. **Panel:**
    - la confirmación sale en el mismo diálogo al elegir el sustituto, sin otro diálogo encima;
    - los candidatos salen de la lista ya cargada;
    - se crea `DocumentDetail`, porque aún no hay detalle de documento. El bloque 4 le añadirá los temas.
 10. **Demostración:** la póliza renovada es un `.txt` ficticio sin el identificador de la antigua. La marca se pone desde el panel (paso 8b) y se comprueba con el MCP en `confirm`.
-11. **Medición:**
-    - `sustituciones.json` y `bateria_sustituidos.json` se crean en la tarea 1, para medir el «antes» con la comprobación nueva;
-    - el cargador aplica las marcas solo desde la tarea 5;
-    - la pregunta nueva es S1, con la palabra «sustituida» también en sus claves.
-12. **Corpus a escala:** 31 parejas explícitas, Los Almendros y sus 30 copias, sacadas una vez del corpus.
-13. **Nombres del bloque 6:** aquí el cargador se llama `CorpusLoader`, y los juegos, `sustituidos` y `sustituidos-escala`. Si el plan del bloque 6 usa otros, se siguen los suyos.
+11. **Medición (D-052):**
+    - la batería es la del archivo del encargo 12, no los juegos antiguos. No hay `bateria_sustituidos.json` ni `sustituciones.json`;
+    - las marcas son las parejas viejo → vigente de las contradicciones de tipo `version` de `datos/claves.json`; las aplican `cargar.py --marcar` (con el `PUT`) y el cargador de Java, solo desde la tarea 5;
+    - «sustituido presentado como vigente» ya lo cuenta el puntuador del archivo. Una pregunta nueva, si hace falta, va al generador;
+    - tres cifras: la de partida (146/216, 7 sustituidos como vigentes), la «antes» (sin marcas, cierre del bloque 6) y la «después» (con marcas), con Haiku completo.
+12. **Parejas:** salen de `claves.json`, sin lista aparte. Una que no se pueda marcar con las reglas del spec 5.1 se lista y se deja fuera.
+13. **Nombres del bloque 6:** el cargador de Java compartido y la clase de la batería de búsqueda del archivo son los del plan del bloque 6. Si usa otros, se siguen los suyos.
 14. **Orden en la búsqueda:** la consulta de hoy, con su `LIMIT`, va en una subconsulta, y el orden exterior pone los sustituidos detrás. Es la primera forma del spec 11.
+
+## Revisión tras D-052 (2026-11-12)
+
+- **Orden:** el bloque 7 va justo después del 6 y antes de los bloques 1 y 3. Se quitó todo lo que daba por hechos el lector (`pagesWithoutText`), los temas, el filtro por tema y `DescribeMe`. Encuentra hecho solo el bloque 6: `listProjects`, `projectName` y `addedAt` en el MCP, las reglas de cita, `make answer-battery` y la batería de búsqueda del archivo.
+- **Migración:** `V11__superseded_documents.sql`; los bloques 1 y 3 pasan a V12 y V13. No queda ninguna mención a V13 como de este bloque.
+- **Medición con el archivo del encargo 12:** la tarea 1 ya no crea `bateria_sustituidos.json` ni los `sustituciones.json`. Las marcas salen de las contradicciones de tipo `version` de `claves.json` (viejo → vigente) y las aplican `cargar.py --marcar` (con el `PUT`) y el cargador de Java.
+- **Tres cifras con Haiku completo:** partida (146/216, 7 sustituidos como vigentes), antes (sin marcas) y después (con marcas). La pregunta nueva, si hace falta, se añade al generador del archivo.
+- **Búsqueda:** `SearchScaleBatteryIT` y `search-battery-scale` pasan a la batería de búsqueda del archivo del bloque 6, con la comprobación nueva de que ningún sustituido sale delante de un vigente.
+- **MCP:** la tarea 4 respeta `projectName`, `addedAt` y las instrucciones del bloque 6, y añade sus dos frases detrás.
+- **Pendiente de otros planes:** los nombres del cargador de Java y de la clase de la batería de búsqueda del archivo los fija el plan del bloque 6, que se reescribe a la vez.
