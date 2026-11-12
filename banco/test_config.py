@@ -120,6 +120,23 @@ class ConfigTest(unittest.TestCase):
         with self.assertRaises(ConfigError):
             load_text(variant('kind = "composer"', 'kind = "judgeSelect"'))
 
+    def test_malformed_tables_raise_config_error(self):
+        cases = [
+            ('[combiner]\nkind = "composer"\nmodel = "haiku"', 'combiner = "x"'),
+            ('[judging]\naggregation = "majority"', "judging = 5"),
+            ('sample = { size = 5, strata = "tipo", seed = 7 }', "sample = 5"),
+        ]
+        for old, root_line in cases:
+            # Las claves de la raíz van antes de las tablas: se escriben al principio.
+            text = root_line + "\n" + variant(old, "")
+            with self.subTest(line=root_line), self.assertRaises(ConfigError):
+                load_text(text)
+
+    def test_non_finite_budget_is_rejected(self):
+        for value in ("nan", "inf"):
+            with self.subTest(value=value), self.assertRaises(ConfigError):
+                load_text(variant("budgetUsd = 1.5", f"budgetUsd = {value}"))
+
     def test_ai_combiner_needs_model_and_single_does_not(self):
         with self.assertRaises(ConfigError):
             load_text(variant('kind = "composer"\nmodel = "haiku"', 'kind = "composer"'))

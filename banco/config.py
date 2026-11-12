@@ -1,5 +1,6 @@
 """Configuración de un experimento del banco: TOML validado y convertido a objetos."""
 
+import math
 import re
 import tomllib
 from dataclasses import dataclass
@@ -76,9 +77,16 @@ def _text(table: dict, key: str, where: str) -> str:
     return value
 
 
+def _table(raw: dict, key: str, where: str) -> dict:
+    value = _need(raw, key, where)
+    if not isinstance(value, dict):
+        raise ConfigError(f"«{key}» en {where} debe ser una tabla")
+    return value
+
+
 def _positive(table: dict, key: str, where: str, kind=(int, float)):
     value = _need(table, key, where)
-    if isinstance(value, bool) or not isinstance(value, kind) or value <= 0:
+    if isinstance(value, bool) or not isinstance(value, kind) or not math.isfinite(value) or value <= 0:
         raise ConfigError(f"«{key}» en {where} debe ser un número mayor que 0")
     return value
 
@@ -137,7 +145,7 @@ def _judges(raw: dict, base_dir: Path) -> tuple[JudgeSpec, ...]:
 
 
 def _combiner(raw: dict) -> CombinerSpec:
-    table = _need(raw, "combiner", ROOT)
+    table = _table(raw, "combiner", ROOT)
     if table.get("kind") == "judgeSelect":
         raise ConfigError("el combinador «judgeSelect» queda fuera de esta fase")
     kind = _choice(table, "kind", "[combiner]", COMBINER_KINDS)
@@ -163,11 +171,11 @@ def _archives(raw: dict) -> tuple[str, ...]:
 
 
 def _sample(raw: dict, mode: str) -> SampleSpec | None:
-    table = raw.get("sample")
-    if table is None:
+    if "sample" not in raw:
         return None
     if mode == "closing":
         raise ConfigError("el modo closing no admite submuestreo: quita «sample»")
+    table = _table(raw, "sample", ROOT)
     seed = _need(table, "seed", "[sample]")
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise ConfigError("«seed» en [sample] debe ser un entero")
@@ -192,7 +200,7 @@ def load_config(path: Path, base_dir: Path) -> ExperimentConfig:
     battery = _text(raw, "battery", ROOT)
     _check_battery(battery, mode)
     judges = _judges(raw, base_dir)
-    judging = _need(raw, "judging", ROOT)
+    judging = _table(raw, "judging", ROOT)
     aggregation = _aggregation(_text(judging, "aggregation", "[judging]"), sum(j.count for j in judges))
     max_turns = _positive(raw, "maxTurns", ROOT, int) if "maxTurns" in raw else None
     return ExperimentConfig(
