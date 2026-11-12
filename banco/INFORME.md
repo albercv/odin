@@ -33,7 +33,7 @@ Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:
 | `libro.json` | gasto real del experimento (`spent`), registros de coste desconocido (`unknown`) y tope (`cap`) |
 | `PARADA.txt` | solo si hubo parada: tope de gasto, coste desconocido, cuota o límite, aislamiento roto |
 
-`buscadores`, `final`, `veredictos` y `libro.json` se escriben siempre, también si algo falla a mitad (`try/finally`); tras una parada, `buscadores.jsonl` incluye lo que quedó en la caché. La orden sale con código 2 si hubo parada.
+`buscadores`, `final`, `veredictos` y `libro.json` se escriben siempre, también si algo falla a mitad (`try/finally`); tras una parada, `buscadores.jsonl` incluye lo que se hizo antes de parar, también los registros de pago fallidos (la excepción de parada lleva `records`), y lo que quedó en la caché, sin duplicados. La orden sale con código 2 si hubo parada.
 
 ## Presupuesto (un solo tope por experimento)
 
@@ -49,7 +49,7 @@ Los jueces de Ollama son locales y de coste 0: no pasan por la comprobación de 
 
 **Gasto notificado:** `cost.notifiedUsd` es el total real cargado en el libro. `cost.notifiedUsdFromRecords` es la suma de los registros, como diagnóstico.
 
-**Coste desconocido:** un registro de pago nuevo sin `coste_usd` numérico no cuenta como 0. Se suma a `unknownCostRecords` (en `resumen.json` y en el informe) y agota el presupuesto: no se lanza ninguna llamada de pago más, con la razón «coste desconocido». Un juez de Claude sin `total_cost_usd` en su resultado, o una llamada fallida sin coste, cae en este caso.
+**Coste desconocido:** un registro de pago nuevo sin `coste_usd` numérico no cuenta como 0. Se suma a `unknownCostRecords` (en `resumen.json` y en el informe) y agota el presupuesto: no se lanza ninguna llamada de pago más, con la razón «coste desconocido». Un juez de Claude sin `total_cost_usd` en su resultado, o una llamada fallida sin coste, cae en este caso. Un error de buscador sin llamada a `claude` (sin duración, p. ej. «sin clave de API») no es coste desconocido: se carga con 0. Los tiempos agotados y los fallos después de lanzar `claude` siguen como desconocidos.
 
 ## Configuración del barrido
 

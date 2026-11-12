@@ -10,6 +10,7 @@ from unittest import mock
 
 from banco.cache import RunCache, run_key
 from banco.config import SearcherSpec
+from banco.ledger import Ledger
 from banco.medir_path import ejecutar
 from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, run_pool
 
@@ -64,6 +65,47 @@ class PoolTest(unittest.TestCase):
         self.assertEqual(sum(r["approach"] == "main" for r in records), 6)
         self.assertEqual(sum(r["approach"] == "topic" for r in records), 4)
         self.assertTrue(all(r["error"] is None and r["cached"] is False for r in records))
+
+    def test_stop_carries_the_records_already_made_including_failed_ones(self):
+        real = ejecutar.responder
+        calls = []
+
+        def second_hits_quota(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 2:
+                return {"id": "Q001", "actor": "t01", "error": "Claude AI usage limit reached", "coste_usd": 0.0,
+                        "duracion_s": 1.0, "respuesta": None, "consultas": [], "tokens": None}
+            return real(*args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=second_hits_quota):
+            with self.assertRaises(PoolStopped) as caught:
+                self._run(specs=(SearcherSpec("main", 3, "haiku"),))
+        records = caught.exception.records
+        self.assertEqual(len(records), 2)
+        self.assertEqual(sum(r["error"] is not None for r in records), 1)
+
+    def test_sin_clave_no_gasta_y_no_es_coste_desconocido(self):
+        settings = PoolSettings(claude_bin=FAKE, timeout=30, concurrency=1, budget_usd=100.0, max_turns=None, odin_commit="abc")
+        ledger = Ledger(100.0)
+        records = run_pool(ITEMS, (SearcherSpec("main", 1, "haiku"),), {**CARGA, "claves": {}}, self.cache, settings,
+                           self.dir / "enfoques", self.stop, ledger=ledger)
+        self.assertEqual(len(records), 2)
+        self.assertTrue(all(r["error"] and r["coste_usd"] == 0.0 for r in records))
+        self.assertEqual((ledger.unknown, ledger.spent), (0, 0.0))
+        self.assertFalse(self.stop.exists())
+
+    def test_timeout_keeps_cost_unknown(self):
+        def timed_out(*args, **kwargs):
+            return {"id": "Q001", "actor": "t01", "error": "tiempo agotado (30 s)", "coste_usd": None, "duracion_s": 30.0,
+                    "respuesta": None, "consultas": [], "tokens": None}
+
+        ledger = Ledger(100.0)
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=timed_out):
+            with self.assertRaises(BudgetExceeded):
+                run_pool(ITEMS, (SearcherSpec("main", 1, "haiku"),), CARGA, self.cache,
+                         PoolSettings(claude_bin=FAKE, timeout=30, concurrency=1, budget_usd=100.0, max_turns=None,
+                                      odin_commit="abc"), self.dir / "enfoques", self.stop, ledger=ledger)
+        self.assertEqual(ledger.unknown, 1)
 
     def test_second_run_hits_cache(self):
         self._run()

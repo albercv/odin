@@ -373,6 +373,38 @@ class BudgetPersistenceTest(Harness):
         self.assertEqual(len(list((self.state_dir).glob("libro-prueba.*.json"))), 1)
 
 
+class StopRecordsTest(Harness):
+    """Lo pagado antes de una parada, también lo fallido, queda en buscadores.jsonl; lo de la caché no se duplica."""
+
+    def test_quota_stop_keeps_the_failed_paid_record(self):
+        code = self.run_cli(self.config(concurrency=1), env={"FAKE_MODO": "limite"})
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        records = self.read_jsonl(folder, "buscadores.jsonl")
+        self.assertEqual(len(records), 1)
+        self.assertIn("usage limit", records[0]["error"])
+
+    def test_stop_keeps_cached_and_fresh_records_once(self):
+        real = ejecutar.responder
+        calls = []
+
+        def third_hits_quota(item, *args, **kwargs):
+            calls.append(1)
+            if len(calls) == 3:
+                return {"id": item["id"], "actor": item["actor"], "error": "Claude AI usage limit reached",
+                        "coste_usd": 0.0, "duracion_s": 1.0, "respuesta": None, "consultas": [], "tokens": None}
+            return real(item, *args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=third_hits_quota):
+            code = self.run_cli(self.config(concurrency=1))
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        records = self.read_jsonl(folder, "buscadores.jsonl")
+        keys = [(r["id"], r["approach"], r["replica"]) for r in records]
+        self.assertEqual(len(records), 3)
+        self.assertEqual(len(set(keys)), 3)
+
+
 class SweepTest(Harness):
     def test_sweep_writes_curves(self):
         code = banco.main(["sweep", "--config", str(self.config(sweep=SWEEP))], layout=self.layout)

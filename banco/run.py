@@ -212,18 +212,26 @@ def _from_cache(cache, jobs, before):
     return out
 
 
+def _merged(records, cached):
+    """Lo que hizo el grupo y lo de la caché que no está ya, sin duplicar (pregunta, enfoque, réplica)."""
+    key = lambda r: (r["id"], r["approach"], r["replica"])
+    seen = {key(r) for r in records}
+    return [*records, *(r for r in cached if key(r) not in seen)]
+
+
 def _pool(sess, specs, settings, sink):
-    """Lanza un grupo de buscadores con el libro compartido. Se pare como se pare, lo que hay en caché va a `sink`."""
+    """Lanza un grupo de buscadores con el libro compartido. Se pare como se pare, lo hecho (también lo fallido)
+    y lo de la caché van a `sink`."""
     approaches = sess.layout.banco / "enfoques"
     jobs = _build_jobs(sess.items, specs, approaches, settings)
     before = {job.key for job in jobs if sess.cache.get(job.key) is not None}
     try:
         records = run_pool(sess.items, specs, sess.stack, sess.cache, settings, approaches, sess.stop_file,
                            ledger=sess.ledger)
-    except (BudgetExceeded, PoolStopped, ejecutar.Aislamiento):  # el pool ya escribió PARADA.txt
-        records = _from_cache(sess.cache, jobs, before)
-    except Exception:
-        sink.extend(_from_cache(sess.cache, jobs, before))
+    except (BudgetExceeded, PoolStopped, ejecutar.Aislamiento) as error:  # el pool ya escribió PARADA.txt
+        records = _merged(getattr(error, "records", []), _from_cache(sess.cache, jobs, before))
+    except Exception as error:
+        sink.extend(_merged(getattr(error, "records", []), _from_cache(sess.cache, jobs, before)))
         raise
     sink.extend(records)
     return records
