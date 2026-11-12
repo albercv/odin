@@ -69,21 +69,34 @@ def _with_extras(record, job, cached):
     return {**record, "approach": job.spec.approach, "replica": job.replica, "cached": cached}
 
 
+def _halt(state, reason):
+    with state.lock:
+        state.reasons.append(reason)
+        state.stop.set()
+
+
+def _claim_launch(state):
+    """Decide bajo el cerrojo si la ejecución se lanza: ni tras una parada ni por encima del tope."""
+    with state.lock:
+        if state.stop.is_set():
+            return False
+        if state.spent >= state.cap:
+            state.skipped += 1
+            return False
+        return True
+
+
 def _process_job(job, carga, cache, temp_dir, state):
     previous = cache.get(job.key)
     if previous is not None:
         return _with_extras(previous, job, cached=True)
-    with state.lock:
-        if state.spent >= state.cap:
-            state.skipped += 1
-            return None
+    if not _claim_launch(state):
+        return None
     record = ejecutar.responder(job.item, carga, job.args, temp_dir, job.text)
     with state.lock:
         state.spent += record["coste_usd"] or 0
     if record["error"] and ejecutar.LIMITE.search(record["error"]):
-        with state.lock:
-            state.reasons.append(f"cuota o límite en {job.item['id']}: {record['error'][:200]}")
-        state.stop.set()
+        _halt(state, f"cuota o límite en {job.item['id']}: {record['error'][:200]}")
     cache.put(job.key, record)
     return _with_extras(record, job, cached=False)
 
@@ -95,9 +108,10 @@ def _execute_job(job, carga, cache, temp_dir, state):
         return _process_job(job, carga, cache, temp_dir, state)
     except ejecutar.Aislamiento as error:
         state.isolation_error = error
+        _halt(state, f"AISLAMIENTO ROTO en {job.item['id']}")
     except Exception as error:  # cualquier otro fallo para el grupo; se relanza al cerrar
         state.unexpected_error = error
-    state.stop.set()
+        _halt(state, f"ERROR INESPERADO en {job.item['id']}: {error!r}")
     return None
 
 
@@ -109,11 +123,10 @@ def _close(state, stop_file):
     if state.isolation_error is not None:
         _write_stop(stop_file, f"AISLAMIENTO ROTO: {state.isolation_error}")
         raise state.isolation_error
-    if state.unexpected_error is not None:
-        _write_stop(stop_file, f"ERROR INESPERADO: {state.unexpected_error!r}")
-        raise state.unexpected_error
     if state.reasons:
         _write_stop(stop_file, "\n".join(state.reasons))
+        if state.unexpected_error is not None:
+            raise state.unexpected_error
         raise PoolStopped("; ".join(state.reasons))
     if state.skipped:
         message = (f"Tope de gasto alcanzado: gastado {state.spent:.4f} USD de un tope de {state.cap:.4f} USD; "
