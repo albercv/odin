@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery
+.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -14,6 +14,7 @@ check:
 	cd api && mvn -q verify
 	cd mcp && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm run build && npm test
 	cd panel && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm test && npm run build
+	python3 -m unittest discover -s deploy/instalacion -p 'test_*.py'
 
 COMPOSE = docker compose -f deploy/compose.yaml --env-file deploy/.env
 
@@ -38,3 +39,17 @@ tagger-model:
 # Batería del etiquetado con el modelo real (el Ollama de ODIN_TAGGER_URL). Fuera de make check; escribe api/odin-adapter-tagger-ollama/target/tagging-battery.json.
 tagging-battery:
 	cd api && mvn -q -am -pl odin-adapter-tagger-ollama verify -Dgroups=model -DexcludedGroups=
+
+# Instalación del propietario (D-056): datos de prueba, vaciarla, volver a una copia y conector de Claude Desktop.
+# Van con cerrojo (data/instalacion.lock). INSTALACION_PROYECTO e INSTALACION_ENV eligen otra pila.
+datos-prueba-cargar:
+	@deploy/instalacion/cerrojo.sh python3 deploy/instalacion/datos_prueba.py
+
+instalacion-reiniciar:
+	@CONFIRMAR="$(CONFIRMAR)" deploy/instalacion/cerrojo.sh deploy/instalacion/reiniciar.sh
+
+instalacion-restaurar:
+	@COPIA="$(COPIA)" CONFIRMAR="$(CONFIRMAR)" deploy/instalacion/cerrojo.sh deploy/instalacion/restaurar.sh
+
+mcp-claude-desktop:
+	@TRABAJADOR="$(TRABAJADOR)" deploy/instalacion/cerrojo.sh deploy/instalacion/mcp-claude-desktop.sh
