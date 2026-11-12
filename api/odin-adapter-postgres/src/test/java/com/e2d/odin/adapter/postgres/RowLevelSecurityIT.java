@@ -37,7 +37,7 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 class RowLevelSecurityIT extends AbstractPostgresIT {
 
     private static final List<String> TABLES = List.of("company", "project", "membership", "document", "document_page",
-            "knowledge_card", "question_record", "project_member", "topic", "document_topic", "document_tagging");
+            "knowledge_card", "question_record", "project_member", "topic", "document_topic", "document_tagging", "delivery_usage");
     private static final List<String> PROJECT_TABLES = List.of("document", "document_page", "knowledge_card");
 
     private Document closedDocument;
@@ -62,6 +62,8 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), "T", "B",
                 Optional.empty(), user, NOW, CardStatus.PENDING, Optional.empty()));
         Topic topic = new Topic(new TopicId(UUID.randomUUID()), company, "Agua", "Fugas");
+        new PostgresDeliveryMeter(tx, java.time.ZoneOffset.UTC).record(company,
+                com.e2d.odin.application.usage.WorkerTool.SEARCH, 10, NOW);
         new PostgresTopicRepository(tx).save(topic);
         new PostgresTaggingRepository(tx).decide(CompanyScope.of(company), d.id(), topic.id(), TopicState.ACTIVE, user,
                 NOW);

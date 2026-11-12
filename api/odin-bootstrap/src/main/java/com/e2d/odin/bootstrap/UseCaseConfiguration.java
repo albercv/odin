@@ -49,6 +49,7 @@ import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
@@ -66,6 +67,7 @@ import com.e2d.odin.application.port.TopicRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.TokenGenerator;
+import com.e2d.odin.application.port.UsageStatistics;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.ListDocuments;
@@ -81,6 +83,9 @@ import com.e2d.odin.application.topic.ListDocumentTopics;
 import com.e2d.odin.application.topic.ListTopics;
 import com.e2d.odin.application.topic.ReviewDocumentTopics;
 import com.e2d.odin.application.topic.UpdateTopic;
+import com.e2d.odin.application.usage.GetDeliveredVolume;
+import com.e2d.odin.application.usage.GetUsageStats;
+import com.e2d.odin.application.usage.ListGaps;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
@@ -89,7 +94,9 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -186,6 +193,24 @@ public class UseCaseConfiguration {
     @Bean
     GetTaggingStatus getTaggingStatus(TaggingRepository tagging, TaggingWindow window) {
         return new GetTaggingStatus(tagging, window);
+    }
+
+    @Bean
+    GetUsageStats getUsageStats(OrganizationRepository organizations, UsageStatistics statistics, Clock clock,
+            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new GetUsageStats(organizations, statistics, clock, zone);
+    }
+
+    @Bean
+    GetDeliveredVolume getDeliveredVolume(OrganizationRepository organizations, DeliveryMeter meter, Clock clock,
+            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new GetDeliveredVolume(organizations, meter, clock, zone);
+    }
+
+    @Bean
+    ListGaps listGaps(OrganizationRepository organizations, UsageStatistics statistics, Clock clock,
+            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new ListGaps(organizations, statistics, clock, zone);
     }
 
     @Bean
