@@ -25,30 +25,30 @@ public class PostgresProjectMemberRepository implements ProjectMemberRepository 
         tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
                 INSERT INTO project_member (project_id, user_id)
                 SELECT p.id, :user FROM project p WHERE p.id = :project AND p.company_id = :company
-                ON CONFLICT (project_id, user_id) DO NOTHING""")
+                ON CONFLICT (project_id, user_id) DO UPDATE SET removed_at = NULL""")
                 .param("project", projectId.value()).param("user", userId.value())
                 .param("company", companyId.value()).update());
     }
 
     @Override
     public void remove(CompanyId companyId, ProjectId projectId, UserId userId) {
-        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("DELETE FROM project_member m"
-                + " WHERE m.project_id = :project AND m.user_id = :user AND " + OF_COMPANY)
+        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("UPDATE project_member m SET removed_at = now()"
+                + " WHERE m.removed_at IS NULL AND m.project_id = :project AND m.user_id = :user AND " + OF_COMPANY)
                 .param("project", projectId.value()).param("user", userId.value())
                 .param("company", companyId.value()).update());
     }
 
     @Override
     public void removeAllOf(CompanyId companyId, UserId userId) {
-        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("DELETE FROM project_member m"
-                + " WHERE m.user_id = :user AND " + OF_COMPANY)
+        tx.runInScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("UPDATE project_member m SET removed_at = now()"
+                + " WHERE m.removed_at IS NULL AND m.user_id = :user AND " + OF_COMPANY)
                 .param("user", userId.value()).param("company", companyId.value()).update());
     }
 
     @Override
     public List<UserId> listMembers(CompanyId companyId, ProjectId projectId) {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("SELECT m.user_id FROM project_member m"
-                + " WHERE m.project_id = :project AND " + OF_COMPANY + " ORDER BY m.added_at, m.user_id")
+                + " WHERE m.removed_at IS NULL AND m.project_id = :project AND " + OF_COMPANY + " ORDER BY m.added_at, m.user_id")
                 .param("project", projectId.value()).param("company", companyId.value())
                 .query((rs, n) -> new UserId(Sql.uuid(rs, "user_id"))).list());
     }
@@ -66,7 +66,7 @@ public class PostgresProjectMemberRepository implements ProjectMemberRepository 
     private Set<ProjectId> projectsOf(CompanyId companyId, UserId userId, String deletedFilter) {
         String sql = """
                 SELECT p.id FROM project_member m JOIN project p ON p.id = m.project_id
-                WHERE m.user_id = :user AND p.company_id = :company AND %s""".formatted(deletedFilter);
+                WHERE m.removed_at IS NULL AND m.user_id = :user AND p.company_id = :company AND %s""".formatted(deletedFilter);
         return tx.inScope(CompanyScope.of(companyId), jdbc -> new HashSet<>(jdbc.sql(sql)
                 .param("user", userId.value()).param("company", companyId.value())
                 .query((rs, n) -> new ProjectId(Sql.uuid(rs, "id"))).list()));

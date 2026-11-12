@@ -75,13 +75,23 @@ class ListMembersTest {
     }
 
     @Test
-    void showsWhetherThePersonHasAPasswordNeverTheHash() {
-        var members = list.execute(Actors.companyAdmin(company), company);
+    void groupAdminSeesWhetherThePersonHasAPasswordNeverTheHash() {
+        var members = list.execute(Actors.groupAdmin(), company);
 
         assertThat(members).filteredOn(m -> m.userId().equals(adminId)).singleElement()
                 .satisfies(m -> assertThat(m.hasPassword()).isTrue());
         assertThat(members).filteredOn(m -> m.userId().equals(workerId)).singleElement()
                 .satisfies(m -> assertThat(m.hasPassword()).isFalse());
+    }
+
+    @Test
+    void companyAdminNeverSeesWhetherSomeoneHasAPasswordEvenAPersonWhoAdministersAnotherCompany() {
+        memberships.save(new Membership(adminId, other, Set.of(Role.COMPANY_ADMIN), true));
+
+        assertThat(list.execute(Actors.companyAdmin(company), company)).extracting(MemberView::hasPassword)
+                .containsOnly(false);
+        assertThat(list.execute(Actors.companyAdmin(other), other)).extracting(MemberView::hasPassword)
+                .containsOnly(false);
     }
 
     @Test

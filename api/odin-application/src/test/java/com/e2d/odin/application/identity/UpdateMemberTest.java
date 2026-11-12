@@ -69,6 +69,33 @@ class UpdateMemberTest {
         return memberships.find(userId, inCompany).orElseThrow();
     }
 
+    private UserId groupAdminWorkingHere() {
+        UserId gemaId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gemaId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        memberships.save(new Membership(gemaId, company, Set.of(Role.WORKER), true));
+        return gemaId;
+    }
+
+    @Test
+    void onlyTheGroupAdminActsOnTheGroupAdminsMembership() {
+        UserId gema = groupAdminWorkingHere();
+
+        assertThatThrownBy(() -> update.execute(companyAdmin, company, gema, active(false)))
+                .isInstanceOf(ForbiddenException.class).hasMessage("Solo el administrador del grupo puede editar a esta persona");
+        assertThat(stored(gema, company).active()).isTrue();
+        assertThat(update.execute(groupAdmin, company, gema, active(false)).active()).isFalse();
+    }
+
+    @Test
+    void groupAdminCannotGetCompanyAdminThroughAnUpdateEither() {
+        UserId gema = groupAdminWorkingHere();
+
+        assertThatThrownBy(() -> update.execute(groupAdmin, company, gema, roles(Role.COMPANY_ADMIN, Role.WORKER)))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("El administrador del grupo ya administra todas las empresas");
+        assertThat(stored(gema, company).roles()).containsExactly(Role.WORKER);
+    }
+
     @Test
     void unknownCompanyChangesNothing() {
         CompanyId ghost = new CompanyId(UUID.randomUUID());

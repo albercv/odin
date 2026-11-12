@@ -7,6 +7,7 @@ import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 class PostgresProjectMemberRepositoryIT extends AbstractPostgresIT {
 
@@ -104,5 +105,53 @@ class PostgresProjectMemberRepositoryIT extends AbstractPostgresIT {
         assertThat(projectMembers.deletedProjectsOf(a, wanda)).containsExactly(gone);
         assertThat(projectMembers.deletedProjectsOf(newCompany(), wanda)).isEmpty();
         assertThat(orgs.listDeletedProjects(a)).extracting(p -> p.id()).containsExactly(gone);
+    }
+
+    @Test
+    void removeKeepsTheRowWithADateAndAddingAgainReactivatesIt() {
+        CompanyId a = newCompany();
+        ProjectId obra = newProject(a, "Obra");
+        UserId wanda = newUser(a);
+        projectMembers.add(a, obra, wanda);
+
+        projectMembers.remove(a, obra, wanda);
+
+        assertThat(isRemoved(obra, wanda)).isTrue();
+        assertThat(projectMembers.listMembers(a, obra)).isEmpty();
+        assertThat(projectMembers.projectsOf(a, wanda)).isEmpty();
+        assertThat(rows(obra, wanda)).isEqualTo(1);
+
+        projectMembers.add(a, obra, wanda);
+
+        assertThat(isRemoved(obra, wanda)).isFalse();
+        assertThat(projectMembers.listMembers(a, obra)).containsExactly(wanda);
+        assertThat(rows(obra, wanda)).isEqualTo(1);
+    }
+
+    @Test
+    void removeAllOfIsSoftAndDeletedProjectsOfIgnoresRemovedMembers() {
+        CompanyId a = newCompany();
+        ProjectId gone = newProject(a, "Vieja");
+        ProjectId live = newProject(a, "Viva");
+        UserId wanda = newUser(a);
+        projectMembers.add(a, gone, wanda);
+        projectMembers.add(a, live, wanda);
+        orgs.deleteProject(a, gone, Instant.now());
+
+        projectMembers.removeAllOf(a, wanda);
+
+        assertThat(isRemoved(live, wanda)).isTrue();
+        assertThat(projectMembers.deletedProjectsOf(a, wanda)).isEmpty();
+        assertThat(projectMembers.projectsOf(a, wanda)).isEmpty();
+    }
+
+    private boolean isRemoved(ProjectId project, UserId user) {
+        return JdbcClient.create(Db.owner()).sql("SELECT removed_at IS NOT NULL FROM project_member WHERE project_id = :p AND user_id = :u")
+                .param("p", project.value()).param("u", user.value()).query(Boolean.class).single();
+    }
+
+    private long rows(ProjectId project, UserId user) {
+        return JdbcClient.create(Db.owner()).sql("SELECT count(*) FROM project_member WHERE project_id = :p AND user_id = :u")
+                .param("p", project.value()).param("u", user.value()).query(Long.class).single();
     }
 }

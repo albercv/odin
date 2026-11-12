@@ -12,8 +12,8 @@ afterEach(() => vi.restoreAllMocks());
 const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', memberCode: 'AAAA-ACM', email: 'ana@acme.test', roles: ['WORKER'], active: true, hasPassword: false };
 const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], active: false, email: 'bea@acme.test', hasPassword: true };
 const list = 'GET /v1/admin/companies/c1/members';
-const groupAdmin: Me = { userId: 'g', displayName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
-const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
+const groupAdmin: Me = { userId: 'g', displayName: 'Ada', firstName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
+const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
 
 const show = (routes: Routes, me: Me = groupAdmin, onProjectsChanged?: () => void) => {
   const calls = mockFetch(routes);
@@ -169,7 +169,7 @@ test('editSendsTheLastNameWhenThereIsOne', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Guardar Cora Gil' }));
   await waitFor(() =>
     expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u5')?.body)
-      .toEqual({ firstName: 'Cora', lastName: 'Gil Ruiz', email: 'ana@acme.test' }));
+      .toEqual({ firstName: 'Cora', lastName: 'Gil Ruiz' }));
 });
 
 test('clearingTheLastNameIsSentSoTheApiRejectsIt', async () => {
@@ -375,10 +375,52 @@ test('addingAPersonRefreshesTheProjectsTheyJoined', async () => {
   await waitFor(() => expect(onProjectsChanged).toHaveBeenCalledTimes(1));
 });
 
-test('onlyTheGroupAdminSeesDeleteAndItAsksFirst', async () => {
+test('onlyTheGroupAdminSeesDelete', async () => {
   show({ [list]: () => [ana] }, companyAdmin);
   await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Ana' }));
   expect(screen.queryByRole('button', { name: 'Borrar Ana' })).toBeNull();
+});
+
+test('companyAdminCannotDeactivateOrRemoveCompanyAdminsNeitherOthersNorThemselves', async () => {
+  show({ [list]: () => [ana, bea, both] }, companyAdmin);
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Ana' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Bea' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Dani Sol' }));
+  expect(screen.getByRole('button', { name: 'Desactivar Ana' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Quitar Ana' })).toBeInTheDocument();
+  for (const name of ['Bea', 'Dani Sol']) {
+    expect(screen.queryByRole('button', { name: `Desactivar ${name}` })).toBeNull();
+    expect(screen.queryByRole('button', { name: `Activar ${name}` })).toBeNull();
+    expect(screen.queryByRole('button', { name: `Quitar ${name}` })).toBeNull();
+    expect(screen.getByRole('button', { name: `Editar ${name}` })).toBeInTheDocument();
+  }
+});
+
+test('nobodySeesDeactivateOrRemoveOnTheirOwnRow', async () => {
+  const ownRow = { ...ana, userId: 'g', displayName: 'Ada Gil', firstName: 'Ada' };
+  show({ [list]: () => [ana, ownRow] });
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Ada Gil' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Más acciones de Ana' }));
+  expect(screen.getByRole('button', { name: 'Quitar Ana' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Desactivar Ada Gil' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Quitar Ada Gil' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Editar Ada Gil' })).toBeInTheDocument();
+});
+
+test('groupAdminSeesDeactivateAndRemoveOnCompanyAdmins', async () => {
+  show({ [list]: () => [bea] });
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones de Bea' }));
+  expect(screen.getByRole('button', { name: 'Activar Bea' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Quitar Bea' })).toBeInTheDocument();
+});
+
+test('editingOnlyTheNameNeverSendsTheEmail', async () => {
+  const calls = show({ [list]: () => [bea], 'PATCH /v1/admin/users/u2': () => bea }, companyAdmin);
+  await act('Bea', 'Editar Bea');
+  await userEvent.clear(screen.getByLabelText('Nombre'));
+  await userEvent.type(screen.getByLabelText('Nombre'), 'Beatriz');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar Bea' }));
+  await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/u2')?.body).toEqual({ firstName: 'Beatriz' }));
 });
 
 test('deletingAPersonAsksThenDeletesAndRefreshesPeopleAndProjects', async () => {

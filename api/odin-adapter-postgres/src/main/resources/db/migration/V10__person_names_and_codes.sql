@@ -1,4 +1,4 @@
--- Fase 2a: nombre y apellidos de la persona, código de persona y código de empresa (D-040).
+-- Fase 2a: nombre y apellidos de la persona, código de persona y código de empresa (D-047 y D-048).
 ALTER TABLE app_user ADD COLUMN first_name text;
 ALTER TABLE app_user ADD COLUMN last_name text;
 ALTER TABLE app_user ADD COLUMN person_code text;

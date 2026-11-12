@@ -152,4 +152,16 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
 
         assertThat(orgs.listProjectSummaries(a)).extracting(ProjectSummary::memberCount).containsExactly(1);
     }
+
+    @Test
+    void projectSummariesDoNotCountRemovedMembers() {
+        CompanyId a = newCompany();
+        ProjectId obra = newProject(a, "Obra");
+        UserId wanda = newUser(a);
+        projectMembers.add(a, obra, wanda);
+        projectMembers.add(a, obra, newUser(a));
+        projectMembers.remove(a, obra, wanda);
+
+        assertThat(orgs.listProjectSummaries(a)).extracting(ProjectSummary::memberCount).containsExactly(1);
+    }
 }

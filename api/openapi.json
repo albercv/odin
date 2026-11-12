@@ -1652,9 +1652,12 @@
           },
           "alreadyExisted" : {
             "type" : "boolean"
+          },
+          "keptPassword" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "alreadyExisted", "member" ]
+        "required" : [ "alreadyExisted", "keptPassword", "member" ]
       },
       "MemberView" : {
         "type" : "object",
@@ -1891,7 +1894,7 @@
           "projects" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/ProjectView"
+              "$ref" : "#/components/schemas/MeProject"
             }
           }
         },
@@ -1917,6 +1920,19 @@
           }
         },
         "required" : [ "capabilities", "id", "name" ]
+      },
+      "MeProject" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name" ]
       },
       "Health" : {
         "type" : "object",
@@ -1990,6 +2006,12 @@
           "displayName" : {
             "type" : "string"
           },
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
           "personCode" : {
             "type" : "string"
           },
@@ -2008,7 +2030,7 @@
             }
           }
         },
-        "required" : [ "companies", "displayName", "personCode", "role", "userId" ]
+        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "userId" ]
       },
       "CompanyRef" : {
         "type" : "object",

@@ -8,6 +8,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.knowledge.CardReview;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
@@ -46,11 +47,12 @@ public final class Responses {
     }
 
     /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
-    public record AdminMe(UUID userId, String displayName, String personCode, Role role, @Nullable UUID companyId,
-            List<CompanyRef> companies) {
-        public static AdminMe from(Actor a, String personCode, List<Company> administered) {
+    public record AdminMe(UUID userId, String displayName, String firstName, @Nullable String lastName,
+            String personCode, Role role, @Nullable UUID companyId, List<CompanyRef> companies) {
+        public static AdminMe from(Actor a, User person, List<Company> administered) {
             UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
-            return new AdminMe(a.userId().value(), a.displayName(), personCode, a.role(), onlyCompany,
+            return new AdminMe(a.userId().value(), a.displayName(), person.firstName(), person.lastName().orElse(null),
+                    person.personCode(), a.role(), onlyCompany,
                     administered.stream().map(CompanyRef::from).toList());
         }
     }
@@ -65,6 +67,13 @@ public final class Responses {
     public record MeCompany(UUID id, String name, Set<Capability> capabilities) {
         public static MeCompany from(Company c) {
             return new MeCompany(c.id().value(), c.name(), c.capabilities());
+        }
+    }
+
+    /** El proyecto tal como lo ve un trabajador: solo id y nombre; si es cerrado y quién es miembro es cosa del panel. */
+    public record MeProject(UUID id, String name) {
+        public static MeProject from(Project p) {
+            return new MeProject(p.id().value(), p.name());
         }
     }
 
@@ -88,10 +97,10 @@ public final class Responses {
         }
     }
 
-    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<ProjectView> projects) {
+    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<MeProject> projects) {
         public static Me from(MeView m) {
             return new Me(m.userId().value(), m.displayName(), m.role(), MeCompany.from(m.company()),
-                    m.projects().stream().map(ProjectView::from).toList());
+                    m.projects().stream().map(MeProject::from).toList());
         }
     }
 
@@ -104,10 +113,11 @@ public final class Responses {
         }
     }
 
-    public record MemberAdded(MemberView member, boolean alreadyExisted) {
-        public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added) {
+    public record MemberAdded(MemberView member, boolean alreadyExisted, boolean keptPassword) {
+        public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added, Actor viewer) {
             return new MemberAdded(MemberView.from(com.e2d.odin.application.identity.MemberView.of(added.user(),
-                    added.membership(), added.company().code())), added.alreadyExisted());
+                    added.membership(), added.company().code(), viewer)), added.alreadyExisted(),
+                    added.keptPassword());
         }
     }
 

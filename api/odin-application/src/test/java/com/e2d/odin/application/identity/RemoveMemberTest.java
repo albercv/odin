@@ -49,7 +49,7 @@ class RemoveMemberTest {
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     private final InMemoryOrganizationRepository projects = new InMemoryOrganizationRepository();
     private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(projects);
-    private final RemoveMember remove = new RemoveMember(memberships, keys, projectMembers, sessions,
+    private final RemoveMember remove = new RemoveMember(users, memberships, keys, projectMembers, sessions,
             new MutableClock());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
@@ -115,6 +115,23 @@ class RemoveMemberTest {
 
         assertThat(memberships.find(adminId, company)).isEmpty();
         assertThat(sessions.resolve(token)).isEmpty();
+    }
+
+    @Test
+    void removingTheWorkerMembershipOfAGroupAdminKeepsTheirPanelSession() {
+        UserId gemaId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gemaId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        memberships.save(new Membership(gemaId, company, Set.of(Role.WORKER), true));
+        String token = sessions.open(gemaId);
+
+        assertThatThrownBy(() -> remove.execute(Actors.companyAdmin(company), company, gemaId))
+                .isInstanceOf(ForbiddenException.class).hasMessage("Solo el administrador del grupo puede editar a esta persona");
+        assertThat(memberships.find(gemaId, company)).isPresent();
+
+        remove.execute(Actors.groupAdmin(), company, gemaId);
+
+        assertThat(memberships.find(gemaId, company)).isEmpty();
+        assertThat(sessions.resolve(token)).isPresent();
     }
 
     @Test

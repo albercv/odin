@@ -5,8 +5,8 @@ import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
 type Me = Parameters<typeof Company>[0]['me'];
-const groupAdmin: Me = { userId: 'g', displayName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
-const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
+const groupAdmin: Me = { userId: 'g', displayName: 'Ada', firstName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
+const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
 
 function show(me: Me) {
   mockFetch({

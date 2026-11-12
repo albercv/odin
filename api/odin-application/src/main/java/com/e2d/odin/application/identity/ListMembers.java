@@ -37,6 +37,6 @@ public class ListMembers {
                 .findAllById(members.stream().map(Membership::userId).toList()).stream()
                 .collect(Collectors.toMap(User::id, Function.identity()));
         return members.stream().filter(m -> people.containsKey(m.userId()))
-                .map(m -> MemberView.of(people.get(m.userId()), m, companyCode)).toList();
+                .map(m -> MemberView.of(people.get(m.userId()), m, companyCode, actor)).toList();
     }
 }

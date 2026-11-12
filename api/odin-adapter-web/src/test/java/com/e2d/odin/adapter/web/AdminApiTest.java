@@ -202,6 +202,8 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.companies[0].name").isNotEmpty())
                 .andExpect(jsonPath("$.companies[0].code").isNotEmpty())
                 .andExpect(jsonPath("$.personCode").value(w.users.findById(id).orElseThrow().personCode()))
+                .andExpect(jsonPath("$.firstName").value(w.users.findById(id).orElseThrow().firstName()))
+                .andExpect(jsonPath("$.lastName").value(w.users.findById(id).orElseThrow().lastName().orElseThrow()))
                 .andExpect(jsonPath("$.companyId").doesNotExist());
     }
 

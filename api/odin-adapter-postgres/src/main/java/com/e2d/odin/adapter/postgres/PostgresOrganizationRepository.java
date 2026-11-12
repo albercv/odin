@@ -70,7 +70,8 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
 
     @Override
     public List<Company> listCompanies(CompanyScope scope) {
-        return tx.inScope(scope, jdbc -> jdbc.sql("SELECT id, name, code FROM company ORDER BY seq")
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql("SELECT id, name, code FROM company WHERE "
+                + Sql.inScope("id") + " ORDER BY seq"), scope)
                 .query((rs, n) -> company(jdbc, rs)).list());
     }
 
@@ -102,7 +103,7 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     public List<ProjectSummary> listProjectSummaries(CompanyId companyId) {
         return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
                 SELECT p.id, p.company_id, p.name, p.restricted, COUNT(u.id) AS member_count
-                FROM project p LEFT JOIN project_member m ON m.project_id = p.id
+                FROM project p LEFT JOIN project_member m ON m.project_id = p.id AND m.removed_at IS NULL
                 LEFT JOIN app_user u ON u.id = m.user_id AND u.deleted_at IS NULL
                 WHERE p.company_id = :company AND p.deleted_at IS NULL
                 GROUP BY p.id, p.company_id, p.name, p.restricted, p.seq ORDER BY p.seq""")

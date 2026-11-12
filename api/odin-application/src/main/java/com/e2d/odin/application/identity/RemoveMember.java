@@ -4,10 +4,13 @@ import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
+import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Clock;
@@ -19,14 +22,16 @@ import java.time.Instant;
  */
 public class RemoveMember {
 
+    private final UserRepository users;
     private final MembershipRepository memberships;
     private final AccessKeyRepository keys;
     private final ProjectMemberRepository projectMembers;
     private final AdminSessions sessions;
     private final Clock clock;
 
-    public RemoveMember(MembershipRepository memberships, AccessKeyRepository keys,
+    public RemoveMember(UserRepository users, MembershipRepository memberships, AccessKeyRepository keys,
             ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock) {
+        this.users = users;
         this.memberships = memberships;
         this.keys = keys;
         this.projectMembers = projectMembers;
@@ -37,6 +42,8 @@ public class RemoveMember {
     public void execute(Actor actor, CompanyId companyId, UserId userId) {
         AccessPolicy.requireAdminOf(actor, companyId);
         Membership membership = UserAdministration.requireMembership(memberships, companyId, userId);
+        User person = users.findById(userId).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        UserAdministration.requireGroupAdminToActOn(actor, person);
         if (actor.userId().equals(userId)) {
             throw new ValidationException("No puedes quitarte de la empresa");
         }
@@ -48,6 +55,6 @@ public class RemoveMember {
                 .forEach(key -> keys.save(key.revoked(now)));
         projectMembers.removeAllOf(companyId, userId);
         memberships.delete(userId, companyId, now);
-        UserAdministration.closeSessionsIfNoLongerAdministering(memberships, sessions, userId);
+        UserAdministration.closeSessionsIfNoLongerAdministering(person, memberships, sessions);
     }
 }

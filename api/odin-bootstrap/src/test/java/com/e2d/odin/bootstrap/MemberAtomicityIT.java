@@ -231,7 +231,7 @@ class MemberAtomicityIT {
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         new PostgresAccessKeyRepository(tx).save(new AccessKey(new AccessKeyId(UUID.randomUUID()), id, company,
                 "portatil", "atomic01", "hash", Instant.now(), Optional.empty()));
-        RemoveMember remove = new UseCaseConfiguration().removeMember(memberships, failingKeySave(), projectMembers,
+        RemoveMember remove = new UseCaseConfiguration().removeMember(users, memberships, failingKeySave(), projectMembers,
                 NO_SESSIONS,
                 Clock.systemUTC(), transactionManager);
 
@@ -256,7 +256,7 @@ class MemberAtomicityIT {
                 throw new IllegalStateException("fallo forzado");
             }
         };
-        RemoveMember remove = new UseCaseConfiguration().removeMember(failingDelete, keys, projectMembers, NO_SESSIONS,
+        RemoveMember remove = new UseCaseConfiguration().removeMember(users, failingDelete, keys, projectMembers, NO_SESSIONS,
                 Clock.systemUTC(), transactionManager);
 
         assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
@@ -280,7 +280,7 @@ class MemberAtomicityIT {
                 throw new IllegalStateException("fallo forzado");
             }
         };
-        RemoveMember remove = new UseCaseConfiguration().removeMember(failingDelete,
+        RemoveMember remove = new UseCaseConfiguration().removeMember(users, failingDelete,
                 new PostgresAccessKeyRepository(tx), projectMembers, NO_SESSIONS, Clock.systemUTC(),
                 transactionManager);
 

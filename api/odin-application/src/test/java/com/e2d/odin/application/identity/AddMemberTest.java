@@ -68,6 +68,7 @@ class AddMemberTest {
                 new NewMember("Wanda", "Pérez", Optional.of(" W@Demo.test "), Set.of(Role.WORKER), Optional.empty(), Set.of()));
 
         assertThat(added.alreadyExisted()).isFalse();
+        assertThat(added.keptPassword()).isFalse();
         assertThat(added.user().displayName()).isEqualTo("Wanda Pérez");
         assertThat(added.user().email()).contains("w@demo.test");
         assertThat(added.user().groupAdmin()).isFalse();
@@ -117,7 +118,7 @@ class AddMemberTest {
         MemberAdded added = add.execute(Actors.companyAdmin(company), company,
                 member(null, Set.of(Role.WORKER), null));
 
-        MemberView view = MemberView.of(added.user(), added.membership(), added.company().code());
+        MemberView view = MemberView.of(added.user(), added.membership(), added.company().code(), groupAdmin);
 
         assertThat(view.memberCode()).isEqualTo("7F3K-E2D");
         assertThat(view.personCode()).isEqualTo("7F3K");
@@ -132,10 +133,43 @@ class AddMemberTest {
                         Optional.of("otra-clave-1234"), Set.of()));
 
         assertThat(added.alreadyExisted()).isTrue();
+        assertThat(added.keptPassword()).isTrue();
         assertThat(added.user()).isEqualTo(carlos);
         assertThat(users.findById(carlos.id())).contains(carlos);
         assertThat(memberships.find(carlos.id(), company)).isPresent();
         assertThat(memberships.find(carlos.id(), other)).isPresent();
+    }
+
+    private User existingGroupAdmin() {
+        return People.groupAdmin(users, new UserId(UUID.randomUUID()), "Gema", Optional.of("g@demo.test"), true,
+                Optional.of(passwords.hash("clave-de-gema-12")));
+    }
+
+    @Test
+    void onlyTheGroupAdminAddsTheGroupAdminAsAWorkerByEmail() {
+        User gema = existingGroupAdmin();
+
+        assertThatThrownBy(() -> add.execute(Actors.companyAdmin(company), company,
+                member("G@demo.test", Set.of(Role.WORKER), null)))
+                .isInstanceOf(ForbiddenException.class).hasMessage("Solo el administrador del grupo puede editar a esta persona");
+        assertThat(memberships.find(gema.id(), company)).isEmpty();
+
+        MemberAdded added = add.execute(groupAdmin, company, member("G@demo.test", Set.of(Role.WORKER), null));
+
+        assertThat(added.alreadyExisted()).isTrue();
+        assertThat(added.user()).isEqualTo(gema);
+        assertThat(memberships.find(gema.id(), company).orElseThrow().roles()).containsExactly(Role.WORKER);
+    }
+
+    @Test
+    void groupAdminCannotGetCompanyAdminInACompany() {
+        User gema = existingGroupAdmin();
+
+        assertThatThrownBy(() -> add.execute(groupAdmin, company,
+                member("g@demo.test", Set.of(Role.COMPANY_ADMIN, Role.WORKER), null)))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("El administrador del grupo ya administra todas las empresas");
+        assertThat(memberships.find(gema.id(), company)).isEmpty();
     }
 
     @Test
@@ -257,6 +291,7 @@ class AddMemberTest {
                 worker("c@demo.test", Set.of(obra)));
 
         assertThat(added.alreadyExisted()).isTrue();
+        assertThat(added.keptPassword()).isFalse();
         assertThat(projectMembers.projectsOf(company, added.user().id())).containsExactly(obra);
     }
 

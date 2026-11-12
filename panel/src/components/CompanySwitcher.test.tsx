@@ -25,7 +25,7 @@ test('offersEveryCompanyWithTheCurrentOneSelected', async () => {
 });
 
 test('switchingLoadsTheOtherCompany', async () => {
-  const me = { userId: 'u2', displayName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN' as const, companyId: 'c1', companies: [acme, beta] };
+  const me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN' as const, companyId: 'c1', companies: [acme, beta] };
   const calls = mockFetch({
     'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
     'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
@@ -35,7 +35,7 @@ test('switchingLoadsTheOtherCompany', async () => {
     'GET /v1/admin/companies/c1/members': () => [],
     'GET /v1/admin/companies/c2/members': () => [],
   });
-  renderWithProviders(<AppShell me={me} onLogout={() => {}} onPasswordChanged={() => {}} />);
+  renderWithProviders(<AppShell me={me} onLogout={() => {}} onPasswordChanged={() => {}} onProfileChanged={() => {}} />);
   expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
   await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Empresa' }), 'Beta');
   expect(await screen.findByRole('heading', { name: 'Beta' })).toBeInTheDocument();

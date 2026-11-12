@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.e2d.odin.application.fake.Fixtures;
@@ -54,11 +55,15 @@ class IsolationTest extends WebTestSupport {
     @Test
     void workerRoutesCarryNoCodes() throws Exception {
         CompanyId a = newCompany();
+        w.orgs.saveProject(new com.e2d.odin.domain.organization.Project(
+                new com.e2d.odin.domain.shared.ProjectId(java.util.UUID.randomUUID()), a, "Obra", false));
 
         String body = mvc.perform(get("/v1/me").header("Authorization", workerKey(a))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.projects[0].name").value("Obra"))
                 .andReturn().getResponse().getContentAsString();
 
-        org.assertj.core.api.Assertions.assertThat(body).doesNotContainIgnoringCase("code");
+        org.assertj.core.api.Assertions.assertThat(body).doesNotContainIgnoringCase("code")
+                .doesNotContain("restricted").doesNotContain("memberCount").doesNotContain("companyId");
     }
 
     @Test

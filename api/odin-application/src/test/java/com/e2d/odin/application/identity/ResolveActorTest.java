@@ -69,6 +69,20 @@ class ResolveActorTest {
     }
 
     @Test
+    void groupAdminWithAWorkerMembershipWorksWithTheirKeyAndStaysGroupAdminInThePanel() {
+        People.groupAdmin(users, workerId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        memberships.save(new Membership(workerId, company, Set.of(Role.WORKER), true));
+        keys.save(new AccessKey(keyId, workerId, company, "portátil", "abcdefgh", "h:secreto", clock.instant(),
+                Optional.empty()));
+
+        Actor worker = resolve.fromAccessKey(PLAIN_KEY);
+        Actor panel = resolve.fromSessionToken(openSession(workerId));
+
+        assertThat(worker).isEqualTo(new Actor(workerId, "Gema Pérez", Role.WORKER, Set.of(company)));
+        assertThat(panel.role()).isEqualTo(Role.GROUP_ADMIN);
+    }
+
+    @Test
     void resolvesWorkerFromKey() {
         givenWorker(true);
 
