@@ -14,7 +14,7 @@ export const INSTRUCTIONS = [
   'Si no hay resultados, di «no consta»; no lo inventes.',
   'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.',
   'Comprueba las citas con verifyCitation antes de darlas por buenas.',
-  'Los resultados KNOWLEDGE_CARD son fichas aportadas por trabajadores con resumen hecho por IA: cítalas por título, autor y fecha, preséntalas como fichas y no como documentos, y no tienen página; verifyCitation es solo para documentos, y si verifyCitation devuelve false, no uses esa cita.',
+  'Los resultados KNOWLEDGE_CARD son fichas aportadas por trabajadores con resumen hecho por IA: cítalas por título, autor y fecha de alta, preséntalas como fichas y no como documentos, y no tienen página; verifyCitation es solo para documentos, y si verifyCitation devuelve false, no uses esa cita.',
   'Presenta el conocimiento general aparte, como información añadida, nunca mezclado con lo que consta en los documentos.',
 ].join(' ');
 

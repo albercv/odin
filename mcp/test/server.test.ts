@@ -115,7 +115,8 @@ describe('buildServer', () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [hit], noSource: false } }));
     const result = await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['plazo'], limit: 5 } });
     const parsed = JSON.parse(textOf(result));
-    expect(parsed.hits[0]).toMatchObject({ documentId: 'd1', title: 'Manual', pageNumber: 3, excerpt: 'el <b>plazo</b>' });
+    expect(parsed.hits[0]).toMatchObject({ documentId: 'd1', title: 'Manual', pageNumber: 3, addedAt: '2026-01-01T00:00:00Z', excerpt: 'el <b>plazo</b>' });
+    expect(parsed.hits[0]).not.toHaveProperty('date');
     expect(JSON.parse(fake.requests.at(-1)!.body)).toEqual({ queries: ['plazo'], limit: 5 });
   });
 
@@ -125,14 +126,20 @@ describe('buildServer', () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [card], noSource: false } }));
     const parsed = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['truco'] } })));
     expect(parsed.hits[0]).toEqual({ sourceType: 'KNOWLEDGE_CARD', cardId: 'k1', title: 'Truco', authorName: 'Ana',
-      date: '2026-01-01T00:00:00Z', projectId: null, projectName: null, excerpt: 'se hace así',
+      addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: null, excerpt: 'se hace así',
       origin: 'Ficha aportada por Ana; resumen hecho por IA' });
   });
 
-  it('instructionsExplainHowToCiteCardsAndUseVerifyCitation', async () => {
+  it('searchDescriptionExplainsAddedAt', async () => {
+    const client = await connect(() => meWith(ALL));
+    const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');
+    expect(search?.description).toContain('addedAt es la fecha en que entró en Odín, no la del documento.');
+  });
+
+  it('instructionsKeepCardCitationRule', async () => {
     const client = await connect(() => meWith(ALL));
     const instructions = client.getInstructions() ?? '';
-    expect(instructions).toContain('por título, autor y fecha');
+    expect(instructions).toContain('por título, autor y fecha de alta');
     expect(instructions).toContain('no tienen página');
     expect(instructions).toContain('verifyCitation es solo para documentos');
     expect(instructions).toContain('si verifyCitation devuelve false, no uses esa cita');

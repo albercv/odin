@@ -10,8 +10,9 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
     {
       description:
         'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
-        'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha y su origen, y no tienen página. ' +
-        'projectName es el proyecto (comunidad, cliente u obra) del resultado.',
+        'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
+        'projectName es el proyecto (comunidad, cliente u obra) del resultado. ' +
+        'addedAt es la fecha en que entró en Odín, no la del documento.',
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto'),
@@ -35,7 +36,7 @@ const toCitation = (hit: Hit, projects: ProjectNames) =>
         cardId: hit.sourceId,
         title: hit.title,
         authorName: hit.authorName,
-        date: hit.date,
+        addedAt: hit.date,
         projectId: hit.projectId ?? null,
         projectName: projects.nameOf(hit.projectId),
         excerpt: hit.excerpt,
@@ -50,6 +51,6 @@ const toCitation = (hit: Hit, projects: ProjectNames) =>
         projectId: hit.projectId ?? null,
         projectName: projects.nameOf(hit.projectId),
         authorName: hit.authorName,
-        date: hit.date,
+        addedAt: hit.date,
         excerpt: hit.excerpt,
       };
