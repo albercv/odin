@@ -35,9 +35,9 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
         KnowledgeCard c = card(a, newUser(a), "Ficha");
-        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(c);
-        assertThat(cards.findById(CompanyScope.all(), ProjectVisibility.all(), c.id())).contains(c);
-        assertThat(cards.findById(CompanyScope.of(b), ProjectVisibility.all(), c.id())).isEmpty();
+        assertThat(cards.findForReview(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(c);
+        assertThat(cards.findForReview(CompanyScope.all(), ProjectVisibility.all(), c.id())).contains(c);
+        assertThat(cards.findForReview(CompanyScope.of(b), ProjectVisibility.all(), c.id())).isEmpty();
     }
 
     @Test
@@ -48,10 +48,10 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CardReview review = new CardReview(reviewer, ReviewDecision.CORRECT, NOW.plusSeconds(5), Optional.of("nota"));
         KnowledgeCard corrected = c.correct("Cuerpo corregido", review);
         cards.save(corrected);
-        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(corrected);
+        assertThat(cards.findForReview(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(corrected);
         KnowledgeCard noNote = c.approve(new CardReview(reviewer, ReviewDecision.APPROVE, NOW, Optional.empty()));
         cards.save(noNote);
-        assertThat(cards.findById(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(noNote);
+        assertThat(cards.findForReview(CompanyScope.of(a), ProjectVisibility.all(), c.id())).contains(noNote);
     }
 
     @Test
@@ -136,10 +136,10 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
                 .containsExactly(free);
         assertThat(cards.listByStatus(scope, ProjectVisibility.all(), CardStatus.PENDING))
                 .containsExactly(free, inVisible, inHidden);
-        assertThat(cards.findById(scope, some, inHidden.id())).isEmpty();
-        assertThat(cards.findById(scope, some, inVisible.id())).contains(inVisible);
-        assertThat(cards.findById(scope, some, free.id())).contains(free);
-        assertThat(cards.findById(scope, ProjectVisibility.all(), inHidden.id())).contains(inHidden);
+        assertThat(cards.findForReview(scope, some, inHidden.id())).isEmpty();
+        assertThat(cards.findForReview(scope, some, inVisible.id())).contains(inVisible);
+        assertThat(cards.findForReview(scope, some, free.id())).contains(free);
+        assertThat(cards.findForReview(scope, ProjectVisibility.all(), inHidden.id())).contains(inHidden);
     }
 
     private KnowledgeCard cardIn(CompanyId company, UserId author, ProjectId project, String title) {

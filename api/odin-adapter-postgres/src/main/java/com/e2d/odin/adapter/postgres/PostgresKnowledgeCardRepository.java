@@ -50,7 +50,7 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
     }
 
     @Override
-    public Optional<KnowledgeCard> findById(CompanyScope scope, ProjectVisibility visibility, CardId id) {
+    public Optional<KnowledgeCard> findForReview(CompanyScope scope, ProjectVisibility visibility, CardId id) {
         String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE id = :id AND " + Sql.inScope("company_id")
                 + " AND " + Sql.inVisibleProjects("project_id");
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)

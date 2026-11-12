@@ -28,7 +28,7 @@ public class ReviewCard {
     public KnowledgeCard execute(Actor actor, CardId id, ReviewDecision decision, Optional<String> correctedBody,
             Optional<String> note) {
         AccessPolicy.requireAdmin(actor);
-        KnowledgeCard card = cards.findById(actor.scope(), ProjectVisibility.all(), id)
+        KnowledgeCard card = cards.findForReview(actor.scope(), ProjectVisibility.all(), id)
                 .orElseThrow(() -> new NotFoundException("Ficha no encontrada"));
         if (card.status() != CardStatus.PENDING) {
             throw new ConflictException("La ficha ya está revisada");

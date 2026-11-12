@@ -27,7 +27,7 @@ public class InMemoryKnowledgeCardRepository implements KnowledgeCardRepository 
     }
 
     @Override
-    public Optional<KnowledgeCard> findById(CompanyScope scope, ProjectVisibility visibility, CardId id) {
+    public Optional<KnowledgeCard> findForReview(CompanyScope scope, ProjectVisibility visibility, CardId id) {
         return Optional.ofNullable(cards.get(id))
                 .filter(c -> scope.includes(c.companyId()) && visibility.allows(c.projectId()));
     }

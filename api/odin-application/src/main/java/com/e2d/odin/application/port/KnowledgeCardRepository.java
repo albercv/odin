@@ -13,7 +13,8 @@ public interface KnowledgeCardRepository {
 
     void save(KnowledgeCard card);
 
-    Optional<KnowledgeCard> findById(CompanyScope scope, ProjectVisibility visibility, CardId id);
+    /** Para el administrador que revisa: no filtra por estado ni por autor, así que un trabajador no debe usarlo. */
+    Optional<KnowledgeCard> findForReview(CompanyScope scope, ProjectVisibility visibility, CardId id);
 
     List<KnowledgeCard> listByStatus(CompanyScope scope, ProjectVisibility visibility, CardStatus status);
 
