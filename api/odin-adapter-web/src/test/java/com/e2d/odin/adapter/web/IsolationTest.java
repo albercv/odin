@@ -77,6 +77,28 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void otherCompanyAdminCannotManageTopics() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        var ownerOfA = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        var created = mvc.perform(post("/v1/admin/companies/" + a.value() + "/topics").cookie(ownerOfA)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Agua\",\"definition\":\"Fugas\"}"))
+                .andReturn();
+        String id = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        String base = "/v1/admin/companies/" + a.value() + "/topics";
+
+        mvc.perform(get(base).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(post(base).cookie(other).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Seguros\",\"definition\":\"x\"}")).andExpect(status().isForbidden());
+        mvc.perform(patch(base + "/" + id).cookie(other).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Robado\"}")).andExpect(status().isForbidden());
+        mvc.perform(delete(base + "/" + id).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(base).cookie(ownerOfA)).andExpect(jsonPath("$[0].name").value("Agua"))
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
     void companyAdminCannotChangeACompanyCode() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();

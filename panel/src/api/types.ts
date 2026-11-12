@@ -196,6 +196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/topics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listTopics"];
+        put?: never;
+        post: operations["createTopic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/projects": {
         parameters: {
             query?: never;
@@ -306,6 +322,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["update_1"];
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/topics/{topicId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteTopic"];
+        options?: never;
+        head?: never;
+        patch: operations["updateTopic"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}/projects/{projectId}": {
@@ -633,6 +665,16 @@ export interface components {
             /** @description De 2 a 6 letras mayúsculas o cifras; único en el grupo. */
             code?: string;
         };
+        TopicRequest: {
+            name?: string;
+            definition?: string;
+        };
+        TopicView: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            definition: string;
+        };
         Name: {
             name?: string;
         };
@@ -730,6 +772,10 @@ export interface components {
             name?: string;
             /** @description Solo lo cambia el administrador del grupo. */
             code?: string;
+        };
+        TopicPatch: {
+            name?: string;
+            definition?: string;
         };
         UpdateProject: {
             name?: string;
@@ -1202,6 +1248,54 @@ export interface operations {
             };
         };
     };
+    listTopics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicView"][];
+                };
+            };
+        };
+    };
+    createTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopicRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicView"];
+                };
+            };
+        };
+    };
     projects: {
         parameters: {
             query?: never;
@@ -1508,6 +1602,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyView"];
+                };
+            };
+        };
+    };
+    deleteTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                topicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                topicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopicPatch"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicView"];
                 };
             };
         };

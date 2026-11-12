@@ -449,6 +449,71 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/topics" : {
+      "get" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "listTopics",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TopicView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "createTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TopicRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopicView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/projects" : {
       "get" : {
         "tags" : [ "company-controller" ],
@@ -896,6 +961,77 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CompanyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/topics/{topicId}" : {
+      "delete" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "deleteTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "updateTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TopicPatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopicView"
                 }
               }
             }
@@ -1689,6 +1825,33 @@
           }
         }
       },
+      "TopicRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
+          }
+        }
+      },
+      "TopicView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "definition", "id", "name" ]
+      },
       "Name" : {
         "type" : "object",
         "properties" : {
@@ -1951,6 +2114,17 @@
           "code" : {
             "type" : "string",
             "description" : "Solo lo cambia el administrador del grupo."
+          }
+        }
+      },
+      "TopicPatch" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
           }
         }
       },

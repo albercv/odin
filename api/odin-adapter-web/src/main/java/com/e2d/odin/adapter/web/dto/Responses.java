@@ -19,6 +19,7 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
+import com.e2d.odin.domain.topic.Topic;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
@@ -91,6 +92,12 @@ public final class Responses {
         public static ProjectView from(ProjectSummary s) {
             Project p = s.project();
             return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted(), s.memberCount());
+        }
+    }
+
+    public record TopicView(UUID id, String name, String definition) {
+        public static TopicView from(Topic t) {
+            return new TopicView(t.id().value(), t.name(), t.definition());
         }
     }
 

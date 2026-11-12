@@ -16,6 +16,7 @@ import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryQuestionLog;
+import com.e2d.odin.application.fake.InMemoryTopicRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
@@ -61,6 +62,10 @@ import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
+import com.e2d.odin.application.topic.CreateTopic;
+import com.e2d.odin.application.topic.DeleteTopic;
+import com.e2d.odin.application.topic.ListTopics;
+import com.e2d.odin.application.topic.UpdateTopic;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
@@ -82,6 +87,7 @@ public class TestWiring {
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
+    final InMemoryTopicRepository topics = new InMemoryTopicRepository();
     final ScriptedKnowledgeSearch search = new ScriptedKnowledgeSearch();
     final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     final MutableClock clock = new MutableClock();
@@ -266,5 +272,21 @@ public class TestWiring {
 
     @Bean VerifyCitation verifyCitation() {
         return new VerifyCitation(orgs, projectMembers, docs);
+    }
+
+    @Bean CreateTopic createTopic() {
+        return new CreateTopic(orgs, topics, ids);
+    }
+
+    @Bean UpdateTopic updateTopic() {
+        return new UpdateTopic(topics);
+    }
+
+    @Bean DeleteTopic deleteTopic() {
+        return new DeleteTopic(topics, clock);
+    }
+
+    @Bean ListTopics listTopics() {
+        return new ListTopics(topics);
     }
 }
