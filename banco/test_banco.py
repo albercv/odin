@@ -1008,5 +1008,40 @@ class NoErrorsInFiguresTest(Harness):
         self.assertTrue(all(r.get("error") is None for r in self._cached_records()))
 
 
+class BatchesTest(Harness):
+    """Tandas: batches.json en la carpeta, copia en resumen.json y sección «Tandas» del informe."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        self.counter = self.tmp / "contador"
+        self.config_path = self.config(concurrency=1)
+
+    def test_one_complete_batch_is_reported_as_such(self):
+        self.assertEqual(self.run_cli(self.config_path, preflight=True,
+                                      env={"FAKE_CONTADOR": str(self.counter), "FAKE_MODO_DESDE": "99"}), 0)
+        folder = self.only_folder()
+        batches = json.loads((folder / "batches.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(batches), 1)
+        self.assertEqual((batches[0]["motivo"], batches[0]["fin"] is not None), ("completa", True))
+        self.assertEqual(batches[0]["llamadas_pago"], 1 + 6 + 6)  # prueba, 6 buscadores y 6 jueces de Claude
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["batches"], batches)
+        self.assertIn("Se hizo en una sola tanda", (folder / "informe.md").read_text(encoding="utf-8"))
+
+    def test_stop_and_resume_are_two_batches_in_the_same_folder(self):
+        self.run_cli(self.config_path, preflight=True, env={"FAKE_CONTADOR": str(self.counter), "FAKE_MODO_DESDE": "4",
+                                                            "FAKE_MODO_DESDE_MODO": "error"})
+        with fake_env(FAKE_CONTADOR=str(self.counter), FAKE_MODO_DESDE="1", FAKE_MODO_DESDE_MODO="ok", FAKE_VEREDICTO="si"):
+            self.assertEqual(banco.main(["reanudar", "--config", str(self.config_path)], layout=self.layout), 0)
+        folder = self.only_folder()
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual([b["motivo"] for b in summary["batches"]][0].split(":")[0], "3 errores seguidos de claude")
+        self.assertEqual(summary["batches"][1]["motivo"], "completa")
+        report = (folder / "informe.md").read_text(encoding="utf-8")
+        self.assertIn("Se hizo en 2 tandas", report)
+        self.assertIn("3 errores seguidos de claude", report)
+
+
 if __name__ == "__main__":
     unittest.main()

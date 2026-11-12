@@ -36,6 +36,15 @@ def delete_state(path):
     Path(path).unlink(missing_ok=True)
 
 
+def read_batches(folder):
+    path = Path(folder) / "batches.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+
+
+def write_batches(folder, batches):
+    atomic_write(Path(folder) / "batches.json", json.dumps(batches, ensure_ascii=False, indent=1))
+
+
 def renewal_time(text):
     """Hora de renovación que trae el aviso («resets 9:50pm (Europe/Madrid)»), como texto; None si no la trae."""
     match = RENEWAL.search(text or "")

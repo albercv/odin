@@ -50,6 +50,7 @@ class Session:
     ledger: Ledger
     sweep: SweepSpec | None = None
     config_path: Path | None = None
+    charges_start: int = 0  # cargos del libro al abrir la tanda: sus llamadas de pago son las de esta tanda
 
     @property
     def stop_file(self):
@@ -282,18 +283,40 @@ def _state(sess, started, reason=None, counts=None):
 
 
 def _open_batch(sess):
-    """Antes de la primera llamada de pago, el estado de reanudación ya existe: un corte de golpe deja algo que reanudar."""
-    tanda.save_state(sess.state_file, _state(sess, datetime.now().isoformat(timespec="seconds")))
+    """Antes de la primera llamada de pago, el estado de reanudación ya existe: un corte de golpe deja algo que reanudar.
+    La tanda se anota en batches.json de la carpeta."""
+    now = datetime.now().isoformat(timespec="seconds")
+    sess.charges_start = len(sess.ledger.charges)
+    batches = tanda.read_batches(sess.folder)
+    batches.append({"inicio": now, "fin": None, "motivo": None, "llamadas_pago": None})
+    tanda.write_batches(sess.folder, batches)
+    tanda.save_state(sess.state_file, _state(sess, now))
+
+
+def _batch_reason(sess, done):
+    if _stopped(sess):
+        return sess.stop_file.read_text(encoding="utf-8").strip()
+    return "completa" if done else "interrumpida"
+
+
+def _close_batch_record(sess, reason):
+    batches = tanda.read_batches(sess.folder)
+    batches[-1].update(fin=datetime.now().isoformat(timespec="seconds"), motivo=reason,
+                       llamadas_pago=len(sess.ledger.charges) - sess.charges_start)
+    tanda.write_batches(sess.folder, batches)
 
 
 def _finish_batch(sess, done):
-    """Al parar, el estado de reanudación guarda el motivo, la hora de renovación y lo hecho; al terminar completo, se borra."""
+    """Al parar, el estado de reanudación guarda el motivo, la hora de renovación y lo hecho; al terminar completo, se borra.
+    En ambos casos la tanda se cierra en batches.json."""
+    reason = _batch_reason(sess, done)
+    _close_batch_record(sess, reason)
     if done and not _stopped(sess):
         tanda.delete_state(sess.state_file)
-        return
-    reason = sess.stop_file.read_text(encoding="utf-8").strip() if _stopped(sess) else "interrumpida"
-    started = (tanda.read_state(sess.state_file) or {}).get("fecha_tanda") or datetime.now().isoformat(timespec="seconds")
-    tanda.save_state(sess.state_file, _state(sess, started, reason, _counts(sess.folder)))
+    else:
+        started = (tanda.read_state(sess.state_file) or {}).get("fecha_tanda") or datetime.now().isoformat(timespec="seconds")
+        tanda.save_state(sess.state_file, _state(sess, started, reason, _counts(sess.folder)))
+    report.rebuild(sess.folder, sess.layout)  # el resumen ya lleva la tanda cerrada
 
 
 def _exit_code(sess):

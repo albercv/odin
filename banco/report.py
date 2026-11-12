@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from banco import metrics, scoring
+from banco import metrics, scoring, tanda
 
 
 def _read_jsonl(path):
@@ -26,7 +26,8 @@ def read_folder(folder):
             "curves": json.loads(curves_file.read_text(encoding="utf-8")) if curves_file.exists() else None,
             "origin": _read_origin(folder),
             "ledger": json.loads((folder / "libro.json").read_text(encoding="utf-8")) if (folder / "libro.json").exists() else None,
-            "stopped": stop_file.read_text(encoding="utf-8").strip() if stop_file.exists() else None}
+            "stopped": stop_file.read_text(encoding="utf-8").strip() if stop_file.exists() else None,
+            "batches": tanda.read_batches(folder)}
 
 
 def rebuild(folder, layout):
@@ -38,7 +39,7 @@ def rebuild(folder, layout):
     items = [i for i in json.loads(layout.battery_file.read_text(encoding="utf-8")) if i["id"] in wanted]
     summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"],
                                     ledger=data["ledger"])
-    summary.update(origen=data["origin"], stopped=data["stopped"])
+    summary.update(origen=data["origin"], stopped=data["stopped"], batches=data["batches"])
     if data["curves"] is not None:
         summary["curvas"] = data["curves"]
     write_report(folder, summary)
@@ -162,6 +163,22 @@ def _cost_lines(summary):
     return lines + [""]
 
 
+def _batch_lines(summary):
+    batches = summary.get("batches") or []
+    lines = ["## Tandas", ""]
+    if not batches:
+        return lines + ["Sin tandas registradas.", ""]
+    lines.append("Se hizo en una sola tanda." if len(batches) == 1 else f"Se hizo en {len(batches)} tandas.")
+    for number, batch in enumerate(batches, start=1):
+        lines.append(f"- Tanda {number}: de {batch['inicio']} a {batch['fin'] or 'sin cerrar'}; motivo: "
+                     f"{batch['motivo'] or 'sin cerrar (corte)'}; llamadas de pago: {_count_or_unknown(batch['llamadas_pago'])}")
+    return lines + [""]
+
+
+def _count_or_unknown(value):
+    return "no consta" if value is None else str(value)
+
+
 def _mix_text(mix):
     return ", ".join(f"{approach} ×{count}" for approach, count in mix.items())
 
@@ -193,7 +210,7 @@ def render(summary):
     origin = summary.get("origen", {})
     parts = [f"# Informe del banco: {origin.get('Configuración', '')}", ""]
     parts += _origin_lines(summary) + _accuracy_lines(summary) + _grave_lines(summary) + _approach_lines(summary)
-    parts += _agreement_lines(summary) + _judge_lines(summary) + _cost_lines(summary)
+    parts += _agreement_lines(summary) + _judge_lines(summary) + _cost_lines(summary) + _batch_lines(summary)
     if "curvas" in summary:
         parts += _curve_lines(summary["curvas"])
     if summary.get("stopped"):
