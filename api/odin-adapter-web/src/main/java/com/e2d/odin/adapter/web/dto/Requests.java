@@ -45,6 +45,12 @@ public final class Requests {
             Boolean restricted) {
     }
 
+    public record TopicRequest(String name, String definition) {
+    }
+
+    public record TopicPatch(String name, String definition) {
+    }
+
     public record UpdateMember(Set<Role> roles, Boolean active, String password) {
     }
 

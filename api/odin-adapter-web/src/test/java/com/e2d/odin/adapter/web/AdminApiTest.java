@@ -523,6 +523,57 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.detail").value("Ya existe un proyecto con ese nombre"));
     }
 
+    private String createTopic(Cookie admin, CompanyId company, String name) throws Exception {
+        var created = mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + name + "\",\"definition\":\"Todo lo de " + name + "\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        return com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void topicsAreCreatedListedPatchedAndDeleted() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String id = createTopic(admin, company, "Agua");
+        String base = "/v1/admin/companies/" + company.value() + "/topics";
+
+        mvc.perform(get(base).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(id)).andExpect(jsonPath("$[0].name").value("Agua"))
+                .andExpect(jsonPath("$[0].definition").value("Todo lo de Agua"));
+        mvc.perform(patch(base + "/" + id).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"definition\":\"Fugas y humedades\"}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Agua"))
+                .andExpect(jsonPath("$.definition").value("Fugas y humedades"));
+        mvc.perform(delete(base + "/" + id).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(base).cookie(admin)).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(delete(base + "/" + id).cookie(admin)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void duplicateTopicNameIs409() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        createTopic(admin, company, "Agua");
+
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"agua\",\"definition\":\"x\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.detail").value("Ya hay un tema con ese nombre"));
+    }
+
+    @Test
+    void topicNameContainingAnotherIs400() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        createTopic(admin, company, "Agua");
+
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Agua y humedades\",\"definition\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Un nombre de tema no puede contener a otro: Agua"));
+    }
+
     private static org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder upload(
             CompanyId company, Cookie admin, byte[] bytes) {
         return multipart("/v1/admin/companies/" + company.value() + "/documents")

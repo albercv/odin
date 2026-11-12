@@ -58,6 +58,7 @@ import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
+import com.e2d.odin.application.port.TopicRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.TokenGenerator;
@@ -66,6 +67,10 @@ import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
+import com.e2d.odin.application.topic.CreateTopic;
+import com.e2d.odin.application.topic.DeleteTopic;
+import com.e2d.odin.application.topic.ListTopics;
+import com.e2d.odin.application.topic.UpdateTopic;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
@@ -134,6 +139,26 @@ public class UseCaseConfiguration {
     @Bean
     CreateProject createProject(OrganizationRepository organizations, IdGenerator ids) {
         return new CreateProject(organizations, ids);
+    }
+
+    @Bean
+    CreateTopic createTopic(OrganizationRepository organizations, TopicRepository topics, IdGenerator ids) {
+        return new CreateTopic(organizations, topics, ids);
+    }
+
+    @Bean
+    UpdateTopic updateTopic(TopicRepository topics) {
+        return new UpdateTopic(topics);
+    }
+
+    @Bean
+    DeleteTopic deleteTopic(TopicRepository topics, Clock clock) {
+        return new DeleteTopic(topics, clock);
+    }
+
+    @Bean
+    ListTopics listTopics(TopicRepository topics) {
+        return new ListTopics(topics);
     }
 
     @Bean
