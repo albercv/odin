@@ -13,7 +13,7 @@ const ana = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'A
 const bea = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', memberCode: 'BBBB-ACM', roles: ['COMPANY_ADMIN'], personActive: true, active: false, email: 'bea@acme.test', hasPassword: true };
 const list = 'GET /v1/admin/companies/c1/members';
 const groupAdmin: Me = { userId: 'g', displayName: 'Ada', firstName: 'Ada', personCode: 'GGGG', role: 'GROUP_ADMIN', companies: [] };
-const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] };
+const companyAdmin: Me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN', companyId: 'c1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true }] };
 
 const show = (routes: Routes, me: Me = groupAdmin, onProjectsChanged?: () => void) => {
   const calls = mockFetch(routes);

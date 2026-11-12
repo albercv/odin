@@ -533,6 +533,7 @@ export interface components {
             name: string;
             code: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
+            codeReviewed: boolean;
         };
         Setup: {
             setupToken?: string;
@@ -822,6 +823,7 @@ export interface components {
             id: string;
             name: string;
             code: string;
+            codeReviewed: boolean;
         };
         ProjectMemberView: {
             /** Format: uuid */
