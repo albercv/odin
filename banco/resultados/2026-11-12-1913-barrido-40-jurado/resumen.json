@@ -1,0 +1,51 @@
+{
+ "byApproach": {
+  "main": {
+   "recall": 1.0,
+   "accuracy": 0.9618,
+   "errors": 243
+  },
+  "synonyms": {
+   "recall": null,
+   "accuracy": null,
+   "errors": 200
+  },
+  "topic": {
+   "recall": null,
+   "accuracy": null,
+   "errors": 200
+  }
+ },
+ "cost": {
+  "notifiedUsd": 0.0,
+  "notifiedUsdFromRecords": 0,
+  "unknownCostRecords": 0,
+  "strategyUsdPerAnswer": null,
+  "tokensPerAnswer": null,
+  "searchers": {
+   "usdPerAnswer": 0.0194,
+   "tokensPerAnswer": 297996.725
+  },
+  "combiner": {
+   "usdPerAnswer": null,
+   "tokensPerAnswer": null
+  },
+  "judges": {
+   "usdPerAnswer": null,
+   "tokensPerAnswer": null
+  }
+ },
+ "notMeasured": 40,
+ "origen": {
+  "Configuración": "barrido-40-jurado",
+  "Rama": "feature/calidad-recuperacion",
+  "Commit": "5528977bf311b9adb415e42cb66b00119daea3f4",
+  "Modo": "explore",
+  "Batería": "desarrollo",
+  "Archivos": "ficticio",
+  "Muestra": "40 (estrato tipo, semilla 7)",
+  "Preguntas": "40",
+  "Fecha": "2026-11-12T19:13"
+ },
+ "stopped": null
+}
