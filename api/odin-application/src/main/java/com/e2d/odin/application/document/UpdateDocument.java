@@ -21,7 +21,8 @@ public class UpdateDocument {
     }
 
     public DocumentEntry execute(Actor actor, DocumentId documentId, boolean caseDocument) {
-        Document document = documents.findById(CompanyScope.all(), ProjectVisibility.all(), documentId)
+        AccessPolicy.requireAdmin(actor);
+        Document document = documents.findById(actor.scope(), ProjectVisibility.all(), documentId)
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
         AccessPolicy.requireAdminOf(actor, document.companyId());
         documents.markCaseDocuments(document.companyId(), Set.of(documentId), caseDocument);

@@ -307,6 +307,14 @@ class WorkerApiTest extends WebTestSupport {
     }
 
     @Test
+    void similarCasesWithoutAnyCapabilityIs403() throws Exception {
+        CompanyId company = Fixtures.companyWith(w.orgs, EnumSet.noneOf(Capability.class));
+
+        mvc.perform(post("/v1/similar-cases").header(AUTH, workerKey(company)).contentType(MediaType.APPLICATION_JSON)
+                .content(similarBody())).andExpect(status().isForbidden());
+    }
+
+    @Test
     void listDocumentsFiltersByCaseDocument() throws Exception {
         CompanyId company = newCompany();
         Document plain = Fixtures.readyDocument(w.docs, company, "suelto");

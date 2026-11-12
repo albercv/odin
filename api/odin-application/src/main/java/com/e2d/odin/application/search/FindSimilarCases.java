@@ -40,7 +40,8 @@ public class FindSimilarCases {
     }
 
     public SimilarCasesResult execute(Actor actor, SimilarCasesRequest request) {
-        var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SIMILAR_CASES);
+        var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SIMILAR_CASES,
+                Capability.SEARCH_KNOWLEDGE);
         WorkerAccess.requireProject(access.visibility(), request.projectId());
         List<String> terms = Optional.ofNullable(request.queries()).orElse(List.of());
         if (terms.stream().allMatch(q -> q == null || q.isBlank())) {

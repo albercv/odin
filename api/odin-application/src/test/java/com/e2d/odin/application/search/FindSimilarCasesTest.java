@@ -105,6 +105,15 @@ class FindSimilarCasesTest {
     }
 
     @Test
+    void searchCapabilityIsAlsoRequired() {
+        CompanyId onlyCases = Fixtures.companyWith(orgs, EnumSet.of(Capability.SIMILAR_CASES));
+
+        assertThatThrownBy(() -> useCase.execute(Actors.worker(onlyCases), request(Optional.empty(), Optional.empty())))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(search.lastSimilarCasesQuery()).isNull();
+    }
+
+    @Test
     void adminActorIsForbidden() {
         assertThatThrownBy(() -> useCase.execute(Actors.companyAdmin(companyA),
                 request(Optional.empty(), Optional.empty()))).isInstanceOf(ForbiddenException.class);

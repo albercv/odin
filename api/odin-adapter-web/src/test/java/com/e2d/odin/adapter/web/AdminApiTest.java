@@ -109,6 +109,8 @@ class AdminApiTest extends WebTestSupport {
         mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
                 .content("{" + ids + "}")).andExpect(status().isBadRequest());
         mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentIds\":[null],\"caseDocument\":true}")).andExpect(status().isBadRequest());
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"documentIds\":[\"" + UUID.randomUUID() + "\"],\"caseDocument\":true}"))
                 .andExpect(status().isNotFound());
     }

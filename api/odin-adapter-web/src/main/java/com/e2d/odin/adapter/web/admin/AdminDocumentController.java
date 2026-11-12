@@ -105,8 +105,10 @@ public class AdminDocumentController {
         if (request.caseDocument() == null) {
             throw new ValidationException("Indica si se marcan o se quitan como casos");
         }
-        Set<DocumentId> ids = request.documentIds() == null ? null
-                : request.documentIds().stream().map(DocumentId::new).collect(Collectors.toSet());
+        if (request.documentIds() == null || request.documentIds().contains(null)) {
+            throw new ValidationException("Elige entre 1 y 500 documentos");
+        }
+        Set<DocumentId> ids = request.documentIds().stream().map(DocumentId::new).collect(Collectors.toSet());
         return new Responses.CaseMarksResult(
                 markCases.execute(actor, new CompanyId(companyId), ids, request.caseDocument()));
     }

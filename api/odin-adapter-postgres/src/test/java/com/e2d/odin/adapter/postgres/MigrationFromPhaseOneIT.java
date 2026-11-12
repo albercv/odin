@@ -167,12 +167,13 @@ class MigrationFromPhaseOneIT {
     }
 
     @Test
-    void migrationGivesSimilarCasesToExistingCompanies() {
+    void migrationGivesSimilarCasesOnlyToCompaniesThatCanSearch() {
         assertThat(jdbc.sql("SELECT count(*) FROM company").query(Long.class).single()).isEqualTo(4);
-        assertThat(jdbc.sql("SELECT count(DISTINCT company_id) FROM company_capability WHERE capability = 'SIMILAR_CASES'")
-                .query(Long.class).single()).isEqualTo(4);
+        assertThat(jdbc.sql("SELECT company_id FROM company_capability WHERE capability = 'SIMILAR_CASES'")
+                .query(UUID.class).list()).containsExactly(COMPANY);
         assertThat(jdbc.sql("SELECT capability FROM company_capability WHERE company_id = :id ORDER BY capability")
                 .param("id", COMPANY).query(String.class).list()).containsExactly("SEARCH_KNOWLEDGE", "SIMILAR_CASES");
+        assertThat(jdbc.sql("SELECT count(*) FROM company_capability").query(Long.class).single()).isEqualTo(2);
     }
 
     @Test

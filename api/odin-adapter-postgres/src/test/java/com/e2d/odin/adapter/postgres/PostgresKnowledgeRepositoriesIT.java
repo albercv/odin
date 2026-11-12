@@ -97,6 +97,18 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         assertThat(kinds).containsExactly("SEARCH", "SIMILAR_CASES");
     }
 
+    @Test
+    void kindOnlyAcceptsKnownValues() {
+        CompanyId a = newCompany();
+        UserId author = newUser(a);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> tx.runInScope(CompanyScope.of(a), jdbc -> jdbc.sql("""
+                INSERT INTO question_record (id, company_id, author_id, text, hit_count, asked_at, kind)
+                VALUES (:id, :company, :author, 'x', 0, now(), 'OTRA')""").param("id", UUID.randomUUID())
+                .param("company", a.value()).param("author", author.value()).update()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
     private List<String> questionTexts(CompanyScope scope) {
         return tx.inScope(scope, (JdbcClient jdbc) -> jdbc.sql("SELECT text FROM question_record")
                 .query(String.class).list());

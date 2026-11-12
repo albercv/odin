@@ -66,7 +66,7 @@ class IsolationTest extends WebTestSupport {
 
         mvc.perform(patch("/v1/admin/documents/" + ofA.id().value()).cookie(other)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":true}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
         org.assertj.core.api.Assertions.assertThat(w.docs.get(ofA.id()).orElseThrow().caseDocument()).isFalse();
     }
 

@@ -43,12 +43,18 @@ class UpdateDocumentTest {
     }
 
     @Test
-    void adminOfAnotherCompanyIsForbidden() {
+    void adminOfAnotherCompanyIsNotFound() {
         Document d = Fixtures.readyDocument(docs, companyA, "caso");
 
         assertThatThrownBy(() -> update.execute(Actors.companyAdmin(companyB), d.id(), true))
-                .isInstanceOf(ForbiddenException.class);
+                .isInstanceOf(NotFoundException.class).hasMessage("Documento no encontrado");
         assertThat(docs.get(d.id()).orElseThrow().caseDocument()).isFalse();
+    }
+
+    @Test
+    void workerIsForbiddenEvenForAnUnknownDocument() {
+        assertThatThrownBy(() -> update.execute(Actors.worker(companyA), new DocumentId(UUID.randomUUID()), true))
+                .isInstanceOf(ForbiddenException.class);
     }
 
     @Test
