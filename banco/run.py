@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from banco import combine, judge, report, scoring
-from banco.cache import RunCache
+from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
 from banco.layout import Layout
@@ -230,7 +230,8 @@ def _from_cache(cache, jobs, before):
     for job in jobs:
         record = cache.get(job.key)
         if record is not None:
-            out.append({**record, "approach": job.spec.approach, "replica": job.replica, "cached": job.key in before})
+            out.append({**record, "approach": job.spec.approach, "replica": job.replica, "cached": job.key in before,
+                        "clave": job.key})
     return out
 
 
@@ -281,17 +282,30 @@ def _compose_paid(sess, item, runs):
         raise
 
 
+def _composed(sess, item, runs):
+    """Respuesta del redactor: si está en la caché, sale de ella a coste 0; si no, es una llamada de pago que se cobra y se guarda."""
+    usable = [r["clave"] for r in runs if r.get("error") is None and r.get("respuesta") is not None]
+    cfg, settings = sess.cfg.combiner, sess.settings
+    key = final_key(item["id"], item["pregunta"], cfg.kind, cfg.model, usable, settings.odin_commit, settings.stack_digest)
+    hit = sess.cache.get(key)
+    if hit is not None:
+        return {**hit, "coste_usd": 0.0, "cached": True}
+    record = _compose_paid(sess, item, runs)
+    sess.ledger.charge(record.get("coste_usd"))
+    _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
+    sess.cache.put(key, record)
+    return {**record, "cached": False}
+
+
 def _final_row(sess, item, runs):
     kind = sess.cfg.combiner.kind
     if kind in ANSWER_RULES:
         answer = ANSWER_RULES[kind](runs)
-        extra = {"coste_usd": 0.0, "tokens": None, "duracion_s": 0.0, "error": None}
+        extra = {"coste_usd": 0.0, "tokens": None, "duracion_s": 0.0, "error": None, "cached": False}
     else:
-        record = _compose_paid(sess, item, runs)
-        sess.ledger.charge(record.get("coste_usd"))
-        _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
+        record = _composed(sess, item, runs)
         answer = record["respuesta"]
-        extra = {key: record.get(key) for key in ("coste_usd", "tokens", "duracion_s", "error")}
+        extra = {key: record.get(key) for key in ("coste_usd", "tokens", "duracion_s", "error", "cached")}
     return {"id": item["id"], "answer": answer, "correcta_script": scoring.is_correct(item, answer, sess.ctx),
             "approach": kind, **extra}
 
@@ -343,13 +357,19 @@ def _one_judge(sess, index, spec, rubric, item, answer):
 
 
 def _call_judge(sess, index, spec, rubric, item, answer):
-    """Un juez de pago que falla después de llamar a claude deja su coste desconocido."""
+    """Un juez que falla después de llamar a claude deja su coste desconocido. Un veredicto guardado no se vuelve a pagar."""
+    key = verdict_key(answer, rubric, spec.model, index, sess.seed)
+    hit = sess.cache.get(key)
+    if hit is not None:
+        return {**hit, "coste_usd": 0.0, "cached": True}
     try:
-        return _one_judge(sess, index, spec, rubric, item, answer)
+        record = _one_judge(sess, index, spec, rubric, item, answer)
     except Exception:
         if _is_paid(spec):
             sess.ledger.charge(None)
         raise
+    sess.cache.put(key, record)
+    return {**record, "cached": False}
 
 
 def _unjudged(item, records, error, motivo=None):
@@ -393,7 +413,7 @@ def _judge_question(sess, jobs, item, answer):
 
 def _charge_judge(sess, spec, record, item):
     """Cobra un juez de pago nuevo. True si con él se para el experimento (cuota o presupuesto agotado)."""
-    if not _is_paid(spec):
+    if not _is_paid(spec) or record.get("cached"):
         return False
     sess.ledger.charge(record.get("coste_usd"))
     quota = _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")

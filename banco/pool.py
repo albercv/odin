@@ -67,7 +67,7 @@ def _build_jobs(items, specs, approaches_dir, settings):
 
 
 def _with_extras(record, job, cached):
-    return {**record, "approach": job.spec.approach, "replica": job.replica, "cached": cached}
+    return {**record, "approach": job.spec.approach, "replica": job.replica, "cached": cached, "clave": job.key}
 
 
 def _carrying(error, records):

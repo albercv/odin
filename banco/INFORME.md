@@ -26,8 +26,8 @@ Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:
 | `ORIGEN.txt` | configuración, rama, huella del código (commit; con «+hash» si había cambios sin commit en banco o medir), modo, batería, muestra, fecha |
 | `ids.json` | documentos y fichas (ids de Odín a rutas), preguntas; sin claves de API |
 | `buscadores.jsonl` | una línea por ejecución de buscador (con `cached`) |
-| `final.jsonl` | respuesta final por pregunta, `correcta_script`, coste del redactor y `error` si lo hubo (`run`) |
-| `veredictos.jsonl` | veredictos de cada juez, veredicto del jurado y `error` si lo hubo (`run`) |
+| `final.jsonl` | respuesta final por pregunta, `correcta_script`, coste del redactor, `cached` y `error` si lo hubo (`run`) |
+| `veredictos.jsonl` | veredictos de cada juez (con `cached`), veredicto del jurado, `motivo` si no hay veredicto («no juzgable: no consta» o «parada») y `error` si lo hubo (`run`) |
 | `turnos.jsonl`, `curvas.json` | barrido: ejecuciones por tope de turnos y curvas (`sweep`) |
 | `resumen.json`, `informe.md` | resumen en claves camelCase e informe en español |
 | `libro.json` | gasto real del experimento (`spent`), registros de coste desconocido (`unknown`) y tope (`cap`) |
@@ -41,15 +41,21 @@ La clave de cada ejecución (`banco/cache.py`) incluye la pregunta, el enfoque, 
 
 Limitación: el hash cubre los ficheros con cambios seguidos por git; un fichero nuevo sin añadir a git no entra en la huella.
 
+La respuesta del redactor tiene su propia clave (`final_key`): pregunta, tipo de redactor, modelo, las claves de las ejecuciones de entrada que usó (sin orden, solo las sin error), huella del código y pila. Cada veredicto de juez tiene la suya (`verdict_key`): hash del JSON de la respuesta final, rúbrica, modelo, número de juez y semilla. Los veredictos de Ollama también se guardan, porque cuestan tiempo. La clave del veredicto no incluye la huella del código ni la pila: si cambia el texto que recibe el juez (p. ej. `banco/judge.py`) sin cambiar la rúbrica, el modelo ni la respuesta, un relanzamiento reutiliza el veredicto antiguo. Para forzar una nueva ronda de jueces, cambia la rúbrica o borra `banco/cache/`.
+
+Los registros con error no se guardan en la caché (`RunCache.put`): se relanzan.
+
 ## Presupuesto (un solo tope por experimento)
 
 `budgetUsd` limita todo el experimento: buscadores, redactor (`composer`, `pageFusion`) y jueces de Claude. Un libro de gasto compartido (`banco/ledger.py`, con cerrojo) suma lo gastado. Antes de cada llamada de pago se comprueba bajo el cerrojo si queda presupuesto; si no, la llamada no se lanza, se escribe `PARADA.txt` con lo gastado y el tope, y las preguntas restantes quedan sin respuesta o sin veredicto. El exceso solo puede venir de llamadas ya en vuelo (como mucho `concurrency − 1`).
 
 En `sweep` el tope es acumulativo: el grupo principal y cada pasada de turnos comparten el mismo libro.
 
-**El tope es del experimento, no de la orden.** El libro se guarda en `banco/estado/libro-<nombre>.json` (con el total y la lista de cargos con fecha, escrita de forma atómica en cada cargo). Al arrancar, `run` y `sweep` leen ese libro: si ya se gastó el tope, la orden se niega con código 2 y un mensaje antes de crear carpeta alguna. Relanzar tras una parada no vuelve a gastar: lo ya hecho sale de la caché y lo gastado sigue contando. Con `--reiniciar-presupuesto` (en make, `REINICIAR=1`) el libro anterior se archiva como `libro-<nombre>.<fecha>.json` y el tope empieza en cero. Un libro con algún coste desconocido también se niega a arrancar.
+**El tope es del experimento, no de la orden.** El libro se guarda en `banco/estado/libro-<nombre>.json` (con el total y la lista de cargos con fecha, escrita de forma atómica en cada cargo). Al arrancar, `run` y `sweep` leen ese libro: si ya se gastó el tope, la orden se niega con código 2 y un mensaje antes de crear carpeta alguna. Relanzar tras una parada no vuelve a gastar: lo ya hecho sale de la caché (ver «Caché y reanudación») y lo gastado sigue contando. Con `--reiniciar-presupuesto` (en make, `REINICIAR=1`) el libro anterior se archiva como `libro-<nombre>.<fecha>.json` y el tope empieza en cero. Un libro con algún coste desconocido también se niega a arrancar.
 
 Los jueces de Ollama son locales y de coste 0. Su llamada ignora los proxies del entorno (`HTTP_PROXY`), así que solo va al host local configurado: no pasan por la comprobación de presupuesto ni cargan en el libro. Si se agota el presupuesto, siguen corriendo; los de pago de esa pregunta no, y la pregunta queda sin veredicto.
+
+**Relanzar no vuelve a pagar lo ya hecho.** Al relanzar tras una parada, lo que está en la caché (buscadores, redactor y veredictos de los jueces, también los de Ollama) sale de ella con coste 0 y `cached: true`; no se lanza ni se cobra nada de nuevo. Lo gastado en la orden anterior sigue contando en el libro, salvo que se reinicie con `--reiniciar-presupuesto`: en ese caso el libro anterior se archiva y el nuevo empieza en cero, pero la caché sigue sirviendo.
 
 **Fallos tras una llamada de pago:** un buscador, el redactor o un juez de Claude que falla tras llamar a `claude` carga su coste como desconocido (`charge(None)`) y agota el presupuesto. Así no se pierde el gasto ni se sigue gastando sin contarlo.
 

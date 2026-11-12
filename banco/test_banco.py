@@ -444,6 +444,30 @@ class BudgetPersistenceTest(Harness):
         self.assertEqual(len(list((self.state_dir).glob("libro-prueba.*.json"))), 1)
 
 
+class RelaunchCacheTest(Harness):
+    """Un relanzamiento con el libro reiniciado no vuelve a pagar redactor ni jueces: sale de la caché, a coste 0."""
+
+    def test_relaunch_with_reset_book_does_not_call_composer_or_judges(self):
+        composer = self.config(kind="composer", combiner_model='model = "haiku"')
+        self.assertEqual(self.run_cli(composer), 0)
+        with mock.patch("banco.run.compose", wraps=run.compose) as compose_mock, \
+                mock.patch("banco.judge.run_claude_judge", wraps=judge.run_claude_judge) as claude, \
+                mock.patch("banco.judge.run_ollama_judge", wraps=judge.run_ollama_judge) as ollama, \
+                mock.patch("banco.medir_path.ejecutar.responder", wraps=ejecutar.responder) as responder:
+            with fake_env(FAKE_VEREDICTO="si"):
+                code = banco.main(["run", "--config", str(composer), "--reiniciar-presupuesto"], layout=self.layout)
+        self.assertEqual(code, 0)
+        self.assertEqual((compose_mock.call_count, claude.call_count, ollama.call_count, responder.call_count), (0, 0, 0, 0))
+        folder = max((self.tmp / "resultados").iterdir())
+        finals = self.read_jsonl(folder, "final.jsonl")
+        self.assertTrue(all(f["cached"] and f["coste_usd"] == 0.0 for f in finals))
+        verdicts = self.read_jsonl(folder, "veredictos.jsonl")
+        self.assertTrue(all(j["cached"] and j["coste_usd"] == 0.0 for v in verdicts for j in v["judges"]))
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["cost"]["notifiedUsd"], 0.0)
+        self.assertEqual(summary["accuracy"]["total"], 3)
+
+
 class StopRecordsTest(Harness):
     """Lo pagado antes de una parada, también lo fallido, queda en buscadores.jsonl; lo de la caché no se duplica."""
 
