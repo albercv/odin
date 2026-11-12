@@ -28,7 +28,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 public class PostgresDocumentRepository implements DocumentRepository {
 
-    private static final String COLUMNS = """
+    static final String COLUMNS = """
             d.id, d.company_id, d.project_id, d.title, d.filename, d.format, d.sha256, d.status, d.failure_reason,
             d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
             d.superseded_at, d.pages_without_text""";
@@ -47,6 +47,8 @@ public class PostgresDocumentRepository implements DocumentRepository {
     public void replacePages(DocumentId id, List<DocumentPage> pages) {
         tx.runInScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> {
             jdbc.sql("DELETE FROM document_page WHERE document_id = :id").param("id", id.value()).update();
+            // el texto cambió: sus temas se vuelven a calcular (las decisiones del administrador se conservan)
+            jdbc.sql("DELETE FROM document_tagging WHERE document_id = :id").param("id", id.value()).update();
             for (DocumentPage p : pages) {
                 jdbc.sql("""
                         INSERT INTO document_page (document_id, company_id, number, text, reader_name, reader_version)
@@ -194,7 +196,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
         return new DocumentEntry(document(rs), SupersessionSql.direct(rs), SupersessionSql.current(rs));
     }
 
-    private static Document document(ResultSet rs) throws SQLException {
+    static Document document(ResultSet rs) throws SQLException {
         return new Document(new DocumentId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), rs.getString("title"),
                 rs.getString("filename"), DocumentFormat.valueOf(rs.getString("format")), rs.getString("sha256"),
