@@ -47,6 +47,11 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         return pages.getOrDefault(id, List.of());
     }
 
+    /** Todos los documentos, en el orden en que se guardaron la primera vez. */
+    public List<Document> all() {
+        return List.copyOf(documents.values());
+    }
+
     public Optional<Document> get(DocumentId id) {
         return Optional.ofNullable(documents.get(id));
     }
