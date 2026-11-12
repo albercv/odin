@@ -106,10 +106,11 @@ public final class Responses {
 
     public record MemberView(UUID userId, String displayName, String firstName, @Nullable String lastName,
             String personCode, String memberCode, @Nullable String email, Set<Role> roles, boolean active,
-            boolean hasPassword) {
+            boolean personActive, boolean hasPassword) {
         public static MemberView from(com.e2d.odin.application.identity.MemberView m) {
             return new MemberView(m.userId().value(), m.displayName(), m.firstName(), m.lastName().orElse(null),
-                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.hasPassword());
+                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.personActive(),
+                    m.hasPassword());
         }
     }
 

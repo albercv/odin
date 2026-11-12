@@ -1828,11 +1828,14 @@
           "active" : {
             "type" : "boolean"
           },
+          "personActive" : {
+            "type" : "boolean"
+          },
           "hasPassword" : {
             "type" : "boolean"
           }
         },
-        "required" : [ "active", "displayName", "firstName", "hasPassword", "memberCode", "personCode", "roles", "userId" ]
+        "required" : [ "active", "displayName", "firstName", "hasPassword", "memberCode", "personActive", "personCode", "roles", "userId" ]
       },
       "KeyLabel" : {
         "type" : "object",
