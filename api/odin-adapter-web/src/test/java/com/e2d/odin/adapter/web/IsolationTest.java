@@ -114,6 +114,19 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void otherCompanyAdminGets404RevokingAKeyOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String key = workerKey(a);
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        var keyId = w.keys.listByMembership(w.memberships.listByCompany(a).get(0).userId(), a).get(0).id();
+        mvc.perform(delete("/v1/admin/keys/" + keyId.value()).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(delete("/v1/admin/keys/" + java.util.UUID.randomUUID()).cookie(other))
+                .andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.keys.findById(keyId).orElseThrow().revokedAt()).isEmpty();
+    }
+
+    @Test
     void companyAdminCannotResetUserOfAnotherCompany() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();

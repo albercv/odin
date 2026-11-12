@@ -1,6 +1,7 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.IdGenerator;
+import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.UserRepository;
@@ -17,13 +18,15 @@ import java.util.Optional;
 public class AddGroupAdmin {
 
     private final UserRepository users;
+    private final MembershipRepository memberships;
     private final PasswordHasher passwords;
     private final IdGenerator ids;
     private final PersonCodeGenerator personCodes;
 
-    public AddGroupAdmin(UserRepository users, PasswordHasher passwords, IdGenerator ids,
-            PersonCodeGenerator personCodes) {
+    public AddGroupAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
+            IdGenerator ids, PersonCodeGenerator personCodes) {
         this.users = users;
+        this.memberships = memberships;
         this.passwords = passwords;
         this.ids = ids;
         this.personCodes = personCodes;
@@ -37,6 +40,10 @@ public class AddGroupAdmin {
         existing.filter(User::groupAdmin).ifPresent(user -> {
             throw new ConflictException("Esa persona ya es administradora del grupo");
         });
+        existing.filter(user -> !UserAdministration.companiesAdministeredBy(memberships, user.id()).isEmpty())
+                .ifPresent(user -> {
+                    throw new ConflictException("Quítale antes la administración de sus empresas");
+                });
         User person = existing.orElseGet(() -> newPerson(request, email));
         User admin = UserAdministration.readyToAdminister(person, request.password(), passwords).withGroupAdmin(true);
         users.save(admin);

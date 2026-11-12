@@ -191,7 +191,7 @@ public class TestWiring {
     }
 
     @Bean AddGroupAdmin addGroupAdmin() {
-        return new AddGroupAdmin(users, passwords, ids, personCodes);
+        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes);
     }
 
     @Bean RevokeGroupAdmin revokeGroupAdmin() {

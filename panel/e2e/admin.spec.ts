@@ -347,7 +347,7 @@ async function groupAdminHandover(browser: Browser): Promise<void> {
   const page = await second.newPage();
   await openGroupAdmins(page, SECOND_GROUP_ADMIN.email, SECOND_GROUP_ADMIN.password);
   await expect(page.getByRole('button', { name: `Más acciones de ${SECOND_GROUP_ADMIN.name}` })).toHaveCount(0);
-  await toggleGroupAdmin(page, FIRST_GROUP_ADMIN, 'Desactivar', `¿Desactivar a ${FIRST_GROUP_ADMIN}? Deja de entrar en el panel y sus claves dejan de valer, en todo el grupo, hasta que se active de nuevo.`);
+  await toggleGroupAdmin(page, FIRST_GROUP_ADMIN, 'Desactivar', `¿Desactivar a ${FIRST_GROUP_ADMIN} en todo el grupo? No podrá usar Odín en ninguna empresa hasta que se reactive. Sus claves y sus proyectos se conservan.`);
   await expect(row(groupAdminsSection(page), FIRST_GROUP_ADMIN)).toContainText('Desactivado');
   const locked = await browser.newContext();
   const attempt = await locked.newPage();

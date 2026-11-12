@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
 import { Notice } from '../components/Notice';
+import { confirmDeactivatePerson, confirmDeletePerson } from '../components/personConfirmations';
 import { useAction, useLoad } from '../components/useLoad';
 import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
@@ -55,14 +56,14 @@ function useAdminActions(u: Admin, onChanged: () => void, act: ReturnType<typeof
   };
   const toggle = () => run(
     u.active
-      ? `¿Desactivar a ${u.displayName}? Deja de entrar en el panel y sus claves dejan de valer, en todo el grupo, hasta que se active de nuevo.`
+      ? confirmDeactivatePerson(u.displayName)
       : `¿Activar a ${u.displayName}? Vuelve a entrar en el panel y sus claves vuelven a valer.`,
     u.active ? 'Desactivar' : 'Activar', () => api.updateUser(u.userId, { active: !u.active }), u.active);
   const revoke = () => run(
     `¿Quitar la administración del grupo a ${u.displayName}? Sigue existiendo, con sus pertenencias, pero ya no administra el grupo.`,
     'Quitar administración', () => api.revokeGroupAdmin(u.userId));
   const erase = () => run(
-    `¿Borrar a ${u.displayName}? Desaparece de todas las empresas y de sus proyectos, y sus claves dejan de valer. No se puede deshacer.`,
+    confirmDeletePerson(u.displayName),
     'Borrar', () => api.deleteUser(u.userId));
   return { toggle, revoke, erase };
 }

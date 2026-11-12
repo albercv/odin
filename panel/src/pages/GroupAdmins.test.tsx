@@ -63,6 +63,7 @@ test('anExistingPersonIsAnnouncedAndKeepsThePassword', async () => {
 test('deactivatesAfterConfirming', async () => {
   const calls = show({ 'PATCH /v1/admin/users/g2': () => ({ userId: 'g2' }) });
   await act('Gael Ruiz', 'Desactivar');
+  expect(screen.getByText('¿Desactivar a Gael Ruiz en todo el grupo? No podrá usar Odín en ninguna empresa hasta que se reactive. Sus claves y sus proyectos se conservan.')).toBeInTheDocument();
   expect(calls.some((c) => c.key.startsWith('PATCH'))).toBe(false);
   await confirmWith('Desactivar');
   await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/users/g2')?.body).toEqual({ active: false }));
