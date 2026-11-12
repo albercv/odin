@@ -8,6 +8,7 @@ import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
@@ -20,6 +21,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 public class PostgresDocumentRepository implements DocumentRepository {
@@ -61,7 +64,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
     @Override
     public Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
-                + SupersessionSql.joins("d.superseded_by") + " WHERE d.id = :id AND " + Sql.inScope("d.company_id")
+                + SupersessionSql.joins("d.superseded_by", "d.company_id") + " WHERE d.id = :id AND " + Sql.inScope("d.company_id")
                 + " AND " + Sql.inVisibleProjects("d.project_id");
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("id", id.value()).query((rs, n) -> entry(rs)).optional());
@@ -73,15 +76,34 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public <T> T withDocumentsLocked(CompanyId companyId, DocumentId first, DocumentId second, Supplier<T> work) {
+        UUID[] ids = Stream.of(first.value(), second.value()).sorted().toArray(UUID[]::new);
+        return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> {
+            for (UUID id : ids) {
+                jdbc.sql("SELECT id FROM document WHERE id = :id AND company_id = :company FOR UPDATE")
+                        .param("id", id).param("company", companyId.value()).query().listOfRows();
+            }
+            return work.get();
+        });
+    }
+
+    @Override
     public void clearSuperseded(CompanyId companyId, DocumentId id) {
         updateSupersession(companyId, id, null, null);
     }
 
     private void updateSupersession(CompanyId companyId, DocumentId id, UUID replacement, OffsetDateTime at) {
-        tx.runInScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+        int updated = tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
                 UPDATE document SET superseded_by = :replacement, superseded_at = :at
-                WHERE id = :id AND company_id = :company""").param("replacement", replacement).param("at", at)
-                .param("id", id.value()).param("company", companyId.value()).update());
+                WHERE id = :id AND company_id = :company AND (CAST(:replacement AS uuid) IS NULL OR EXISTS (
+                    SELECT 1 FROM document r WHERE r.id = :replacement AND r.company_id = :company
+                    AND (r.project_id IS NULL OR r.project_id IS NOT DISTINCT FROM document.project_id)))""")
+                .param("replacement", replacement).param("at", at).param("id", id.value())
+                .param("company", companyId.value()).update());
+        if (updated == 0 && replacement != null) {
+            throw new ConflictException("El documento que lo sustituye tiene que ser de la misma empresa y estar en "
+                    + "el mismo proyecto o sin proyecto");
+        }
     }
 
     @Override
@@ -96,7 +118,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
             Optional<DocumentStatus> status, int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
-                + SupersessionSql.joins("d.superseded_by") + """
+                + SupersessionSql.joins("d.superseded_by", "d.company_id") + """
                  WHERE (CAST(:project AS uuid) IS NULL OR d.project_id = :project)
                   AND (CAST(:status AS text) IS NULL OR d.status = :status) AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),

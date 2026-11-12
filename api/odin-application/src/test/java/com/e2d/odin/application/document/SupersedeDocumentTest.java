@@ -56,6 +56,14 @@ class SupersedeDocumentTest {
     }
 
     @Test
+    void checksAndMarkRunWithBothDocumentsLocked() {
+        Document old = ready(companyA);
+        Document current = ready(companyA);
+        supersede.mark(adminA, old.id(), current.id());
+        assertThat(docs.lastMarkWasLocked()).isTrue();
+    }
+
+    @Test
     void marksAndReturnsTheDocumentWithItsReplacement() {
         Document old = ready(companyA);
         Document current = ready(companyA);
