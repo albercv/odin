@@ -1,0 +1,2 @@
+.brain { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(ellipse 70% 60% at 40% 45%, var(--brand-base) 0%, var(--brand-base) 55%, var(--brand-base-deep) 100%); }
+.canvas { display: block; width: 100%; height: 100%; }

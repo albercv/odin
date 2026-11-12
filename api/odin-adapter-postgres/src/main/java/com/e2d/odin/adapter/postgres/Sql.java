@@ -2,6 +2,8 @@ package com.e2d.odin.adapter.postgres;
 
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -20,6 +22,21 @@ final class Sql {
     /** Filtro de empresa en el propio SQL: segunda barrera si la conexión llegara a saltarse la RLS. */
     static String inScope(String companyColumn) {
         return "(:allCompanies OR " + companyColumn + " = ANY (CAST(string_to_array(:companyIds, ',') AS uuid[])))";
+    }
+
+    /** Filtro de proyectos visibles en el propio SQL: lo que no tiene proyecto lo ve toda la empresa. */
+    static String inVisibleProjects(String projectColumn) {
+        return "(:allProjects OR " + projectColumn + " IS NULL OR " + projectColumn
+                + " = ANY (CAST(string_to_array(:projectIds, ',') AS uuid[])))";
+    }
+
+    static StatementSpec visible(StatementSpec spec, ProjectVisibility visibility) {
+        return spec.param("allProjects", visibility.allProjects()).param("projectIds", projectIds(visibility));
+    }
+
+    static String projectIds(ProjectVisibility visibility) {
+        return visibility.projects().stream().map(ProjectId::value).map(Object::toString)
+                .collect(Collectors.joining(","));
     }
 
     static StatementSpec scoped(StatementSpec spec, CompanyScope scope) {

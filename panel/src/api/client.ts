@@ -52,23 +52,33 @@ export const api = {
   login: (b: S['Login']) => request<S['UserRef']>('POST', `${a}/session`, b, true),
   logout: () => request<void>('DELETE', `${a}/session`, undefined, true),
   companies: () => request<S['CompanyView'][]>('GET', `${a}/companies`),
-  createCompany: (name: string) => request<S['CompanyView']>('POST', `${a}/companies`, { name }),
-  renameCompany: (id: string, name: string) => request<S['CompanyView']>('PATCH', co(id), { name }),
+  createCompany: (name: string, code: string) => request<S['CompanyView']>('POST', `${a}/companies`, { name, code }),
+  updateCompany: (id: string, changes: S['UpdateCompany']) => request<S['CompanyView']>('PATCH', co(id), changes),
   setCapabilities: (id: string, capabilities: Capability[]) =>
     request<S['CompanyView']>('PUT', `${co(id)}/capabilities`, { capabilities }),
   projects: (id: string) => request<S['ProjectView'][]>('GET', `${co(id)}/projects`),
   createProject: (id: string, name: string) => request<S['ProjectView']>('POST', `${co(id)}/projects`, { name }),
-  renameProject: (id: string, projectId: string, name: string) =>
-    request<S['ProjectView']>('PATCH', `${co(id)}/projects/${projectId}`, { name }),
+  updateProject: (id: string, projectId: string, changes: S['UpdateProject']) =>
+    request<S['ProjectView']>('PATCH', `${co(id)}/projects/${projectId}`, changes),
+  projectMembers: (id: string, projectId: string) => request<S['ProjectMemberView'][]>('GET', `${co(id)}/projects/${projectId}/members`),
+  addProjectMember: (id: string, projectId: string, userId: string) =>
+    request<void>('PUT', `${co(id)}/projects/${projectId}/members/${userId}`),
+  removeProjectMember: (id: string, projectId: string, userId: string) =>
+    request<void>('DELETE', `${co(id)}/projects/${projectId}/members/${userId}`),
   deleteProject: (id: string, projectId: string) => request<void>('DELETE', `${co(id)}/projects/${projectId}`),
-  users: (id: string) => request<S['UserView'][]>('GET', `${co(id)}/users`),
-  createUser: (id: string, b: S['CreateUser']) => request<S['UserView']>('POST', `${co(id)}/users`, b),
-  updateUser: (userId: string, changes: S['UpdateUser']) => request<S['UserView']>('PATCH', `${a}/users/${userId}`, changes),
-  setActive: (userId: string, active: boolean) => api.updateUser(userId, { active }),
+  members: (id: string) => request<S['MemberView'][]>('GET', `${co(id)}/members`),
+  addMember: (id: string, b: S['AddMember']) => request<S['MemberAdded']>('POST', `${co(id)}/members`, b),
+  memberProjects: (id: string, userId: string) => request<S['ProjectView'][]>('GET', `${co(id)}/members/${userId}/projects`),
+  updateMember: (id: string, userId: string, changes: S['UpdateMember']) =>
+    request<S['MemberView']>('PATCH', `${co(id)}/members/${userId}`, changes),
+  setActive: (id: string, userId: string, active: boolean) => api.updateMember(id, userId, { active }),
+  removeMember: (id: string, userId: string) => request<void>('DELETE', `${co(id)}/members/${userId}`),
   deleteUser: (userId: string) => request<void>('DELETE', `${a}/users/${userId}`),
+  updateUser: (userId: string, changes: S['UpdateUser']) => request<S['UserRef']>('PATCH', `${a}/users/${userId}`, changes),
   setPassword: (userId: string, b: S['SetPassword']) => request<void>('PUT', `${a}/users/${userId}/password`, b),
-  keys: (userId: string) => request<S['KeyView'][]>('GET', `${a}/users/${userId}/keys`),
-  issueKey: (userId: string, label: string) => request<S['IssuedKeyView']>('POST', `${a}/users/${userId}/keys`, { label }),
+  keys: (id: string, userId: string) => request<S['KeyView'][]>('GET', `${co(id)}/members/${userId}/keys`),
+  issueKey: (id: string, userId: string, label: string) =>
+    request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
   upload: (id: string, file: File, title: string, projectId: string) => {

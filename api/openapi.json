@@ -35,6 +35,76 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}" : {
+      "put" : {
+        "tags" : [ "project-member-controller" ],
+        "operationId" : "add",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "projectId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "project-member-controller" ],
+        "operationId" : "remove",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "projectId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/capabilities" : {
       "put" : {
         "tags" : [ "company-controller" ],
@@ -205,71 +275,6 @@
         }
       }
     },
-    "/v1/admin/users/{userId}/keys" : {
-      "get" : {
-        "tags" : [ "user-controller" ],
-        "operationId" : "keys",
-        "parameters" : [ {
-          "name" : "userId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/KeyView"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post" : {
-        "tags" : [ "user-controller" ],
-        "operationId" : "issue",
-        "parameters" : [ {
-          "name" : "userId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/KeyLabel"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "201" : {
-            "description" : "Created",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/IssuedKeyView"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/admin/session" : {
       "post" : {
         "tags" : [ "session-controller" ],
@@ -369,7 +374,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Name"
+                "$ref" : "#/components/schemas/NewCompany"
               }
             }
           },
@@ -382,71 +387,6 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CompanyView"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/admin/companies/{companyId}/users" : {
-      "get" : {
-        "tags" : [ "user-controller" ],
-        "operationId" : "list_1",
-        "parameters" : [ {
-          "name" : "companyId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/UserView"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post" : {
-        "tags" : [ "user-controller" ],
-        "operationId" : "create_1",
-        "parameters" : [ {
-          "name" : "companyId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/CreateUser"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "201" : {
-            "description" : "Created",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/UserView"
                 }
               }
             }
@@ -512,6 +452,152 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/members" : {
+      "get" : {
+        "tags" : [ "member-controller" ],
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MemberView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "member-controller" ],
+        "operationId" : "add_1",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AddMember"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MemberAdded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/members/{userId}/keys" : {
+      "get" : {
+        "tags" : [ "member-controller" ],
+        "operationId" : "keys",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/KeyView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "member-controller" ],
+        "operationId" : "issue",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KeyLabel"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedKeyView"
                 }
               }
             }
@@ -717,7 +803,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/UserView"
+                  "$ref" : "#/components/schemas/UserRef"
                 }
               }
             }
@@ -728,7 +814,7 @@
     "/v1/admin/companies/{companyId}" : {
       "patch" : {
         "tags" : [ "company-controller" ],
-        "operationId" : "rename",
+        "operationId" : "update_1",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -742,7 +828,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Name"
+                "$ref" : "#/components/schemas/UpdateCompany"
               }
             }
           },
@@ -791,7 +877,7 @@
       },
       "patch" : {
         "tags" : [ "company-controller" ],
-        "operationId" : "renameProject",
+        "operationId" : "updateProject",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -813,7 +899,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Name"
+                "$ref" : "#/components/schemas/UpdateProject"
               }
             }
           },
@@ -826,6 +912,77 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/members/{userId}" : {
+      "delete" : {
+        "tags" : [ "member-controller" ],
+        "operationId" : "remove_1",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "member-controller" ],
+        "operationId" : "update_2",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateMember"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MemberView"
                 }
               }
             }
@@ -996,10 +1153,86 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/projects/{projectId}/members" : {
+      "get" : {
+        "tags" : [ "project-member-controller" ],
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "projectId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ProjectMemberView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/members/{userId}/projects" : {
+      "get" : {
+        "tags" : [ "member-controller" ],
+        "operationId" : "projects_1",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ProjectView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/cards" : {
       "get" : {
         "tags" : [ "admin-card-controller" ],
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1092,6 +1325,9 @@
           "name" : {
             "type" : "string"
           },
+          "code" : {
+            "type" : "string"
+          },
           "capabilities" : {
             "type" : "array",
             "items" : {
@@ -1101,7 +1337,7 @@
             "uniqueItems" : true
           }
         },
-        "required" : [ "capabilities", "id", "name" ]
+        "required" : [ "capabilities", "code", "id", "name" ]
       },
       "Setup" : {
         "type" : "object",
@@ -1275,30 +1511,6 @@
         },
         "required" : [ "id", "message", "status" ]
       },
-      "KeyLabel" : {
-        "type" : "object",
-        "properties" : {
-          "label" : {
-            "type" : "string"
-          }
-        }
-      },
-      "IssuedKeyView" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "prefix" : {
-            "type" : "string"
-          },
-          "key" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "id", "key", "prefix" ]
-      },
       "Login" : {
         "type" : "object",
         "properties" : {
@@ -1354,6 +1566,18 @@
         },
         "required" : [ "attemptCount", "companyId", "filename", "format", "id", "paginated", "status", "title", "uploadedAt" ]
       },
+      "NewCompany" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string",
+            "description" : "De 2 a 6 letras mayúsculas o cifras; único en el grupo."
+          }
+        }
+      },
       "Name" : {
         "type" : "object",
         "properties" : {
@@ -1361,51 +1585,6 @@
             "type" : "string"
           }
         }
-      },
-      "CreateUser" : {
-        "type" : "object",
-        "properties" : {
-          "displayName" : {
-            "type" : "string"
-          },
-          "email" : {
-            "type" : "string"
-          },
-          "role" : {
-            "type" : "string",
-            "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
-          },
-          "password" : {
-            "type" : "string"
-          }
-        }
-      },
-      "UserView" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "displayName" : {
-            "type" : "string"
-          },
-          "email" : {
-            "type" : "string"
-          },
-          "role" : {
-            "type" : "string",
-            "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
-          },
-          "companyId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "active" : {
-            "type" : "boolean"
-          }
-        },
-        "required" : [ "active", "displayName", "id", "role" ]
       },
       "ProjectView" : {
         "type" : "object",
@@ -1420,9 +1599,131 @@
           },
           "name" : {
             "type" : "string"
+          },
+          "restricted" : {
+            "type" : "boolean"
+          },
+          "memberCount" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Solo en la lista de proyectos de la empresa."
           }
         },
-        "required" : [ "companyId", "id", "name" ]
+        "required" : [ "companyId", "id", "name", "restricted" ]
+      },
+      "AddMember" : {
+        "type" : "object",
+        "properties" : {
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "roles" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
+            },
+            "uniqueItems" : true
+          },
+          "password" : {
+            "type" : "string"
+          },
+          "projectIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            },
+            "uniqueItems" : true
+          }
+        }
+      },
+      "MemberAdded" : {
+        "type" : "object",
+        "properties" : {
+          "member" : {
+            "$ref" : "#/components/schemas/MemberView"
+          },
+          "alreadyExisted" : {
+            "type" : "boolean"
+          },
+          "keptPassword" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "alreadyExisted", "keptPassword", "member" ]
+      },
+      "MemberView" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "personCode" : {
+            "type" : "string"
+          },
+          "memberCode" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "roles" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
+            },
+            "uniqueItems" : true
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "hasPassword" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active", "displayName", "firstName", "hasPassword", "memberCode", "personCode", "roles", "userId" ]
+      },
+      "KeyLabel" : {
+        "type" : "object",
+        "properties" : {
+          "label" : {
+            "type" : "string"
+          }
+        }
+      },
+      "IssuedKeyView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "key", "prefix" ]
       },
       "Upload" : {
         "type" : "object",
@@ -1515,7 +1816,10 @@
       "UpdateUser" : {
         "type" : "object",
         "properties" : {
-          "displayName" : {
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
             "type" : "string"
           },
           "email" : {
@@ -1524,6 +1828,49 @@
           },
           "active" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "UpdateCompany" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string",
+            "description" : "Solo lo cambia el administrador del grupo."
+          }
+        }
+      },
+      "UpdateProject" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "restricted" : {
+            "type" : "boolean",
+            "description" : "Verdadero: solo lo ven sus miembros. Falso: visible para toda la empresa."
+          }
+        }
+      },
+      "UpdateMember" : {
+        "type" : "object",
+        "properties" : {
+          "roles" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
+            },
+            "uniqueItems" : true
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "password" : {
+            "type" : "string"
           }
         }
       },
@@ -1542,16 +1889,50 @@
             "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
           },
           "company" : {
-            "$ref" : "#/components/schemas/CompanyView"
+            "$ref" : "#/components/schemas/MeCompany"
           },
           "projects" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/ProjectView"
+              "$ref" : "#/components/schemas/MeProject"
             }
           }
         },
         "required" : [ "company", "displayName", "projects", "role", "userId" ]
+      },
+      "MeCompany" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "capabilities" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
+            },
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "capabilities", "id", "name" ]
+      },
+      "MeProject" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name" ]
       },
       "Health" : {
         "type" : "object",
@@ -1615,6 +1996,71 @@
         },
         "required" : [ "documentId", "pageNumber", "paginated", "text", "title" ]
       },
+      "AdminMe" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "personCode" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
+          },
+          "companyId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "companies" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CompanyRef"
+            }
+          }
+        },
+        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "userId" ]
+      },
+      "CompanyRef" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "id", "name" ]
+      },
+      "ProjectMemberView" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "userId" ]
+      },
       "KeyView" : {
         "type" : "object",
         "properties" : {
@@ -1638,27 +2084,6 @@
           }
         },
         "required" : [ "createdAt", "id", "label", "prefix" ]
-      },
-      "AdminMe" : {
-        "type" : "object",
-        "properties" : {
-          "userId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "displayName" : {
-            "type" : "string"
-          },
-          "role" : {
-            "type" : "string",
-            "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
-          },
-          "companyId" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        },
-        "required" : [ "displayName", "role", "userId" ]
       }
     }
   }

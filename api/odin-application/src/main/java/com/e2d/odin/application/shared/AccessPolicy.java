@@ -19,8 +19,7 @@ public final class AccessPolicy {
     }
 
     public static void requireAdminOf(Actor actor, CompanyId company) {
-        boolean ownAdmin = actor.role() == Role.COMPANY_ADMIN && actor.companyId().filter(company::equals).isPresent();
-        if (!actor.isGroupAdmin() && !ownAdmin) {
+        if (!actor.administers(company)) {
             throw new ForbiddenException("No tienes permiso sobre esta empresa");
         }
     }

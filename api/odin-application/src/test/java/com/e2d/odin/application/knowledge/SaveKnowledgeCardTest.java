@@ -7,6 +7,7 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.domain.identity.Actor;
@@ -16,6 +17,8 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.EnumSet;
 import java.util.Optional;
@@ -25,7 +28,8 @@ class SaveKnowledgeCardTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
-    private final SaveKnowledgeCard save = new SaveKnowledgeCard(orgs, cards, new SequenceIdGenerator(),
+    private final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(orgs);
+    private final SaveKnowledgeCard save = new SaveKnowledgeCard(orgs, members, cards, new SequenceIdGenerator(),
             new MutableClock());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
@@ -63,12 +67,25 @@ class SaveKnowledgeCardTest {
 
         assertThatThrownBy(() -> save.execute(Actors.worker(companyB), "t", "b", Optional.of(projectOfA)))
                 .isInstanceOf(NotFoundException.class);
-        assertThat(cards.listByStatus(Actors.groupAdmin().scope(), CardStatus.PENDING)).isEmpty();
+        assertThat(cards.listByStatus(Actors.groupAdmin().scope(), ProjectVisibility.all(), CardStatus.PENDING)).isEmpty();
     }
 
     @Test
     void adminCannotSave() {
         assertThatThrownBy(() -> save.execute(Actors.companyAdmin(companyA), "t", "b", Optional.empty()))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void unassignedProjectIsInvisible() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        Actor worker = Actors.worker(companyA);
+
+        assertThatThrownBy(() -> save.execute(worker, "t", "b", Optional.of(closed)))
+                .isInstanceOf(NotFoundException.class).hasMessage("Proyecto no encontrado");
+        assertThat(cards.listByStatus(worker.scope(), ProjectVisibility.all(), CardStatus.PENDING)).isEmpty();
+
+        members.add(closed, worker.userId());
+        assertThat(save.execute(worker, "t", "b", Optional.of(closed)).projectId()).contains(closed);
     }
 }

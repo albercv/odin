@@ -1,0 +1,11 @@
+.switcher { display: grid; gap: 6px; }
+.switcher label { padding: 0 4px; font-size: 13px; color: var(--side-text); }
+.control { position: relative; display: flex; align-items: center; color: #fff; }
+.control select {
+  appearance: none; width: 100%; padding: 10px 40px 10px 12px; border-radius: var(--radius-md); border: 1px solid rgba(255, 255, 255, .12);
+  background: rgba(255, 255, 255, .05); color: #fff; font-weight: 500; cursor: pointer; transition: background-color .15s, border-color .15s;
+}
+.control select:hover { background: rgba(255, 255, 255, .08); }
+.control select:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.control select option { background: var(--side-bg); color: #fff; }
+.control svg { position: absolute; right: 12px; pointer-events: none; }

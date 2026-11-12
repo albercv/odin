@@ -1,80 +1,77 @@
 import { useState } from 'react';
-import { api, type Capability, type S } from '../api/client';
+import { api, type S } from '../api/client';
+import { Capabilities } from '../components/Capabilities';
+import { NameDialog } from '../components/NameDialog';
 import { Notice } from '../components/Notice';
 import { useAction, useLoad } from '../components/useLoad';
+import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
+import form from '../ui/Form.module.css';
+import { PageHeader } from '../ui/PageHeader';
+import { RowAction, RowActions } from '../ui/RowActions';
+import { Section } from '../ui/Section';
+import { Table, Td, Tr, tableStyles } from '../ui/Table';
 
-const CAPABILITIES = [
-  ['SEARCH_KNOWLEDGE', 'Buscar conocimiento'],
-  ['SAVE_KNOWLEDGE_CARD', 'Guardar fichas'],
-] as const;
+type EditProps = { company: S['CompanyView']; onSaved: () => void; onCancel: () => void };
 
-function Capabilities({ c, onChange }: { c: S['CompanyView']; onChange: (caps: Capability[]) => void }) {
-  const has: Capability[] = c.capabilities;
-  const toggle = (cap: Capability) => onChange(has.includes(cap) ? has.filter((x) => x !== cap) : [...has, cap]);
+function EditForm({ company, onSaved, onCancel }: EditProps) {
+  const [name, setName] = useState(company.name);
+  const [code, setCode] = useState(company.code);
+  const { error, act } = useAction();
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (await act(() => api.updateCompany(company.id, { name, ...(code !== company.code && { code }) }))) onSaved();
+  };
   return (
-    <fieldset>
-      <legend>Capacidades de {c.name}</legend>
-      {CAPABILITIES.map(([cap, text]) => (
-        <label key={cap}><input type="checkbox" checked={has.includes(cap)} onChange={() => toggle(cap)} /> {text}</label>
-      ))}
-    </fieldset>
-  );
-}
-
-function Rename({ c, onSave }: { c: S['CompanyView']; onSave: (name: string) => void }) {
-  const [name, setName] = useState(c.name);
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave(name); }}>
-      <label>Nombre de {c.name} <input required value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <button type="submit">Renombrar</button>
+    <form className={form.form} onSubmit={submit}>
+      <Notice message={error} />
+      <Field label={`Nombre de ${company.name}`}><input required value={name} onChange={(e) => setName(e.target.value)} /></Field>
+      <Field label="Código"><input required pattern="[A-Z0-9]{2,6}" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} /></Field>
+      <div className={form.buttons}>
+        <RowAction type="submit" variant="primary" text="Guardar" target={company.name} />
+        <RowAction text="Cancelar" target={company.name} onClick={onCancel} />
+      </div>
     </form>
   );
 }
 
-function CompanyRow({ c, onOpen, onDone }: { c: S['CompanyView']; onOpen: () => void; onDone: () => void }) {
+type RowProps = { c: S['CompanyView']; onOpen: () => void; onDone: () => void };
+
+function CompanyRow({ c, onOpen, onDone }: RowProps) {
+  const [renaming, setRenaming] = useState(false);
   const { error, act } = useAction();
   const run = async (fn: () => Promise<unknown>) => (await act(fn)) && onDone();
   return (
-    <li className="card">
-      <h2>{c.name}</h2>
-      <Notice message={error} />
-      <button type="button" onClick={onOpen}>Abrir {c.name}</button>
-      <Rename c={c} onSave={(n) => run(() => api.renameCompany(c.id, n))} />
-      <Capabilities c={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} />
-    </li>
+    <Tr>
+      <Td label="Empresa" className={tableStyles.person}>
+        {renaming
+          ? <EditForm company={c} onSaved={() => { setRenaming(false); onDone(); }} onCancel={() => setRenaming(false)} />
+          : <><strong>{c.name}</strong><span>Código {c.code}</span></>}
+        <Notice message={error} />
+      </Td>
+      <Td label="Capacidades"><Capabilities company={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} /></Td>
+      <Td className={tableStyles.actions}>
+        <RowAction text="Abrir" target={c.name} onClick={onOpen} />
+        <RowActions label={`Más acciones de ${c.name}`}><RowAction variant="ghost" text="Editar" target={c.name} onClick={() => setRenaming(true)} /></RowActions>
+      </Td>
+    </Tr>
   );
 }
 
-function NewCompany({ onDone }: { onDone: () => void }) {
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState('');
-  const { error, act } = useAction();
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (await act(() => api.createCompany(name))) {
-      setName('');
-      setAdding(false);
-      onDone();
-    }
-  };
-  if (!adding) return <button type="button" onClick={() => setAdding(true)}>Nueva empresa</button>;
-  return (
-    <form onSubmit={create}>
-      <Notice message={error} />
-      <label>Nombre de la empresa <input required autoFocus value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <button type="submit">Crear empresa</button>
-    </form>
-  );
-}
-
-export function Companies({ onOpen }: { onOpen: (id: string) => void }) {
+export function Companies({ onOpen }: { onOpen: (id: string, name: string) => void }) {
   const list = useLoad(api.companies, []);
+  const [adding, setAdding] = useState(false);
   return (
-    <section>
-      <h1>Empresas</h1>
+    <div>
+      <PageHeader title="Empresas" actions={<Button variant="primary" icon="plus" onClick={() => setAdding(true)}>Nueva empresa</Button>} />
       <Notice message={list.error} />
-      <NewCompany onDone={list.reload} />
-      <ul>{list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id)} onDone={list.reload} />)}</ul>
-    </section>
+      <Section title="Empresas del grupo">
+        <Table columns={['Empresa', 'Capacidades']}>
+          {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}
+        </Table>
+      </Section>
+      <NameDialog title="Nueva empresa" label="Nombre de la empresa" submitLabel="Crear empresa" codeLabel="Código" open={adding}
+        onSubmit={api.createCompany} onClose={() => setAdding(false)} onDone={list.reload} />
+    </div>
   );
 }

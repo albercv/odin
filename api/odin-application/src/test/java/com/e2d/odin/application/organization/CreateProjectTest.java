@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -18,6 +19,7 @@ class CreateProjectTest {
 
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final CreateProject create = new CreateProject(organizations, new SequenceIdGenerator());
+    private final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(organizations);
     private final CompanyId company = Fixtures.company(organizations);
 
     @Test
@@ -70,5 +72,14 @@ class CreateProjectTest {
         create.execute(Actors.companyAdmin(company), company, "Obra");
 
         assertThat(organizations.listProjects(company)).hasSize(1);
+    }
+
+    @Test
+    void newProjectIsClosedWithoutMembers() {
+        Project project = create.execute(Actors.companyAdmin(company), company, "Obra");
+
+        assertThat(project.restricted()).isTrue();
+        assertThat(organizations.findProject(company, project.id()).orElseThrow().restricted()).isTrue();
+        assertThat(members.listMembers(project.id())).isEmpty();
     }
 }

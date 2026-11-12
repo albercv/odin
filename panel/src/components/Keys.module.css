@@ -1,0 +1,5 @@
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.item { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.revoked { color: var(--text-muted); font-size: 14px; }
+.key { display: block; margin: 0; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-muted); word-break: break-all; }
+.explanation { color: var(--text-muted); font-size: 14px; }

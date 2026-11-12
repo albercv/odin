@@ -20,10 +20,11 @@ public class CreateCompany {
         this.ids = ids;
     }
 
-    public Company execute(Actor actor, String name) {
+    public Company execute(Actor actor, String name, String code) {
         AccessPolicy.requireGroupAdmin(actor);
         Company company = new Company(new CompanyId(ids.newId()), Validation.requireText(name, "el nombre"),
-                EnumSet.allOf(Capability.class));
+                code, EnumSet.allOf(Capability.class));
+        CompanyCodes.requireFree(organizations, company.code(), company.id());
         organizations.saveCompany(company);
         return company;
     }

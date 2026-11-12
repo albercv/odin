@@ -6,49 +6,74 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
+import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class DeleteUserTest {
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final DeleteUser delete = new DeleteUser(users, sessions, new MutableClock());
+    private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
+    private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(organizations);
+    private final DeleteUser delete = new DeleteUser(users, memberships, projectMembers, sessions, new MutableClock());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
 
     DeleteUserTest() {
-        users.save(new User(workerId, "Wanda", Optional.empty(), Role.WORKER, Optional.of(company), true,
-                Optional.empty()));
+        People.member(users, memberships, workerId, "Wanda", Optional.empty(), Role.WORKER, company, true,
+                Optional.empty());
     }
 
     @Test
-    void deletedUserDisappearsFromList() {
-        delete.execute(Actors.companyAdmin(company), workerId);
+    void deletedPersonLosesAllTheirMemberships() {
+        memberships.save(new Membership(workerId, new CompanyId(UUID.randomUUID()), Set.of(Role.WORKER), true));
 
-        assertThat(users.listByCompany(company)).isEmpty();
+        delete.execute(Actors.groupAdmin(), workerId);
+
+        assertThat(memberships.listByUser(workerId)).isEmpty();
         assertThat(users.findById(workerId)).isEmpty();
+    }
+
+    @Test
+    void deletedPersonLeavesTheProjectsOfEveryCompany() {
+        CompanyId other = Fixtures.company(organizations);
+        memberships.save(new Membership(workerId, other, Set.of(Role.WORKER), true));
+        var inOther = Fixtures.project(organizations, other);
+        var inFirst = Fixtures.project(organizations, Fixtures.company(organizations));
+        projectMembers.add(inOther, workerId);
+        projectMembers.add(inFirst, workerId);
+
+        delete.execute(Actors.groupAdmin(), workerId);
+
+        assertThat(projectMembers.listMembers(inOther)).isEmpty();
     }
 
     @Test
     void deletingClosesTheUsersSessions() {
         UserId adminId = new UserId(UUID.randomUUID());
-        users.save(new User(adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, Optional.of(company),
-                true, Optional.of("pw:x")));
+        People.member(users, memberships, adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company,
+                true, Optional.of("pw:x"));
         String token = sessions.open(adminId);
 
         delete.execute(Actors.groupAdmin(), adminId);
@@ -57,10 +82,17 @@ class DeleteUserTest {
     }
 
     @Test
+    void companyAdminCannotDeleteAPerson() {
+        assertThatThrownBy(() -> delete.execute(Actors.companyAdmin(company), workerId))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(users.findById(workerId)).isPresent();
+        assertThat(memberships.find(workerId, company)).isPresent();
+    }
+
+    @Test
     void companyAdminCannotDeleteTheGroupAdmin() {
         UserId groupAdminId = new UserId(UUID.randomUUID());
-        users.save(new User(groupAdminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), true,
-                Optional.of("pw:x")));
+        People.groupAdmin(users, groupAdminId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
 
         assertThatThrownBy(() -> delete.execute(Actors.companyAdmin(company), groupAdminId))
                 .isInstanceOf(ForbiddenException.class);
@@ -70,9 +102,9 @@ class DeleteUserTest {
     @Test
     void cannotDeleteOneself() {
         UserId adminId = new UserId(UUID.randomUUID());
-        users.save(new User(adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, Optional.of(company),
-                true, Optional.of("pw:x")));
-        Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Optional.of(company));
+        People.member(users, memberships, adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company,
+                true, Optional.of("pw:x"));
+        Actor self = new Actor(adminId, "Carlos", Role.GROUP_ADMIN, Set.of());
 
         assertThatThrownBy(() -> delete.execute(self, adminId))
                 .isInstanceOf(ValidationException.class).hasMessage("No puedes borrarte a ti mismo");
@@ -96,9 +128,9 @@ class DeleteUserTest {
 
     @Test
     void deletingTwiceIsNotFound() {
-        delete.execute(Actors.companyAdmin(company), workerId);
+        delete.execute(Actors.groupAdmin(), workerId);
 
-        assertThatThrownBy(() -> delete.execute(Actors.companyAdmin(company), workerId))
+        assertThatThrownBy(() -> delete.execute(Actors.groupAdmin(), workerId))
                 .isInstanceOf(NotFoundException.class);
     }
 }

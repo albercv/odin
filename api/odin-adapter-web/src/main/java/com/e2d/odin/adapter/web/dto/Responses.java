@@ -14,8 +14,11 @@ import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -37,37 +40,84 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record AdminMe(UUID userId, String displayName, Role role, @Nullable UUID companyId) {
-        public static AdminMe from(Actor a) {
-            return new AdminMe(a.userId().value(), a.displayName(), a.role(),
-                    a.companyId().map(c -> c.value()).orElse(null));
+    public record CompanyRef(UUID id, String name, String code) {
+        public static CompanyRef from(Company c) {
+            return new CompanyRef(c.id().value(), c.name(), c.code());
         }
     }
 
-    public record CompanyView(UUID id, String name, Set<Capability> capabilities) {
+    /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
+    public record AdminMe(UUID userId, String displayName, String firstName, @Nullable String lastName,
+            String personCode, Role role, @Nullable UUID companyId, List<CompanyRef> companies) {
+        public static AdminMe from(Actor a, User person, List<Company> administered) {
+            UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
+            return new AdminMe(a.userId().value(), a.displayName(), person.firstName(), person.lastName().orElse(null),
+                    person.personCode(), a.role(), onlyCompany,
+                    administered.stream().map(CompanyRef::from).toList());
+        }
+    }
+
+    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities) {
         public static CompanyView from(Company c) {
-            return new CompanyView(c.id().value(), c.name(), c.capabilities());
+            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities());
         }
     }
 
-    public record ProjectView(UUID id, UUID companyId, String name) {
+    /** La empresa tal como la ve un trabajador: sin código, que es cosa del panel de administración. */
+    public record MeCompany(UUID id, String name, Set<Capability> capabilities) {
+        public static MeCompany from(Company c) {
+            return new MeCompany(c.id().value(), c.name(), c.capabilities());
+        }
+    }
+
+    /** El proyecto tal como lo ve un trabajador: solo id y nombre; si es cerrado y quién es miembro es cosa del panel. */
+    public record MeProject(UUID id, String name) {
+        public static MeProject from(Project p) {
+            return new MeProject(p.id().value(), p.name());
+        }
+    }
+
+    public record ProjectView(UUID id, UUID companyId, String name, boolean restricted,
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            @Schema(description = "Solo en la lista de proyectos de la empresa.") @Nullable Integer memberCount) {
+        /** Sin recuento: solo la lista de proyectos de la empresa lo calcula. */
         public static ProjectView from(Project p) {
-            return new ProjectView(p.id().value(), p.companyId().value(), p.name());
+            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted(), null);
+        }
+
+        public static ProjectView from(ProjectSummary s) {
+            Project p = s.project();
+            return new ProjectView(p.id().value(), p.companyId().value(), p.name(), p.restricted(), s.memberCount());
         }
     }
 
-    public record Me(UUID userId, String displayName, Role role, CompanyView company, List<ProjectView> projects) {
+    public record ProjectMemberView(UUID userId, String displayName) {
+        public static ProjectMemberView from(com.e2d.odin.application.organization.ProjectMemberView m) {
+            return new ProjectMemberView(m.userId().value(), m.displayName());
+        }
+    }
+
+    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<MeProject> projects) {
         public static Me from(MeView m) {
-            return new Me(m.userId().value(), m.displayName(), m.role(), CompanyView.from(m.company()),
-                    m.projects().stream().map(ProjectView::from).toList());
+            return new Me(m.userId().value(), m.displayName(), m.role(), MeCompany.from(m.company()),
+                    m.projects().stream().map(MeProject::from).toList());
         }
     }
 
-    public record UserView(UUID id, String displayName, @Nullable String email, Role role, @Nullable UUID companyId,
-            boolean active) {
-        public static UserView from(User u) {
-            return new UserView(u.id().value(), u.displayName(), u.email().orElse(null), u.role(),
-                    u.companyId().map(c -> c.value()).orElse(null), u.active());
+    public record MemberView(UUID userId, String displayName, String firstName, @Nullable String lastName,
+            String personCode, String memberCode, @Nullable String email, Set<Role> roles, boolean active,
+            boolean hasPassword) {
+        public static MemberView from(com.e2d.odin.application.identity.MemberView m) {
+            return new MemberView(m.userId().value(), m.displayName(), m.firstName(), m.lastName().orElse(null),
+                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.hasPassword());
+        }
+    }
+
+    public record MemberAdded(MemberView member, boolean alreadyExisted, boolean keptPassword) {
+        public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added, Actor viewer) {
+            return new MemberAdded(MemberView.from(com.e2d.odin.application.identity.MemberView.of(added.user(),
+                    added.membership(), added.company().code(), viewer)), added.alreadyExisted(),
+                    added.keptPassword());
         }
     }
 

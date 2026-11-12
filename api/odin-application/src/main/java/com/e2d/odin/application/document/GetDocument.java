@@ -6,6 +6,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 
 public class GetDocument {
 
@@ -17,6 +18,6 @@ public class GetDocument {
 
     public Document execute(Actor actor, DocumentId id) {
         AccessPolicy.requireAdmin(actor);
-        return documents.findById(actor.scope(), id).orElseThrow(() -> new NotFoundException("Documento no encontrado"));
+        return documents.findById(actor.scope(), ProjectVisibility.all(), id).orElseThrow(() -> new NotFoundException("Documento no encontrado"));
     }
 }

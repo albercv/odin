@@ -7,13 +7,14 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
@@ -21,6 +22,7 @@ import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -30,20 +32,21 @@ class ChangePasswordTest {
     private static final String NEW = "clave-nueva-1234";
 
     private final InMemoryUserRepository users = new InMemoryUserRepository();
+    private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final FakePasswordHasher passwords = new FakePasswordHasher();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final ChangePassword change = new ChangePassword(users, passwords, sessions);
+    private final ChangePassword change = new ChangePassword(users, memberships, passwords, sessions);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId adminId = new UserId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
-    private final Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Optional.of(company));
+    private final Actor self = new Actor(adminId, "Carlos", Role.COMPANY_ADMIN, Set.of(company));
 
     ChangePasswordTest() {
-        users.save(new User(adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, Optional.of(company),
-                true, Optional.of(passwords.hash(OLD))));
-        users.save(new User(workerId, "Wanda", Optional.empty(), Role.WORKER, Optional.of(company), true,
-                Optional.empty()));
+        People.member(users, memberships, adminId, "Carlos", Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company,
+                true, Optional.of(passwords.hash(OLD)));
+        People.member(users, memberships, workerId, "Wanda", Optional.empty(), Role.WORKER, company, true,
+                Optional.empty());
     }
 
     private Optional<String> storedHash() {
@@ -80,8 +83,8 @@ class ChangePasswordTest {
     @Test
     void companyAdminCannotResetAnotherUser() {
         UserId otherId = new UserId(UUID.randomUUID());
-        users.save(new User(otherId, "Olga", Optional.of("o@demo.test"), Role.COMPANY_ADMIN, Optional.of(company),
-                true, Optional.of(passwords.hash(OLD))));
+        People.member(users, memberships, otherId, "Olga", Optional.of("o@demo.test"), Role.COMPANY_ADMIN, company,
+                true, Optional.of(passwords.hash(OLD)));
 
         assertThatThrownBy(() -> change.execute(self, otherId, Optional.empty(), NEW))
                 .isInstanceOf(ForbiddenException.class)
@@ -125,7 +128,7 @@ class ChangePasswordTest {
 
     @Test
     void oldPasswordNoLongerLogsIn() {
-        LogInAdmin logIn = new LogInAdmin(users, passwords, sessions);
+        LogInAdmin logIn = new LogInAdmin(users, memberships, passwords, sessions);
 
         change.execute(self, adminId, Optional.of(OLD), NEW);
 
@@ -142,8 +145,8 @@ class ChangePasswordTest {
     @Test
     void companyAdminCannotResetTheGroupAdmin() {
         UserId groupAdminId = new UserId(UUID.randomUUID());
-        users.save(new User(groupAdminId, "Gema", Optional.of("g@demo.test"), Role.GROUP_ADMIN, Optional.empty(), true,
-                Optional.of(passwords.hash(OLD))));
+        People.groupAdmin(users, groupAdminId, "Gema", Optional.of("g@demo.test"), true,
+                Optional.of(passwords.hash(OLD)));
 
         assertThatThrownBy(() -> change.execute(self, groupAdminId, Optional.empty(), NEW))
                 .isInstanceOf(ForbiddenException.class);

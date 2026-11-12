@@ -3,16 +3,21 @@ package com.e2d.odin.adapter.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.e2d.odin.application.identity.ListMembers;
+import com.e2d.odin.application.identity.MemberView;
 import com.e2d.odin.domain.identity.AccessKey;
-import com.e2d.odin.domain.identity.AdminSession;
+import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.identity.AdminSession;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -21,18 +26,18 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     private final PostgresAccessKeyRepository keys = new PostgresAccessKeyRepository(tx);
     private final PostgresAdminSessionRepository sessions = new PostgresAdminSessionRepository(tx);
 
-    private User user(String email, Optional<CompanyId> company) {
-        return new User(new UserId(UUID.randomUUID()), "Ana", Optional.ofNullable(email), Role.COMPANY_ADMIN, company,
-                true, Optional.of("hash"));
+    private User user(String email) {
+        return new User(new UserId(UUID.randomUUID()), "Ana", Optional.of("Gil"), uniqueCode(),
+                Optional.ofNullable(email), false, true, Optional.of("hash"));
     }
 
     private static User inactive(User u) {
-        return u.updated(u.displayName(), u.email(), false);
+        return u.withActive(false);
     }
 
     @Test
     void secondDeleteKeepsFirstTimestamp() throws Exception {
-        User u = user("twice@x.com", Optional.empty());
+        User u = user("twice@x.com");
         users.save(u);
         Instant first = Instant.parse("2026-11-01T10:00:00Z");
         users.delete(u.id(), first);
@@ -47,9 +52,33 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     }
 
     @Test
+    void personCodeIsUniqueAmongDeletedToo() {
+        User first = user("codigo@x.com");
+        users.save(first);
+        users.delete(first.id(), Instant.now());
+        User second = new User(new UserId(UUID.randomUUID()), "Ana", Optional.of("Gil"), first.personCode(),
+                Optional.empty(), false, true, Optional.empty());
+
+        assertThat(users.personCodeExists(first.personCode())).isTrue();
+        assertThat(users.personCodeExists("ZZZZ")).isFalse();
+        assertThatThrownBy(() -> users.save(second)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void savesAndReadsFirstNameLastNameAndCode() {
+        User withoutSurnames = new User(new UserId(UUID.randomUUID()), "Migrada", Optional.empty(), uniqueCode(),
+                Optional.empty(), false, true, Optional.empty());
+        users.save(withoutSurnames);
+        User complete = user("c2@x.com");
+        users.save(complete);
+
+        assertThat(users.findById(withoutSurnames.id())).contains(withoutSurnames);
+        assertThat(users.findById(complete.id()).orElseThrow().displayName()).isEqualTo("Ana Gil");
+    }
+
+    @Test
     void savesFindsAndUpdatesUsers() {
-        CompanyId company = newCompany();
-        User u = user("Ana@Example.com", Optional.of(company));
+        User u = user("Ana@Example.com");
         users.save(u);
         assertThat(users.findById(u.id())).contains(u);
         assertThat(users.findByEmail("ana@example.COM")).contains(u);
@@ -58,63 +87,92 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     }
 
     @Test
-    void groupAdminHasNoCompanyAndListByCompanyOnlyReturnsItsUsers() {
-        CompanyId a = newCompany();
-        CompanyId b = newCompany();
-        User admin = user(null, Optional.empty());
-        User ua = user("a@x.com", Optional.of(a));
-        User ub = user("b@x.com", Optional.of(b));
-        users.save(admin);
-        users.save(ua);
-        users.save(ub);
-        assertThat(users.findById(admin.id())).contains(admin);
-        assertThat(users.listByCompany(a)).containsExactly(ua);
+    void softDeletedPersonDoesNotAppearInTheCompanyMemberListing() {
+        CompanyId company = newCompany();
+        UserId kept = newUser(company);
+        UserId gone = newUser(company);
+        ListMembers list = new ListMembers(users, memberships, orgs);
+        Actor admin = new Actor(new UserId(UUID.randomUUID()), "Carlos", Role.COMPANY_ADMIN, Set.of(company));
+        assertThat(list.execute(admin, company)).extracting(MemberView::userId).containsExactly(kept, gone);
+
+        users.delete(gone, Instant.now());
+
+        assertThat(list.execute(admin, company)).extracting(MemberView::userId).containsExactly(kept);
+    }
+
+    @Test
+    void findsSeveralPeopleByIdInOneQueryIgnoringDeletedAndUnknown() {
+        User first = user("uno@x.com");
+        User second = user("dos@x.com");
+        User deleted = user("tres@x.com");
+        users.save(first);
+        users.save(second);
+        users.save(deleted);
+        users.delete(deleted.id(), Instant.now());
+
+        assertThat(users.findAllById(List.of(first.id(), second.id(), deleted.id(), new UserId(UUID.randomUUID()))))
+                .containsExactlyInAnyOrder(first, second);
+        assertThat(users.findAllById(List.of())).isEmpty();
     }
 
     @Test
     void emailIsUniqueIgnoringCaseButManyUsersMayHaveNone() {
-        users.save(user("dup@x.com", Optional.empty()));
-        users.save(user(null, Optional.empty()));
-        users.save(user(null, Optional.empty()));
-        assertThatThrownBy(() -> users.save(user("DUP@x.com", Optional.empty())))
+        users.save(user("dup@x.com"));
+        users.save(user(null));
+        users.save(user(null));
+        assertThatThrownBy(() -> users.save(user("DUP@x.com")))
                 .isInstanceOf(ConflictException.class);
     }
 
     @Test
     void deletedUserIsExcludedFromReads() {
-        CompanyId company = newCompany();
-        User u = user("gone@x.com", Optional.of(company));
+        User u = user("gone@x.com");
         users.save(u);
         users.delete(u.id(), Instant.now());
         assertThat(users.findById(u.id())).isEmpty();
         assertThat(users.findByEmail("gone@x.com")).isEmpty();
-        assertThat(users.listByCompany(company)).isEmpty();
     }
 
     @Test
     void deletedUsersEmailIsFreeButInactiveUsersIsNot() {
-        User deleted = user("free@x.com", Optional.empty());
-        User inactive = user("busy@x.com", Optional.empty());
+        User deleted = user("free@x.com");
+        User inactive = user("busy@x.com");
         users.save(deleted);
         users.save(inactive(inactive));
         users.delete(deleted.id(), Instant.now());
-        users.save(user("free@x.com", Optional.empty()));
-        assertThatThrownBy(() -> users.save(user("busy@x.com", Optional.empty())))
+        users.save(user("free@x.com"));
+        assertThatThrownBy(() -> users.save(user("busy@x.com")))
                 .isInstanceOf(ConflictException.class);
     }
 
     @Test
+    void listsOnlyTheKeysOfThatMembershipsCompany() {
+        CompanyId first = newCompany();
+        CompanyId second = newCompany();
+        UserId person = newUser(first);
+        AccessKey inFirst = key(person, first, "mem1");
+        AccessKey inSecond = key(person, second, "mem2");
+        keys.save(inFirst);
+        keys.save(inSecond);
+
+        assertThat(keys.listByMembership(person, first)).containsExactly(inFirst);
+        assertThat(keys.listByMembership(person, second)).containsExactly(inSecond);
+        assertThat(keys.listByMembership(new UserId(UUID.randomUUID()), first)).isEmpty();
+    }
+
+    @Test
     void keysAreSavedFoundByPrefixAndListedPerUser() {
-        UserId owner = newUser(newCompany());
-        UserId other = newUser(newCompany());
-        AccessKey k = key(owner, "pre1");
+        CompanyId company = newCompany();
+        UserId owner = newUser(company);
+        UserId other = newUser(company);
+        AccessKey k = key(owner, company, "pre1");
         keys.save(k);
-        keys.save(key(other, "pre2"));
+        keys.save(key(other, company, "pre2"));
         assertThat(keys.findById(k.id())).contains(k);
         assertThat(keys.findByPrefix("pre1")).contains(k);
         assertThat(keys.findByPrefix("nope")).isEmpty();
-        assertThat(keys.listByUser(owner)).containsExactly(k);
-        AccessKey revoked = new AccessKey(k.id(), owner, k.label(), k.prefix(), k.secretHash(), k.createdAt(),
+        assertThat(keys.listByMembership(owner, company)).containsExactly(k);
+        AccessKey revoked = new AccessKey(k.id(), owner, company, k.label(), k.prefix(), k.secretHash(), k.createdAt(),
                 Optional.of(NOW));
         keys.save(revoked);
         assertThat(keys.findById(k.id())).contains(revoked);
@@ -122,9 +180,10 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
 
     @Test
     void keyPrefixIsUnique() {
-        UserId owner = newUser(newCompany());
-        keys.save(key(owner, "same"));
-        assertThatThrownBy(() -> keys.save(key(owner, "same"))).isInstanceOf(ConflictException.class);
+        CompanyId company = newCompany();
+        UserId owner = newUser(company);
+        keys.save(key(owner, company, "same"));
+        assertThatThrownBy(() -> keys.save(key(owner, company, "same"))).isInstanceOf(ConflictException.class);
     }
 
     @Test
@@ -155,17 +214,17 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         assertThat(sessions.findByTokenHash("c")).isPresent();
     }
 
-    private static AccessKey key(UserId owner, String prefix) {
-        return new AccessKey(new AccessKeyId(UUID.randomUUID()), owner, "portatil", prefix, "secret-hash", Instant.parse(
-                "2026-11-09T10:00:00Z"), Optional.empty());
+    private static AccessKey key(UserId owner, CompanyId company, String prefix) {
+        return new AccessKey(new AccessKeyId(UUID.randomUUID()), owner, company, "portatil", prefix, "secret-hash",
+                Instant.parse("2026-11-09T10:00:00Z"), Optional.empty());
     }
 
     @Test
     void findGroupAdminReturnsTheOnlyGroupAdmin() {
         assertThat(users.findGroupAdmin()).isEmpty();
-        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.of("gema@x.com"), Role.GROUP_ADMIN,
-                Optional.empty(), true, Optional.of("hash"));
-        users.save(user("c@x.com", Optional.of(newCompany())));
+        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.empty(), uniqueCode(),
+                Optional.of("gema@x.com"), true, true, Optional.of("hash"));
+        users.save(user("c@x.com"));
         users.save(admin);
         assertThat(users.findGroupAdmin()).contains(admin);
         users.delete(admin.id(), Instant.now());

@@ -26,17 +26,17 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     private static final int MAX_IDENTIFIERS = 10;
     private static final String CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
-                   d.project_id, u.display_name AS author, d.uploaded_at AS date, p.text AS body,
+                   d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
                    %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
                  q
-            WHERE d.status = 'READY' AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project) AND %5$s
+            WHERE d.status = 'READY' AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project) AND %5$s AND %7$s
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
-            SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, u.display_name, c.created_at, c.body,
+            SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
                    %3$s + ts_rank_cd(c.tsv, q.q)::float8
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
-            WHERE c.status = 'APPROVED' AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project) AND %6$s
+            WHERE c.status = 'APPROVED' AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project) AND %6$s AND %8$s
               AND (c.tsv @@ q.q OR %4$s)""";
     private final ScopedTransactions tx;
 
@@ -51,7 +51,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
             return SearchResult.noSource();
         }
         List<String> exact = exactTokens(terms);
-        List<SearchHit> hits = tx.inScope(query.scope(), jdbc -> rows(jdbc, terms, exact, query));
+        List<SearchHit> hits = tx.inScope(query.scope(), query.visibility(), jdbc -> rows(jdbc, terms, exact, query));
         return new SearchResult(hits);
     }
 
@@ -60,7 +60,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 + " project_id, author, date, body, rank, ts_headline('odin_spanish', body, q.q,"
                 + " 'StartSel=\"\", StopSel=\"\", MaxFragments=1') AS headline FROM (" + candidates(exact.size())
                 + ") r, q ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
-        StatementSpec spec = Sql.scoped(jdbc.sql(sql), query.scope())
+        StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
                 .param("limit", query.limit());
         for (int i = 0; i < terms.size(); i++) {
@@ -77,7 +77,8 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
         String bodyMatch = anyMatch("p.text", exactCount);
         String cardMatch = anyMatch("c.body", exactCount);
         return CANDIDATES.formatted(boost("p.text", exactCount), bodyMatch, boost("c.body", exactCount), cardMatch,
-                Sql.inScope("d.company_id"), Sql.inScope("c.company_id"));
+                Sql.inScope("d.company_id"), Sql.inScope("c.company_id"), Sql.inVisibleProjects("d.project_id"),
+                Sql.inVisibleProjects("c.project_id"));
     }
 
     private static String tsquery(int termCount) {

@@ -1,0 +1,5 @@
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.ok { background: var(--accent-tint); color: var(--text); }
+.ok::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.off { background: var(--surface-muted); color: var(--text-muted); }
+.pending { background: var(--pending-bg); color: var(--pending-text); }

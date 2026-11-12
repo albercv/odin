@@ -34,10 +34,22 @@ final class Db {
         return APP;
     }
 
+    /** Base de datos nueva y vacía en el mismo contenedor, para pruebas que migran paso a paso. */
+    static DataSource freshDatabase(String name) {
+        try (Connection c = OWNER.getConnection(); Statement s = c.createStatement()) {
+            s.execute("DROP DATABASE IF EXISTS " + name + " WITH (FORCE)");
+            s.execute("CREATE DATABASE " + name);
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
+        return new DriverManagerDataSource(PG.getJdbcUrl().replaceFirst("/[^/?]+(\\?|$)", "/" + name + "$1"),
+                PG.getUsername(), PG.getPassword());
+    }
+
     static void truncate() {
         try (Connection c = OWNER.getConnection(); Statement s = c.createStatement()) {
             s.execute("TRUNCATE question_record, knowledge_card, document_page, document, admin_session, access_key, "
-                    + "app_user, project, company_capability, company, odin_group CASCADE");
+                    + "membership, app_user, project, company_capability, company, odin_group CASCADE");
         } catch (SQLException e) {
             throw new IllegalStateException(e);
         }

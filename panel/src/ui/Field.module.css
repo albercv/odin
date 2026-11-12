@@ -1,0 +1,6 @@
+.field { display: grid; gap: 6px; }
+.label { display: grid; gap: 6px; margin: 0; font-size: 14px; font-weight: 500; }
+.label input, .label textarea, .label select { width: 100%; min-width: 0; font-weight: 400; transition: border-color .15s, box-shadow .15s; }
+.label input:focus, .label textarea:focus, .label select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.label textarea { min-height: 190px; resize: vertical; line-height: 1.6; }
+.error { margin: 0; font-size: 14px; font-weight: 500; color: var(--danger); }

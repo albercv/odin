@@ -7,15 +7,18 @@ import com.e2d.odin.application.organization.CreateCompany;
 import com.e2d.odin.application.organization.CreateProject;
 import com.e2d.odin.application.organization.DeleteProject;
 import com.e2d.odin.application.organization.ListCompanies;
+import com.e2d.odin.application.organization.CompanyChanges;
 import com.e2d.odin.application.organization.ListProjects;
-import com.e2d.odin.application.organization.RenameCompany;
-import com.e2d.odin.application.organization.RenameProject;
+import com.e2d.odin.application.organization.ProjectChanges;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
+import com.e2d.odin.application.organization.UpdateCompany;
+import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,23 +39,23 @@ public class CompanyController {
 
     private final CreateCompany createCompany;
     private final ListCompanies listCompanies;
-    private final RenameCompany renameCompany;
+    private final UpdateCompany updateCompany;
     private final SetCompanyCapabilities setCapabilities;
     private final CreateProject createProject;
     private final ListProjects listProjects;
-    private final RenameProject renameProject;
+    private final UpdateProject updateProject;
     private final DeleteProject deleteProject;
 
-    public CompanyController(CreateCompany createCompany, ListCompanies listCompanies, RenameCompany renameCompany,
+    public CompanyController(CreateCompany createCompany, ListCompanies listCompanies, UpdateCompany updateCompany,
             SetCompanyCapabilities setCapabilities, CreateProject createProject, ListProjects listProjects,
-            RenameProject renameProject, DeleteProject deleteProject) {
+            UpdateProject updateProject, DeleteProject deleteProject) {
         this.createCompany = createCompany;
         this.listCompanies = listCompanies;
-        this.renameCompany = renameCompany;
+        this.updateCompany = updateCompany;
         this.setCapabilities = setCapabilities;
         this.createProject = createProject;
         this.listProjects = listProjects;
-        this.renameProject = renameProject;
+        this.updateProject = updateProject;
         this.deleteProject = deleteProject;
     }
 
@@ -64,14 +67,16 @@ public class CompanyController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Responses.CompanyView create(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @RequestBody Requests.Name request) {
-        return Responses.CompanyView.from(createCompany.execute(actor, request.name()));
+            @RequestBody Requests.NewCompany request) {
+        return Responses.CompanyView.from(createCompany.execute(actor, request.name(), request.code()));
     }
 
     @PatchMapping("/{companyId}")
-    public Responses.CompanyView rename(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @PathVariable UUID companyId, @RequestBody Requests.Name request) {
-        return Responses.CompanyView.from(renameCompany.execute(actor, new CompanyId(companyId), request.name()));
+    public Responses.CompanyView update(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @RequestBody Requests.UpdateCompany request) {
+        CompanyChanges changes = new CompanyChanges(Optional.ofNullable(request.name()),
+                Optional.ofNullable(request.code()));
+        return Responses.CompanyView.from(updateCompany.execute(actor, new CompanyId(companyId), changes));
     }
 
     @PutMapping("/{companyId}/capabilities")
@@ -99,10 +104,13 @@ public class CompanyController {
     }
 
     @PatchMapping("/{companyId}/projects/{projectId}")
-    public Responses.ProjectView renameProject(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @PathVariable UUID companyId, @PathVariable UUID projectId, @RequestBody Requests.Name request) {
-        return Responses.ProjectView.from(renameProject.execute(actor, new CompanyId(companyId),
-                new ProjectId(projectId), request.name()));
+    public Responses.ProjectView updateProject(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID projectId,
+            @RequestBody Requests.UpdateProject request) {
+        ProjectChanges changes = new ProjectChanges(Optional.ofNullable(request.name()),
+                Optional.ofNullable(request.restricted()));
+        return Responses.ProjectView.from(updateProject.execute(actor, new CompanyId(companyId),
+                new ProjectId(projectId), changes));
     }
 
     @DeleteMapping("/{companyId}/projects/{projectId}")

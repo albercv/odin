@@ -26,7 +26,7 @@ public class CreateProject {
         organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         String projectName = Validation.requireText(name, "el nombre");
         ProjectNames.requireFree(organizations, companyId, projectName, Optional.empty());
-        Project project = new Project(new ProjectId(ids.newId()), companyId, projectName);
+        Project project = new Project(new ProjectId(ids.newId()), companyId, projectName, true);
         organizations.saveProject(project);
         return project;
     }

@@ -4,6 +4,7 @@ import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
@@ -12,12 +13,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.ToIntFunction;
 
 public class InMemoryOrganizationRepository implements OrganizationRepository {
 
     private Group group;
     private final Map<CompanyId, Company> companies = new LinkedHashMap<>();
     private final Map<ProjectId, Project> projects = new LinkedHashMap<>();
+    private final Map<ProjectId, Project> deletedProjects = new LinkedHashMap<>();
+    private ToIntFunction<ProjectId> memberCount = id -> 0;
+
+    /** Lo registra el repositorio de miembros de la prueba, que es quien los conoce. */
+    void countMembersWith(ToIntFunction<ProjectId> counter) {
+        memberCount = counter;
+    }
 
     @Override
     public Optional<Group> findGroup() {
@@ -37,6 +46,11 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     @Override
     public Optional<Company> findCompany(CompanyId id) {
         return Optional.ofNullable(companies.get(id));
+    }
+
+    @Override
+    public Optional<Company> findCompanyByCode(String code) {
+        return companies.values().stream().filter(c -> c.code().equals(code)).findFirst();
     }
 
     @Override
@@ -60,7 +74,23 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     }
 
     @Override
+    public List<ProjectSummary> listProjectSummaries(CompanyId companyId) {
+        return listProjects(companyId).stream().map(p -> new ProjectSummary(p, memberCount.applyAsInt(p.id()))).toList();
+    }
+
+    @Override
     public void deleteProject(CompanyId companyId, ProjectId id, Instant at) {
-        findProject(companyId, id).ifPresent(p -> projects.remove(id));
+        findProject(companyId, id).ifPresent(p -> deletedProjects.put(id, projects.remove(id)));
+    }
+
+    @Override
+    public List<Project> listDeletedProjects(CompanyId companyId) {
+        return deletedProjects.values().stream().filter(p -> p.companyId().equals(companyId)).toList();
+    }
+
+    /** Ayuda de las pruebas: la empresa de un proyecto, esté o no borrado. */
+    public CompanyId companyOf(ProjectId id) {
+        Project project = projects.getOrDefault(id, deletedProjects.get(id));
+        return project == null ? null : project.companyId();
     }
 }
