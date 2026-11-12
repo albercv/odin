@@ -152,19 +152,26 @@ def _mix_text(mix):
     return ", ".join(f"{approach} ×{count}" for approach, count in mix.items())
 
 
+def _beats_text(row):
+    if not row["valid"]:
+        return "no válida: errores"
+    return "no aplica" if row["supera_single"] is None else ("sí" if row["supera_single"] else "no")
+
+
 def _curve_lines(curves):
     lines = ["## Curvas", "", f"Variación de single por defecto (media de la mitad del intervalo): "
              f"{_pct(curves['variacion'])}.", "",
              "| Mezcla | Ejecuciones | Acierto medio [mín, máx] | Tokens medios | Coste medio | Latencia p50 / p95 | Supera single |",
              "|---|---|---|---|---|---|---|"]
     for row in curves["mezclas"]:
-        beats = "no aplica" if row["supera_single"] is None else ("sí" if row["supera_single"] else "no")
         lines.append(f"| {_mix_text(row['mix'])} | {row['n']} | {_pct(row['accuracy_mean'])} "
                      f"[{_pct(row['accuracy_min'])}, {_pct(row['accuracy_max'])}] | {_tokens(row['tokens_mean'])} | "
-                     f"{_usd(row['cost_mean'])} | {_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | {beats} |")
-    lines += ["", "| Turnos máximos | Acierto | Tokens medios | Latencia p50 / p95 |", "|---|---|---|---|"]
+                     f"{_usd(row['cost_mean'])} | {_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | "
+                     f"{_beats_text(row)} |")
+    lines += ["", "| Turnos máximos | Acierto | Tokens medios | Latencia p50 / p95 | Válida |", "|---|---|---|---|---|"]
     lines += [f"| {row['max_turns']} | {_pct(row['accuracy_mean'])} | {_tokens(row['tokens_mean'])} | "
-              f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s |" for row in curves["single"]]
+              f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | {'sí' if row['valid'] else 'no válida: errores'} |"
+              for row in curves["single"]]
     return lines + [""]
 
 

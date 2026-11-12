@@ -744,5 +744,24 @@ class PreflightTest(Harness):
         self.assertIn("la llamada de prueba falló", (folder / "PARADA.txt").read_text(encoding="utf-8"))
 
 
+class CurveReportTest(unittest.TestCase):
+    """El informe de curvas marca las mezclas no válidas por errores y no les da veredicto de «supera single»."""
+
+    def test_invalid_mix_and_turn_rows_say_so(self):
+        from banco.report import render
+        row = {"mix": {"main": 2}, "n": 2, "accuracy_mean": 0.9, "accuracy_min": 0.8, "accuracy_max": 1.0,
+               "tokens_mean": 100.0, "cost_mean": 0.01, "latency_p50": 1.0, "latency_p95": 2.0, "valid": False,
+               "invalidDraws": 9, "measuredPairs": 11, "supera_single": None}
+        turn = {**row, "mix": {"main": 1}, "max_turns": 10, "valid": False, "accuracy_min": None}
+        curves = {"variacion": 0.05, "mezclas": [row], "single": [turn], "single_por_defecto": turn}
+        summary = {"origen": {}, "cost": {"notifiedUsd": 0.0, "notifiedUsdFromRecords": 0.0, "unknownCostRecords": 0,
+                                          "strategyUsdPerAnswer": None,
+                                          "tokensPerAnswer": None, "searchers": {"tokensPerAnswer": None},
+                                          "combiner": {"tokensPerAnswer": None}, "judges": {"tokensPerAnswer": None}},
+                   "curvas": curves}
+        text = render(summary)
+        self.assertEqual(text.count("no válida: errores"), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
