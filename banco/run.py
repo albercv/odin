@@ -50,6 +50,7 @@ class Session:
     ledger: Ledger
     sweep: SweepSpec | None = None
     config_path: Path | None = None
+    config_sha: str = ""  # sha256 de los bytes de la configuración: otra configuración no reanuda la tanda
     charges_start: int = 0  # cargos del libro al abrir la tanda: sus llamadas de pago son las de esta tanda
 
     @property
@@ -188,10 +189,16 @@ class ResumeError(Exception):
     """La reanudación se niega: no hay estado, o el código o la pila cambiaron desde la última tanda."""
 
 
-def _check_resume(resume, commit, digest):
-    """La caché solo sirve si el código y la pila son los mismos que en la tanda anterior."""
+def _check_resume(resume, commit, digest, config_sha, question_ids):
+    """La caché solo sirve si la configuración, el código, la pila y las preguntas son los de la tanda anterior."""
     if not Path(resume["carpeta"]).is_dir():
         raise ResumeError(f"no existe la carpeta de resultados {resume['carpeta']}")
+    if resume.get("config_sha256") != config_sha:
+        raise ResumeError("la configuración cambió desde la última tanda: vuelve a lanzar el experimento entero")
+    saved = json.loads((Path(resume["carpeta"]) / "ids.json").read_text(encoding="utf-8"))["preguntas"]
+    if saved != question_ids:
+        raise ResumeError("las preguntas seleccionadas cambiaron desde la última tanda (ids.json): "
+                          "vuelve a lanzar el experimento entero")
     if resume["huella"] != commit:
         raise ResumeError("el código cambió desde la última tanda: la caché no serviría; "
                           "vuelve a lanzar el experimento entero")
@@ -222,12 +229,14 @@ def prepare(config_path, layout, sweep=False, reset_budget=False, resume=None):
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
                             budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit,
                             stack_digest=stack_digest(stack))
+    config_sha = hashlib.sha256(Path(config_path).read_bytes()).hexdigest()
     if resume is not None:
-        _check_resume(resume, commit, settings.stack_digest)
+        _check_resume(resume, commit, settings.stack_digest, config_sha, [item["id"] for item in items])
     ledger = open_ledger(layout.state_dir / f"libro-{cfg.name}.json", cfg.budget_usd, reset_budget)
     folder = Path(resume["carpeta"]) if resume is not None else _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,
-                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec, config_path=Path(config_path))
+                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec, config_path=Path(config_path),
+                   config_sha=config_sha)
     if resume is None:
         _write_start(sess, branch, commit)
     else:
@@ -277,7 +286,7 @@ def _counts(folder):
 
 def _state(sess, started, reason=None, counts=None):
     """Lo que hace falta para continuar en la misma carpeta: se escribe al empezar la tanda y al parar."""
-    return {"config": str(sess.config_path), "mode": sess.mode, "carpeta": str(sess.folder),
+    return {"config": str(sess.config_path), "config_sha256": sess.config_sha, "mode": sess.mode, "carpeta": str(sess.folder),
             "huella": sess.settings.odin_commit, "stack_digest": sess.settings.stack_digest,
             "motivo": reason, "renovacion": tanda.renewal_time(reason), "fecha_tanda": started, "recuentos": counts}
 

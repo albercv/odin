@@ -1109,5 +1109,44 @@ class PreflightCostTest(Harness):
             self.assertEqual(banco.main(["reanudar", "--config", str(path)], layout=self.layout), 0)
 
 
+class ResumeGuardTest(Harness):
+    """reanudar se niega (código 2, con el motivo) si la configuración o la lista de preguntas cambiaron."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        self.path = self.config(concurrency=1)
+
+    def _stop_first_batch(self):
+        def failing(item, *args, **kwargs):
+            return {"id": item["id"], "respuesta": None, "error": "fallo cualquiera", "coste_usd": 0.001, "tokens": None,
+                    "duracion_s": 1.0, "consultas": [], "modelo": None}
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=failing):
+            self.assertEqual(self.run_cli(self.path), 2)
+
+    def _resume_refused(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), fake_env(FAKE_VEREDICTO="si"):
+            code = banco.main(["reanudar", "--config", str(self.path)], layout=self.layout)
+        return code, err.getvalue()
+
+    def test_changed_config_file_is_refused(self):
+        self._stop_first_batch()
+        self.path.write_text(self.path.read_text(encoding="utf-8") + "\n# cambio posterior\n", encoding="utf-8")
+        code, message = self._resume_refused()
+        self.assertEqual(code, 2)
+        self.assertIn("la configuración cambió", message)
+
+    def test_changed_question_set_is_refused(self):
+        self._stop_first_batch()
+        ids = self.only_folder() / "ids.json"
+        data = json.loads(ids.read_text(encoding="utf-8"))
+        data["preguntas"] = data["preguntas"][:-1]
+        ids.write_text(json.dumps(data), encoding="utf-8")
+        code, message = self._resume_refused()
+        self.assertEqual(code, 2)
+        self.assertIn("las preguntas seleccionadas cambiaron", message)
+
+
 if __name__ == "__main__":
     unittest.main()
