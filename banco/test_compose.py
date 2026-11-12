@@ -33,6 +33,19 @@ class ComposerTextTest(unittest.TestCase):
         self.assertIn("verifyCitation", text)
         self.assertIn("«no consta»", text)
 
+    def test_rule_separates_searcher_disagreement_from_sources_that_do_not_match(self):
+        text = composer_text(RUNS)
+        self.assertIn("discrepen entre sí", text)
+        self.assertIn("fuentes no cuadren", text)
+        self.assertIn("dos fuentes que no cuadran", text)
+        self.assertIn("enseña las dos", text)
+        self.assertIn("no elijas ninguna", text)
+        self.assertIn("ningún buscador dio una respuesta con citas que puedas comprobar", text)
+        self.assertIn("manda la respuesta con citas", text)
+
+    def test_old_rule_is_gone(self):
+        self.assertNotIn("Si las respuestas discrepan y no puedes comprobarlas", composer_text(RUNS))
+
 
 class PageFusionTextTest(unittest.TestCase):
     def test_page_fusion_prompt_contains_rrf_pages_only(self):

@@ -10,7 +10,11 @@ from banco.medir_path import ejecutar
 
 KINDS = ("composer", "pageFusion")
 COMPOSER_RULE = ("Escribe una única respuesta final. Cita solo fragmentos que hayas comprobado con verifyCitation. "
-                  "Si las respuestas discrepan y no puedes comprobarlas, di «no consta».")
+                  "Distingue dos cosas: que los buscadores discrepen entre sí, y que las fuentes no cuadren entre sí. "
+                  "Si los buscadores coinciden en que hay dos fuentes que no cuadran, da esa misma respuesta: enseña las dos, "
+                  "cada una con su cita y su fecha, y no elijas ninguna. "
+                  "Di «no consta» solo si ningún buscador dio una respuesta con citas que puedas comprobar con verifyCitation. "
+                  "Si unos dicen «no consta» y otros dan una respuesta con citas comprobables, manda la respuesta con citas.")
 FUSION_RULE = "Lee esas páginas con readPage y responde solo a partir de ellas."
 
 
