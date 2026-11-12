@@ -14,3 +14,5 @@
 @keyframes swap { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .detail, .reject { animation: none; } }
 @media (max-width: 900px) { .detail { padding: 20px 16px; } }
+.neutral { background: var(--surface-muted); }
+.warning { margin: 0; font-weight: 500; }

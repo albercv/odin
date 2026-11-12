@@ -42,6 +42,8 @@ export function Sidebar({ isGroup, name, companyName, switcher, page, pending, s
         {link('documents', 'Documentos', 'file')}
         {link('topics', 'Temas', 'spark')}
         {link('review', 'Revisión', 'review', pending)}
+        {link('usage', 'Uso', 'people')}
+        {link('gaps', 'Huecos', 'file')}
       </nav>
       <div className={`${styles.nav} ${styles.foot}`}>
         <p className={styles.who}>{name}</p>

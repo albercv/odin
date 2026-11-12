@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppShell } from './AppShell';
+import { currentMonth } from '../components/MonthPicker';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
@@ -29,4 +30,15 @@ test('topicsLivesInsideTheMenuAndUsesTheChosenCompany', async () => {
   expect(await screen.findByRole('heading', { name: 'Temas', level: 1 })).toBeInTheDocument();
   await waitFor(() => expect(calls.some((c) => c.key === 'GET /v1/admin/companies/c2/topics')).toBe(true));
   expect(calls.some((c) => c.key.includes('/companies/c1/topics'))).toBe(false);
+});
+
+test.each([['Uso', 'usage-stats'], ['Huecos', 'gaps']])('%sUsesTheChosenCompany', async (link, route) => {
+  const calls = await openAs(link, {
+    'GET /v1/admin/companies/c2/projects': () => [], 'GET /v1/admin/companies/c2/members': () => [],
+    [`GET /v1/admin/companies/c2/${route}?month=${currentMonth()}`]: () => ({ withheld: false, gaps: [], month: '', company: { questions: { search: 0, similarCases: 0 }, questionsWithoutResults: 0, cards: { saved: 0, pending: 0, withheld: false }, documents: { uploaded: 0, ready: 0, failed: 0, waitingForReader: 0 } }, people: [] }),
+    [`GET /v1/admin/companies/c2/delivered-volume?month=${currentMonth()}`]: () => ({ month: '', totals: [] }),
+  });
+  expect(await screen.findByRole('heading', { name: link, level: 1 })).toBeInTheDocument();
+  await waitFor(() => expect(calls.some((c) => c.key.startsWith(`GET /v1/admin/companies/c2/${route}`))).toBe(true));
+  expect(calls.some((c) => c.key.includes('/companies/c1/'))).toBe(false);
 });

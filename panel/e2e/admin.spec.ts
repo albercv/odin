@@ -439,6 +439,71 @@ async function removeAndRecoverDocumentTopic(page: Page): Promise<void> {
   console.log('✓ Admin 19: temas de la empresa creados y editados, estado del etiquetado a la vista, y un tema de la IA quitado y recuperado en un documento');
 }
 
+const API = process.env.DEMO_API_URL ?? '';
+const GAP_QUERY = 'xqzvwk consulta sin respuesta';
+const ASKERS = ['Uso Uno', 'Uso Dos', 'Uso Tres'];
+const WITHHELD_TEXT = 'No se muestra para proteger a las personas (pocas en este periodo)';
+
+async function apiJson<T>(page: Page, method: 'post' | 'put' | 'get', path: string, data?: unknown, headers: Record<string, string> = {}): Promise<T> {
+  const response = await page.request[method](`${API}${path}`, { data, headers });
+  expect(response.ok(), `${method} ${path} ${response.status()}`).toBeTruthy();
+  return (response.status() === 204 ? undefined : await response.json()) as T;
+}
+
+// Tres personas preguntan lo mismo sin resultado (el mínimo para ver huecos) y una guarda una ficha, con sus claves reales.
+async function workersAskAndSaveCard(page: Page): Promise<void> {
+  const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
+  const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'] });
+  for (const [index, name] of ASKERS.entries()) {
+    const added = await apiJson<{ member: { userId: string } }>(page, 'post', `/v1/admin/companies/${companyId}/members`,
+      { firstName: firstNameOf(name), lastName: lastNamesOf(name), roles: ['WORKER'] });
+    const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${added.member.userId}/keys`, { label: 'uso e2e' });
+    const bearer = { Authorization: `Bearer ${key}` };
+    await apiJson(page, 'post', '/v1/search', { queries: [GAP_QUERY] }, bearer);
+    if (index === 0) await apiJson(page, 'post', '/v1/cards', { title: 'Ficha ficticia del uso', body: 'Texto ficticio de la ficha del uso.' }, bearer);
+  }
+}
+
+async function seeUsageOfTheMonth(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Uso', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Uso', level: 1 })).toBeVisible();
+  const people = page.getByRole('region', { name: 'Por persona' });
+  await expect(people.getByRole('row').filter({ hasText: 'Uso Dos' })).toContainText(/[2-9A-HJKMNP-Z]{4}-E2E/);
+  const names = await people.getByRole('row').filter({ hasText: 'Uso ' }).locator('td:first-child').allTextContents();
+  expect(names).toEqual(['Uso Dos', 'Uso Tres', 'Uso Uno']);
+  await expect(people.getByRole('button')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Empresa' }).getByRole('row').filter({ hasText: 'Preguntas de búsqueda' })).toContainText('3');
+  await expect(page.getByRole('region', { name: 'Empresa' }).getByText(WITHHELD_TEXT)).toBeVisible();
+  const volume = page.getByRole('region', { name: 'Volumen entregado a la IA del trabajador' });
+  await expect(volume.getByRole('row').filter({ hasText: 'Búsqueda' })).toContainText('3');
+  await expect(volume).toContainText('Odín no usa ninguna IA externa.');
+  console.log('✓ Admin 20: «Uso» enseña las preguntas del mes por persona (por nombre, con su código), las fichas sin desglose y el volumen entregado');
+}
+
+async function seeTheGapOfTheQuestion(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Huecos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Huecos', level: 1 })).toBeVisible();
+  const gap = page.getByRole('row').filter({ hasText: GAP_QUERY });
+  await expect(gap).toContainText('Búsqueda');
+  await expect(gap).toContainText('3');
+  await expect(gap).toContainText(new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }));
+  await expect(gap).not.toContainText(/Uso (Uno|Dos|Tres)/);
+  console.log('✓ Admin 21: «Huecos» enseña la pregunta sin resultado con sus tres veces y el día, sin autor ni hora');
+}
+
+async function rejectCardSeeingTheNoteWarning(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Revisión', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ficha ficticia del uso' })).toBeVisible();
+  await page.getByRole('button', { name: 'Rechazar', exact: true }).click();
+  await expect(page.getByText('El autor verá esta nota tal cual. Escribe sobre el contenido de la ficha, no sobre la persona.')).toBeVisible();
+  await page.getByLabel('Motivo del rechazo').fill('Falta la fuente del dato');
+  await page.getByRole('button', { name: 'Rechazar la ficha', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Ficha rechazada');
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 22: al rechazar una ficha, el panel avisa de que el autor verá la nota');
+}
+
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
 // El administrador del grupo reutiliza la sesión de prepare (sin login) y los pasos que entran de nuevo van al final.
 test('administración del panel de extremo a extremo', async ({ page, context, browser }) => {
@@ -463,6 +528,10 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await uploadCaseFilesAndMarkSelection(page);
   await createAndEditTopics(page);
   await removeAndRecoverDocumentTopic(page);
+  await workersAskAndSaveCard(page);
+  await seeUsageOfTheMonth(page);
+  await seeTheGapOfTheQuestion(page);
+  await rejectCardSeeingTheNoteWarning(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);
   await groupAdminHandover(browser);

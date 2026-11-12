@@ -167,6 +167,13 @@ async function openDocumentTopics(page: Page): Promise<void> {
   await expect(page.getByRole('dialog', { name: 'Incidencia ficticia' }).getByRole('button', { name: 'Volver a etiquetar' })).toBeVisible();
 }
 
+async function openFromMenu(page: Page, company: string, link: string): Promise<void> {
+  await openCompany(page, company);
+  await page.getByRole('link', { name: link, exact: true }).click();
+  await expect(page.getByRole('heading', { name: link, level: 1 })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+}
+
 const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   login: async (page) => { await page.goto(PANEL); await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible(); },
   cover: async (page) => { await page.goto(`${PANEL}/#cover`); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); },
@@ -183,6 +190,10 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   'topics empty': (page) => openTopics(page, EMPTY_COMPANY),
   'topics list': async (page) => { await openTopics(page, 'Empresa E'); await expect(page.getByRole('row').filter({ hasText: 'agua y humedades' })).toBeVisible(); },
   'document topics dialog': openDocumentTopics,
+  // «Empresa E2E» (admin.spec.ts) tiene tres personas con una pregunta sin resultado y fichas de una sola autora (su desglose se calla).
+  'usage with people': async (page) => { await openFromMenu(page, 'Empresa E2E', 'Uso'); await expect(page.getByRole('region', { name: 'Por persona' }).getByText('Uso Dos')).toBeVisible(); await expect(page.getByText('No se muestra para proteger a las personas (pocas en este periodo)')).toBeVisible(); },
+  'gaps with rows': async (page) => { await openFromMenu(page, 'Empresa E2E', 'Huecos'); await expect(page.getByRole('row').filter({ hasText: 'xqzvwk' })).toBeVisible(); },
+  'gaps empty': async (page) => { await openFromMenu(page, 'Empresa A', 'Huecos'); await expect(page.getByRole('heading', { name: 'Este mes no hay consultas sin resultados' })).toBeVisible(); },
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,
   'review reject panel': openRejectPanel,
