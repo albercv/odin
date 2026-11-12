@@ -239,7 +239,7 @@ Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 6 preguntas
 
 ## 12. Revisión tras la 2a y D-049 (2026-11-11)
 
-- **Orden (D-049):** este bloque es el último de la fase 2. La migración pasa de V13 a V15 (V11 es del bloque 1, V12 del 3, V13 del 7 y V14 del 2).
+- **Orden (D-049):** este bloque es el último de la fase 2. La migración pasa de V13 a V15 (orden de D-052: V11 es del bloque 7, V12 del 1, V13 del 3 y V14 del 2).
 - **D-048:** cada fila de la tabla por persona lleva `userId`, `displayName` y `memberCode` (`personCode-companyCode`, como `MemberView.of`). La tabla sigue ordenada por `displayName`. La fila «Personas dadas de baja» no lleva código. El código sale solo en el panel: nunca en el MCP, ni en las citas, ni en las fichas.
 - **D-047:** no cambia lo que ve el administrador. El volumen entregado y los huecos se miden por empresa, sin mirar proyectos.
 - **Bloque 6:** `listProjects` lee `GET /v1/me`, así que cuenta como «Perfil» en el volumen entregado y no añade ninguna fila. La regresión incluye `SearchScaleBatteryIT`.

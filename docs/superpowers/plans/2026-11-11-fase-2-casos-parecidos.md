@@ -43,7 +43,7 @@
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V14__similar_cases.sql`, o la siguiente libre si otro bloque usó antes el número (el orden de D-049 la deja en V14: V11 es del bloque 1, V12 del 3 y V13 del 7).
+- **Migración:** `V14__similar_cases.sql`, o la siguiente libre si otro bloque usó antes el número (el orden de D-052 la deja en V14: V11 es del bloque 7, V12 del 1 y V13 del 3).
 - **Datos:** solo ficticios.
 
 ## Foco de revisión
