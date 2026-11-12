@@ -315,6 +315,15 @@ def _close_batch_record(sess, reason):
     tanda.write_batches(sess.folder, batches)
 
 
+def _started_date(sess):
+    """Fecha de inicio de la tanda, guardada al abrirla; si el estado se perdió o está dañado, la de ahora."""
+    try:
+        state = tanda.read_state(sess.state_file)
+    except ValueError:
+        state = None
+    return (state or {}).get("fecha_tanda") or datetime.now().isoformat(timespec="seconds")
+
+
 def _finish_batch(sess, done):
     """Al parar, el estado de reanudación guarda el motivo, la hora de renovación y lo hecho; al terminar completo, se borra.
     En ambos casos la tanda se cierra en batches.json."""
@@ -323,7 +332,7 @@ def _finish_batch(sess, done):
     if done and not _stopped(sess):
         tanda.delete_state(sess.state_file)
     else:
-        started = (tanda.read_state(sess.state_file) or {}).get("fecha_tanda") or datetime.now().isoformat(timespec="seconds")
+        started = _started_date(sess)
         tanda.save_state(sess.state_file, _state(sess, started, reason, _counts(sess.folder)))
     report.rebuild(sess.folder, sess.layout)  # el resumen ya lleva la tanda cerrada
 
@@ -683,11 +692,25 @@ def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False, 
     return _exit_code(sess)
 
 
+REQUIRED_STATE_FIELDS = ("mode", "carpeta", "huella", "stack_digest")
+
+
+def _read_saved_state(path):
+    """El estado guardado, o None si no hay. Un estado ilegible o incompleto se niega con un motivo en español."""
+    try:
+        state = tanda.read_state(path)
+    except ValueError as error:
+        raise ResumeError(f"el estado de reanudación está dañado ({error}): no se puede reanudar") from error
+    if state is not None and not all(field in state for field in REQUIRED_STATE_FIELDS):
+        raise ResumeError("el estado de reanudación está dañado: le faltan campos: no se puede reanudar")
+    return state
+
+
 def resume_experiment(config_path, layout):
     """Reanuda el experimento desde su estado guardado: misma carpeta, lo hecho sale de la caché y la llamada de
     prueba se repite. Sin estado, o con el código o la pila cambiados, se niega."""
     name = load_config(Path(config_path), layout.banco).name
-    state = tanda.read_state(tanda.state_path(layout.state_dir, name))
+    state = _read_saved_state(tanda.state_path(layout.state_dir, name))
     if state is None:
         raise ResumeError(f"no hay estado de reanudación para «{name}»: no hay nada que reanudar; "
                           "lanza el experimento con «run» o «sweep»")

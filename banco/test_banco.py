@@ -1148,5 +1148,33 @@ class ResumeGuardTest(Harness):
         self.assertIn("las preguntas seleccionadas cambiaron", message)
 
 
+class CorruptStateTest(Harness):
+    """Un estado de reanudación dañado se explica en español (código 2), no con un error de decodificación."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        self.path = self.config(concurrency=1)
+        self.state = self.state_dir / "reanudar-prueba.json"
+
+    def _resume(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = banco.main(["reanudar", "--config", str(self.path)], layout=self.layout)
+        return code, err.getvalue()
+
+    def test_invalid_json_is_a_clear_error(self):
+        self.state.write_text("{no es json", encoding="utf-8")
+        code, message = self._resume()
+        self.assertEqual(code, 2)
+        self.assertIn("estado de reanudación está dañado", message)
+
+    def test_state_without_required_fields_is_a_clear_error(self):
+        self.state.write_text(json.dumps({"mode": "run"}), encoding="utf-8")
+        code, message = self._resume()
+        self.assertEqual(code, 2)
+        self.assertIn("estado de reanudación está dañado", message)
+
+
 if __name__ == "__main__":
     unittest.main()
