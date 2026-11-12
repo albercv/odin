@@ -14,7 +14,11 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
         'projectName es el proyecto (comunidad, cliente u obra) del resultado. ' +
         'addedAt es la fecha en que entró en Odín, no la del documento. ' +
         'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
-        'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.',
+        'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +
+        'Cada consulta, una idea, en 1 a 3 palabras específicas. ' +
+        'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena. ' +
+        'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas. ' +
+        'Si una ficha dice algo distinto que un documento, cita las dos.',
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto; también incluye lo que no tiene proyecto'),
