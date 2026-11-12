@@ -814,5 +814,74 @@ class ReanudarStateTest(Harness):
         self.assertFalse(self.state_file().exists())
 
 
+class ResumeTest(Harness):
+    """reanudar: misma carpeta, lo hecho sale de la caché y solo se lanzan las llamadas que faltan. Se niega si el
+    código o la pila cambiaron desde la última tanda."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        self.counter = self.tmp / "contador"
+        self.config_path = self.config(concurrency=1)
+
+    def _calls(self):
+        return len(self.counter.read_text(encoding="utf-8").splitlines()) if self.counter.exists() else 0
+
+    def _stop_first_batch(self):
+        # prueba ok, Q1 ok (2 ejecuciones), Q2 y Q3 con error seguido: para tras 3 errores
+        code = self.run_cli(self.config_path, preflight=True,
+                            env={"FAKE_CONTADOR": str(self.counter), "FAKE_MODO_DESDE": "4", "FAKE_MODO_DESDE_MODO": "error"})
+        self.assertEqual(code, 2)
+        self.assertEqual(self._calls(), 6)
+
+    def _resume(self, env=None):
+        with fake_env(**{"FAKE_CONTADOR": str(self.counter), "FAKE_MODO_DESDE": "1", "FAKE_MODO_DESDE_MODO": "ok",
+                         "FAKE_VEREDICTO": "si", **(env or {})}):
+            return banco.main(["reanudar", "--config", str(self.config_path)], layout=self.layout)
+
+    def _state(self):
+        return json.loads((self.state_dir / "reanudar-prueba.json").read_text(encoding="utf-8"))
+
+    def test_resume_launches_only_the_missing_calls_in_the_same_folder(self):
+        self._stop_first_batch()
+        folder = self.only_folder()
+        self.assertEqual(self._resume(), 0)
+        self.assertEqual(self._calls(), 6 + 1 + 4)  # prueba de la tanda 2 + las cuatro ejecuciones que faltaban
+        self.assertEqual(self.only_folder(), folder)
+        records = self.read_jsonl(folder, "buscadores.jsonl")
+        self.assertEqual(len(records), 6)
+        self.assertEqual(sum(r["cached"] for r in records), 2)  # Q1 salía de la caché
+        self.assertFalse((self.state_dir / "reanudar-prueba.json").exists())  # completa: el estado se borra
+
+    def test_resume_refuses_when_the_code_changed(self):
+        self._stop_first_batch()
+        state = self._state()
+        state["huella"] = "otra-huella"
+        save_state_text = json.dumps(state)
+        (self.state_dir / "reanudar-prueba.json").write_text(save_state_text, encoding="utf-8")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(self._resume(), 2)
+        self.assertIn("el código cambió", err.getvalue())
+        self.assertEqual(self._calls(), 6)  # no se lanza nada
+
+    def test_resume_refuses_when_the_stack_was_reloaded(self):
+        self._stop_first_batch()
+        state = self._state()
+        state["stack_digest"] = "pila-recargada"
+        (self.state_dir / "reanudar-prueba.json").write_text(json.dumps(state), encoding="utf-8")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(self._resume(), 2)
+        self.assertIn("la pila se recargó", err.getvalue())
+        self.assertEqual(self._calls(), 6)
+
+    def test_resume_without_saved_state_is_a_clear_error(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(self._resume(), 2)
+        self.assertIn("no hay estado de reanudación", err.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

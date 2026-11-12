@@ -2,6 +2,7 @@
   python3 banco/banco.py run --config X
   python3 banco/banco.py sweep --config X
   python3 banco/banco.py report --results DIR
+  python3 banco/banco.py reanudar --config X   (continúa la última tanda parada, en la misma carpeta)
 
 El tope de gasto es del experimento (libro en banco/estado/libro-<nombre>.json): relanzar no vuelve a gastar.
 --reiniciar-presupuesto archiva ese libro y empieza en cero.
@@ -32,6 +33,7 @@ def _parser():
         order.add_argument("--sin-prueba", action="store_true",
                            help="no hace la llamada de prueba a claude antes del primer grupo")
     orders.add_parser("report").add_argument("--results", required=True)
+    orders.add_parser("reanudar").add_argument("--config", required=True)
     return ap
 
 
@@ -42,6 +44,8 @@ def main(argv=None, layout=None):
         if args.orden == "report":
             report.rebuild(Path(args.results), layout)
             return 0
+        if args.orden == "reanudar":
+            return run.resume_experiment(Path(args.config), layout)
         order = run.run_experiment if args.orden == "run" else run.sweep_experiment
         return order(Path(args.config), layout, reset_budget=args.reiniciar_presupuesto, sin_prueba=args.sin_prueba)
     except ConfigError as error:
@@ -49,6 +53,9 @@ def main(argv=None, layout=None):
         return 1
     except BudgetAlreadySpent as error:
         print(f"error de presupuesto: {error}", file=sys.stderr)
+        return 2
+    except run.ResumeError as error:
+        print(f"error de reanudación: {error}", file=sys.stderr)
         return 2
 
 

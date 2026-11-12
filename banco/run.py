@@ -183,9 +183,33 @@ def _write_start(sess, branch, commit):
     (sess.folder / "ids.json").write_text(json.dumps(ids, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-def prepare(config_path, layout, sweep=False, reset_budget=False):
+class ResumeError(Exception):
+    """La reanudación se niega: no hay estado, o el código o la pila cambiaron desde la última tanda."""
+
+
+def _check_resume(resume, commit, digest):
+    """La caché solo sirve si el código y la pila son los mismos que en la tanda anterior."""
+    if not Path(resume["carpeta"]).is_dir():
+        raise ResumeError(f"no existe la carpeta de resultados {resume['carpeta']}")
+    if resume["huella"] != commit:
+        raise ResumeError("el código cambió desde la última tanda: la caché no serviría; "
+                          "vuelve a lanzar el experimento entero")
+    if resume["stack_digest"] != digest:
+        raise ResumeError("la pila se recargó: los ids cambiaron y la caché no serviría; "
+                          "vuelve a lanzar el experimento entero")
+
+
+def _archive_stop(folder):
+    """La parada de la tanda anterior se guarda con su nombre: la nueva tanda no debe nacer parada."""
+    stop = folder / "PARADA.txt"
+    if stop.exists():
+        stop.rename(folder / f"PARADA-{datetime.now():%Y%m%d-%H%M%S}.txt")
+
+
+def prepare(config_path, layout, sweep=False, reset_budget=False, resume=None):
     """Valida todo lo que puede fallar antes de crear la carpeta de resultados. El libro del experimento se abre
-    antes de crearla: si ya se gastó el tope, no queda carpeta a medias."""
+    antes de crearla: si ya se gastó el tope, no queda carpeta a medias. Con `resume`, la carpeta es la de la
+    tanda anterior y no se escribe de nuevo su inicio."""
     cfg = load_config(Path(config_path), layout.banco)
     _check_supported(cfg)
     _check_main(cfg, sweep)
@@ -197,11 +221,16 @@ def prepare(config_path, layout, sweep=False, reset_budget=False):
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
                             budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit,
                             stack_digest=stack_digest(stack))
+    if resume is not None:
+        _check_resume(resume, commit, settings.stack_digest)
     ledger = open_ledger(layout.state_dir / f"libro-{cfg.name}.json", cfg.budget_usd, reset_budget)
-    folder = _new_folder(layout.results_dir, cfg.name)
+    folder = Path(resume["carpeta"]) if resume is not None else _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,
                    cache=RunCache(layout.cache), ledger=ledger, sweep=spec, config_path=Path(config_path))
-    _write_start(sess, branch, commit)
+    if resume is None:
+        _write_start(sess, branch, commit)
+    else:
+        _archive_stop(folder)
     return sess
 
 
@@ -526,8 +555,8 @@ def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
     report.rebuild(sess.folder, sess.layout)
 
 
-def run_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
-    sess = prepare(config_path, layout, reset_budget=reset_budget)
+def run_experiment(config_path, layout, reset_budget=False, sin_prueba=False, resume=None):
+    sess = prepare(config_path, layout, reset_budget=reset_budget, resume=resume)
     runs, finals, verdicts = [], [], []
     done = False
     try:
@@ -592,8 +621,8 @@ def _curves(sess, runs, turn_runs):
     return {"variacion": variation, "mezclas": mix_rows, "single": turn_rows, "single_por_defecto": default}
 
 
-def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
-    sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget)
+def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False, resume=None):
+    sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget, resume=resume)
     runs, turn_runs = [], []
     done = False
     try:
@@ -609,3 +638,15 @@ def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
         _write_outputs(sess, runs, [], [], turn_runs)
         _finish_batch(sess, done)
     return _exit_code(sess)
+
+
+def resume_experiment(config_path, layout):
+    """Reanuda el experimento desde su estado guardado: misma carpeta, lo hecho sale de la caché y la llamada de
+    prueba se repite. Sin estado, o con el código o la pila cambiados, se niega."""
+    name = load_config(Path(config_path), layout.banco).name
+    state = tanda.read_state(tanda.state_path(layout.state_dir, name))
+    if state is None:
+        raise ResumeError(f"no hay estado de reanudación para «{name}»: no hay nada que reanudar; "
+                          "lanza el experimento con «run» o «sweep»")
+    order = sweep_experiment if state["mode"] == "sweep" else run_experiment
+    return order(Path(config_path), layout, resume=state)
