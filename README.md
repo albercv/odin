@@ -141,6 +141,16 @@ curl -X POST http://127.0.0.1:8080/v1/setup/admin-password -H 'Content-Type: app
 
 Responde 204: la contraseña queda cambiada, el administrador vuelve a estar activo y sus sesiones del panel se cierran. Si el token no vale responde 403; si la instalación aún no está configurada, 409. Tiene el mismo límite de intentos que el login.
 
+## Cómo cambiar al administrador del grupo
+
+Hoy una instalación tiene un solo administrador del grupo. Si esa persona deja la empresa, el relevo lo hace quien controla `deploy/.env`. Los tres pasos son obligatorios y van en este orden (D-051):
+
+1. **Cortar su entrada al panel.** Pon una contraseña nueva con el token de instalación, con la orden de «Contraseña olvidada». Sus sesiones del panel se cierran en ese momento.
+2. **Revocar sus claves personales.** Entra en el panel con esa contraseña. En cada empresa en la que la cuenta trabaja con su IA, abre «Claves» en su fila y usa «Revocar clave» en todas. Si te saltas este paso, sus claves siguen valiendo en el MCP aunque ya no entre en el panel.
+3. **Pasar la cuenta a la persona nueva.** En «Mi cuenta», cambia el nombre, los apellidos y el correo por los suyos, y la contraseña por una que elija ella.
+
+**Límite:** es la misma cuenta y el mismo código de persona. Lo que revisó o escribió el anterior aparecerá con el nombre nuevo. Por eso este relevo vale para la demostración y las pruebas, pero no para un cliente real: antes del primer cliente real, Odín tendrá varios administradores del grupo y relevo con una persona nueva (B-007).
+
 ## Sesión del panel
 
 Hoy el panel usa un token aleatorio y opaco, en una cookie `HttpOnly` con `SameSite=Strict`. En la base solo se guarda su huella, nunca el token. La sesión caduca por inactividad y se revoca al cerrarla o al cambiar la contraseña.

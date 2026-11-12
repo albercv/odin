@@ -27,11 +27,11 @@ Hoy un usuario tiene un solo papel y una sola empresa. D-038 pide otra cosa:
 **Resoluciones del CTO sobre la corrección del 2026-11-11**, pendientes de validar por el CEO. Cambiarlas cuesta poco:
 - los documentos y las fichas sin proyecto los sigue viendo toda la empresa, como en D-038;
 - el administrador puede marcar un proyecto como «Visible para toda la empresa», a propósito y proyecto a proyecto;
-- al migrar, cada proyecto que ya existe queda cerrado, con todos los trabajadores activos de su empresa como miembros: nadie pierde el acceso que tiene hoy.
+- al migrar, cada proyecto que ya existe, también los borrados, queda cerrado, con todos los trabajadores de su empresa (activos o no) como miembros: nadie pierde el acceso que tiene hoy (detalle en el apartado 7).
 
 **Del CTO:**
 - El correo sigue siendo opcional en quien solo trabaja, y único cuando existe.
-- El administrador del grupo deja de ser un papel con empresa vacía y pasa a ser una marca de la persona. Puede además trabajar con su IA: tener pertenencias con papel `WORKER` y claves en ellas (D-038: una misma persona administra y trabaja). `COMPANY_ADMIN` no le hace falta: ya administra todas (revisión final, 2026-11-11).
+- El administrador del grupo deja de ser un papel con empresa vacía y pasa a ser una marca de la persona. Puede además trabajar con su IA: tener pertenencias con papel `WORKER` y claves en ellas (D-038: una misma persona administra y trabaja). `COMPANY_ADMIN` no le hace falta: ya administra todas (revisión final, 2026-11-11). Sobre su persona y sus pertenencias solo actúa él mismo; un administrador de empresa recibe 403. Hoy hay uno solo por instalación; su relevo, en el `README` («Cómo cambiar al administrador del grupo», D-051).
 - Quien administra varias empresas entra una sola vez en el panel y elige empresa.
 - Un proyecto que el trabajador no puede ver se comporta como si no existiera: 404, nunca 403.
 - La restricción por proyecto lleva las mismas dos barreras que la separación entre empresas: el caso de uso con su filtro SQL, y la seguridad por filas de PostgreSQL.
