@@ -145,6 +145,13 @@ describe('buildServer', () => {
     expect(instructions).toContain('si verifyCitation devuelve false, no uses esa cita');
   });
 
+  it('instructionsRequireLiteralQuotes', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).toContain('Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.');
+    expect(instructions).toContain('De una ficha, cita solo su texto, sin el título, el autor ni la fecha.');
+    expect(instructions).toContain('cítalas por título, autor y fecha');
+  });
+
   it('noSourceMessage', async () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [], noSource: true } }));
     const result = await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['nada'] } });

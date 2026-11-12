@@ -15,6 +15,8 @@ export const INSTRUCTIONS = [
   'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.',
   'Comprueba las citas con verifyCitation antes de darlas por buenas.',
   'Los resultados KNOWLEDGE_CARD son fichas aportadas por trabajadores con resumen hecho por IA: cítalas por título, autor y fecha de alta, preséntalas como fichas y no como documentos, y no tienen página; verifyCitation es solo para documentos, y si verifyCitation devuelve false, no uses esa cita.',
+  'Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.',
+  'De una ficha, cita solo su texto, sin el título, el autor ni la fecha.',
   'Presenta el conocimiento general aparte, como información añadida, nunca mezclado con lo que consta en los documentos.',
 ].join(' ');
 
