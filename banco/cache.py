@@ -7,21 +7,27 @@ import tempfile
 from pathlib import Path
 
 
-def run_key(question_id: str, approach: str, approach_text: str, model: str, replica: int, odin_commit: str) -> str:
-    partes = [question_id, approach, hashlib.sha256(approach_text.encode("utf-8")).hexdigest(), model, str(replica), odin_commit]
-    return hashlib.sha256(json.dumps(partes).encode("utf-8")).hexdigest()
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def run_key(question_id: str, question_text: str, approach: str, approach_text: str, model: str, replica: int,
+            odin_commit: str, max_turns: int | None) -> str:
+    parts = [question_id, _digest(question_text), approach, _digest(approach_text), model, str(replica),
+             odin_commit, str(max_turns)]
+    return hashlib.sha256(json.dumps(parts).encode("utf-8")).hexdigest()
 
 
 class RunCache:
     def __init__(self, root: Path):
         self.root = Path(root)
 
-    def _ruta(self, key: str) -> Path:
+    def _path(self, key: str) -> Path:
         return self.root / f"{key}.json"
 
     def get(self, key: str) -> dict | None:
-        ruta = self._ruta(key)
-        return json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else None
+        path = self._path(key)
+        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
     def put(self, key: str, record: dict) -> None:
         if record.get("error") is not None:
@@ -30,4 +36,4 @@ class RunCache:
         fd, tmp = tempfile.mkstemp(dir=self.root, suffix=".tmp")
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(record, f, ensure_ascii=False)
-        os.replace(tmp, self._ruta(key))
+        os.replace(tmp, self._path(key))

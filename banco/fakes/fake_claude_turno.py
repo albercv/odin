@@ -7,13 +7,13 @@ from pathlib import Path
 FAKE = Path(__file__).resolve().parents[2] / "experimentos" / "2026-11-12-archivo-ficticio" / "medir" / "fake_claude.py"
 
 
-def contar_llamada(ruta):
-    ruta = Path(ruta)
-    n = int(ruta.read_text()) + 1 if ruta.exists() else 1
-    ruta.write_text(str(n))
+def count_call(path):
+    path = Path(path)
+    n = int(path.read_text()) + 1 if path.exists() else 1
+    path.write_text(str(n))
     return n
 
 
-if "FAKE_MODO_DESDE" in os.environ and contar_llamada(os.environ["FAKE_CONTADOR"]) >= int(os.environ["FAKE_MODO_DESDE"]):
+if "FAKE_MODO_DESDE" in os.environ and count_call(os.environ["FAKE_CONTADOR"]) >= int(os.environ["FAKE_MODO_DESDE"]):
     os.environ["FAKE_MODO"] = os.environ["FAKE_MODO_DESDE_MODO"]
 os.execv(sys.executable, [sys.executable, str(FAKE), *sys.argv[1:]])
