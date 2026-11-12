@@ -120,7 +120,7 @@ public class PostgresTaggingRepository implements TaggingRepository {
     public void saveResult(DocumentId documentId, Set<TopicId> aiTopics, String taggerVersion, Instant now) {
         tx.runInScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> {
             // sin fila en TAGGING, el texto se volvió a leer o se pidió etiquetar de nuevo: este resultado ya no vale
-            if (!"TAGGING".equals(lockRow(jdbc, documentId).orElse(""))) {
+            if (!"TAGGING".equals(lockRow(jdbc, CompanyScope.all(), documentId).orElse(""))) {
                 return;
             }
             jdbc.sql("""
@@ -136,9 +136,11 @@ public class PostgresTaggingRepository implements TaggingRepository {
         });
     }
 
-    /** Bloquea la fila del documento y dice su estado, si la hay. */
-    private static Optional<String> lockRow(JdbcClient jdbc, DocumentId documentId) {
-        return jdbc.sql("SELECT status FROM document_tagging WHERE document_id = :id FOR UPDATE")
+    /** Bloquea la fila del documento, si es de una empresa del ámbito, y dice su estado, si la hay. */
+    private static Optional<String> lockRow(JdbcClient jdbc, CompanyScope scope, DocumentId documentId) {
+        return Sql.scoped(jdbc.sql("""
+                SELECT t.status FROM document_tagging t JOIN document d ON d.id = t.document_id
+                WHERE t.document_id = :id AND %s FOR UPDATE OF t""".formatted(Sql.inScope("d.company_id"))), scope)
                 .param("id", documentId.value()).query(String.class).optional();
     }
 
@@ -223,8 +225,8 @@ public class PostgresTaggingRepository implements TaggingRepository {
             Instant at) {
         tx.runInScope(scope, ProjectVisibility.all(), jdbc -> {
             ensureRow(jdbc, scope, documentId);
-            if (lockRow(jdbc, documentId).isPresent()) {
-                upsertDecision(jdbc, documentId, topicId, state, by, at);
+            if (lockRow(jdbc, scope, documentId).isPresent()) {
+                upsertDecision(jdbc, scope, documentId, topicId, state, by, at);
             }
         });
     }
@@ -239,18 +241,18 @@ public class PostgresTaggingRepository implements TaggingRepository {
                 .param("id", documentId.value()).update();
     }
 
-    private static void upsertDecision(JdbcClient jdbc, DocumentId documentId, TopicId topicId, TopicState state,
-            UserId by, Instant at) {
-        jdbc.sql("""
+    private static void upsertDecision(JdbcClient jdbc, CompanyScope scope, DocumentId documentId, TopicId topicId,
+            TopicState state, UserId by, Instant at) {
+        Sql.scoped(jdbc.sql("""
                 INSERT INTO document_topic (document_id, topic_id, company_id, source, state, decided_by, decided_at)
                 SELECT d.id, p.id, d.company_id, 'ADMIN', CAST(:state AS text), :by, :at FROM document d
                 JOIN topic p ON p.company_id = d.company_id AND p.id = :topic AND p.deleted_at IS NULL
-                WHERE d.id = :id
+                WHERE d.id = :id AND %s
                 ON CONFLICT (document_id, topic_id) DO UPDATE SET state = CAST(:state AS text), decided_by = :by,
                     decided_at = :at,
                     source = CASE WHEN CAST(:state AS text) = 'REMOVED' THEN document_topic.source ELSE 'ADMIN' END,
                     tagger_version = CASE WHEN CAST(:state AS text) = 'REMOVED'
-                        THEN document_topic.tagger_version ELSE NULL END""")
+                        THEN document_topic.tagger_version ELSE NULL END""".formatted(Sql.inScope("d.company_id"))), scope)
                 .param("state", state.name()).param("by", by.value()).param("at", Sql.ts(at))
                 .param("topic", topicId.value()).param("id", documentId.value()).update();
     }

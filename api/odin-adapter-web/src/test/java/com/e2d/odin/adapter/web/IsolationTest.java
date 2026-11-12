@@ -257,4 +257,48 @@ class IsolationTest extends WebTestSupport {
         mvc.perform(get("/v1/admin/companies/" + b.value() + "/members/" + worker.value() + "/projects")
                 .cookie(other)).andExpect(status().isNotFound());
     }
+
+    private String createTopic(jakarta.servlet.http.Cookie admin, CompanyId company, String name) throws Exception {
+        var created = mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + name + "\",\"definition\":\"x\"}"))
+                .andReturn();
+        return com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void workerOfBGets404ListingDocumentsByATopicOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String topicOfA = createTopic(adminCookie(Role.COMPANY_ADMIN, Optional.of(a)), a, "Agua");
+        Fixtures.readyDocument(w.docs, a, "secreto de A");
+
+        mvc.perform(get("/v1/documents?topicId=" + topicOfA).header("Authorization", workerKey(b)))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("Tema no encontrado"));
+    }
+
+    @Test
+    void meOfWorkerOfBCarriesNeitherTopicsNorPendingCountOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        createTopic(adminCookie(Role.COMPANY_ADMIN, Optional.of(a)), a, "Agua");
+        Fixtures.readyDocument(w.docs, a, "secreto de A");
+        Fixtures.readyDocument(w.docs, a, "otro de A");
+
+        mvc.perform(get("/v1/me").header("Authorization", workerKey(b))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.topics.length()").value(0))
+                .andExpect(jsonPath("$.tagging.pendingDocuments").value(0));
+    }
+
+    @Test
+    void adminOfACannotAssignATopicOfBToADocumentOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        var adminOfA = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        String topicOfB = createTopic(adminCookie(Role.COMPANY_ADMIN, Optional.of(b)), b, "Seguros");
+        Document own = Fixtures.readyDocument(w.docs, a, "de A");
+        String base = "/v1/admin/documents/" + own.id().value() + "/topics";
+
+        mvc.perform(put(base + "/" + topicOfB).cookie(adminOfA)).andExpect(status().isNotFound());
+        mvc.perform(get(base).cookie(adminOfA)).andExpect(jsonPath("$.topics.length()").value(0));
+    }
 }
