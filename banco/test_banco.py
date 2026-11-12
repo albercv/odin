@@ -630,6 +630,20 @@ class SweepTest(Harness):
         self.assertIn("Acierto de las ejecuciones que coinciden", (folder / "informe.md").read_text(encoding="utf-8"))
 
 
+class SweepConfigTest(unittest.TestCase):
+    """Las mezclas aprobadas del barrido de 40 preguntas (D-067): main 1 a 5, tres mezclas con topic y synonyms, y la referencia."""
+
+    def test_barrido_40_mixes_are_the_approved_list(self):
+        from banco.config import load_config
+        from banco.run import load_sweep
+        path = BANCO / "configs" / "barrido-40.toml"
+        spec = load_sweep(path, load_config(path, BANCO))
+        expected = [{"main": n} for n in range(1, 6)] + [
+            {"main": n, "topic": 1, "synonyms": 1} for n in (1, 2, 3)] + [{"main": 10, "topic": 5, "synonyms": 5}]
+        self.assertEqual(list(spec.mixes), expected)
+        self.assertEqual((spec.draws, list(spec.single_max_turns)), (20, [10, 20, 40]))
+
+
 class SampleAndConfigTest(Harness):
     def test_stratified_sample_is_deterministic(self):
         items = [{"id": f"Q{n}", "tipo": t} for n, t in enumerate(["a", "a", "a", "b", "b", "c"], start=1)]
