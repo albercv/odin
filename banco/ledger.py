@@ -60,15 +60,19 @@ class Ledger:
             self.streak = self.streak + 1 if error else 0
             return self.streak
 
-    def charge(self, cost):
-        """Suma un coste real. Un coste que no es un número cuenta como desconocido, no como 0."""
+    def charge(self, cost, note=None):
+        """Suma un coste real. Un coste que no es un número cuenta como desconocido, no como 0; solo una llamada
+        marcada con `note` (la prueba sin coste notificado) puede anotarse como 0 con su motivo."""
         with self.lock:
             if _numeric(cost):
                 self.spent += cost
             else:
                 self.unknown += 1
                 cost = None
-            self.charges.append({"fecha": datetime.now().isoformat(timespec="seconds"), "coste_usd": cost})
+            entry = {"fecha": datetime.now().isoformat(timespec="seconds"), "coste_usd": cost}
+            if note is not None:
+                entry["nota"] = note
+            self.charges.append(entry)
             if self.path is not None:
                 self._save()
 

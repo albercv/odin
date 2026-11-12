@@ -88,5 +88,14 @@ class ClaudeErrorStreakTest(unittest.TestCase):
         from banco.ledger import CONSECUTIVE_ERRORS
         self.assertEqual(CONSECUTIVE_ERRORS, 3)
 
+
+class ChargeNoteTest(unittest.TestCase):
+    def test_note_is_stored_with_the_charge(self):
+        ledger = Ledger(10.0)
+        ledger.charge(0.0, note="prueba sin coste notificado")
+        self.assertEqual(ledger.charges[0]["nota"], "prueba sin coste notificado")
+        self.assertTrue(ledger.can_launch())  # una prueba sin coste no bloquea el libro
+
+
 if __name__ == "__main__":
     unittest.main()

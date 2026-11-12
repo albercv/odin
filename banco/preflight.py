@@ -29,7 +29,10 @@ def _result(stdout):
     return None
 
 
-def _call(claude_bin, model, timeout, ledger):
+PRUEBA_SIN_COSTE = "prueba sin coste notificado"  # su coste no se conoce: se anota con 0 y no bloquea el libro
+
+
+def _call(claude_bin, model, timeout):
     """Lanza la llamada. Devuelve (proceso, None) o (None, motivo) si no llegó a lanzarse o agotó el tiempo."""
     with tempfile.TemporaryDirectory(prefix="odin-prueba-") as d:
         cfg = Path(d) / "mcp.json"
@@ -39,19 +42,24 @@ def _call(claude_bin, model, timeout, ledger):
                                   capture_output=True, timeout=timeout,
                                   env={**os.environ, **ejecutar.ENTORNO_AISLADO}), None
         except subprocess.TimeoutExpired:
-            ledger.charge(None)  # puede haber gastado antes de agotar el tiempo: coste desconocido
             return None, f"tiempo agotado ({timeout} s)"
-        except OSError as error:  # no llegó a lanzarse: no hay gasto
+        except OSError as error:
             return None, f"no se pudo lanzar claude: {error}"
 
 
 def run_preflight(claude_bin, model, timeout, ledger):
-    """Devuelve None si la llamada de prueba fue bien, o el motivo del fallo. Su coste se cobra en el libro."""
-    proc, error = _call(claude_bin, model, timeout, ledger)
+    """Devuelve None si la llamada de prueba fue bien, o el motivo del fallo. Su coste va al libro; si no se conoce
+    (sin resultado, sin total_cost_usd o tiempo agotado), se anota con 0 y el motivo, y el libro sigue usable."""
+    proc, error = _call(claude_bin, model, timeout)
     if proc is None:
+        ledger.charge(0.0, note=PRUEBA_SIN_COSTE)
         return error
     result = _result(proc.stdout)
-    ledger.charge(None if result is None else result.get("total_cost_usd"))
+    cost = None if result is None else result.get("total_cost_usd")
+    if isinstance(cost, (int, float)) and not isinstance(cost, bool):
+        ledger.charge(cost)
+    else:
+        ledger.charge(0.0, note=PRUEBA_SIN_COSTE)
     if result is None:
         return f"sin resultado (código {proc.returncode}): {proc.stderr[-300:]}"
     if result.get("is_error"):

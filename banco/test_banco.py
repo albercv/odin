@@ -1092,5 +1092,22 @@ class CachedCostTest(Harness):
         return round(sum((r.get("coste_usd") or 0) for r in records if not r.get("cached")), 4)
 
 
+class PreflightCostTest(Harness):
+    """Una prueba sin coste notificado se anota con coste 0 y no bloquea el libro: la tanda se reanuda sin reiniciarlo."""
+
+    def test_preflight_without_cost_does_not_lock_the_ledger(self):
+        lost = SimpleNamespace(stdout="", stderr="boom", returncode=1)
+        path = self.config(concurrency=1)
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        with mock.patch("banco.preflight._call", return_value=(lost, None)):
+            code = self.run_cli(path, preflight=True)
+        self.assertEqual(code, 2)
+        self.assertIn("la llamada de prueba falló: sin resultado", (self.only_folder() / "PARADA.txt").read_text(encoding="utf-8"))
+        charges = json.loads((self.state_dir / "libro-prueba.json").read_text(encoding="utf-8"))["cargos"]
+        self.assertEqual((charges[0]["coste_usd"], charges[0]["nota"]), (0.0, "prueba sin coste notificado"))
+        with fake_env(FAKE_VEREDICTO="si"):
+            self.assertEqual(banco.main(["reanudar", "--config", str(path)], layout=self.layout), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
