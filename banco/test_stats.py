@@ -1,3 +1,4 @@
+import math
 import unittest
 
 from banco.stats import (
@@ -75,11 +76,16 @@ class PpiMeanTest(unittest.TestCase):
         judge_labeled = [True] * 10
         truth_labeled = [True] * 8 + [False] * 2
         estimate, low, high = ppi_mean(judge_unlabeled, judge_labeled, truth_labeled)
+        # Varianza: 0 (juez constante) + pvarianza(rectificador) / 10, con 8 ceros y 2 valores -1: 0,16 / 10.
+        half = 1.96 * math.sqrt(0.16 / 10)
         self.assertAlmostEqual(estimate, 0.8)
-        self.assertLessEqual(low, estimate)
-        self.assertGreaterEqual(high, estimate)
-        self.assertGreaterEqual(low, 0.0)
-        self.assertLessEqual(high, 1.0)
+        self.assertAlmostEqual(low, 0.8 - half, places=3)
+        self.assertAlmostEqual(low, 0.552, places=3)
+        self.assertEqual(high, 1.0)
+
+    def test_ppi_clips_estimate_into_unit_interval(self):
+        self.assertEqual(ppi_mean([True], [False], [True]), (1.0, 1.0, 1.0))
+        self.assertEqual(ppi_mean([False], [True], [False]), (0.0, 0.0, 0.0))
 
     def test_ppi_rejects_empty_or_mismatched_input(self):
         with self.assertRaises(ValueError):

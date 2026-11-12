@@ -11,6 +11,10 @@ def _check_pair(a: list, b: list) -> None:
         raise ValueError("las listas no pueden estar vacías")
 
 
+def _clamp(x: float) -> float:
+    return min(1.0, max(0.0, x))
+
+
 def wilson(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
     if n <= 0:
         raise ValueError("n debe ser mayor que 0 para el intervalo de Wilson")
@@ -21,7 +25,7 @@ def wilson(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
     denom = 1 + z2 / n
     center = (p + z2 / (2 * n)) / denom
     half = z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / denom
-    return max(0.0, center - half), min(1.0, center + half)
+    return _clamp(center - half), _clamp(center + half)
 
 
 def cohen_kappa(a: list[bool], b: list[bool]) -> float:
@@ -62,4 +66,4 @@ def ppi_mean(judge_unlabeled: list[bool], judge_labeled: list[bool], truth_label
     estimate = mean(unlabeled) + mean(rectifier)
     variance = pvariance(unlabeled) / len(unlabeled) + pvariance(rectifier) / len(rectifier)
     half = z * math.sqrt(variance)
-    return estimate, max(0.0, estimate - half), min(1.0, estimate + half)
+    return _clamp(estimate), _clamp(estimate - half), _clamp(estimate + half)
