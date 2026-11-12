@@ -7,6 +7,7 @@ import { Company } from '../pages/Company';
 import { Documents } from '../pages/Documents';
 import { GroupAdmins } from '../pages/GroupAdmins';
 import { Review } from '../pages/Review';
+import { Topics } from '../pages/Topics';
 import { withViewTransition } from '../ui/viewTransition';
 import { Sidebar, type Page } from './Sidebar';
 import styles from './AppShell.module.css';
@@ -50,6 +51,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         {needsCompany && !companyId && <p>Elige una empresa en el menú.</p>}
         {needsCompany && companyId && page === 'company' && <Company key={companyId} companyId={companyId} me={me} />}
         {needsCompany && companyId && page === 'documents' && <Documents key={companyId} companyId={companyId} scannedDocumentsSupported={me.scannedDocumentsSupported} />}
+        {needsCompany && companyId && page === 'topics' && <Topics key={companyId} companyId={companyId} />}
         {needsCompany && companyId && page === 'review' && <Review key={companyId} companyId={companyId} onPendingChanged={setPending} />}
       </main>
     </div>

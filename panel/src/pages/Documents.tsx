@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { MAX_DOCUMENTS, api, type S } from '../api/client';
+import { AiMark } from '../components/AiMark';
 import { DocumentDetail } from '../components/DocumentDetail';
 import { Notice } from '../components/Notice';
 import { SupersedeDialog } from '../components/SupersedeDialog';
+import { TaggingStatus } from '../components/TaggingStatus';
 import { UploadDialog } from '../components/UploadDialog';
 import { useAction, useLoad } from '../components/useLoad';
 import { Button } from '../ui/Button';
@@ -45,6 +47,10 @@ function DocRow({ d, scannedDocumentsSupported, selected, onSelect, ...handlers 
       <Td label="Estado">
         <StatusPill tone={tone}>{label}</StatusPill>
         {d.pagesWithoutText.length > 0 && <div className={styles.superseded}>{`Páginas sin texto, no leídas: ${d.pagesWithoutText.join(', ')}`}</div>}
+      </Td>
+      <Td label="Temas">
+        {d.topics.map((t) => <div key={t.id} className={styles.topic}>{t.name}{t.source === 'AI' && <AiMark />}</div>)}
+        <TaggingStatus status={d.taggingStatus} />
       </Td>
       <Td label="Motivo">{d.failureReason}</Td>
       <Td className={tableStyles.actions}>
@@ -112,7 +118,7 @@ export function Documents({ companyId, scannedDocumentsSupported = false }: { co
       <Section title="Documentos de la empresa">
         {list.data?.documents.length === 0 && <EmptyState title="Aún no hay documentos" description="Sube el primero con «Subir documento»." />}
         <SelectionBar count={selected.size} onMark={mark} />
-        <Table columns={['Título', 'Estado', 'Motivo']}>
+        <Table columns={['Título', 'Estado', 'Temas', 'Motivo']}>
           {list.data?.documents.map((d) => <DocRow key={d.id} d={d} scannedDocumentsSupported={scannedDocumentsSupported} selected={selected.has(d.id)} onSelect={() => toggle(d.id)}
             onRetry={() => reloadAfter(() => api.retry(d.id))} onUnmark={() => reloadAfter(() => api.unsupersede(d.id))} onToggleCase={() => reloadAfter(() => api.markCase(d.id, !d.caseDocument))}
             onDetail={() => setOpen({ kind: 'detail', document: d })} onSupersede={() => setOpen({ kind: 'supersede', document: d })} />)}

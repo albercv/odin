@@ -15,6 +15,7 @@ const WORKER = { name: 'Trabajador E2E', email: 'e2e-worker@demo.test', renamed:
 const COMPANY_ADMIN = { name: 'Admin E2E', email: 'e2e-admin@demo.test', password: `clave-${randomUUID()}`, newPassword: `clave-${randomUUID()}`, resetPassword: `clave-${randomUUID()}` };
 const FIRST_GROUP_ADMIN = 'Administrador Demo';
 const SECOND_GROUP_ADMIN = { name: 'Segundo Relevo', email: 'e2e-relevo@demo.test', password: `clave-${randomUUID()}` };
+const TOPIC = 'agua y humedades';
 const PROJECT = { name: 'Proyecto E2E', renamed: 'Proyecto E2E renombrado' };
 
 const usersSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Personas' }) });
@@ -386,9 +387,62 @@ async function groupAdminHandover(browser: Browser): Promise<void> {
   console.log('✓ Admin 18: relevo del administrador del grupo: el segundo entra, desactiva al primero (que ya no entra) y lo reactiva');
 }
 
+const topicsTable = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Temas de la empresa' }) });
+
+async function addTopic(page: Page, name: string, definition: string): Promise<void> {
+  await page.getByRole('button', { name: 'Añadir tema', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Añadir tema' });
+  await dialog.getByLabel('Nombre').fill(name);
+  await dialog.getByLabel('Definición').fill(definition);
+  await dialog.getByRole('button', { name: 'Guardar tema' }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
+async function createAndEditTopics(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Temas', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Sin temas no se etiqueta ningún documento' })).toBeVisible();
+  await addTopic(page, TOPIC, 'Problemas de agua en el edificio');
+  await expect(page.getByRole('status')).toContainText('Los documentos de esta empresa se volverán a etiquetar');
+  await expect(page.getByText(/a ser etiquetados\.|Todos los documentos están etiquetados\./)).toBeVisible();
+  await addTopic(page, 'otros', 'Todo lo demás');
+  await openActions(topicsTable(page), 'otros');
+  await page.getByRole('button', { name: 'Editar otros', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Editar tema' });
+  await dialog.getByLabel('Definición').fill('Cualquier otra cosa');
+  await dialog.getByRole('button', { name: 'Guardar tema' }).click();
+  await expect(row(topicsTable(page), 'otros')).toContainText('Cualquier otra cosa');
+}
+
+async function waitForTagging(page: Page, title: string): Promise<Locator> {
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  const documentRow = page.getByRole('row').filter({ hasText: title });
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Actualizar', exact: true }).click();
+    await expect(documentRow).toContainText('Etiquetado', { timeout: 1500 });
+  }).toPass({ timeout: 60_000 });
+  return documentRow;
+}
+
+async function removeAndRecoverDocumentTopic(page: Page): Promise<void> {
+  const documentRow = await waitForTagging(page, CASE_FILES[0] ?? '');
+  await expect(documentRow.getByText('IA', { exact: true })).toBeVisible();
+  await documentRow.getByRole('button', { name: `Más acciones de ${CASE_FILES[0]}`, exact: true }).click();
+  await documentRow.getByRole('button', { name: `Ver detalle de ${CASE_FILES[0]}`, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: CASE_FILES[0] });
+  await dialog.getByRole('button', { name: `Quitar ${TOPIC}`, exact: true }).click();
+  await expect(dialog.getByText(`Quitado por ${FIRST_GROUP_ADMIN}`)).toBeVisible();
+  await dialog.getByRole('button', { name: `Recuperar ${TOPIC}`, exact: true }).click();
+  await expect(dialog.getByRole('button', { name: `Quitar ${TOPIC}`, exact: true })).toBeVisible();
+  await expect(dialog.getByText('Quitado por', { exact: false })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Cerrar' }).click();
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 19: temas de la empresa creados y editados, estado del etiquetado a la vista, y un tema de la IA quitado y recuperado en un documento');
+}
+
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
 // El administrador del grupo reutiliza la sesión de prepare (sin login) y los pasos que entran de nuevo van al final.
 test('administración del panel de extremo a extremo', async ({ page, context, browser }) => {
+  test.setTimeout(120_000); // el etiquetado espera a su sondeo de 2 s
   const [name, value] = state.sessionCookie.split('=');
   await context.addCookies([{ name: name ?? '', value: value ?? '', url: process.env.DEMO_PANEL_URL ?? '' }]);
   await page.goto(process.env.DEMO_PANEL_URL ?? '');
@@ -407,6 +461,8 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await promoteWorkerWithoutPassword(page, browser);
   await deleteProjectMember(page);
   await uploadCaseFilesAndMarkSelection(page);
+  await createAndEditTopics(page);
+  await removeAndRecoverDocumentTopic(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);
   await groupAdminHandover(browser);

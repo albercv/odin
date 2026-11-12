@@ -3,7 +3,7 @@ import { Icon, type IconName } from '../ui/Icon';
 import { BrandMark } from './BrandMark';
 import styles from './Sidebar.module.css';
 
-export type Page = 'companies' | 'company' | 'documents' | 'review' | 'groupAdmins' | 'account';
+export type Page = 'companies' | 'company' | 'documents' | 'topics' | 'review' | 'usage' | 'gaps' | 'groupAdmins' | 'account';
 
 type Props = {
   isGroup: boolean; name: string; companyName?: string; switcher?: SwitcherProps; page: Page; pending: number;
@@ -40,6 +40,7 @@ export function Sidebar({ isGroup, name, companyName, switcher, page, pending, s
         {isGroup && link('companies', 'Grupo', 'buildings')}
         {link('company', 'Empresa', 'building')}
         {link('documents', 'Documentos', 'file')}
+        {link('topics', 'Temas', 'spark')}
         {link('review', 'Revisión', 'review', pending)}
       </nav>
       <div className={`${styles.nav} ${styles.foot}`}>

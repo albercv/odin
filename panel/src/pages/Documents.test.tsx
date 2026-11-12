@@ -10,7 +10,7 @@ afterEach(() => vi.restoreAllMocks());
 const list = 'GET /v1/admin/companies/c1/documents?offset=0&limit=500';
 const projects = 'GET /v1/admin/companies/c1/projects';
 const supersede = 'PUT /v1/admin/documents/d1/superseded-by';
-const base = { companyId: 'c1', filename: 'f.pdf', format: 'PDF', paginated: true, attemptCount: 1, pagesWithoutText: [] as number[], uploadedAt: '2026-03-10T10:00:00Z' };
+const base = { companyId: 'c1', filename: 'f.pdf', format: 'PDF', paginated: true, attemptCount: 1, pagesWithoutText: [] as number[], topics: [] as unknown[], uploadedAt: '2026-03-10T10:00:00Z' };
 const old = { ...base, id: 'd1', title: 'Póliza 2022', status: 'READY', projectId: 'p1' };
 const renewed = { ...base, id: 'd2', title: 'Póliza 2024', status: 'READY', projectId: 'p1', uploadedAt: '2026-05-02T10:00:00Z' };
 const draft = { ...base, id: 'd3', title: 'Borrador', status: 'FAILED' };
@@ -205,4 +205,19 @@ test('marksSelectedDocumentsAsCases', async () => {
   await userEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar Borrador' }));
   await userEvent.click(screen.getByRole('button', { name: 'Quitar marca de caso' }));
   await waitFor(() => expect(calls.filter((c) => c.key === marks).at(-1)?.body).toEqual({ documentIds: ['d3'], caseDocument: false }));
+});
+
+test('showsTaggingStatusLabels', async () => {
+  const tagged = { ...old, id: 'd4', title: 'Con tema', taggingStatus: 'DONE', topics: [{ id: 't1', name: 'Agua', source: 'AI' }, { id: 't2', name: 'Seguros', source: 'ADMIN' }] };
+  show(routes([tagged, { ...renewed, taggingStatus: 'TAGGING' }, { ...draft, taggingStatus: 'FAILED' }, { ...old, id: 'd5', title: 'Sin fila' }, { ...old, id: 'd6', title: 'En espera', taggingStatus: 'PENDING' }]));
+  const label = async (title: string) => within((await screen.findByText(title)).closest('tr')!);
+  expect((await label('Con tema')).getByText('Etiquetado')).toBeInTheDocument();
+  expect((await label('Póliza 2024')).getByText('Etiquetando')).toBeInTheDocument();
+  expect((await label('Borrador')).getByText('Falló')).toBeInTheDocument();
+  expect((await label('Sin fila')).getByText('Sin etiquetar')).toBeInTheDocument();
+  expect((await label('En espera')).getByText('Sin etiquetar')).toBeInTheDocument();
+  const topics = await label('Con tema');
+  expect(topics.getByText('Agua')).toHaveTextContent('asignado por IA');
+  expect(topics.getByText('Seguros')).not.toHaveTextContent('asignado por IA');
+  expect(screen.getByRole('columnheader', { name: 'Temas' })).toBeInTheDocument();
 });

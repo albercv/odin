@@ -152,6 +152,21 @@ async function openGroupAdmins(page: Page): Promise<void> {
   await expect(page.getByRole('row', { name: /Administrador/ }).first()).toBeVisible();
 }
 
+async function openTopics(page: Page, company: string): Promise<void> {
+  await openCompany(page, company);
+  await page.getByRole('link', { name: 'Temas', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Temas', level: 1 })).toBeVisible();
+}
+
+// «Empresa E» (demo-client, paso 11) ya tiene temas y un documento etiquetado.
+async function openDocumentTopics(page: Page): Promise<void> {
+  await openCompany(page, 'Empresa E');
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await page.getByRole('button', { name: 'Más acciones de Incidencia ficticia', exact: true }).click();
+  await page.getByRole('button', { name: 'Ver detalle de Incidencia ficticia', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Incidencia ficticia' }).getByRole('button', { name: 'Volver a etiquetar' })).toBeVisible();
+}
+
 const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   login: async (page) => { await page.goto(PANEL); await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible(); },
   cover: async (page) => { await page.goto(`${PANEL}/#cover`); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); },
@@ -165,6 +180,9 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   'company switcher': openSwitcher,
   'group switcher': openSwitcher,
   'group admins': openGroupAdmins,
+  'topics empty': (page) => openTopics(page, EMPTY_COMPANY),
+  'topics list': async (page) => { await openTopics(page, 'Empresa E'); await expect(page.getByRole('row').filter({ hasText: 'agua y humedades' })).toBeVisible(); },
+  'document topics dialog': openDocumentTopics,
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,
   'review reject panel': openRejectPanel,

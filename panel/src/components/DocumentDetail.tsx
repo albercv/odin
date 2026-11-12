@@ -3,6 +3,7 @@ import { STATUS } from '../pages/documentStatus';
 import { formatDate, projectName } from '../pages/reviewNames';
 import { FormDialog } from '../ui/FormDialog';
 import { StatusPill } from '../ui/StatusPill';
+import { DocumentTopics } from './DocumentTopics';
 import styles from './DocumentDetail.module.css';
 
 type Props = { document: S['DocumentView']; projects: S['ProjectView'][]; onClose: () => void };
@@ -23,6 +24,7 @@ export function DocumentDetail({ document: d, projects, onClose }: Props) {
           </div>
         )}
       </dl>
+      <DocumentTopics documentId={d.id} companyId={d.companyId} />
     </FormDialog>
   );
 }
