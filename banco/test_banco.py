@@ -805,7 +805,8 @@ class ReanudarStateTest(Harness):
         self.assertEqual(state["huella"], code_fingerprint(BANCO.parent)[0])
         carga = json.loads((self.state_dir / "carga.json").read_text(encoding="utf-8"))
         self.assertEqual(state["stack_digest"], stack_digest(carga))
-        self.assertIn("3 errores seguidos de claude", state["motivo"])
+        # con el LIMITE del CTO 2 (425ec9c) el aviso de 5 horas se reconoce como límite antes de llegar a la racha
+        self.assertIn("5-hour limit", state["motivo"])
         self.assertEqual(state["renovacion"], "9:50pm (Europe/Madrid)")
         self.assertEqual(state["recuentos"], {"respuestas_finales": 0, "buscadores_validos": {}})
 
