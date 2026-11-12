@@ -15,9 +15,9 @@ public class PostgresQuestionLog implements QuestionLog {
     @Override
     public void record(QuestionRecord r) {
         tx.runInScope(CompanyScope.of(r.companyId()), jdbc -> jdbc.sql("""
-                INSERT INTO question_record (id, company_id, author_id, text, hit_count, asked_at)
-                VALUES (:id, :company, :author, :text, :hits, :asked)""")
+                INSERT INTO question_record (id, company_id, author_id, text, hit_count, asked_at, kind)
+                VALUES (:id, :company, :author, :text, :hits, :asked, :kind)""")
                 .param("id", r.id()).param("company", r.companyId().value()).param("author", r.authorId().value())
-                .param("text", r.text()).param("hits", r.hitCount()).param("asked", Sql.ts(r.askedAt())).update());
+                .param("text", r.text()).param("hits", r.hitCount()).param("asked", Sql.ts(r.askedAt())).param("kind", r.kind().name()).update());
     }
 }

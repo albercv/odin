@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 
 public interface DocumentRepository {
@@ -37,15 +38,27 @@ public interface DocumentRepository {
 
     void clearSuperseded(CompanyId companyId, DocumentId id);
 
+    /** Marca o desmarca la ficha de caso de todos los documentos de la empresa en una transacción; si falta alguno, 404 y no cambia ninguno. */
+    int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument);
+
     Optional<Document> findBySha256(CompanyId companyId, String sha256);
 
-    /** Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. */
+    /**
+     * Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. Con {@code caseDocument}, solo los
+     * que tienen esa marca de ficha de caso.
+     */
     List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
-            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit);
+            Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
+            int limit);
+
+    default List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
+            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit) {
+        return list(scope, visibility, projectId, topicId, Optional.empty(), status, offset, limit);
+    }
 
     default List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<DocumentStatus> status, int offset, int limit) {
-        return list(scope, visibility, projectId, Optional.empty(), status, offset, limit);
+        return list(scope, visibility, projectId, Optional.empty(), Optional.empty(), status, offset, limit);
     }
 
     Optional<DocumentPage> findPage(CompanyScope scope, ProjectVisibility visibility, DocumentId id, int pageNumber);

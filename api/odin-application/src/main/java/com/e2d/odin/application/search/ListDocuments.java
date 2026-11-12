@@ -37,13 +37,19 @@ public class ListDocuments {
 
     public List<TaggedDocument> execute(Actor actor, Optional<ProjectId> projectId, Optional<TopicId> topicId,
             int offset, Optional<Integer> limit) {
+        return execute(actor, projectId, topicId, Optional.empty(), offset, limit);
+    }
+
+    /** El filtro por marca de caso depende de SEARCH_KNOWLEDGE, como el listado, y no de SIMILAR_CASES. */
+    public List<TaggedDocument> execute(Actor actor, Optional<ProjectId> projectId, Optional<TopicId> topicId,
+            Optional<Boolean> caseDocument, int offset, Optional<Integer> limit) {
         var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE);
         WorkerAccess.requireProject(access.visibility(), projectId);
         List<Topic> companyTopics = topics.list(access.companyId());
         topicId.filter(id -> companyTopics.stream().noneMatch(t -> t.id().equals(id))).ifPresent(id -> {
             throw new NotFoundException("Tema no encontrado");
         });
-        var entries = documents.list(actor.scope(), access.content(), projectId, topicId,
+        var entries = documents.list(actor.scope(), access.content(), projectId, topicId, caseDocument,
                 Optional.of(DocumentStatus.READY), Math.max(0, offset), WorkerAccess.cap(limit, 100, 500));
         return TaggedDocuments.of(entries, actor.scope(), access.content(), companyTopics, tagging);
     }

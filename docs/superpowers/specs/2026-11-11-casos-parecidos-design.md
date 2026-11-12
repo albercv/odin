@@ -71,7 +71,7 @@
 ### 5.1 Quién marca un caso
 
 - **Al subir:** el campo `caseDocument` del multipart, falso si no llega.
-- **Después:** `PATCH /v1/admin/documents/{documentId}` con `{ caseDocument }`, solo para administradores de esa empresa o el del grupo. El orden de las comprobaciones es el de siempre: 404 si no existe, 403 si es de otra empresa.
+- **Después:** `PATCH /v1/admin/documents/{documentId}` con `{ caseDocument }`, solo para administradores de esa empresa o el del grupo. El orden de las comprobaciones es el de siempre: 404 si no existe o es de otra empresa, como en `GetDocument`; un trabajador recibe 403.
 - **Por lotes (D-040, D-042):**
   - **Al subir:** el panel deja elegir varios ficheros a la vez, con una sola casilla «Son fichas de caso» para todos. Envía una subida por fichero, con el mismo `caseDocument`. Con varios ficheros, el título de cada uno es su nombre sin la extensión.
   - **En la lista:** el administrador selecciona varios documentos y elige «Marcar como caso» o «Quitar marca de caso».

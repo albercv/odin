@@ -9,6 +9,7 @@ import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.search.SearchQuery;
+import com.e2d.odin.domain.search.SimilarCasesQuery;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
@@ -53,6 +54,7 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         documentOfA = newDocument(a, newUser(a), "Póliza de A", DocumentStatus.READY);
         docs.replacePages(documentOfA.id(),
                 List.of(new DocumentPage(documentOfA.id(), 1, "filtración secreta de A", "lector", "1")));
+        docs.markCaseDocuments(a, Set.of(documentOfA.id()), true);
         pendingOfA = card(CardStatus.PENDING);
         card(CardStatus.APPROVED);
     }
@@ -70,6 +72,10 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         seen += ownerDocs.findPage(scope, ProjectVisibility.all(), documentOfA.id(), 1).stream().toList().size();
         seen += ownerCards.findById(scope, ProjectVisibility.all(), pendingOfA.id()).stream().toList().size();
         seen += ownerCards.listByStatus(scope, ProjectVisibility.all(), CardStatus.PENDING).size();
+        seen += ownerDocs.list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), Optional.of(true),
+                Optional.empty(), 0, 10).size();
+        seen += ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("filtración"), scope,
+                ProjectVisibility.all(), Optional.empty(), 10)).cases().size();
         return seen + ownerSearch.search(new SearchQuery(List.of("filtración"), scope, ProjectVisibility.all(), Optional.empty(), 10))
                 .hits().size();
     }
@@ -81,8 +87,8 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
 
     @Test
     void sameConnectionStillReadsAWithItsOwnScope() {
-        assertThat(readEverything(CompanyScope.of(a))).isEqualTo(7);
-        assertThat(readEverything(CompanyScope.all())).isEqualTo(7);
+        assertThat(readEverything(CompanyScope.of(a))).isEqualTo(10);
+        assertThat(readEverything(CompanyScope.all())).isEqualTo(10);
     }
 
     @Test
@@ -109,6 +115,41 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
                 .extracting(KnowledgeCard::id).doesNotContain(closedCard.id());
         assertThat(ownerSearch.search(new SearchQuery(List.of("zafiro"), scope, none, Optional.empty(), 10))
                 .hits()).isEmpty();
+    }
+
+    @Test
+    void closedProjectCasesAreHiddenFromEmptyVisibilityThroughAConnectionThatBypassesRls() {
+        ProjectId project = newProject(a, "Cerrado");
+        UserId user = newUser(a);
+        Document closed = new Document(new DocumentId(UUID.randomUUID()), a, Optional.of(project), "Cerrado",
+                "f.pdf", DocumentFormat.PDF, UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(),
+                true, user, NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
+        docs.save(closed);
+        docs.markCaseDocuments(a, Set.of(closed.id()), true);
+        docs.replacePages(closed.id(), List.of(new DocumentPage(closed.id(), 1, "zafiro cerrado", "lector", "1")));
+        cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), a, Optional.of(project), "Ficha aprobada cerrada",
+                "zafiro cerrado", Optional.empty(), user, NOW, CardStatus.APPROVED, Optional.empty()));
+        CompanyScope scope = CompanyScope.of(a);
+        var none = ProjectVisibility.of(Set.of());
+
+        assertThat(ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("zafiro"), scope, none,
+                Optional.empty(), 10)).cases()).isEmpty();
+        assertThat(ownerDocs.list(scope, none, Optional.empty(), Optional.empty(), Optional.of(true),
+                Optional.empty(), 0, 10)).extracting(e -> e.document().id()).doesNotContain(closed.id());
+        assertThat(ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("zafiro"), scope,
+                ProjectVisibility.of(Set.of(project)), Optional.empty(), 10)).cases()).hasSize(2);
+    }
+
+    @Test
+    void caseMarkOfAnotherCompanyChangesNothingThroughAConnectionThatBypassesRls() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> ownerDocs.markCaseDocuments(b, Set.of(documentOfA.id()), false))
+                .isInstanceOf(com.e2d.odin.domain.shared.NotFoundException.class);
+
+        assertThat(ownerDocs.findById(CompanyScope.of(a), ProjectVisibility.all(), documentOfA.id()).orElseThrow()
+                .caseDocument()).isTrue();
+        assertThat(ownerDocs.list(CompanyScope.of(b), ProjectVisibility.all(), Optional.empty(), Optional.empty(),
+                Optional.of(true), Optional.empty(), 0, 10)).isEmpty();
     }
 
     @Test

@@ -9,6 +9,7 @@ import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CardId;
@@ -64,7 +65,7 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         new PostgresTopicRepository(tx).save(topic);
         new PostgresTaggingRepository(tx).decide(CompanyScope.of(company), d.id(), topic.id(), TopicState.ACTIVE, user,
                 NOW);
-        new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), company, user, "pregunta", 0, NOW));
+                new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), company, user, "pregunta", 0, NOW, QuestionKind.SEARCH));
     }
 
     private long count(Connection c, String table) throws SQLException {

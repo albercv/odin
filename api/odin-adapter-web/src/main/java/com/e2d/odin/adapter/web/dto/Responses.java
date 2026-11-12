@@ -25,6 +25,9 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
+import com.e2d.odin.domain.search.SourceType;
+import com.e2d.odin.domain.search.SimilarCasesResult;
+import com.e2d.odin.domain.search.SimilarCase;
 import com.e2d.odin.domain.topic.DocumentTagging;
 import com.e2d.odin.domain.topic.DocumentTopic;
 import com.e2d.odin.domain.topic.Topic;
@@ -176,7 +179,8 @@ public final class Responses {
     public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
             int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt,
-            List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics) {
+            List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics,
+            boolean caseDocument) {
         public static DocumentView from(DocumentEntry entry) {
             return from(new TaggedDocument(entry, Optional.empty(), List.of()));
         }
@@ -190,7 +194,7 @@ public final class Responses {
                     d.attemptCount(), entry.supersededBy().map(DocumentLink::from).orElse(null),
                     d.supersededAt().orElse(null), d.pagesWithoutText(),
                     tagged.tagging().map(t -> t.status().name()).orElse(null),
-                    tagged.topics().stream().map(TopicLabelView::from).toList());
+                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
         }
     }
 
@@ -243,14 +247,17 @@ public final class Responses {
     /** Vista del trabajador: solo documentos listos y sin datos internos del proceso. */
     public record WorkerDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, Instant uploadedAt, boolean superseded, @Nullable Replacement replacement,
-            List<TopicLabelView> topics) {
+            List<TopicLabelView> topics, boolean caseDocument) {
         public static WorkerDocumentView from(TaggedDocument tagged) {
             Document d = tagged.entry().document();
             return new WorkerDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
                     tagged.entry().replacement().map(Replacement::from).orElse(null),
-                    tagged.topics().stream().map(TopicLabelView::from).toList());
+                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
         }
+    }
+
+    public record CaseMarksResult(int updated) {
     }
 
     public record Upload(DocumentView document, boolean duplicate) {
@@ -294,6 +301,33 @@ public final class Responses {
     public record SearchResponse(List<Hit> hits, boolean noSource) {
         public static SearchResponse from(SearchResult r) {
             return new SearchResponse(r.hits().stream().map(Hit::from).toList(), r.hits().isEmpty());
+        }
+    }
+
+    public record CasePageView(int number, String text) {
+    }
+
+    /** Un caso parecido. Sin autor a propósito: ni quien subió el documento ni quien aportó la ficha (D-040). */
+    public record SimilarCaseView(String sourceType, UUID sourceId, String title, @Nullable UUID projectId,
+            Instant addedAt, int pageCount, List<CasePageView> pages, @Nullable String body, boolean truncated,
+            String excerpt, String origin, @Nullable String originLabel, boolean superseded,
+            @Nullable Replacement replacement) {
+        static final String CARD_LABEL = "Ficha aportada por un trabajador, redactada con IA";
+
+        static SimilarCaseView from(SimilarCase c) {
+            boolean card = c.sourceType() == SourceType.KNOWLEDGE_CARD;
+            return new SimilarCaseView(c.sourceType().name(), c.sourceId(), c.title(),
+                    c.projectId().map(p -> p.value()).orElse(null), c.addedAt(), c.pageCount(),
+                    c.pages().stream().map(p -> new CasePageView(p.number(), p.text())).toList(),
+                    c.body().orElse(null), c.truncated(), c.excerpt(),
+                    card ? "KNOWLEDGE_CARD" : "ORIGINAL_DOCUMENT", card ? CARD_LABEL : null, c.superseded(),
+                    c.replacement().map(Replacement::from).orElse(null));
+        }
+    }
+
+    public record SimilarCasesResponse(List<SimilarCaseView> cases, boolean noSource) {
+        public static SimilarCasesResponse from(SimilarCasesResult r) {
+            return new SimilarCasesResponse(r.cases().stream().map(SimilarCaseView::from).toList(), r.noSource());
         }
     }
 

@@ -25,10 +25,21 @@ public record Document(
         int attemptCount,
         Optional<DocumentId> supersededBy,
         Optional<Instant> supersededAt,
-        List<Integer> pagesWithoutText) {
+        List<Integer> pagesWithoutText,
+        boolean caseDocument) {
 
     /** Tope de saltos al seguir las marcas de sustituido; evita que una cadena circular cuelgue las lecturas. */
     public static final int MAX_SUPERSESSION_CHAIN = 50;
+
+    public Document(DocumentId id, CompanyId companyId, Optional<ProjectId> projectId, String title,
+            String filename, DocumentFormat format, String sha256, DocumentStatus status,
+            Optional<String> failureReason, boolean paginated, UserId uploadedBy, Instant uploadedAt,
+            Optional<Instant> processingStartedAt, int attemptCount, Optional<DocumentId> supersededBy,
+            Optional<Instant> supersededAt, List<Integer> pagesWithoutText) {
+        this(id, companyId, projectId, title, filename, format, sha256, status, failureReason, paginated,
+                uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
+                pagesWithoutText, false);
+    }
 
     public Document(DocumentId id, CompanyId companyId, Optional<ProjectId> projectId, String title,
             String filename, DocumentFormat format, String sha256, DocumentStatus status,
@@ -56,7 +67,13 @@ public record Document(
     public Document withSupersession(Optional<DocumentId> newSupersededBy, Optional<Instant> newSupersededAt) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
                 paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, newSupersededBy,
-                newSupersededAt, pagesWithoutText);
+                newSupersededAt, pagesWithoutText, caseDocument);
+    }
+
+    public Document withCaseDocument(boolean newCaseDocument) {
+        return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
+                paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
+                pagesWithoutText, newCaseDocument);
     }
 
     public Document startProcessing(Instant now) {
@@ -66,7 +83,7 @@ public record Document(
     public Document markReady(boolean isPaginated, List<Integer> blankPages) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, DocumentStatus.READY,
                 Optional.empty(), isPaginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount,
-                supersededBy, supersededAt, blankPages);
+                supersededBy, supersededAt, blankPages, caseDocument);
     }
 
     public Document markFailed(String reason) {
@@ -100,6 +117,6 @@ public record Document(
             Optional<Instant> startedAt, int attempts) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, newStatus, reason,
                 isPaginated, uploadedBy, uploadedAt, startedAt, attempts, supersededBy, supersededAt,
-                pagesWithoutText);
+                pagesWithoutText, caseDocument);
     }
 }
