@@ -23,6 +23,7 @@ final class UserAdministration {
 
     static final String WORKER_HAS_NO_PASSWORD = "Un trabajador no tiene contraseña: entra con su clave personal";
     static final String GROUP_ADMIN_ALREADY_ADMINISTERS = "El administrador del grupo ya administra todas las empresas";
+    static final String LAST_GROUP_ADMIN = "Tiene que quedar al menos un administrador del grupo activo";
     static final String ADMINISTRATOR_NEEDS_EMAIL = "El administrador necesita correo";
 
     private UserAdministration() {
@@ -85,7 +86,7 @@ final class UserAdministration {
         }
     }
 
-    /** Sobre quien es el administrador del grupo solo actúa él mismo, aunque trabaje en una empresa. */
+    /** Sobre un administrador del grupo solo actúa un administrador del grupo. */
     static void requireGroupAdminToActOn(Actor actor, User person) {
         if (person.groupAdmin() && !actor.isGroupAdmin()) {
             throw new ForbiddenException("Solo el administrador del grupo puede editar a esta persona");
@@ -116,6 +117,14 @@ final class UserAdministration {
         String plain = password.filter(p -> !p.isBlank())
                 .orElseThrow(() -> new ValidationException("Hace falta una contraseña para administrar"));
         return user.withPasswordHash(passwords.hash(Validation.requirePassword(plain)));
+    }
+
+    /** Quien deja de poder administrar el grupo no puede ser el último administrador activo. */
+    static void requireAnotherActiveGroupAdmin(UserRepository users, User user) {
+        if (user.groupAdmin() && user.active() && users.lockGroupAdmins().stream()
+                .noneMatch(other -> other.active() && !other.id().equals(user.id()))) {
+            throw new ConflictException(LAST_GROUP_ADMIN);
+        }
     }
 
     /** Si la persona ya no administra ninguna empresa (y no es la administradora del grupo), sus sesiones del panel dejan de valer. */

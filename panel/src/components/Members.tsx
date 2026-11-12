@@ -12,6 +12,7 @@ import { MemberAccesses } from './MemberAccesses';
 import { EditForm, ResetPasswordForm, RolesForm } from './MemberEditors';
 import { MemberForm } from './MemberForm';
 import { Notice } from './Notice';
+import { confirmDeactivatePerson, confirmDeletePerson } from './personConfirmations';
 import { useAction, useLoad } from './useLoad';
 import styles from './Members.module.css';
 
@@ -50,11 +51,23 @@ function useRemovals(companyId: string, u: Member, onRemoved: RowProps['onRemove
     if (await act(() => api.removeMember(companyId, u.userId))) onRemoved(`Se ha quitado a ${u.displayName} de esta empresa`);
   };
   const erase = async () => {
-    const message = `¿Borrar a ${u.displayName}? Desaparece de todas las empresas y de sus proyectos, y sus claves dejan de valer. No se puede deshacer.`;
+    const message = confirmDeletePerson(u.displayName);
     if (!(await confirm({ message, confirmLabel: 'Borrar', danger: true }))) return;
     if (await act(() => api.deleteUser(u.userId))) onRemoved(`Se ha borrado a ${u.displayName}`);
   };
   return { remove, erase };
+}
+
+/** Deactivating a person affects the whole group, so it asks first; reactivating does not. */
+function useGroupToggle(u: Member, act: ReturnType<typeof useAction>['act'], onChanged: () => void) {
+  const confirm = useConfirm();
+  return async () => {
+    if (u.personActive) {
+      const message = confirmDeactivatePerson(u.displayName);
+      if (!(await confirm({ message, confirmLabel: 'Desactivar', danger: true }))) return;
+    }
+    if (await act(() => api.updateUser(u.userId, { active: !u.personActive }))) onChanged();
+  };
 }
 
 function MemberActions({ companyId, u, isGroup, meId, onChanged, onRemoved, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
@@ -63,6 +76,7 @@ function MemberActions({ companyId, u, isGroup, meId, onChanged, onRemoved, pane
   // The API only lets the group admin deactivate or remove a company admin, and nobody does it to themselves.
   const mayDisable = u.userId !== meId && (isGroup || !u.roles.includes('COMPANY_ADMIN'));
   const toggle = async () => (await act(() => api.setActive(companyId, u.userId, !u.active))) && onChanged();
+  const toggleGroup = useGroupToggle(u, act, onChanged);
   const { remove, erase } = useRemovals(companyId, u, onRemoved, act);
   const open = (target: Panel, text: string, label?: string) => (
     <RowAction variant="ghost" text={text} label={label} target={u.displayName} aria-expanded={panel === target} onClick={() => show(target)} />
@@ -71,6 +85,9 @@ function MemberActions({ companyId, u, isGroup, meId, onChanged, onRemoved, pane
     <>
       <RowActions label={`Más acciones de ${u.displayName}`}>
         {mayDisable && <RowAction variant="ghost" text={u.active ? 'Desactivar' : 'Activar'} target={u.displayName} onClick={toggle} />}
+        {isGroup && u.userId !== meId && (
+          <RowAction variant="ghost" text={u.personActive ? 'Desactivar en el grupo' : 'Activar en el grupo'} target={u.displayName} onClick={toggleGroup} />
+        )}
         {open('edit', 'Editar')}
         {open('roles', 'Papeles', 'Papeles de')}
         {mayDisable && <RowAction variant="danger" text="Quitar" target={u.displayName} onClick={remove} />}
@@ -80,6 +97,15 @@ function MemberActions({ companyId, u, isGroup, meId, onChanged, onRemoved, pane
         {isGroup && u.roles.includes('COMPANY_ADMIN') && open('password', 'Restablecer contraseña', 'Restablecer contraseña de')}
       </RowActions>
       <Notice message={error} />
+    </>
+  );
+}
+
+function AccessState({ u }: { u: Member }) {
+  return (
+    <>
+      <StatusPill tone={u.active ? 'ok' : 'off'}>{u.active ? 'Activo' : 'Desactivado'}</StatusPill>
+      {!u.personActive && <span className={styles.flag}><StatusPill tone="off">Desactivada en el grupo</StatusPill></span>}
     </>
   );
 }
@@ -99,7 +125,7 @@ function MemberRow(props: RowProps) {
           {!u.lastName && <span className={styles.flag}><StatusPill tone="pending">Faltan apellidos</StatusPill></span>}
         </Td>
         <Td label="Papel">{roleLabel(u.roles)}</Td>
-        <Td label="Acceso"><StatusPill tone={u.active ? 'ok' : 'off'}>{u.active ? 'Activo' : 'Desactivado'}</StatusPill></Td>
+        <Td label="Acceso"><AccessState u={u} /></Td>
         <Td className={tableStyles.actions}><MemberActions {...props} panel={panel} show={show} /></Td>
       </Tr>
       {panel && (

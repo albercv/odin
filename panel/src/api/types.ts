@@ -148,6 +148,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/group-admins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["add_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/documents/{documentId}/retry": {
         parameters: {
             query?: never;
@@ -171,7 +187,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         post: operations["create"];
         delete?: never;
@@ -203,9 +219,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
-        post: operations["add_1"];
+        post: operations["add_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -235,7 +251,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         post: operations["upload"];
         delete?: never;
@@ -427,7 +443,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -459,7 +475,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -484,6 +500,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/group-admins/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -501,6 +533,7 @@ export interface components {
             name: string;
             code: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
+            codeReviewed: boolean;
         };
         Setup: {
             setupToken?: string;
@@ -515,6 +548,8 @@ export interface components {
         };
         RecoverAdmin: {
             setupToken?: string;
+            /** @description Obligatorio si hay más de un administrador del grupo. */
+            email?: string;
             newPassword?: string;
         };
         SearchRequest: {
@@ -570,6 +605,29 @@ export interface components {
         Login: {
             email?: string;
             password?: string;
+        };
+        AddGroupAdmin: {
+            firstName?: string;
+            lastName?: string;
+            /** @description Obligatorio: es la puerta al panel. */
+            email?: string;
+            /** @description Solo hace falta si la persona no tiene ya contraseña. */
+            password?: string;
+        };
+        GroupAdminAdded: {
+            admin: components["schemas"]["GroupAdminView"];
+            alreadyExisted: boolean;
+            keptPassword: boolean;
+        };
+        GroupAdminView: {
+            /** Format: uuid */
+            userId: string;
+            firstName: string;
+            lastName?: string;
+            displayName: string;
+            email?: string;
+            personCode: string;
+            active: boolean;
         };
         DocumentView: {
             /** Format: uuid */
@@ -634,6 +692,7 @@ export interface components {
             email?: string;
             roles: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active: boolean;
+            personActive: boolean;
             hasPassword: boolean;
         };
         KeyLabel: {
@@ -764,6 +823,7 @@ export interface components {
             id: string;
             name: string;
             code: string;
+            codeReviewed: boolean;
         };
         ProjectMemberView: {
             /** Format: uuid */
@@ -1045,6 +1105,50 @@ export interface operations {
             };
         };
     };
+    list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupAdminView"][];
+                };
+            };
+        };
+    };
+    add_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddGroupAdmin"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupAdminAdded"];
+                };
+            };
+        };
+    };
     retry: {
         parameters: {
             query?: never;
@@ -1067,7 +1171,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    list_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1159,7 +1263,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1181,7 +1285,7 @@ export interface operations {
             };
         };
     };
-    add_1: {
+    add_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1257,7 +1361,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query?: {
                 offset?: number;
@@ -1646,7 +1750,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1692,7 +1796,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_5: {
         parameters: {
             query?: {
                 status?: "PENDING" | "APPROVED" | "REJECTED";
@@ -1722,6 +1826,26 @@ export interface operations {
             header?: never;
             path: {
                 keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
             };
             cookie?: never;
         };

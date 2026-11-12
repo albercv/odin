@@ -129,27 +129,30 @@ Borra los volúmenes (`make down; docker volume rm odin_pgdata odin_originals`) 
 
 ## Contraseña olvidada
 
-Si olvidas la contraseña del administrador del grupo, restablécela con el token de instalación de `deploy/.env`. Quien tiene ese fichero ya controla la base de datos, así que esta orden no abre nada nuevo.
+Es la recuperación de emergencia. Si ningún administrador del grupo puede entrar, restablece la contraseña de uno con el token de instalación de `deploy/.env`. Quien tiene ese fichero ya controla la base de datos, así que esta orden no abre nada nuevo.
 
 ```sh
 set -a; . deploy/.env; set +a
 curl -X POST http://127.0.0.1:8080/v1/setup/admin-password -H 'Content-Type: application/json' -d "{
   \"setupToken\": \"$ODIN_SETUP_TOKEN\",
+  \"email\": \"correo-del-administrador@ejemplo.com\",
   \"newPassword\": \"una-clave-nueva-de-12-o-mas\"
 }"
 ```
 
-Responde 204: la contraseña queda cambiada, el administrador vuelve a estar activo y sus sesiones del panel se cierran. Si el token no vale responde 403; si la instalación aún no está configurada, 409. Tiene el mismo límite de intentos que el login.
+Responde 204: la contraseña queda cambiada, el administrador vuelve a estar activo y sus sesiones del panel se cierran. El `email` es obligatorio si hay más de un administrador del grupo; con uno solo puedes omitirlo. Si el correo no es de un administrador del grupo responde 404. Si el token no vale responde 403; si la instalación aún no está configurada, 409. Tiene el mismo límite de intentos que el login.
 
 ## Cómo cambiar al administrador del grupo
 
-Hoy una instalación tiene un solo administrador del grupo. Si esa persona deja la empresa, el relevo lo hace quien controla `deploy/.env`. Los tres pasos son obligatorios y van en este orden (D-051):
+Una instalación puede tener varios administradores del grupo, todos con la misma autoridad. El relevo se hace desde el panel, sin renombrar la cuenta: cada persona conserva su código y lo que escribió queda a su nombre (D-051). Lo hace un administrador del grupo, en «Administración del grupo» de la barra lateral:
 
-1. **Cortar su entrada al panel.** Pon una contraseña nueva con el token de instalación, con la orden de «Contraseña olvidada». Sus sesiones del panel se cierran en ese momento.
-2. **Revocar sus claves personales.** Entra en el panel con esa contraseña. En cada empresa en la que la cuenta trabaja con su IA, abre «Claves» en su fila y usa «Revocar clave» en todas. Si te saltas este paso, sus claves siguen valiendo en el MCP aunque ya no entre en el panel.
-3. **Pasar la cuenta a la persona nueva.** En «Mi cuenta», cambia el nombre, los apellidos y el correo por los suyos, y la contraseña por una que elija ella.
+1. **Añadir a la persona nueva.** Pulsa «Añadir administrador del grupo» e indica nombre, apellidos, correo y contraseña. Si ya existe en el grupo, solo se le da la marca: conserva su nombre y su código, y la contraseña solo se pide si no tiene.
+2. **Desactivar a la anterior.** Entra la persona nueva, abre las acciones de la fila de la anterior y usa «Desactivar». Deja de entrar en el panel y sus claves dejan de valer en todo el grupo. Si prefieres que siga existiendo sin administrar, usa «Quitar administración»; si ya no debe figurar, «Borrar». Si se quita la marca a quien no tiene pertenencias, no aparece en ninguna empresa: para borrarlo, añádelo de nuevo como administrador del grupo por su correo y usa «Borrar».
+3. **Revisar sus claves.** Si la anterior trabajaba con su IA, desactivarla ya invalida sus claves; si solo le quitas la marca, siguen valiendo hasta que las revoques en «Claves».
 
-**Límite:** es la misma cuenta y el mismo código de persona. Lo que revisó o escribió el anterior aparecerá con el nombre nuevo. Por eso este relevo vale para la demostración y las pruebas, pero no para un cliente real: antes del primer cliente real, Odín tendrá varios administradores del grupo y relevo con una persona nueva (B-007).
+Siempre queda al menos un administrador del grupo activo: desactivar, quitar la marca o borrar al último da 409. Nadie se lo hace a sí mismo, y por eso su propia fila no tiene acciones.
+
+El token de instalación queda solo para emergencias, cuando nadie puede entrar: ver «Contraseña olvidada», con el `email` del administrador.
 
 ## Sesión del panel
 

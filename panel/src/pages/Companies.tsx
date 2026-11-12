@@ -10,6 +10,7 @@ import form from '../ui/Form.module.css';
 import { PageHeader } from '../ui/PageHeader';
 import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
+import { StatusPill } from '../ui/StatusPill';
 import { Table, Td, Tr, tableStyles } from '../ui/Table';
 
 type EditProps = { company: S['CompanyView']; onSaved: () => void; onCancel: () => void };
@@ -46,7 +47,7 @@ function CompanyRow({ c, onOpen, onDone }: RowProps) {
       <Td label="Empresa" className={tableStyles.person}>
         {renaming
           ? <EditForm company={c} onSaved={() => { setRenaming(false); onDone(); }} onCancel={() => setRenaming(false)} />
-          : <><strong>{c.name}</strong><span>Código {c.code}</span></>}
+          : <><strong>{c.name}</strong><span>Código {c.code} {!c.codeReviewed && <StatusPill tone="pending">Código por revisar</StatusPill>}</span></>}
         <Notice message={error} />
       </Td>
       <Td label="Capacidades"><Capabilities company={c} onChange={(caps) => run(() => api.setCapabilities(c.id, caps))} /></Td>
@@ -58,20 +59,23 @@ function CompanyRow({ c, onOpen, onDone }: RowProps) {
   );
 }
 
-export function Companies({ onOpen }: { onOpen: (id: string, name: string) => void }) {
+type Props = { onOpen: (id: string) => void; onChanged?: () => void };
+
+export function Companies({ onOpen, onChanged }: Props) {
   const list = useLoad(api.companies, []);
   const [adding, setAdding] = useState(false);
+  const changed = () => { list.reload(); onChanged?.(); };
   return (
     <div>
-      <PageHeader title="Empresas" actions={<Button variant="primary" icon="plus" onClick={() => setAdding(true)}>Nueva empresa</Button>} />
+      <PageHeader title="Grupo" actions={<Button variant="primary" icon="plus" onClick={() => setAdding(true)}>Nueva empresa</Button>} />
       <Notice message={list.error} />
       <Section title="Empresas del grupo">
         <Table columns={['Empresa', 'Capacidades']}>
-          {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}
+          {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id)} onDone={changed} />)}
         </Table>
       </Section>
       <NameDialog title="Nueva empresa" label="Nombre de la empresa" submitLabel="Crear empresa" codeLabel="Código" open={adding}
-        onSubmit={api.createCompany} onClose={() => setAdding(false)} onDone={list.reload} />
+        onSubmit={api.createCompany} onClose={() => setAdding(false)} onDone={changed} />
     </div>
   );
 }

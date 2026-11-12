@@ -8,6 +8,10 @@ import com.e2d.odin.application.shared.InstallationToken;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.ConflictException;
+import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ValidationException;
+import java.util.List;
+import java.util.Optional;
 
 public class RecoverGroupAdmin {
 
@@ -24,12 +28,26 @@ public class RecoverGroupAdmin {
         this.settings = settings;
     }
 
-    public void execute(String setupToken, String newPassword) {
+    public void execute(String setupToken, Optional<String> email, String newPassword) {
         InstallationToken.require(settings, setupToken);
-        User admin = users.findGroupAdmin()
-                .orElseThrow(() -> new ConflictException("La instalación no está configurada"));
+        User admin = chooseAdmin(email.filter(e -> !e.isBlank()).map(Validation::normalizeEmail));
         String hash = passwords.hash(Validation.requirePassword(newPassword));
         users.save(admin.withActive(true).withPasswordHash(hash));
         sessions.closeAllOf(admin.id());
+    }
+
+    private User chooseAdmin(Optional<String> email) {
+        List<User> admins = users.listGroupAdmins();
+        if (admins.isEmpty()) {
+            throw new ConflictException("La instalación no está configurada");
+        }
+        if (email.isPresent()) {
+            return users.findGroupAdminByEmail(email.get()).orElseThrow(
+                    () -> new NotFoundException("No hay ningún administrador del grupo con ese correo"));
+        }
+        if (admins.size() > 1) {
+            throw new ValidationException("Indica el correo del administrador del grupo");
+        }
+        return admins.get(0);
     }
 }

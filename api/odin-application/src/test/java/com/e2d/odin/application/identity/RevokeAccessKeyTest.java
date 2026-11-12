@@ -16,6 +16,7 @@ import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,11 +41,13 @@ class RevokeAccessKeyTest {
     }
 
     @Test
-    void otherCompanyAdminCannotRevoke() {
+    void otherCompanyAdminGetsNotFoundLikeForAMissingKey() {
         CompanyId other = new CompanyId(UUID.randomUUID());
 
         assertThatThrownBy(() -> revoke.execute(Actors.companyAdmin(other), keyId))
-                .isInstanceOf(ForbiddenException.class);
+                .isInstanceOf(NotFoundException.class).hasMessage("Clave no encontrada");
+        assertThatThrownBy(() -> revoke.execute(Actors.companyAdmin(other), new AccessKeyId(UUID.randomUUID())))
+                .isInstanceOf(NotFoundException.class).hasMessage("Clave no encontrada");
         assertThat(keys.findById(keyId).orElseThrow().revokedAt()).isEmpty();
     }
 

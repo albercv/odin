@@ -5,7 +5,10 @@ import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
+import com.e2d.odin.application.identity.ListGroupAdmins;
+import com.e2d.odin.application.identity.RevokeGroupAdmin;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.DescribeAdmin;
@@ -26,6 +29,7 @@ import com.e2d.odin.application.identity.SetUpInstallation;
 import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.UpdateUser;
+import com.e2d.odin.application.identity.UserChanges;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
 import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
@@ -70,6 +74,7 @@ import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Clock;
@@ -198,8 +203,38 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateUser updateUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions) {
-        return new UpdateUser(users, memberships, sessions);
+    ListGroupAdmins listGroupAdmins(UserRepository users) {
+        return new ListGroupAdmins(users);
+    }
+
+    @Bean
+    AddGroupAdmin addGroupAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
+            IdGenerator ids, PersonCodeGenerator personCodes) {
+        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes);
+    }
+
+    @Bean
+    RevokeGroupAdmin revokeGroupAdmin(UserRepository users, MembershipRepository memberships,
+            AdminSessions sessions, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RevokeGroupAdmin(users, memberships, sessions) {
+            @Override
+            public void execute(Actor actor, UserId id) {
+                transaction.executeWithoutResult(status -> super.execute(actor, id));
+            }
+        };
+    }
+
+    @Bean
+    UpdateUser updateUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateUser(users, memberships, sessions) {
+            @Override
+            public User execute(Actor actor, UserId id, UserChanges changes) {
+                return transaction.execute(status -> super.execute(actor, id, changes));
+            }
+        };
     }
 
     @Bean

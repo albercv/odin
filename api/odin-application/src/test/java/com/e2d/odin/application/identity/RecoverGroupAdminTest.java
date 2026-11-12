@@ -48,7 +48,7 @@ class RecoverGroupAdminTest {
         saveGroupAdmin(false);
         String session = sessions.open(adminId);
 
-        recover(TOKEN).execute(TOKEN, NEW);
+        recover(TOKEN).execute(TOKEN, Optional.empty(), NEW);
 
         User admin = users.findById(adminId).orElseThrow();
         assertThat(admin.passwordHash()).contains(passwords.hash(NEW));
@@ -60,7 +60,7 @@ class RecoverGroupAdminTest {
     void invalidTokenIsForbidden() {
         saveGroupAdmin(true);
 
-        assertThatThrownBy(() -> recover(TOKEN).execute("otro", NEW)).isInstanceOf(ForbiddenException.class)
+        assertThatThrownBy(() -> recover(TOKEN).execute("otro", Optional.empty(), NEW)).isInstanceOf(ForbiddenException.class)
                 .hasMessage("Código de instalación no válido");
         assertThat(users.findById(adminId).orElseThrow().passwordHash()).contains("pw:vieja-clave-123");
     }
@@ -69,12 +69,12 @@ class RecoverGroupAdminTest {
     void emptyConfiguredTokenIsForbidden() {
         saveGroupAdmin(true);
 
-        assertThatThrownBy(() -> recover("").execute("", NEW)).isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> recover("").execute("", Optional.empty(), NEW)).isInstanceOf(ForbiddenException.class);
     }
 
     @Test
     void notConfiguredInstallationIsConflict() {
-        assertThatThrownBy(() -> recover(TOKEN).execute(TOKEN, NEW)).isInstanceOf(ConflictException.class)
+        assertThatThrownBy(() -> recover(TOKEN).execute(TOKEN, Optional.empty(), NEW)).isInstanceOf(ConflictException.class)
                 .hasMessage("La instalación no está configurada");
     }
 
@@ -82,7 +82,54 @@ class RecoverGroupAdminTest {
     void shortPasswordIsRejected() {
         saveGroupAdmin(true);
 
-        assertThatThrownBy(() -> recover(TOKEN).execute(TOKEN, "corta")).isInstanceOf(ValidationException.class);
+        assertThatThrownBy(() -> recover(TOKEN).execute(TOKEN, Optional.empty(), "corta")).isInstanceOf(ValidationException.class);
         assertThat(users.findById(adminId).orElseThrow().passwordHash()).contains("pw:vieja-clave-123");
+    }
+
+    private UserId saveSecondGroupAdmin() {
+        UserId gaelId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gaelId, "Gael", Optional.of("gael@demo.test"), false,
+                Optional.of("pw:vieja-de-gael"));
+        return gaelId;
+    }
+
+    @Test
+    void withSeveralGroupAdminsTheEmailIsRequired() {
+        saveGroupAdmin(true);
+        saveSecondGroupAdmin();
+
+        assertThatThrownBy(() -> recover(TOKEN).execute(TOKEN, Optional.empty(), NEW))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("Indica el correo del administrador del grupo");
+        assertThat(users.findById(adminId).orElseThrow().passwordHash()).contains("pw:vieja-clave-123");
+    }
+
+    @Test
+    void recoversTheOneWithThatEmail() {
+        saveGroupAdmin(true);
+        UserId gaelId = saveSecondGroupAdmin();
+        String session = sessions.open(gaelId);
+
+        recover(TOKEN).execute(TOKEN, Optional.of(" GAEL@demo.test "), NEW);
+
+        User gael = users.findById(gaelId).orElseThrow();
+        assertThat(gael.passwordHash()).contains(passwords.hash(NEW));
+        assertThat(gael.active()).isTrue();
+        assertThat(sessions.resolve(session)).isEmpty();
+        assertThat(users.findById(adminId).orElseThrow().passwordHash()).contains("pw:vieja-clave-123");
+    }
+
+    @Test
+    void unknownEmailIs404() {
+        saveGroupAdmin(true);
+        People.member(users, memberships, new UserId(UUID.randomUUID()), "Wanda", Optional.of("w@demo.test"),
+                com.e2d.odin.domain.identity.Role.WORKER, new com.e2d.odin.domain.shared.CompanyId(UUID.randomUUID()),
+                true, Optional.empty());
+
+        for (String email : new String[] {"nadie@demo.test", "w@demo.test"}) {
+            assertThatThrownBy(() -> recover(TOKEN).execute(TOKEN, Optional.of(email), NEW))
+                    .isInstanceOf(com.e2d.odin.domain.shared.NotFoundException.class)
+                    .hasMessage("No hay ningún administrador del grupo con ese correo");
+        }
     }
 }
