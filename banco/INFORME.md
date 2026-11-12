@@ -72,6 +72,10 @@ draws = 20                                                    # por defecto 20
 singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 20 y 40
 ```
 
+## Jueces
+
+En `[[judges]]`, `think` (false por defecto) se envía a Ollama como `"think"` en `/api/chat`, y `timeoutS` (600 por defecto) es el tiempo de espera de su petición. Ambas claves solo se admiten en jueces `ollama:`; en un juez de Claude se rechazan con error de configuración.
+
 ## Criterios que fija el código (no están en la configuración)
 
 - **Muestra:** estratos por `sample.strata`, en orden alfabético; cada estrato se baraja con `random.Random(seed)` y se reparte por turnos.
@@ -80,7 +84,9 @@ singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 
 - **Acierto por enfoque:** sobre las ejecuciones sin error, igual que el acierto global. Las ejecuciones con error se cuentan aparte (`errors`).
 - **Firma de mayoría:** `answer_signature` = (`no_lo_se`, cifras normalizadas, conjunto de páginas citadas `(documentId, pagina)`). Así, dos respuestas sin cifras que citan páginas distintas no coinciden; la redacción sigue sin contar.
 - **Acuerdo entre buscadores:** `k` = cuántos buscadores coinciden con la firma mayoritaria. El acierto de cada grupo es el de la respuesta final, no el del buscador.
-- **Jueces frente al script:** kappa y tasas solo con preguntas con clave o abstención. Con una sola clase en el script valen «no calculable». El PPI solo se calcula si hay preguntas sin clave; en la batería de desarrollo no hay ninguna.
+- **«No consta» sin juzgar:** una respuesta final con `no_lo_se` o sin citas no llega al jurado: no se lanza ningún juez (ni de pago ni de Ollama), la fila lleva `motivo: "no juzgable: no consta"` y `jury` nulo. En `resumen.json`, `judges.notJudgedNoConsta` cuenta esas preguntas y `judges.manualReview` lista las que no tienen clave (sin veredicto del script ni del jurado; hay que revisarlas a mano). Donde hay clave, decide el script como siempre.
+- **Parada durante los jueces:** si una cuota, el presupuesto o un coste desconocido para el experimento ocurre durante los jueces de una pregunta (también en su último juez de pago), esa pregunta queda sin veredicto (`jury` nulo, `motivo: "parada"`), aunque ya haya veredictos parciales. Esos registros de jueces sí se guardan en `veredictos.jsonl`.
+- **Jueces frente al script:** kappa y tasas solo con preguntas con clave o abstención que citan (los «no consta» no entran). Con una sola clase en el script valen «no calculable». El PPI solo se calcula si hay preguntas sin clave; en la batería de desarrollo no hay ninguna.
 - **Coste:** «gasto notificado» es el total del libro (ver arriba). Por respuesta, los buscadores dividen entre las preguntas ejecutadas (con alguna ejecución); el redactor, los jueces, el coste de la estrategia (buscadores más redactor) y los tokens totales, entre las respuestas medidas. Así, una parada no diluye ni infla las cifras con preguntas que nunca se midieron.
 - **Sin medir:** las preguntas sin respuesta final (parada o error) no son fallos. Quedan fuera de todos los denominadores de acierto, de tipo, de acuerdo y de jueces, y se cuentan aparte como «no medidas (parada o error)» (`notMeasured`).
 - **Latencia estimada (jueces en paralelo):** por respuesta, el buscador más lento, más el redactor, más el juez más lento, como si los jueces corrieran en paralelo como en el producto. Las ejecuciones de caché usan su duración guardada, igual que su coste. Percentiles 50 y 95 con `statistics.quantiles`.
