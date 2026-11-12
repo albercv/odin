@@ -589,6 +589,13 @@ export interface components {
             excerpt: string;
             /** Format: double */
             rank: number;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+        };
+        Replacement: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
@@ -767,6 +774,8 @@ export interface components {
             paginated: boolean;
             /** Format: date-time */
             uploadedAt: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
         };
         Page: {
             /** Format: uuid */
@@ -776,6 +785,8 @@ export interface components {
             pageNumber: number;
             paginated: boolean;
             text: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
         };
         AdminMe: {
             /** Format: uuid */

@@ -1565,9 +1565,28 @@
           "rank" : {
             "type" : "number",
             "format" : "double"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
           }
         },
-        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "title" ]
+        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
+      },
+      "Replacement" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "title" ]
       },
       "SearchResponse" : {
         "type" : "object",
@@ -2054,9 +2073,15 @@
           "uploadedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
           }
         },
-        "required" : [ "filename", "format", "id", "paginated", "title", "uploadedAt" ]
+        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -2077,9 +2102,15 @@
           },
           "text" : {
             "type" : "string"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
           }
         },
-        "required" : [ "documentId", "pageNumber", "paginated", "text", "title" ]
+        "required" : [ "documentId", "pageNumber", "paginated", "superseded", "text", "title" ]
       },
       "AdminMe" : {
         "type" : "object",

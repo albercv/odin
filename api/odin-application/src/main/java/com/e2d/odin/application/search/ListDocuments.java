@@ -4,7 +4,6 @@ import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.shared.WorkerAccess;
-import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
@@ -26,10 +25,10 @@ public class ListDocuments {
         this.documents = documents;
     }
 
-    public List<Document> execute(Actor actor, Optional<ProjectId> projectId, int offset, Optional<Integer> limit) {
+    public List<DocumentEntry> execute(Actor actor, Optional<ProjectId> projectId, int offset, Optional<Integer> limit) {
         var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE);
         WorkerAccess.requireProject(access.visibility(), projectId);
-        return documents.list(actor.scope(), access.content(), projectId, Optional.of(DocumentStatus.READY), Math.max(0, offset),
-                WorkerAccess.cap(limit, 100, 500)).stream().map(DocumentEntry::document).toList();
+        return documents.list(actor.scope(), access.content(), projectId, Optional.of(DocumentStatus.READY),
+                Math.max(0, offset), WorkerAccess.cap(limit, 100, 500));
     }
 }

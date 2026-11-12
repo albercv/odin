@@ -12,10 +12,11 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
         'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
         'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
         'projectName es el proyecto (comunidad, cliente u obra) del resultado. ' +
-        'addedAt es la fecha en que entró en Odín, no la del documento.',
+        'addedAt es la fecha en que entró en Odín, no la del documento. ' +
+        'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo).',
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
-        projectId: z.string().optional().describe('Limita la búsqueda a un proyecto'),
+        projectId: z.string().optional().describe('Limita la búsqueda a un proyecto; también incluye lo que no tiene proyecto'),
         limit: z.number().int().positive().optional().describe('Máximo de resultados'),
       },
     },
@@ -52,5 +53,7 @@ const toCitation = (hit: Hit, projects: ProjectNames) =>
         projectName: projects.nameOf(hit.projectId),
         authorName: hit.authorName,
         addedAt: hit.date,
+        superseded: hit.superseded,
+        replacement: hit.replacement ?? null,
         excerpt: hit.excerpt,
       };

@@ -18,6 +18,8 @@ export const INSTRUCTIONS = [
   'Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.',
   'De una ficha, cita solo su texto, sin el título, el autor ni la fecha.',
   'Afirma solo lo que dicen las citas. Si la fuente es parcial, porque falta el documento que lo regula o el que tienes no lo dice todo, dilo y no completes la conclusión.',
+  'Si un resultado viene marcado como sustituido, no lo presentes como vigente: di que está sustituido y por cuál, y busca o lee el que lo sustituye antes de responder. Si no puedes ver el que lo sustituye, di solo que está sustituido.',
+  'Si dos fuentes no cuadran y ninguna está marcada como sustituida, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.',
   'Presenta el conocimiento general aparte, como información añadida, nunca mezclado con lo que consta en los documentos.',
 ].join(' ');
 

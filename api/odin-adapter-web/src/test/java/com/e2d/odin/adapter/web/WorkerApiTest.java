@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.search.SearchHit;
@@ -35,7 +36,7 @@ class WorkerApiTest extends WebTestSupport {
     void searchReturnsHitsAndNoSource() throws Exception {
         String key = workerKey(newCompany());
         w.search.returns(new SearchResult(List.of(new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(),
-                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5))));
+                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty()))));
         mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"queries\":[\"vacaciones\"]}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.noSource").value(false))
@@ -111,6 +112,52 @@ class WorkerApiTest extends WebTestSupport {
                 .content(quote.formatted("vacaciones  SON 22"))).andExpect(jsonPath("$.verified").value(true));
         mvc.perform(post("/v1/citations/verify").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content(quote.formatted("vacaciones son 23"))).andExpect(jsonPath("$.verified").value(false));
+    }
+
+    @Test
+    void searchHitCarriesSupersededAndReplacement() throws Exception {
+        String key = workerKey(newCompany());
+        Document current = Fixtures.readyDocument(w.docs, newCompany(), "vigente");
+        w.search.returns(new SearchResult(List.of(
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Viejo", Optional.of(1), true,
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, true, Optional.of(DocumentRef.of(current))),
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Sin ver", Optional.of(1), true,
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.4, true, Optional.empty()))));
+        mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"x\"]}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.hits[0].superseded").value(true))
+                .andExpect(jsonPath("$.hits[0].replacement.documentId").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.hits[0].replacement.title").value(current.title()))
+                .andExpect(jsonPath("$.hits[1].superseded").value(true))
+                .andExpect(jsonPath("$.hits[1].replacement").doesNotExist());
+    }
+
+    @Test
+    void pageCarriesSupersededAndReplacement() throws Exception {
+        CompanyId company = newCompany();
+        String key = workerKey(company);
+        Document old = Fixtures.readyDocument(w.docs, company, "viejo");
+        Document current = Fixtures.readyDocument(w.docs, company, "vigente");
+        w.docs.markSuperseded(company, old.id(), current.id(), Fixtures.NOW);
+        mvc.perform(get("/v1/documents/" + old.id().value() + "/pages/1").header(AUTH, key))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.superseded").value(true))
+                .andExpect(jsonPath("$.replacement.documentId").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.replacement.title").value(current.title()));
+        mvc.perform(get("/v1/documents/" + current.id().value() + "/pages/1").header(AUTH, key))
+                .andExpect(jsonPath("$.superseded").value(false)).andExpect(jsonPath("$.replacement").doesNotExist());
+    }
+
+    @Test
+    void workerListingCarriesSupersededAndReplacement() throws Exception {
+        CompanyId company = newCompany();
+        Document old = Fixtures.readyDocument(w.docs, company, "viejo");
+        Document current = Fixtures.readyDocument(w.docs, company, "vigente");
+        w.docs.markSuperseded(company, old.id(), current.id(), Fixtures.NOW);
+        mvc.perform(get("/v1/documents").header(AUTH, workerKey(company))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='" + old.id().value() + "')].superseded").value(true))
+                .andExpect(jsonPath("$[?(@.id=='" + old.id().value() + "')].replacement.documentId")
+                        .value(current.id().value().toString()))
+                .andExpect(jsonPath("$[?(@.id=='" + current.id().value() + "')].superseded").value(false));
     }
 
     @Test
