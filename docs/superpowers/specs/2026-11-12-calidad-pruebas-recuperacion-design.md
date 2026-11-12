@@ -1,7 +1,7 @@
 # Odín · Calidad de las pruebas y de la recuperación (diseño)
 
 - Fecha: 2026-11-12. Autor: CTO 3. Encargo: D-059 y peticiones del propietario del mismo día.
-- Estado: propuesta. La valida el CEO (D-037).
+- Estado: **validado por el CEO** (D-060, 2026-11-12). Sus respuestas están en el apartado 13.
 - Rama: `feature/calidad-recuperacion`, que sale de `feature/fase-2-conocimiento` (883e707).
 - **Investigación de apoyo:** `docs/informes/2026-11-12-investigacion-corpus-preguntas-multiagente.md` (corpus públicos, baterías de evaluación, búsqueda multiagente y jueces).
 - Solo planifica. No se ha lanzado ninguna medición: las cifras de partida salen de resultados ya guardados, vueltos a leer con scripts locales y sin cuota de IA.
@@ -104,7 +104,7 @@ No existe ningún corpus público de documentos de comunidades de propietarios. 
   - las ordenanzas, en un proyecto por municipio;
   - los contratos y las pólizas, en proyectos propios.
 - **Cómo se obtienen:** `banco/archivos/publico/descargar.py`, con una lista fija de URL, la huella SHA-256 y la licencia de cada documento.
-  - Los documentos se guardan fuera de git. Se versiona solo la lista.
+  - Un documento entra en git solo si su licencia permite redistribuirlo; si no, se guarda en una carpeta local fuera de git. La lista, con la fuente y la licencia de cada documento, se versiona siempre (D-060).
   - **Descargarlos usa la red,** así que se lanza solo con permiso, como con D-057.
 - **Antes de usar una fuente,** se lee su licencia en el original (la investigación solo vio fragmentos). Se descarta cualquier documento con datos de particulares.
 - **Las preguntas y las claves de este archivo** se hacen como dice 4.2.
@@ -215,7 +215,7 @@ Errores metidos con respuesta conocida, sobre documentos de las capas 3.1 y 3.2.
   - **Registro de usos:** `USOS.md`, en esa rama, con la fecha, el commit medido, el resultado y quién la lanzó.
   - **Regla en el `CLAUDE.md` de Odín:** quien ajusta instrucciones, búsqueda, puntuador o banco no la abre.
   - **El banco se niega a usarla** en un barrido o en una muestra. Solo la usa en el modo de cierre (5.5).
-  - **Reserva quemada:** si alguien mira el detalle, la reserva pasa a desarrollo y se genera otra.
+  - **Reserva quemada:** la reserva se quema cuando sirve para decidir un cambio, o si alguien mira su detalle. Entonces pasa a desarrollo y se genera otra (D-060).
   - **Límite:** la protección es de procedimiento, no técnica. La rama aparte y el registro hacen visible si se rompe.
 
 ## 5. Banco de pruebas multiagente
@@ -673,19 +673,31 @@ Los objetivos son propuestas para el CEO. Una vez cumplido, cada objetivo pasa a
 | Permiso para descargar un reordenador pequeño | Solo si se dispara 7.5 | Si hace falta |
 | Cuánta cuota semanal se puede dedicar a esto | Ordenar las fases dentro del límite semanal | Antes de la fase 1 |
 
-## 13. Preguntas para el CEO
+## 13. Validación del CEO (D-060)
 
-1. **Regla del mínimo:** la peor de las 3 repeticiones por encima del 90 % (recomendada), o la media.
-2. **Objetivos de la tabla del apartado 8:** validarlos o cambiarlos.
-3. **Jueces de IA (5.4).** D-050 dice que puntúa un script. Propongo:
-   - el script sigue siendo la referencia donde hay clave;
-   - un jurado calibrado puntúa solo donde no la hay;
-   - su cifra se da siempre corregida y con su intervalo.
-4. **Documentos públicos reales (3.2):** BOE, ordenanzas, Gazeta y, si su licencia lo permite, pólizas y contratos públicos, sin datos de particulares y guardados solo en local. ¿Hace falta la validación legal de D-022 para esto, o basta con la licencia de cada fuente?
-5. **«No consta» con rastro (7.1) y citar cada dato (7.2):** cambian lo que ve el trabajador. Recomiendo que sí a los dos.
-6. **Estrategias que necesitan la IA de Odín (5.7: `deepSearch` y `checkAnswer`):** el banco las mide. ¿Qué coste y qué latencia por respuesta serían aceptables para tenerlas en cuenta?
-7. **Disparadores del reordenador y de los vectores (7.5):** validar los umbrales.
-8. **Reserva (4.3):** validar la regla de quemado y que solo la lance el CTO que cierra una fase.
+1. **Mínimo:** la peor de 3 repeticiones tiene que superar el 90 %. Si no llega, el análisis vuelve al CEO.
+2. **Objetivos del apartado 8:** validados tal cual. Una vez cumplidos, pasan a umbral de regresión.
+3. **Jueces:**
+   - donde hay clave, manda el script;
+   - donde no la hay, puntúa un jurado de modelos distintos, calibrado (aceptaciones falsas ≤ 3 % y kappa ≥ 0,8), y siempre con la cifra corregida.
+4. **Documentos públicos:**
+   - basta con la licencia de cada fuente; no hace falta la validación legal de D-022;
+   - solo textos institucionales y normativos, sin datos de particulares: ni nombramientos ni nombres de personas físicas;
+   - se anotan la fuente y la licencia de cada documento;
+   - entran en git solo si la licencia permite redistribuirlos; si no, van a una carpeta local fuera de git;
+   - la descarga de la lista de 3.2 queda autorizada. Cualquier fuente nueva se consulta antes con el CEO.
+5. **«No consta» con rastro y citar cada dato:** sí a los dos. El rastro, breve y en palabras llanas.
+6. **`deepSearch` y `checkAnswer`:**
+   - umbral provisional: como mucho 10 s más en la mediana y 0,02 USD más de coste notificado por respuesta;
+   - además, tienen que ganar a un solo agente con el mismo gasto, por encima de la variación;
+   - antes de llevarlas al producto vuelven al propietario, porque cambian quién paga la IA y qué sale al proveedor de Odín (D-016).
+7. **Disparadores del reordenador y de los vectores:** validados.
+8. **Reserva:**
+   - se quema cuando sirve para decidir un cambio, y se renueva;
+   - solo la lanza el CTO que cierra una fase.
+9. **Cuota:** la decide el propietario. Hasta entonces no se lanza ni el piloto ni el barrido; si lo autoriza, se empieza por el piloto de 5 preguntas.
+10. **Cuentas de OpenAI y Google:** son de pago y las decide el propietario. Quedan para la fase 4.
+11. **Coordinación:** `medir/` no se toca sin hablarlo antes con el CTO 2.
 
 ## 14. Lo que queda a criterio de quien lo construya
 
