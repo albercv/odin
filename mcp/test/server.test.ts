@@ -139,7 +139,7 @@ describe('buildServer', () => {
   it('instructionsKeepCardCitationRule', async () => {
     const client = await connect(() => meWith(ALL));
     const instructions = client.getInstructions() ?? '';
-    expect(instructions).toContain('por título, autor y fecha de alta');
+    expect(instructions).toContain('con su título, autor y fecha de alta');
     expect(instructions).toContain('no tienen página');
     expect(instructions).toContain('verifyCitation es solo para documentos');
     expect(instructions).toContain('si verifyCitation devuelve false, no uses esa cita');
@@ -149,7 +149,7 @@ describe('buildServer', () => {
     const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
     expect(instructions).toContain('Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.');
     expect(instructions).toContain('De una ficha, cita solo su texto, sin el título, el autor ni la fecha.');
-    expect(instructions).toContain('cítalas por título, autor y fecha');
+    expect(instructions).toContain('preséntalas con su título, autor y fecha');
   });
 
   it('instructionsAskForPartialSourceWarning', async () => {
