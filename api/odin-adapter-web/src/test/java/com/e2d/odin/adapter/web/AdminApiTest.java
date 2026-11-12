@@ -143,6 +143,24 @@ class AdminApiTest extends WebTestSupport {
     }
 
     @Test
+    void meSaysWhetherScannedDocumentsAreSupported() throws Exception {
+        CompanyId company = newCompany();
+        mvc.perform(get("/v1/admin/me").cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.scannedDocumentsSupported").value(true));
+    }
+
+    @Test
+    void documentViewIncludesPagesWithoutText() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document mixed = Fixtures.document(w.docs, company, DocumentStatus.READY);
+        w.docs.save(mixed.markReady(true, java.util.List.of(3, 5)));
+        mvc.perform(get("/v1/admin/documents/" + mixed.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.pagesWithoutText[0]").value(3))
+                .andExpect(jsonPath("$.pagesWithoutText[1]").value(5));
+    }
+
+    @Test
     void uploadTooLargeIs413() throws Exception {
         CompanyId company = newCompany();
         mvc.perform(upload(company, adminCookie(Role.COMPANY_ADMIN, Optional.of(company)),

@@ -34,6 +34,8 @@ Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplo
 | `make demo` | Demostración de cierre y prueba de extremo a extremo de la administración del panel, en una pila desechable aparte |
 | `make answer-battery MODELO=haiku\|sonnet [MUESTRA=N]` | Mide si Odín da datos correctos con el archivo ficticio: levanta una pila desechable (`odin-medicion`), carga, deja responder a `claude -p`, puntúa en `experimentos/2026-11-12-archivo-ficticio/resultados/` y baja la pila. Gasta cuota de Claude; no entra en `make check` |
 
+El lector de prueba (`reader-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el puente real con Unlimited-OCR 2.
+
 ## Primer arranque
 
 Tras `make up`, crea el grupo y su primer administrador con el token de instalación de `deploy/.env`. Solo funciona una vez:
@@ -158,9 +160,14 @@ Hoy el panel usa un token aleatorio y opaco, en una cookie `HttpOnly` con `SameS
 
 Esa lógica está detrás del puerto `AdminSessions` (`api/odin-application/src/main/java/com/e2d/odin/application/port/AdminSessions.java`), implementado por `StoredAdminSessions`. Para pasar a JWT bastará con escribir otra clase que implemente `AdminSessions` y cambiar una línea en `UseCaseConfiguration`. `closeAllOf` exigirá entonces una versión de sesión por usuario, para seguir cerrando todas las sesiones de una persona sin consultar cada token.
 
+## Lector OCR
+
+Sin lector, los PDF escaneados y las imágenes no se leen: quedan «Esperando al lector OCR» y el panel dice «Esta instalación no lee documentos escaneados».
+
+Para leerlos, arranca el puente en el Mac, desde el repositorio OCR: `make serve`. En este equipo la URL del puente, vista desde Docker, va en `deploy/.env` (`ODIN_READER_URL`, y `ODIN_READER_TOKEN` si el puente lleva token). Al llegar el lector, los documentos que esperaban se leen solos. Un PDF con algunas páginas sin texto queda listo y el panel dice cuáles no se han leído.
+
 ## Fuera de la fase 1
 
-- El lector OCR: los PDF escaneados y las imágenes quedan en «Pendiente de lector» hasta la fase 2.
 - Lo demás de la fase 2: etiquetado por tema, casos parecidos, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
 - Fuera de alcance: acceso desde internet, TLS y SSO.
 

@@ -98,6 +98,14 @@ class WorkerApiTest extends WebTestSupport {
     }
 
     @Test
+    void readPageIncludesReaderName() throws Exception {
+        CompanyId company = newCompany();
+        Document doc = Fixtures.readyDocument(w.docs, company, "Acta escaneada");
+        mvc.perform(get("/v1/documents/" + doc.id().value() + "/pages/1").header(AUTH, workerKey(company)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.readerName").value("stub"));
+    }
+
+    @Test
     void readsPagesAndVerifiesCitations() throws Exception {
         CompanyId company = newCompany();
         String key = workerKey(company);

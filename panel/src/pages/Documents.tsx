@@ -14,7 +14,7 @@ import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
 import { StatusPill } from '../ui/StatusPill';
 import { Table, Td, Tr, tableStyles } from '../ui/Table';
-import { STATUS } from './documentStatus';
+import { NO_READER_LABEL, STATUS } from './documentStatus';
 import styles from './Documents.module.css';
 
 function UploadDialog({ companyId, open, onClose, onDone }: { companyId: string; open: boolean; onClose: () => void; onDone: () => void }) {
@@ -60,15 +60,19 @@ function DocActions({ d, onDetail, onSupersede, onUnmark }: { d: S['DocumentView
   );
 }
 
-function DocRow({ d, ...handlers }: { d: S['DocumentView'] } & RowHandlers) {
-  const [label, tone] = STATUS[d.status] ?? [d.status, 'off' as const];
+function DocRow({ d, scannedDocumentsSupported, ...handlers }: { d: S['DocumentView']; scannedDocumentsSupported: boolean } & RowHandlers) {
+  const [known, tone] = STATUS[d.status] ?? [d.status, 'off' as const];
+  const label = d.status === 'PENDING_READER' && !scannedDocumentsSupported ? NO_READER_LABEL : known;
   return (
     <Tr>
       <Td label="Título">
         {d.title}
         {d.supersededBy && <div className={styles.superseded}><StatusPill tone="off">Sustituido</StatusPill><span>{`por ${d.supersededBy.title}`}</span></div>}
       </Td>
-      <Td label="Estado"><StatusPill tone={tone}>{label}</StatusPill></Td>
+      <Td label="Estado">
+        <StatusPill tone={tone}>{label}</StatusPill>
+        {d.pagesWithoutText.length > 0 && <div className={styles.superseded}>{`Páginas sin texto, no leídas: ${d.pagesWithoutText.join(', ')}`}</div>}
+      </Td>
       <Td label="Motivo">{d.failureReason}</Td>
       <Td className={tableStyles.actions}>
         {d.status === 'FAILED' && <RowAction text="Reintentar" target={d.title} onClick={handlers.onRetry} />}
@@ -86,7 +90,7 @@ function DocumentDialogs({ open, documents, projects, onClose, onDone }: { open?
   return null;
 }
 
-export function Documents({ companyId }: { companyId: string }) {
+export function Documents({ companyId, scannedDocumentsSupported = false }: { companyId: string; scannedDocumentsSupported?: boolean }) {
   const list = useLoad(() => api.documents(companyId), [companyId]);
   const projects = useLoad(() => api.projects(companyId), [companyId]);
   const [uploading, setUploading] = useState(false);
@@ -107,7 +111,7 @@ export function Documents({ companyId }: { companyId: string }) {
       <Section title="Documentos de la empresa">
         {list.data?.documents.length === 0 && <EmptyState title="Aún no hay documentos" description="Sube el primero con «Subir documento»." />}
         <Table columns={['Título', 'Estado', 'Motivo']}>
-          {list.data?.documents.map((d) => <DocRow key={d.id} d={d} onRetry={() => reloadAfter(() => api.retry(d.id))} onUnmark={() => reloadAfter(() => api.unsupersede(d.id))}
+          {list.data?.documents.map((d) => <DocRow key={d.id} d={d} scannedDocumentsSupported={scannedDocumentsSupported} onRetry={() => reloadAfter(() => api.retry(d.id))} onUnmark={() => reloadAfter(() => api.unsupersede(d.id))}
             onDetail={() => setOpen({ kind: 'detail', document: d })} onSupersede={() => setOpen({ kind: 'supersede', document: d })} />)}
         </Table>
       </Section>

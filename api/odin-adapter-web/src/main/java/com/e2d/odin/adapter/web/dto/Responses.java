@@ -50,12 +50,13 @@ public final class Responses {
 
     /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
     public record AdminMe(UUID userId, String displayName, String firstName, @Nullable String lastName,
-            String personCode, Role role, @Nullable UUID companyId, List<CompanyRef> companies) {
-        public static AdminMe from(Actor a, User person, List<Company> administered) {
+            String personCode, Role role, @Nullable UUID companyId, List<CompanyRef> companies,
+            boolean scannedDocumentsSupported) {
+        public static AdminMe from(Actor a, User person, List<Company> administered, boolean scannedDocumentsSupported) {
             UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
             return new AdminMe(a.userId().value(), a.displayName(), person.firstName(), person.lastName().orElse(null),
                     person.personCode(), a.role(), onlyCompany,
-                    administered.stream().map(CompanyRef::from).toList());
+                    administered.stream().map(CompanyRef::from).toList(), scannedDocumentsSupported);
         }
     }
 
@@ -144,14 +145,15 @@ public final class Responses {
 
     public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
-            int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt) {
+            int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt,
+            List<Integer> pagesWithoutText) {
         public static DocumentView from(DocumentEntry entry) {
             Document d = entry.document();
             return new DocumentView(d.id().value(), d.companyId().value(),
                     d.projectId().map(p -> p.value()).orElse(null), d.title(), d.filename(), d.format().name(),
                     d.status().name(), d.failureReason().orElse(null), d.paginated(), d.uploadedAt(),
                     d.attemptCount(), entry.supersededBy().map(DocumentLink::from).orElse(null),
-                    d.supersededAt().orElse(null));
+                    d.supersededAt().orElse(null), d.pagesWithoutText());
         }
     }
 
@@ -218,11 +220,11 @@ public final class Responses {
     }
 
     public record Page(UUID documentId, String title, int pageNumber, boolean paginated, String text,
-            boolean superseded, @Nullable Replacement replacement) {
+            boolean superseded, @Nullable Replacement replacement, String readerName) {
         public static Page from(PageView v) {
             return new Page(v.document().id().value(), v.document().title(), v.page().number(),
                     v.document().paginated(), v.page().text(), v.document().superseded(),
-                    v.entry().replacement().map(Replacement::from).orElse(null));
+                    v.entry().replacement().map(Replacement::from).orElse(null), v.page().readerName());
         }
     }
 

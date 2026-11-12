@@ -1,0 +1,13 @@
+# Solo lo usa deploy/demo/run-demo.sh: añade el lector de prueba a la pila de la demostración.
+services:
+  reader-stub:
+    image: node:24
+    command: ["node", "/app/reader-stub.mjs"]
+    volumes:
+      - ./demo/reader-stub.mjs:/app/reader-stub.mjs:ro
+  api:
+    depends_on:
+      - reader-stub
+    environment:
+      ODIN_READER_URL: http://reader-stub:8077
+      ODIN_READER_POLL_INTERVAL: PT2S
