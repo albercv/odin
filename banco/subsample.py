@@ -21,7 +21,7 @@ def draw_subsets(runs_by_question, mix, draws, seed):
 def _draw_question(runs, mix, rng, question_id):
     picked = []
     for approach, count in mix.items():
-        pool = [run for run in runs if run["approach"] == approach]
+        pool = sorted((r for r in runs if r["approach"] == approach), key=lambda r: r["replica"])
         if len(pool) < count:
             raise ValueError(f"pregunta {question_id}: hacen falta {count} ejecuciones de '{approach}' y hay {len(pool)}")
         picked.extend(rng.sample(pool, count))
@@ -54,20 +54,20 @@ def _accuracy(items, subset_by_question, score, combiner):
     return correct / len(items)
 
 
-def curve(runs_by_question, items, score, combiner, mixes, draws, seed):
+def curve(runs_by_question, items, score, combiner, mixes, draws, seed, extra_s=0.0):
     rows = []
     for mix in mixes:
-        rows.append(_curve_row(runs_by_question, items, score, combiner, mix, draws, seed))
+        rows.append(_curve_row(runs_by_question, items, score, combiner, mix, draws, seed, extra_s))
     return rows
 
 
-def _curve_row(runs_by_question, items, score, combiner, mix, draws, seed):
+def _curve_row(runs_by_question, items, score, combiner, mix, draws, seed, extra_s):
     per_draw = draw_subsets(runs_by_question, mix, draws, seed)
     accuracies = [_accuracy(items, subsets, score, combiner) for subsets in per_draw]
     subsets_all = [subset for subsets in per_draw for subset in subsets.values()]
     tokens = [sum(_tokens_by_class(s).values()) for s in subsets_all]
     costs = [sum((r.get("coste_usd") or 0) for r in s) for s in subsets_all]
-    latencies = [latency_of(s) for s in subsets_all]
+    latencies = [latency_of(s, extra_s) for s in subsets_all]
     p50, p95 = _percentiles(latencies)
     return {
         "mix": mix,

@@ -1,6 +1,8 @@
 import unittest
 
-from banco.combine import majority_vote
+from banco.combine import majority_vote, single
+import random
+
 from banco.subsample import beats_single_frontier, curve, draw_subsets, latency_of
 
 
@@ -55,6 +57,14 @@ class DrawSubsetsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             draw_subsets(runs_by_question, {"topic": 6}, draws=1, seed=0)
 
+    def test_draws_do_not_depend_on_arrival_order(self):
+        runs_by_question = {"q1": _pool({"main": 2, "topic": 6})}
+        shuffled = {"q1": list(runs_by_question["q1"])}
+        random.Random(3).shuffle(shuffled["q1"])
+        mix = {"main": 1, "topic": 2}
+        ids = lambda draws: [[r["id"] for r in d["q1"]] for d in draws]
+        self.assertEqual(ids(draw_subsets(runs_by_question, mix, 5, 11)), ids(draw_subsets(shuffled, mix, 5, 11)))
+
 
 class CurveTest(unittest.TestCase):
     def test_curve_rows_have_all_fields(self):
@@ -103,6 +113,48 @@ class CurveTest(unittest.TestCase):
         rows = curve(runs_by_question, items, score, majority_vote, [{"main": 1}], draws=2, seed=0)
         self.assertEqual(rows[0]["accuracy_mean"], 0.0)
         self.assertEqual(calls, [])
+
+    def test_extra_s_shifts_latency_percentiles(self):
+        items = [{"id": "q1"}, {"id": "q2"}]
+        runs_by_question = {
+            "q1": [_run("main", 0, _answer("a"), duracion_s=2.0), _run("topic", 0, None, error="x", duracion_s=None)],
+            "q2": [_run("main", 0, _answer("b"), duracion_s=4.0)],
+        }
+        base, shifted = (
+            curve(runs_by_question, items, lambda i, a: True, single, [{"main": 1}], 2, 0, extra_s=extra)[0]
+            for extra in (0.0, 1.0)
+        )
+        self.assertEqual(shifted["latency_p50"], base["latency_p50"] + 1.0)
+        self.assertEqual(shifted["latency_p95"], base["latency_p95"] + 1.0)
+
+
+class ExactAggregatesTest(unittest.TestCase):
+    def test_aggregates_are_exact_when_pools_equal_counts(self):
+        # Pool == count: sin efecto del muestreo. None cuenta como 0.
+        items = [{"id": "q1"}, {"id": "q2"}]
+        runs_by_question = {
+            "q1": [
+                _run("main", 0, _answer("300 €"), duracion_s=2.0,
+                     tokens={"entrada": 10, "salida": 2, "cache_lectura": 3, "cache_creacion": 4}, coste=0.5),
+                _run("topic", 0, _answer("300 €"), duracion_s=None,
+                     tokens={"entrada": None, "salida": 5, "cache_lectura": None, "cache_creacion": None}, coste=None),
+            ],
+            "q2": [
+                _run("main", 0, _answer("500 €"), duracion_s=4.0,
+                     tokens={"entrada": 1, "salida": 1, "cache_lectura": 0, "cache_creacion": 0}, coste=0.25),
+                _run("topic", 0, _answer("500 €"), duracion_s=1.0, tokens=None, coste=None),
+            ],
+        }
+        row = curve(runs_by_question, items, lambda i, a: True, single, [{"main": 1, "topic": 1}], 2, 0)[0]
+        # subconjuntos: q1 -> tokens 19+5=24, coste 0.5, lat max(2,0)=2; q2 -> tokens 2, coste 0.25, lat max(4,1)=4
+        self.assertEqual(row["tokens_mean"], 13.0)
+        self.assertEqual(row["cost_mean"], 0.375)
+        self.assertEqual(row["latency_p50"], 3.0)
+        self.assertEqual(row["latency_p95"], 4.0)
+        self.assertEqual(
+            row["tokens_by_class_mean"],
+            {"entrada": 5.5, "salida": 4.0, "cache_lectura": 1.5, "cache_creacion": 2.0},
+        )
 
 
 class LatencyTest(unittest.TestCase):
