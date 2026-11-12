@@ -92,7 +92,11 @@ def _process_job(job, carga, cache, temp_dir, state):
         return _with_extras(previous, job, cached=True)
     if not _claim_launch(state):
         return None
-    record = ejecutar.responder(job.item, carga, job.args, temp_dir, job.text)
+    try:
+        record = ejecutar.responder(job.item, carga, job.args, temp_dir, job.text)
+    except Exception:  # la llamada pudo gastar antes de fallar: coste desconocido
+        state.ledger.charge(None)
+        raise
     state.ledger.charge(record.get("coste_usd"))
     if record["error"] and ejecutar.LIMITE.search(record["error"]):
         _halt(state, f"cuota o límite en {job.item['id']}: {record['error'][:200]}")

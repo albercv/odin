@@ -19,7 +19,7 @@ class PageTextTest(unittest.TestCase):
         self.assertIn("Aviso de vecino", scoring.page_text("card-1", None, self.ctx))
 
     def test_unknown_identifier(self):
-        self.assertEqual(scoring.page_text("zz", 1, self.ctx), scoring.NO_ENCONTRADO)
+        self.assertEqual(scoring.page_text("zz", 1, self.ctx), scoring.NOT_FOUND)
 
 
 class PagesTest(unittest.TestCase):

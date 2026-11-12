@@ -25,6 +25,7 @@ def read_folder(folder):
             "finals": _read_jsonl(folder / "final.jsonl"), "verdicts": _read_jsonl(folder / "veredictos.jsonl"),
             "curves": json.loads(curves_file.read_text(encoding="utf-8")) if curves_file.exists() else None,
             "origin": _read_origin(folder),
+            "ledger": json.loads((folder / "libro.json").read_text(encoding="utf-8")) if (folder / "libro.json").exists() else None,
             "stopped": stop_file.read_text(encoding="utf-8").strip() if stop_file.exists() else None}
 
 
@@ -35,7 +36,8 @@ def rebuild(folder, layout):
     ctx = scoring.build_context(layout.exp, {"doc_ruta": data["ids"]["documentos"], "ficha_f": data["ids"]["fichas"]})
     wanted = set(data["ids"]["preguntas"])
     items = [i for i in json.loads(layout.battery_file.read_text(encoding="utf-8")) if i["id"] in wanted]
-    summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"])
+    summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"],
+                                    ledger=data["ledger"])
     summary.update(origen=data["origin"], stopped=data["stopped"])
     if data["curves"] is not None:
         summary["curvas"] = data["curves"]
@@ -73,12 +75,15 @@ def _origin_lines(summary):
 
 def _accuracy_lines(summary):
     lines = ["## Acierto", ""]
+    not_measured = summary.get("notMeasured")
+    note = [] if not_measured is None else [f"- No medidas por la parada: {not_measured} (no cuentan como fallo "
+                                            "ni en ningún denominador)."]
     if "accuracy" not in summary:
-        return lines + ["- Sin respuesta final: no se compuso ninguna respuesta.", ""]
+        return lines + ["- Sin respuesta final medida: no se compuso ninguna respuesta."] + note + [""]
     acc = summary["accuracy"]
     low, high = acc["wilson"]
-    return lines + [f"- Acierto del script: {acc['correct']} de {acc['total']} ({_pct(acc['rate'])}); "
-                    f"intervalo de Wilson al 95 %: {_pct(low)} a {_pct(high)}.", ""]
+    return lines + [f"- Acierto del script: {acc['correct']} de {acc['total']} medidas ({_pct(acc['rate'])}); "
+                    f"intervalo de Wilson al 95 %: {_pct(low)} a {_pct(high)}."] + note + [""]
 
 
 def _grave_lines(summary):
@@ -131,6 +136,7 @@ def _cost_lines(summary):
              f"- Coste de la estrategia por respuesta: {_usd(cost['strategyUsdPerAnswer'])}",
              f"- Tokens por respuesta: {_tokens(cost['tokensPerAnswer'])} (buscadores {_tokens(cost['searchers']['tokensPerAnswer'])}, "
              f"redactor {_tokens(cost['combiner']['tokensPerAnswer'])}, jueces {_tokens(cost['judges']['tokensPerAnswer'])})",
+             f"- Gasto según registros (diagnóstico): {_usd(cost['notifiedUsdFromRecords'])}",
              f"- Registros de pago con coste desconocido: {unknown}"
              + (" (el presupuesto se dio por agotado: no se lanzaron más llamadas de pago)" if unknown else "")]
     if "latency" in summary:

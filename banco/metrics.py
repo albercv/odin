@@ -124,16 +124,18 @@ def latency_block(runs, finals, verdicts):
     return {"p50": p50, "p95": p95}
 
 
-def cost_block(n, runs, finals, verdicts):
+def cost_block(n, runs, finals, verdicts, ledger=None):
     """Gasto notificado: solo ejecuciones nuevas, redactor y jueces. El resto son costes por respuesta (n preguntas)."""
     judges = [j for v in verdicts for j in v["judges"]]
     usd = lambda records: sum(r.get("coste_usd") or 0 for r in records)
     tokens = lambda records: sum(_total_tokens(r.get("tokens")) for r in records)
     per = lambda value: round(value / n, 4) if n else None
     fresh = [*(r for r in runs if not r.get("cached")), *finals, *judges]
-    notified = usd(fresh)
+    from_records = usd(fresh)
     unknown = sum(not isinstance(r.get("coste_usd"), (int, float)) for r in fresh)  # pago sin coste: no cuenta como 0
-    return {"notifiedUsd": round(notified, 4), "unknownCostRecords": unknown,
+    notified = from_records if ledger is None else ledger["spent"]  # el libro es el gasto real del experimento
+    return {"notifiedUsd": round(notified, 4), "notifiedUsdFromRecords": round(from_records, 4),
+            "unknownCostRecords": unknown,
             "strategyUsdPerAnswer": per(usd(runs) + usd(finals)),
             "tokensPerAnswer": per(tokens(runs) + tokens(finals) + tokens(judges)),
             "searchers": {"usdPerAnswer": per(usd(runs)), "tokensPerAnswer": per(tokens(runs))},
@@ -141,13 +143,16 @@ def cost_block(n, runs, finals, verdicts):
             "judges": {"usdPerAnswer": per(usd(judges)), "tokensPerAnswer": per(tokens(judges))}}
 
 
-def build_summary(items, ctx, runs, finals, verdicts, extra_runs=()):
-    """Resumen completo. Sin respuestas finales (barrido o parada temprana) solo quedan enfoques y coste."""
+def build_summary(items, ctx, runs, finals, verdicts, extra_runs=(), ledger=None):
+    """Resumen completo. Las preguntas sin respuesta (parada o error) no son fallos: se cuentan aparte como no medidas."""
     by_id = {item["id"]: item for item in items}
+    measured = [f for f in finals if f["answer"] is not None]
     summary = {"byApproach": approach_block(by_id, runs, ctx, scoring.ids_by_path(ctx.doc_ruta))}
-    summary["cost"] = cost_block(len(items), [*runs, *extra_runs], finals, verdicts)
+    summary["cost"] = cost_block(len(items), [*runs, *extra_runs], finals, verdicts, ledger)
     if finals:
-        summary.update(accuracy=accuracy_block(finals), byType=by_type_block(by_id, finals),
-                       graveFailures=grave_block(by_id, finals, ctx), agreement=agreement_block(finals, runs),
-                       judges=judges_block(by_id, finals, verdicts), latency=latency_block(runs, finals, verdicts))
+        summary["notMeasured"] = len(finals) - len(measured)
+    if measured:
+        summary.update(accuracy=accuracy_block(measured), byType=by_type_block(by_id, measured),
+                       graveFailures=grave_block(by_id, measured, ctx), agreement=agreement_block(measured, runs),
+                       judges=judges_block(by_id, measured, verdicts), latency=latency_block(runs, measured, verdicts))
     return summary

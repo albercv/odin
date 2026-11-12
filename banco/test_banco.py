@@ -82,8 +82,8 @@ class Harness(unittest.TestCase):
         self.state_dir = self.tmp / "estado"
         self.state_dir.mkdir()
         doc_ruta = {f"doc-{n}": item["citas_resueltas"][0]["doc"] for n, item in enumerate(self.items, start=1)}
-        claves = {item["actor"]: "clave-de-prueba" for item in self.items}
-        stack = {"url_mcp": "http://127.0.0.1:1/", "claves": claves, "doc_ruta": doc_ruta, "ficha_f": {}}
+        keys_by_actor = {item["actor"]: "clave-de-prueba" for item in self.items}
+        stack = {"url_mcp": "http://127.0.0.1:1/", "claves": keys_by_actor, "doc_ruta": doc_ruta, "ficha_f": {}}
         (self.state_dir / "carga.json").write_text(json.dumps(stack), encoding="utf-8")
         battery_file = self.tmp / "bateria.json"
         battery_file.write_text(json.dumps(self.items, ensure_ascii=False), encoding="utf-8")
@@ -93,9 +93,11 @@ class Harness(unittest.TestCase):
                              results_dir=self.tmp / "resultados", cache=self.tmp / "cache", repo=BANCO.parent,
                              claude_bin=FAKE_CLAUDE, claude_judge_bin=FAKE_JUDGE, ollama_url=url, timeout=30)
 
-    def config(self, budget=5.0, kind="majorityVote", combiner_model="", sweep="", battery="desarrollo", mode="explore"):
+    def config(self, budget=5.0, kind="majorityVote", combiner_model="", sweep="", battery="desarrollo", mode="explore",
+               concurrency=1):
         path = self.tmp / "experimento.toml"
-        text = CONFIG.format(budget=budget, kind=kind, combiner_model=combiner_model, sweep=sweep)
+        text = CONFIG.format(budget=budget, kind=kind, combiner_model=combiner_model, sweep=sweep).replace(
+            "concurrency = 1", f"concurrency = {concurrency}")
         text = text.replace('battery = "desarrollo"', f'battery = "{battery}"').replace('mode = "explore"', f'mode = "{mode}"')
         path.write_text(text, encoding="utf-8")
         return path
@@ -153,11 +155,15 @@ class RunTest(Harness):
         self.assertIn("Parada", (folder / "informe.md").read_text(encoding="utf-8"))
 
     def test_budget_cap_writes_partial_results(self):
-        code = self.run_cli(self.config(budget=0.0015))
+        code = self.run_cli(self.config(budget=0.0015, concurrency=1))
         folder = self.only_folder()
         self.assertEqual(code, 2)
         self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         self.assertEqual(len(self.read_jsonl(folder, "buscadores.jsonl")), 2)
+        ledger = json.loads((folder / "libro.json").read_text(encoding="utf-8"))
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertAlmostEqual(ledger["spent"], 0.002)
+        self.assertEqual(summary["cost"]["notifiedUsd"], 0.002)
 
     def test_composer_composes_final_answer(self):
         code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"'))
@@ -167,7 +173,7 @@ class RunTest(Harness):
 
     def test_composer_spend_crossing_cap_stops_and_writes_stop_file(self):
         # 6 buscadores × 0,001 USD = 0,006; el primer redactor cruza el tope de 0,0065 USD
-        code = self.run_cli(self.config(budget=0.0065, kind="composer", combiner_model='model = "haiku"'))
+        code = self.run_cli(self.config(budget=0.0065, kind="composer", combiner_model='model = "haiku"', concurrency=1))
         folder = self.only_folder()
         self.assertEqual(code, 2)
         self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
@@ -175,15 +181,20 @@ class RunTest(Harness):
         self.assertEqual(len(finals), 3)
         self.assertEqual(sum(f["answer"] is not None for f in finals), 1)
         self.assertEqual(self.read_jsonl(folder, "veredictos.jsonl"), [])
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["accuracy"]["total"], 1)  # las dos sin respuesta no son fallos
+        self.assertEqual(summary["notMeasured"], 2)
+        self.assertIn("No medidas por la parada: 2", (folder / "informe.md").read_text(encoding="utf-8"))
 
     def test_judge_spend_crossing_cap_stops_and_writes_stop_file(self):
         # buscadores 0,006 USD; los dos jueces de Haiku de la primera pregunta llegan a 0,007 USD (tope 0,0068)
-        code = self.run_cli(self.config(budget=0.0068))
+        code = self.run_cli(self.config(budget=0.0068, concurrency=1))
         folder = self.only_folder()
         self.assertEqual(code, 2)
         self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         verdicts = self.read_jsonl(folder, "veredictos.jsonl")
-        self.assertEqual([len(v["judges"]) for v in verdicts], [3, 0, 0])
+        # sin presupuesto, los jueces de Claude no corren, pero el de Ollama (gratis) sí
+        self.assertEqual([len(v["judges"]) for v in verdicts], [3, 1, 1])
         self.assertIsNone(verdicts[1]["jury"])
 
     def test_sweep_cap_is_cumulative_across_pools(self):
@@ -206,14 +217,16 @@ class RunTest(Harness):
             return real_judge(*args, **kwargs)
 
         with mock.patch("banco.judge.run_claude_judge", side_effect=flaky):
-            code = self.run_cli(self.config())
+            code = self.run_cli(self.config(concurrency=1))
         folder = self.only_folder()
-        self.assertEqual(code, 0)
+        # un juez de pago que falla deja su coste desconocido: el presupuesto se agota y para
+        self.assertEqual(code, 2)
+        self.assertIn("coste desconocido", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         verdicts = self.read_jsonl(folder, "veredictos.jsonl")
         self.assertEqual(len(verdicts), 3)
         self.assertIn("fallo del juez", verdicts[0]["error"])
         self.assertIsNone(verdicts[0]["jury"])
-        self.assertTrue(all(v["jury"] is not None for v in verdicts[1:]))
+        self.assertEqual([len(v["judges"]) for v in verdicts], [0, 1, 1])  # solo los gratis de Ollama
         self.assertTrue((folder / "resumen.json").exists())
 
     def test_composer_exception_keeps_other_results(self):
@@ -227,13 +240,15 @@ class RunTest(Harness):
             return real_compose(*args, **kwargs)
 
         with mock.patch("banco.run.compose", side_effect=flaky):
-            code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"'))
+            code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"', concurrency=1))
         folder = self.only_folder()
-        self.assertEqual(code, 0)
+        self.assertEqual(code, 2)  # coste desconocido en el redactor: el presupuesto se agota
+        self.assertIn("coste desconocido", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         finals = self.read_jsonl(folder, "final.jsonl")
         self.assertEqual(len(finals), 3)
         self.assertIn("redactor roto", finals[0]["error"])
         self.assertIsNone(finals[0]["answer"])
+        self.assertEqual(finals[1]["error"], "presupuesto agotado")
         self.assertTrue((folder / "resumen.json").exists())
 
     def test_composer_quota_error_is_stop_reason(self):
@@ -257,13 +272,70 @@ class RunTest(Harness):
             return record
 
         with mock.patch("banco.medir_path.ejecutar.responder", side_effect=without_cost):
-            code = self.run_cli(self.config())
+            code = self.run_cli(self.config(concurrency=1))
         folder = self.only_folder()
-        self.assertEqual(code, 2)
+        self.assertEqual(code, 2)  # una búsqueda nueva sin coste para el experimento
+        self.assertLess(len(self.read_jsonl(folder, "buscadores.jsonl")), 6)
         self.assertIn("coste desconocido", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
         self.assertGreaterEqual(summary["cost"]["unknownCostRecords"], 1)
         self.assertIn("coste desconocido", (folder / "informe.md").read_text(encoding="utf-8"))
+
+
+class PaidPathsTest(Harness):
+    """Un fallo tras una llamada de pago agota el presupuesto: nunca se cuenta como coste 0."""
+
+    def _pool_with(self, side_effect_error):
+        from banco.cache import RunCache
+        from banco.config import SearcherSpec as Spec
+        from banco.ledger import Ledger
+        from banco.pool import PoolSettings, run_pool
+        real = ejecutar.responder
+        calls = []
+
+        def failing_first(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 1:
+                raise side_effect_error
+            return real(*args, **kwargs)
+
+        ledger = Ledger(100.0)
+        settings = PoolSettings(claude_bin=FAKE_CLAUDE, timeout=30, concurrency=1, budget_usd=100.0, max_turns=None,
+                                odin_commit="abc")
+        stop = self.tmp / "PARADA.txt"
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=failing_first):
+            with self.assertRaises(type(side_effect_error)):
+                run_pool(self.items, (Spec("main", 2, "haiku"),), {"url_mcp": "x", "claves": {}, "doc_ruta": {}, "ficha_f": {}},
+                         RunCache(self.tmp / "cache2"), settings, BANCO / "enfoques", stop, ledger=ledger)
+        return ledger
+
+    def test_searcher_aislamiento_charges_unknown_cost(self):
+        ledger = self._pool_with(ejecutar.Aislamiento("juez no aislado"))
+        self.assertEqual(ledger.unknown, 1)
+        self.assertFalse(ledger.can_launch())
+
+    def test_searcher_unexpected_error_charges_unknown_cost(self):
+        ledger = self._pool_with(RuntimeError("fallo inesperado"))
+        self.assertEqual(ledger.unknown, 1)
+        self.assertFalse(ledger.can_launch())
+
+    def test_unexpected_pool_error_still_writes_cached_records(self):
+        real = ejecutar.responder
+        calls = []
+
+        def second_fails(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 2:
+                raise RuntimeError("fallo inesperado")
+            return real(*args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=second_fails):
+            with self.assertRaises(RuntimeError):
+                self.run_cli(self.config(concurrency=1))
+        folder = self.only_folder()
+        self.assertEqual(len(self.read_jsonl(folder, "buscadores.jsonl")), 1)
+        self.assertTrue((folder / "resumen.json").exists())
+        self.assertAlmostEqual(json.loads((folder / "libro.json").read_text(encoding="utf-8"))["spent"], 0.001)
 
 
 class SweepTest(Harness):

@@ -14,8 +14,8 @@ from banco import combine, judge, report, scoring
 from banco.cache import RunCache
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
-from banco.ledger import Ledger
 from banco.layout import Layout
+from banco.ledger import Ledger
 from banco.medir_path import carga_mod, ejecutar
 from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, _build_jobs, run_pool
 from banco.subsample import beats_single_frontier, curve
@@ -166,12 +166,11 @@ def prepare(config_path, layout, sweep=False):
     items = _select_items(layout, cfg)
     ctx = scoring.build_context(layout.exp, stack)
     commit, branch = _git(layout.repo)
-    ledger = Ledger(cfg.budget_usd)
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
                             budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit)
     folder = _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,
-                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec)
+                   cache=RunCache(layout.cache), ledger=Ledger(cfg.budget_usd), sweep=spec)
     _write_start(sess, branch, commit)
     return sess
 
@@ -202,7 +201,7 @@ def _exit_code(sess):
 
 
 def _from_cache(cache, jobs, before):
-    """Lo que quedó en la caché tras una parada: las ejecuciones que ya estaban antes no cuentan como gasto nuevo."""
+    """Lo que quedó en la caché: las ejecuciones que ya estaban antes no cuentan como gasto nuevo."""
     out = []
     for job in jobs:
         record = cache.get(job.key)
@@ -211,16 +210,21 @@ def _from_cache(cache, jobs, before):
     return out
 
 
-def _pool(sess, specs, settings):
-    """Lanza un grupo de buscadores con el libro compartido. Si se para, devuelve lo que quedó en la caché."""
+def _pool(sess, specs, settings, sink):
+    """Lanza un grupo de buscadores con el libro compartido. Se pare como se pare, lo que hay en caché va a `sink`."""
     approaches = sess.layout.banco / "enfoques"
     jobs = _build_jobs(sess.items, specs, approaches, settings)
     before = {job.key for job in jobs if sess.cache.get(job.key) is not None}
     try:
-        return run_pool(sess.items, specs, sess.stack, sess.cache, settings, approaches, sess.stop_file,
-                        ledger=sess.ledger)
+        records = run_pool(sess.items, specs, sess.stack, sess.cache, settings, approaches, sess.stop_file,
+                           ledger=sess.ledger)
     except (BudgetExceeded, PoolStopped, ejecutar.Aislamiento):  # el pool ya escribió PARADA.txt
-        return _from_cache(sess.cache, jobs, before)
+        records = _from_cache(sess.cache, jobs, before)
+    except Exception:
+        sink.extend(_from_cache(sess.cache, jobs, before))
+        raise
+    sink.extend(records)
+    return records
 
 
 # ---------- respuesta final ----------
@@ -236,13 +240,22 @@ def _unanswered(item, kind, error):
             "tokens": None, "duracion_s": 0.0, "error": error}
 
 
+def _compose_paid(sess, item, runs):
+    """Redactor: una llamada de pago. Si falla, su coste queda desconocido y el presupuesto se agota."""
+    try:
+        return compose(item, runs, sess.stack, sess.settings, sess.cfg.combiner.kind, sess.cfg.combiner.model)
+    except Exception:
+        sess.ledger.charge(None)
+        raise
+
+
 def _final_row(sess, item, runs):
     kind = sess.cfg.combiner.kind
     if kind in ANSWER_RULES:
         answer = ANSWER_RULES[kind](runs)
         extra = {"coste_usd": 0.0, "tokens": None, "duracion_s": 0.0, "error": None}
     else:
-        record = compose(item, runs, sess.stack, sess.settings, kind, sess.cfg.combiner.model)
+        record = _compose_paid(sess, item, runs)
         sess.ledger.charge(record.get("coste_usd"))
         _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
         answer = record["respuesta"]
@@ -268,8 +281,10 @@ def answer_stage(sess, runs, finals):
         except ejecutar.Aislamiento as error:
             _stop(sess, f"AISLAMIENTO ROTO en el redactor: {error}")
             finals.append(_unanswered(item, kind, f"aislamiento roto: {error}"))
-        except Exception as error:  # noqa: BLE001 (un fallo de una pregunta no pierde las demás)
+        except Exception as error:  # un fallo de una pregunta no pierde las demás
             finals.append(_unanswered(item, kind, f"error inesperado: {error!r}"))
+    if sess.ledger.unknown:
+        _budget_stop(sess, 0)
 
 
 # ---------- jueces ----------
@@ -294,24 +309,39 @@ def _one_judge(sess, index, spec, rubric, item, answer):
     return judge.run_claude_judge(material, rubric, spec.model, sess.layout.claude_judge_bin, sess.layout.timeout)
 
 
+def _call_judge(sess, index, spec, rubric, item, answer):
+    """Un juez de pago que falla después de llamar a claude deja su coste desconocido."""
+    try:
+        return _one_judge(sess, index, spec, rubric, item, answer)
+    except Exception:
+        if _is_paid(spec):
+            sess.ledger.charge(None)
+        raise
+
+
 def _unjudged(item, records, error):
     return {"id": item["id"], "judges": records, "jury": None, "error": error}
 
 
 def _judge_question(sess, jobs, item, answer):
-    """Veredictos de los jueces de una pregunta. Devuelve (fila, motivo de parada o None, llamadas sin lanzar)."""
-    records = []
+    """Veredictos de los jueces de una pregunta. Devuelve (fila, motivo de parada o None, llamadas de pago sin lanzar).
+    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo; la pregunta queda sin veredicto."""
+    records, skipped = [], 0
     try:
         for index, spec, rubric in jobs:
             if _is_paid(spec) and not sess.ledger.can_launch():
-                return _unjudged(item, records, "presupuesto agotado"), BUDGET, len(jobs) - len(records)
-            record = _one_judge(sess, index, spec, rubric, item, answer)
-            sess.ledger.charge(record.get("coste_usd"))
+                skipped += 1
+                continue
+            record = _call_judge(sess, index, spec, rubric, item, answer)
+            if _is_paid(spec):
+                sess.ledger.charge(record.get("coste_usd"))
             records.append(record)
     except ejecutar.Aislamiento as error:
-        return _unjudged(item, records, str(error)), f"AISLAMIENTO ROTO en juez: {error}", 0
-    except Exception as error:  # noqa: BLE001 (un juez roto no pierde los veredictos de las demás preguntas)
-        return _unjudged(item, records, repr(error)), None, 0
+        return _unjudged(item, records, str(error)), f"AISLAMIENTO ROTO en juez: {error}", skipped
+    except Exception as error:  # un juez roto no pierde los veredictos de las demás preguntas
+        return _unjudged(item, records, repr(error)), None, skipped
+    if skipped:
+        return _unjudged(item, records, "presupuesto agotado"), BUDGET, skipped
     jury = judge.aggregate([r["verdict"] for r in records], sess.cfg.aggregation)
     return {"id": item["id"], "judges": records, "jury": jury, "error": None}, None, 0
 
@@ -322,33 +352,46 @@ def judge_stage(sess, finals, verdicts):
     answered = [f for f in finals if f["answer"] is not None]
     with ThreadPoolExecutor(max(1, sess.cfg.concurrency)) as pool:
         results = list(pool.map(lambda f: _judge_question(sess, jobs, by_id[f["id"]], f["answer"]), answered))
+    skipped_total, budget_hit = 0, False
     for row, reason, skipped in results:
         verdicts.append(row)
+        skipped_total += skipped
         if reason == BUDGET:
-            _budget_stop(sess, skipped)
+            budget_hit = True
         elif reason:
             _stop(sess, reason)
+    if budget_hit or sess.ledger.unknown:
+        _budget_stop(sess, skipped_total)
 
 
-# ---------- órdenes ----------
+# ---------- salida ----------
 def _write_jsonl(path, rows):
     path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8")
+
+
+def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
+    """Se llama siempre (finally): lo que haya se escribe aunque una etapa haya fallado."""
+    _write_jsonl(sess.folder / "buscadores.jsonl", runs)
+    _write_jsonl(sess.folder / "final.jsonl", finals)
+    _write_jsonl(sess.folder / "veredictos.jsonl", verdicts)
+    if turn_runs is not None:
+        _write_jsonl(sess.folder / "turnos.jsonl", turn_runs)
+    ledger = {"spent": sess.ledger.spent, "unknown": sess.ledger.unknown, "cap": sess.ledger.cap}
+    (sess.folder / "libro.json").write_text(json.dumps(ledger, indent=1), encoding="utf-8")
+    report.rebuild(sess.folder, sess.layout)
 
 
 def run_experiment(config_path, layout):
     sess = prepare(config_path, layout)
     runs, finals, verdicts = [], [], []
     try:
-        runs = _pool(sess, sess.cfg.searchers, sess.settings)
+        _pool(sess, sess.cfg.searchers, sess.settings, runs)
         if not _stopped(sess):
             answer_stage(sess, runs, finals)
         if finals and not _stopped(sess):
             judge_stage(sess, finals, verdicts)
     finally:
-        _write_jsonl(sess.folder / "buscadores.jsonl", runs)
-        _write_jsonl(sess.folder / "final.jsonl", finals)
-        _write_jsonl(sess.folder / "veredictos.jsonl", verdicts)
-        report.rebuild(sess.folder, layout)
+        _write_outputs(sess, runs, finals, verdicts)
     return _exit_code(sess)
 
 
@@ -365,17 +408,19 @@ def _by_question(records):
     return out
 
 
-def _turn_runs(sess):
+def _turn_runs(sess, sink):
     """Un solo buscador main con cada tope de turnos, con el mismo libro de gasto; sin redactor ni jueces."""
     model = next(s.model for s in sess.cfg.searchers if s.approach == "main")
     spec = SearcherSpec("main", 1, model)
-    turn_runs = []
     for turns in sess.sweep.single_max_turns:
-        records = _pool(sess, (spec,), replace(sess.settings, max_turns=turns))
-        turn_runs += [{**r, "max_turns": turns} for r in records]
+        mark = len(sink)
+        try:
+            _pool(sess, (spec,), replace(sess.settings, max_turns=turns), sink)
+        finally:
+            for record in sink[mark:]:
+                record["max_turns"] = turns
         if _stopped(sess):
             break
-    return turn_runs
 
 
 def _curves(sess, runs, turn_runs):
@@ -402,14 +447,12 @@ def sweep_experiment(config_path, layout):
     sess = prepare(config_path, layout, sweep=True)
     runs, turn_runs = [], []
     try:
-        runs = _pool(sess, sess.cfg.searchers, sess.settings)
+        _pool(sess, sess.cfg.searchers, sess.settings, runs)
         if not _stopped(sess):
-            turn_runs = _turn_runs(sess)
+            _turn_runs(sess, turn_runs)
         if not _stopped(sess):
             (sess.folder / "curvas.json").write_text(
                 json.dumps(_curves(sess, runs, turn_runs), ensure_ascii=False, indent=1), encoding="utf-8")
     finally:
-        _write_jsonl(sess.folder / "buscadores.jsonl", runs)
-        _write_jsonl(sess.folder / "turnos.jsonl", turn_runs)
-        report.rebuild(sess.folder, layout)
+        _write_outputs(sess, runs, [], [], turn_runs)
     return _exit_code(sess)

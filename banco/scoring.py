@@ -5,17 +5,17 @@ from pathlib import Path
 
 from banco.medir_path import puntuar, sustituciones
 
-NO_ENCONTRADO = "(no encontrado)"
+NOT_FOUND = "(no encontrado)"
 
 
 def build_context(exp, stack):
     """Contexto del puntuador como puntuar.main: corpus, manifiesto y mapas de ids (de carga.json o de ids.json)."""
-    datos = Path(exp) / "datos"
-    corpus = puntuar.load_corpus(datos / "corpus")
-    man = json.loads((datos / "manifiesto.json").read_text(encoding="utf-8"))
-    claves = json.loads((datos / "claves.json").read_text(encoding="utf-8"))
-    reales = {viejo for viejo, _ in sustituciones.parejas(claves, man)}
-    return puntuar.Contexto(corpus, man, stack["doc_ruta"], stack["ficha_f"], reales)
+    data_dir = Path(exp) / "datos"
+    corpus = puntuar.load_corpus(data_dir / "corpus")
+    manifest = json.loads((data_dir / "manifiesto.json").read_text(encoding="utf-8"))
+    key_rows = json.loads((data_dir / "claves.json").read_text(encoding="utf-8"))
+    superseded = {old for old, _ in sustituciones.parejas(key_rows, manifest)}
+    return puntuar.Contexto(corpus, manifest, stack["doc_ruta"], stack["ficha_f"], superseded)
 
 
 def ids_by_path(doc_ruta):
@@ -32,11 +32,11 @@ def page_text(ident, pagina, ctx):
     if ident in ctx.doc_ruta:
         pages = ctx.corpus.get(ctx.doc_ruta[ident], {})
         if pagina is None:
-            return "\n\n".join(pages.values()) or NO_ENCONTRADO
-        return pages.get(pagina, NO_ENCONTRADO)
+            return "\n\n".join(pages.values()) or NOT_FOUND
+        return pages.get(pagina, NOT_FOUND)
     ficha = ctx.fichas.get(ctx.ficha_f.get(ident, ""))
     if ficha is None:
-        return NO_ENCONTRADO
+        return NOT_FOUND
     return f"{ficha.get('titulo', '')}\n{ficha.get('texto', '')}"
 
 
