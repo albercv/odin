@@ -41,7 +41,7 @@ const toCitation = (hit: Hit, projects: ProjectNames) =>
         projectId: hit.projectId ?? null,
         projectName: projects.nameOf(hit.projectId),
         excerpt: hit.excerpt,
-        origin: `Ficha aportada por ${hit.authorName}; resumen hecho por IA`,
+        origin: `Ficha aportada por ${hit.authorName}, redactada con IA`,
       }
     : {
         sourceType: hit.sourceType,

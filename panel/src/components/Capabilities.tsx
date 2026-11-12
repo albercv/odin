@@ -6,6 +6,7 @@ import styles from './Capabilities.module.css';
 const CAPABILITIES: [Capability, string][] = [
   ['SEARCH_KNOWLEDGE', 'Buscar conocimiento'],
   ['SAVE_KNOWLEDGE_CARD', 'Guardar fichas'],
+  ['SIMILAR_CASES', 'Casos parecidos'],
 ];
 
 type Props = { company: S['CompanyView']; onChange?: (capabilities: Capability[]) => void };

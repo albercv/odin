@@ -18,6 +18,8 @@ const QUERY = 'franquicia daños por agua ATL-4417-2024';
 const TITLE = 'Póliza ficticia';
 const RENEWED_TITLE = 'Póliza ficticia renovada';
 const NO_SOURCE = 'No consta en los documentos de tu empresa.';
+const CASE_QUERY = 'filtración de agua desde la azotea lámina';
+const CASE_FILES = [need('DEMO_CASE_1'), need('DEMO_CASE_2')];
 const CARD = { title: 'Franquicia por daños de agua', body: 'La póliza ATL-4417-2024 aplica una franquicia de 150 euros por siniestro de daños por agua.' };
 
 function need(name: string): string {
@@ -44,9 +46,9 @@ async function json<T>(r: Response, expected: number): Promise<T> {
 }
 
 type Id = { id: string };
-async function createCompany(name: string, code: string): Promise<string> {
+async function createCompany(name: string, code: string, extra: string[] = []): Promise<string> {
   const c = await json<Id>(await http('POST', '/v1/admin/companies', { name, code }), 201);
-  const caps = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'];
+  const caps = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', ...extra];
   await http('PUT', `/v1/admin/companies/${c.id}/capabilities`, { capabilities: caps });
   return c.id;
 }
@@ -57,10 +59,10 @@ async function createWorker(companyId: string, firstName: string, lastName: stri
   const k = await json<{ key: string }>(await http('POST', `/v1/admin/companies/${companyId}/members/${userId}/keys`, { label: 'demo' }), 201);
   return { id: userId, key: k.key };
 }
-async function uploadFile(companyId: string, path: string, title: string, projectId?: string): Promise<string> {
+async function uploadFile(companyId: string, path: string, title: string, projectId?: string, caseDocument = false): Promise<string> {
   const form = new FormData();
   form.append('file', new Blob([readFileSync(path)], { type: MIME[path.slice(path.lastIndexOf('.'))] ?? 'text/plain' }), basename(path));
-  const scope = projectId ? `&projectId=${projectId}` : '';
+  const scope = (projectId ? `&projectId=${projectId}` : '') + (caseDocument ? '&caseDocument=true' : '');
   const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent(title)}${scope}`, form);
   return (await json<{ document: Id }>(r, 201)).document.id;
 }
@@ -178,6 +180,32 @@ async function taggingStep(): Promise<void> {
     'Paso 11c: al terminar de etiquetar, el tema sigue quitado');
 }
 
+type SimilarCase = { documentId: string; title: string; pages: { number: number; text: string }[]; authorName?: string };
+
+async function addProject(companyId: string, name: string, workerId: string): Promise<string> {
+  const project = await json<Id>(await http('POST', `/v1/admin/companies/${companyId}/projects`, { name }), 201);
+  const member = await http('PUT', `/v1/admin/companies/${companyId}/projects/${project.id}/members/${workerId}`);
+  if (member.status !== 204) throw new Error(`HTTP ${member.status} al hacer miembro del proyecto: ${await member.text()}`);
+  return project.id;
+}
+
+// La duda que se repite entre comunidades: el trabajador es miembro de las dos (D-047) y ve sus casos; el documento que no es caso no sale.
+async function similarCasesStep(): Promise<void> {
+  const companyId = await createCompany('Empresa F', 'EF', ['SIMILAR_CASES']);
+  const worker = await createWorker(companyId, 'Trabajadora', 'Casos', 'casos@demo.invalid');
+  const [olmo, almendros] = [await addProject(companyId, 'Comunidad Olmo 14', worker.id), await addProject(companyId, 'Comunidad Los Almendros', worker.id)];
+  const file = join(mkdtempSync(join(tmpdir(), 'odin-demo-')), 'acta-ficticia.txt');
+  writeFileSync(file, 'Acta ficticia de junta: se habló de la filtración de agua desde la azotea y de la lámina, sin ficha de caso.');
+  const ids = [await uploadFile(companyId, CASE_FILES[0]!, 'Caso azotea Olmo 14', olmo, true),
+    await uploadFile(companyId, CASE_FILES[1]!, 'Caso azotea Los Almendros', almendros, true),
+    await uploadFile(companyId, file, 'Acta de junta', olmo)];
+  for (const id of ids) await waitReady(companyId, id);
+  const found = await withMcp(worker.key, async (call) => JSON.parse(await call('findSimilarCases', { queries: [CASE_QUERY] })) as { cases: SimilarCase[] });
+  const returned = found.cases.map((c) => c.documentId).sort();
+  check(JSON.stringify(returned) === JSON.stringify([ids[0], ids[1]].sort()), 'Paso 12: findSimilarCases devuelve las dos fichas de caso y no el documento que no es caso');
+  check(found.cases.every((c) => c.pages.length > 0 && c.pages[0]!.text.length > 0 && !('authorName' in c)), 'Paso 12b: cada caso trae sus páginas y ninguno lleva autor');
+}
+
 async function prepare(): Promise<void> {
   const setup = await http('POST', '/v1/setup', { setupToken: SETUP_TOKEN, groupName: 'Grupo Demo', adminName: 'Administrador Demo', adminEmail: ADMIN.email, password: ADMIN.password });
   check(setup.status === 201, `Paso 1: setup inicial del grupo`);
@@ -211,6 +239,7 @@ async function prepare(): Promise<void> {
   check(true, 'Paso 7d: póliza ficticia renovada subida a la empresa A y procesada (READY)');
   await scannedStep();
   await taggingStep();
+  await similarCasesStep();
   writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie, workerKey: wa.key, oldId: docId, renewedId }));
 }
 
