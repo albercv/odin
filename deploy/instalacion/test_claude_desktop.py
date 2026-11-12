@@ -30,7 +30,7 @@ class RegistrarTest(unittest.TestCase):
     def registrar(self, trabajador="marta"):
         salida = io.StringIO()
         with contextlib.redirect_stdout(salida):
-            cd.registrar(self.config, self.credenciales, trabajador, Path("/repo/odin"), "/usr/local/bin/node",
+            cd.registrar(self.config, self.credenciales, trabajador, Path("/repo/odin/data/mcp-claude-desktop"), "/usr/local/bin/node",
                          self.copias)
         return salida.getvalue()
 
@@ -41,7 +41,7 @@ class RegistrarTest(unittest.TestCase):
         config = json.loads(self.config.read_text())
         self.assertEqual({"command": "x"}, config["mcpServers"]["otro"])
         self.assertEqual({"a": 1}, config["preferencias"])
-        self.assertEqual({"command": "/usr/local/bin/node", "args": ["/repo/odin/mcp/dist/stdio.js"],
+        self.assertEqual({"command": "/usr/local/bin/node", "args": ["/repo/odin/data/mcp-claude-desktop/dist/stdio.js"],
                           "env": {"ODIN_API_URL": "http://127.0.0.1:8080", "ODIN_ACCESS_KEY": "odin_secreta_marta"}},
                          config["mcpServers"]["odin"])
 

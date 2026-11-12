@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Registra la entrada `odin` de Claude Desktop con la clave de un trabajador de prueba. No toca las demás entradas.
-Uso: claude_desktop.py --config FICHERO --credenciales FICHERO --trabajador NOMBRE --repo DIR --node RUTA --copias DIR"""
+Uso: claude_desktop.py --config FICHERO --credenciales FICHERO --trabajador NOMBRE --mcp DIR --node RUTA --copias DIR"""
 import argparse
 import json
 import os
@@ -20,8 +20,8 @@ def leer_config(config):
         raise SystemExit(f"{config} no es JSON válido ({error}); no se ha cambiado nada.")
 
 
-def entrada(credenciales, trabajador, repo, node):
-    return {"command": node, "args": [str(repo / "mcp" / "dist" / "stdio.js")],
+def entrada(credenciales, trabajador, mcp, node):
+    return {"command": node, "args": [str(mcp / "dist" / "stdio.js")],
             "env": {"ODIN_API_URL": credenciales["api"], "ODIN_ACCESS_KEY": trabajador["clave"]}}
 
 
@@ -43,7 +43,7 @@ def escribir(config, contenido):
     os.replace(tmp.name, config)
 
 
-def registrar(config, ruta_credenciales, nombre, repo, node, copias):
+def registrar(config, ruta_credenciales, nombre, mcp, node, copias):
     credenciales = json.loads(Path(ruta_credenciales).read_text(encoding="utf-8"))
     trabajadores = credenciales["trabajadores"]
     if nombre not in trabajadores:
@@ -51,7 +51,7 @@ def registrar(config, ruta_credenciales, nombre, repo, node, copias):
     contenido = leer_config(config)
     if config.exists():
         print(f"Copia previa: {copiar(config, copias)}")
-    contenido.setdefault("mcpServers", {})["odin"] = entrada(credenciales, trabajadores[nombre], repo, node)
+    contenido.setdefault("mcpServers", {})["odin"] = entrada(credenciales, trabajadores[nombre], mcp, node)
     escribir(config, contenido)
     t = trabajadores[nombre]
     print(f"Conector «odin» registrado en {config} con la clave de {t['nombre']} ({t['empresa']}).")
@@ -60,10 +60,10 @@ def registrar(config, ruta_credenciales, nombre, repo, node, copias):
 
 def main():
     a = argparse.ArgumentParser()
-    for opcion in ("--config", "--credenciales", "--trabajador", "--repo", "--node", "--copias"):
+    for opcion in ("--config", "--credenciales", "--trabajador", "--mcp", "--node", "--copias"):
         a.add_argument(opcion, required=True)
     args = a.parse_args()
-    registrar(Path(args.config), Path(args.credenciales), args.trabajador, Path(args.repo).resolve(), args.node,
+    registrar(Path(args.config), Path(args.credenciales), args.trabajador, Path(args.mcp).resolve(), args.node,
               Path(args.copias))
 
 
