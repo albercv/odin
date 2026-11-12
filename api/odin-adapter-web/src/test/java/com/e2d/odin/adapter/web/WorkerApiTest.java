@@ -12,8 +12,13 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.organization.Capability;
+import com.e2d.odin.domain.document.DocumentRef;
+import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.search.CasePage;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
+import com.e2d.odin.domain.search.SimilarCase;
+import com.e2d.odin.domain.search.SimilarCasesResult;
 import com.e2d.odin.domain.search.SourceType;
 import com.e2d.odin.domain.shared.CompanyId;
 import java.util.EnumSet;
@@ -229,5 +234,100 @@ class WorkerApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.topics[0].name").value("Agua"))
                 .andExpect(jsonPath("$.topics[0].definition").value("Fugas"))
                 .andExpect(jsonPath("$.tagging.pendingDocuments").value(2));
+    }
+
+    private static String similarBody() {
+        return "{\"queries\":[\"filtracion\"]}";
+    }
+
+    private void scriptOldCaseAndCard(UUID docId) {
+        Document replacement = new Document(new com.e2d.odin.domain.shared.DocumentId(UUID.randomUUID()),
+                newCompany(), Optional.empty(), "Caso nuevo", "f.pdf", com.e2d.odin.domain.document.DocumentFormat.PDF,
+                "x", com.e2d.odin.domain.document.DocumentStatus.READY, Optional.empty(), true,
+                new UserId(UUID.randomUUID()), Fixtures.NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
+        w.search.returnsCases(new SimilarCasesResult(List.of(
+                new SimilarCase(SourceType.ORIGINAL_DOCUMENT, docId, "Caso viejo", Optional.empty(), Fixtures.NOW, 5,
+                        List.of(new CasePage(1, "uno"), new CasePage(5, "cinco")), Optional.empty(), true, "extracto",
+                        true, Optional.of(DocumentRef.of(replacement))),
+                new SimilarCase(SourceType.KNOWLEDGE_CARD, UUID.randomUUID(), "Ficha", Optional.empty(), Fixtures.NOW,
+                        0, List.of(), Optional.of("cuerpo"), false, "ext", false, Optional.empty()))));
+    }
+
+    @Test
+    void similarCasesReturnsCasesWithPages() throws Exception {
+        String key = workerKey(newCompany());
+        UUID docId = UUID.randomUUID();
+        scriptOldCaseAndCard(docId);
+
+        mvc.perform(post("/v1/similar-cases").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content(similarBody())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.noSource").value(false))
+                .andExpect(jsonPath("$.cases", hasSize(2)))
+                .andExpect(jsonPath("$.cases[0].sourceId").value(docId.toString()))
+                .andExpect(jsonPath("$.cases[0].origin").value("ORIGINAL_DOCUMENT"))
+                .andExpect(jsonPath("$.cases[0].originLabel").doesNotExist())
+                .andExpect(jsonPath("$.cases[0].pageCount").value(5))
+                .andExpect(jsonPath("$.cases[0].pages", hasSize(2)))
+                .andExpect(jsonPath("$.cases[0].pages[1].number").value(5))
+                .andExpect(jsonPath("$.cases[0].pages[1].text").value("cinco"))
+                .andExpect(jsonPath("$.cases[0].truncated").value(true))
+                .andExpect(jsonPath("$.cases[0].superseded").value(true))
+                .andExpect(jsonPath("$.cases[0].replacement.title").value("Caso nuevo"))
+                .andExpect(jsonPath("$.cases[0].excerpt").value("extracto"))
+                .andExpect(jsonPath("$.cases[0].body").doesNotExist())
+                .andExpect(jsonPath("$.cases[1].origin").value("KNOWLEDGE_CARD"))
+                .andExpect(jsonPath("$.cases[1].originLabel").value("Ficha aportada por un trabajador, redactada con IA"))
+                .andExpect(jsonPath("$.cases[1].body").value("cuerpo"))
+                .andExpect(jsonPath("$.cases[1].pages", hasSize(0)))
+                .andExpect(jsonPath("$.cases[0].authorName").doesNotExist())
+                .andExpect(jsonPath("$.cases[0].author").doesNotExist())
+                .andExpect(jsonPath("$.cases[0].uploadedBy").doesNotExist())
+                .andExpect(jsonPath("$.cases[1].authorId").doesNotExist());
+    }
+
+    @Test
+    void similarCasesWithoutResultsSaysNoSource() throws Exception {
+        String key = workerKey(newCompany());
+        w.search.returnsCases(new SimilarCasesResult(List.of()));
+
+        mvc.perform(post("/v1/similar-cases").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content(similarBody())).andExpect(status().isOk()).andExpect(jsonPath("$.noSource").value(true))
+                .andExpect(jsonPath("$.cases", hasSize(0)));
+        mvc.perform(post("/v1/similar-cases").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[]}")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void similarCasesCapabilityDisabledIs403() throws Exception {
+        CompanyId company = Fixtures.companyWith(w.orgs, EnumSet.of(Capability.SEARCH_KNOWLEDGE));
+
+        mvc.perform(post("/v1/similar-cases").header(AUTH, workerKey(company)).contentType(MediaType.APPLICATION_JSON)
+                .content(similarBody())).andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Tu empresa no tiene activada esta función"));
+    }
+
+    @Test
+    void similarCasesWithoutAnyCapabilityIs403() throws Exception {
+        CompanyId company = Fixtures.companyWith(w.orgs, EnumSet.noneOf(Capability.class));
+
+        mvc.perform(post("/v1/similar-cases").header(AUTH, workerKey(company)).contentType(MediaType.APPLICATION_JSON)
+                .content(similarBody())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void listDocumentsFiltersByCaseDocument() throws Exception {
+        CompanyId company = newCompany();
+        Document plain = Fixtures.readyDocument(w.docs, company, "suelto");
+        Document marked = Fixtures.readyDocument(w.docs, company, "caso");
+        w.docs.markCaseDocuments(company, java.util.Set.of(marked.id()), true);
+        String key = workerKey(company);
+
+        mvc.perform(get("/v1/documents?caseDocument=true").header(AUTH, key)).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].id").value(marked.id().value().toString()))
+                .andExpect(jsonPath("$[0].caseDocument").value(true));
+        mvc.perform(get("/v1/documents?caseDocument=false").header(AUTH, key)).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(plain.id().value().toString()))
+                .andExpect(jsonPath("$[0].caseDocument").value(false));
+        mvc.perform(get("/v1/documents").header(AUTH, key)).andExpect(jsonPath("$", hasSize(2)));
     }
 }

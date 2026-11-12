@@ -10,10 +10,10 @@ export const MAX_DOCUMENTS = 2000;
 
 const normalize = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 
-export async function collectDocuments(api: ApiClient, projectId?: string, topicId?: string) {
+export async function collectDocuments(api: ApiClient, projectId?: string, topicId?: string, caseDocument?: boolean) {
   const documents: WorkerDocumentView[] = [];
   while (documents.length <= MAX_DOCUMENTS) {
-    const page = await api.listDocuments(projectId, documents.length, PAGE_SIZE, topicId);
+    const page = await api.listDocuments(projectId, documents.length, PAGE_SIZE, topicId, caseDocument);
     documents.push(...page);
     if (page.length < PAGE_SIZE) break;
   }
@@ -33,23 +33,24 @@ export function registerListDocuments(server: McpServer, api: ApiClient, project
       inputSchema: {
         projectId: z.string().optional().describe('Limita la lista a un proyecto'),
         topic: z.string().optional().describe('Limita la lista a un tema de la empresa, por su nombre'),
+        caseDocument: z.boolean().optional().describe('true lista solo las fichas de caso; false, solo lo que no es caso'),
       },
     },
-    ({ projectId, topic }) =>
+    ({ projectId, topic, caseDocument }) =>
       guarded(async () => {
-        if (topic === undefined) return jsonResult(await listed(api, projects, projectId));
+        if (topic === undefined) return jsonResult(await listed(api, projects, projectId, undefined, caseDocument));
         // GET /v1/me al momento: los temas y los pendientes cambian durante una sesión larga.
         const me = await api.me();
         const found = me.topics.find((t) => normalize(t.name) === normalize(topic));
         if (!found) return unknownTopic(topic, me.topics.map((t) => t.name));
-        const result = await listed(api, projects, projectId, found.id);
+        const result = await listed(api, projects, projectId, found.id, caseDocument);
         return jsonResult({ ...result, taggingPending: me.tagging.pendingDocuments });
       }),
   );
 }
 
-async function listed(api: ApiClient, projects: ProjectNames, projectId?: string, topicId?: string) {
-  const { documents, truncated } = await collectDocuments(api, projectId, topicId);
+async function listed(api: ApiClient, projects: ProjectNames, projectId?: string, topicId?: string, caseDocument?: boolean) {
+  const { documents, truncated } = await collectDocuments(api, projectId, topicId, caseDocument);
   return { documents: documents.map((d) => ({ ...d, projectName: projects.nameOf(d.projectId) })), truncated };
 }
 

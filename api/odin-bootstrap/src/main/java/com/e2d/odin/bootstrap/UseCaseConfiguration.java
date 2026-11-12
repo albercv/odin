@@ -4,7 +4,9 @@ import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
@@ -64,6 +66,7 @@ import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.TokenGenerator;
 import com.e2d.odin.application.port.UserRepository;
+import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
@@ -352,6 +355,16 @@ public class UseCaseConfiguration {
     }
 
     @Bean
+    UpdateDocument updateDocument(DocumentRepository documents) {
+        return new UpdateDocument(documents);
+    }
+
+    @Bean
+    MarkCaseDocuments markCaseDocuments(DocumentRepository documents) {
+        return new MarkCaseDocuments(documents);
+    }
+
+    @Bean
     SupersedeDocument supersedeDocument(DocumentRepository documents, Clock clock) {
         return new SupersedeDocument(documents, clock);
     }
@@ -391,6 +404,12 @@ public class UseCaseConfiguration {
             IdGenerator ids,
             Clock clock) {
         return new SearchKnowledge(organizations, projectMembers, search, questions, ids, clock);
+    }
+
+    @Bean
+    FindSimilarCases findSimilarCases(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            KnowledgeSearch search, QuestionLog questions, IdGenerator ids, Clock clock) {
+        return new FindSimilarCases(organizations, projectMembers, search, questions, ids, clock);
     }
 
     @Bean

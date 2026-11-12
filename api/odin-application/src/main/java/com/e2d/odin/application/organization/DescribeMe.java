@@ -36,8 +36,9 @@ public class DescribeMe {
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         List<Project> alive = organizations.listProjects(companyId);
         var visibility = WorkerAccess.visibleProjects(actor, companyId, alive, projectMembers);
+        var content = WorkerAccess.withDeleted(visibility, actor, companyId, organizations, projectMembers);
         return new MeView(actor.userId(), actor.displayName(), actor.role(), company,
                 alive.stream().filter(p -> visibility.includes(p.id())).toList(), topics.list(companyId),
-                tagging.pendingCount(companyId, visibility));
+                tagging.pendingCount(companyId, content));
     }
 }

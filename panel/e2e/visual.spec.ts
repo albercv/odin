@@ -110,6 +110,13 @@ async function openProjectMembers(page: Page): Promise<void> {
   await expect(page.getByRole('region', { name: 'Miembros de Proyecto visual' })).toBeVisible();
 }
 
+async function openUploadDocument(page: Page): Promise<void> {
+  await openCompany(page, CARD_COMPANY);
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await page.getByRole('button', { name: 'Subir documento', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Subir documento' })).toBeVisible();
+}
+
 async function openSwitcher(page: Page): Promise<void> {
   await page.goto(PANEL);
   await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
@@ -147,6 +154,7 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   'company roles form': openRolesForm,
   'company keys': openKeys,
   'project members': openProjectMembers,
+  'documents upload dialog': openUploadDocument,
   'company switcher': openSwitcher,
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,

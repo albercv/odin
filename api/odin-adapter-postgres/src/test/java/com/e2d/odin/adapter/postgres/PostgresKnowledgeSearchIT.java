@@ -9,8 +9,12 @@ import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.search.QuoteMatcher;
+import com.e2d.odin.domain.search.CasePage;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchQuery;
+import com.e2d.odin.domain.search.SimilarCase;
+import com.e2d.odin.domain.search.SimilarCasesQuery;
+import com.e2d.odin.domain.search.SimilarCasesResult;
 import com.e2d.odin.domain.search.SourceType;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -334,6 +338,152 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         assertThat(hits.get(0).sourceType()).isEqualTo(SourceType.KNOWLEDGE_CARD);
         assertThat(hits.get(0).superseded()).isFalse();
         assertThat(hits.get(0).replacement()).isEmpty();
+    }
+
+    private Document caseDocument(CompanyId company, String title, String... texts) {
+        Document d = page(company, title, DocumentStatus.READY, texts);
+        docs.markCaseDocuments(company, Set.of(d.id()), true);
+        return d;
+    }
+
+    private SimilarCasesResult cases(CompanyId company, ProjectVisibility visibility, String... terms) {
+        return search.findSimilarCases(new SimilarCasesQuery(List.of(terms), CompanyScope.of(company), visibility,
+                Optional.empty(), 5));
+    }
+
+    private static List<String> caseTitles(SimilarCasesResult result) {
+        return result.cases().stream().map(SimilarCase::title).toList();
+    }
+
+    @Test
+    void onlyCaseDocumentsAndApprovedCardsAreCandidates() {
+        CompanyId c = newCompany();
+        caseDocument(c, "Caso marcado", "la franquicia del seguro");
+        page(c, "Documento suelto", DocumentStatus.READY, "la franquicia del seguro");
+        card(c, CardStatus.APPROVED, "Ficha aprobada", "la franquicia del seguro");
+        caseDocument(c, "Caso sin leer", "la franquicia del seguro");
+        docs.save(docs.findBySha256(c, docs.list(CompanyScope.of(c), ProjectVisibility.all(), Optional.empty(),
+                Optional.empty(), 0, 10).stream().filter(e -> e.document().title().equals("Caso sin leer"))
+                .findFirst().orElseThrow().document().sha256()).orElseThrow().markFailed("roto"));
+
+        SimilarCasesResult result = cases(c, ProjectVisibility.all(), "franquicia");
+
+        assertThat(caseTitles(result)).containsExactlyInAnyOrder("Caso marcado", "Ficha aprobada");
+        SimilarCase card = result.cases().stream().filter(x -> x.sourceType() == SourceType.KNOWLEDGE_CARD)
+                .findFirst().orElseThrow();
+        assertThat(card.body()).contains("la franquicia del seguro");
+        assertThat(card.pages()).isEmpty();
+    }
+
+    @Test
+    void pendingAndRejectedCardsAreExcluded() {
+        CompanyId c = newCompany();
+        card(c, CardStatus.PENDING, "Pendiente", "la franquicia del seguro");
+        card(c, CardStatus.REJECTED, "Rechazada", "la franquicia del seguro");
+        card(c, CardStatus.APPROVED, "Aprobada", "la franquicia del seguro");
+
+        assertThat(caseTitles(cases(c, ProjectVisibility.all(), "franquicia"))).containsExactly("Aprobada");
+    }
+
+    @Test
+    void twoMatchingPagesGiveOneCase() {
+        CompanyId c = newCompany();
+        caseDocument(c, "Caso largo", "la franquicia del seguro en la primera página",
+                "otra franquicia del seguro en la segunda");
+
+        SimilarCasesResult result = cases(c, ProjectVisibility.all(), "franquicia seguro");
+
+        assertThat(result.cases()).hasSize(1);
+        SimilarCase found = result.cases().get(0);
+        assertThat(found.pageCount()).isEqualTo(2);
+        assertThat(found.pages()).extracting(CasePage::number).containsExactly(1, 2);
+        assertThat(found.pages().get(0).text()).isEqualTo("la franquicia del seguro en la primera página");
+        assertThat(found.truncated()).isFalse();
+        assertThat(found.sourceType()).isEqualTo(SourceType.ORIGINAL_DOCUMENT);
+        assertThat(found.excerpt()).isNotBlank();
+        assertThat(found.addedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void bestPageBeyondThreeIsAppendedAndTruncated() {
+        CompanyId c = newCompany();
+        caseDocument(c, "Caso de cinco", "uno", "dos", "tres", "cuatro", "la filtración de la azotea");
+
+        SimilarCase found = cases(c, ProjectVisibility.all(), "filtración").cases().get(0);
+
+        assertThat(found.pageCount()).isEqualTo(5);
+        assertThat(found.pages()).extracting(CasePage::number).containsExactly(1, 2, 3, 5);
+        assertThat(found.truncated()).isTrue();
+    }
+
+    @Test
+    void restrictedProjectOfOthersIsInvisible() {
+        CompanyId c = newCompany();
+        ProjectId closed = newProject(c, "Cerrado");
+        ProjectId mine = newProject(c, "Mío");
+        inProject(caseDocument(c, "Mejor caso del cerrado", "franquicia franquicia franquicia ATL-4417-2024"), closed);
+        inProject(caseDocument(c, "Caso del mío", "la franquicia"), mine);
+        cardIn(c, closed, "Ficha del cerrado", "la franquicia ATL-4417-2024");
+
+        SimilarCasesResult result = cases(c, ProjectVisibility.of(Set.of(mine)), "franquicia", "ATL-4417-2024");
+
+        assertThat(caseTitles(result)).containsExactly("Caso del mío");
+        assertThat(caseTitles(cases(c, ProjectVisibility.of(Set.of()), "franquicia"))).isEmpty();
+    }
+
+    @Test
+    void openProjectOfOthersContributesCases() {
+        CompanyId c = newCompany();
+        ProjectId open = new ProjectId(UUID.randomUUID());
+        orgs.saveProject(new com.e2d.odin.domain.organization.Project(open, c, "Abierto", false));
+        inProject(caseDocument(c, "Caso del abierto", "la franquicia"), open);
+
+        assertThat(caseTitles(cases(c, ProjectVisibility.of(Set.of(open)), "franquicia")))
+                .containsExactly("Caso del abierto");
+    }
+
+    @Test
+    void projectlessCaseIsVisibleToEveryone() {
+        CompanyId c = newCompany();
+        caseDocument(c, "Caso general", "la franquicia");
+        card(c, CardStatus.APPROVED, "Ficha general", "la franquicia");
+
+        assertThat(caseTitles(cases(c, ProjectVisibility.of(Set.of()), "franquicia")))
+                .containsExactlyInAnyOrder("Caso general", "Ficha general");
+    }
+
+    @Test
+    void supersededCaseComesAfterCurrentOnesWithReplacement() {
+        CompanyId c = newCompany();
+        Document old = caseDocument(c, "Caso 2022", "póliza ATL-4417-2024 franquicia");
+        Document current = caseDocument(c, "Caso 2024", "la póliza vigente");
+        supersede(c, old, current);
+
+        List<SimilarCase> found = cases(c, ProjectVisibility.all(), "ATL-4417-2024", "póliza").cases();
+
+        assertThat(found).extracting(SimilarCase::title).containsExactly("Caso 2024", "Caso 2022");
+        assertThat(found.get(1).superseded()).isTrue();
+        assertThat(found.get(1).replacement()).contains(DocumentRef.of(current));
+        assertThat(found.get(0).superseded()).isFalse();
+        assertThat(found.get(0).replacement()).isEmpty();
+    }
+
+    @Test
+    void otherCompanyCasesAreNeverReturned() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        caseDocument(b, "Caso de B", "la franquicia");
+        card(b, CardStatus.APPROVED, "Ficha de B", "la franquicia");
+
+        assertThat(cases(a, ProjectVisibility.all(), "franquicia").noSource()).isTrue();
+        assertThat(caseTitles(cases(b, ProjectVisibility.all(), "franquicia")))
+                .containsExactlyInAnyOrder("Caso de B", "Ficha de B");
+    }
+
+    @Test
+    void noAuthorIsSelected() {
+        assertThat(java.util.Arrays.stream(SimilarCase.class.getRecordComponents()).map(rc -> rc.getName().toLowerCase()))
+                .noneMatch(name -> name.contains("author") || name.contains("uploa") || name.contains("user"));
     }
 
     private List<String> titles(CompanyId company, ProjectVisibility visibility, Optional<ProjectId> project) {

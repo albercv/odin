@@ -1,0 +1,43 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS CALLE OLMO 14
+
+DATOS DEL CASO
+Número de caso: Caso 2026-016
+Comunidad: Comunidad de Propietarios Calle Olmo 14, Puerto Albar
+Tipo de incidencia: avería en instalación común de ventilación
+Fecha de apertura: 2 de marzo de 2026
+Comunicante: propietario del 3º C
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 2 de marzo de 2026 el propietario del 3º C comunicó al despacho, por correo electrónico, que la central de detección de monóxido de carbono del garaje mostraba un aviso permanente de fallo y que los extractores de la planta sótano no arrancaban al abrir la puerta de la rampa. El sistema consta de una central de cuatro zonas, cuatro sondas de CO y dos extractores axiales de doble velocidad en cubierta del garaje, con conductos de chapa galvanizada. La empresa de mantenimiento eléctrico describió el defecto como un fallo de calibración de dos sondas y un contactor de mando de los extractores con los contactos picados, de modo que la ventilación forzada no se activaba al superar el umbral de CO.
+
+ACTUACIONES REALIZADAS
+- 3 de marzo de 2026: el administrador registra la incidencia y pide visita urgente a la empresa de mantenimiento eléctrico.
+- 4 de marzo de 2026: primera visita del técnico, que mide con un analizador portátil una concentración de CO inferior al umbral de alarma y verifica que los extractores no responden a la central.
+- 6 de marzo de 2026: se cambia el modo de funcionamiento a manual y se instala un cartel provisional con instrucciones. La junta autoriza por escrito la reparación.
+- 9 de marzo de 2026: el técnico entrega presupuesto para la sustitución de dos sondas, del contactor y de la tarjeta de relés de la central.
+
+DOCUMENTACIÓN ARCHIVADA
+- Correo electrónico del propietario del 3º C.
+- Informe del técnico con las mediciones del analizador portátil.
+- Presupuesto del técnico, de 9 de marzo de 2026.
+- Circular informativa a los propietarios.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico sustituyó las dos sondas de CO con deriva de calibración, el contactor de mando de los extractores y la tarjeta de relés de la central. A continuación recalibró las cuatro sondas con gas patrón, ajustó el umbral de arranque de la velocidad lenta y el de la velocidad rápida y comprobó el arranque simultáneo de los dos extractores con la puerta de la rampa abierta. La Comunidad abonó 1.120 euros por los trabajos. Se ejecutaron el 16 y el 17 de marzo de 2026. La empresa emitió el certificado de la prueba funcional, el parte de trabajo y la factura, y dejó la central en modo automático.
+
+SEGUIMIENTO
+El 24 de marzo de 2026 el técnico repitió la prueba funcional con una fuente de gas patrón en cada sonda y verificó que la central activaba los extractores y registraba el evento. El 31 de marzo de 2026 el administrador comprobó que la central no mostraba avisos de fallo. El propietario del 3º C confirmó por correo el funcionamiento de los extractores. El administrador comunicó el cierre por escrito a la presidencia y propuso incorporar la calibración anual de las sondas al contrato de mantenimiento.
+
+RESULTADO
+Cerrado el 2 de abril de 2026. La reparación quedó a cargo de la Comunidad por tratarse de un elemento común. La central permanece en modo automático sin avisos.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Certificado de la prueba funcional y parte de trabajo del técnico.
+- Factura de la empresa de mantenimiento eléctrico.
+- Anotación de la comprobación del 31 de marzo de 2026.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

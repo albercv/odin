@@ -43,7 +43,7 @@ class ProcessPendingDocumentsTest {
         detector.detects(format);
         UploadDocument upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(),
                 new SequenceIdGenerator(), clock);
-        return upload.execute(Actors.companyAdmin(company), company, Optional.empty(), "Manual", "m", "x".getBytes())
+        return upload.execute(Actors.companyAdmin(company), company, Optional.empty(), "Manual", "m", "x".getBytes(), false)
                 .document();
     }
 

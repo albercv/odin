@@ -41,7 +41,7 @@ class ProcessDocumentsWithReaderTest {
     private Document pendingReader() {
         StubFormatDetector detector = new StubFormatDetector(DocumentFormat.IMAGE);
         Document d = new UploadDocument(docs, orgs, store, detector, new UploadSettings(), new SequenceIdGenerator(),
-                clock).execute(Actors.companyAdmin(company), company, Optional.empty(), "Escaneo", "e", "x".getBytes())
+                clock).execute(Actors.companyAdmin(company), company, Optional.empty(), "Escaneo", "e", "x".getBytes(), false)
                 .document();
         docs.save(d.awaitReader());
         return d;

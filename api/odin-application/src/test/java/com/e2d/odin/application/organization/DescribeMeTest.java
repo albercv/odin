@@ -157,4 +157,19 @@ class DescribeMeTest {
         assertThat(describe.execute(outsider).taggingPending()).isEqualTo(2);
         assertThat(describe.execute(member).taggingPending()).isEqualTo(3);
     }
+
+    @Test
+    void pendingCountIncludesDocumentsOfADeletedProjectTheWorkerSaw() {
+        CompanyId company = Fixtures.company(orgs);
+        topic(company, "Agua");
+        ProjectId open = Fixtures.companyWideProject(orgs, company);
+        Fixtures.documentIn(docs, company, open, "abierto");
+        Fixtures.readyDocument(docs, company, "sin proyecto");
+        orgs.deleteProject(company, open, Fixtures.NOW);
+
+        MeView me = describe.execute(Actors.worker(company));
+
+        assertThat(me.projects()).isEmpty();
+        assertThat(me.taggingPending()).isEqualTo(2);
+    }
 }

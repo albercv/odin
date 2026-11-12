@@ -10,6 +10,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
@@ -21,9 +22,11 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
@@ -32,7 +35,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
     static final String COLUMNS = """
             d.id, d.company_id, d.project_id, d.title, d.filename, d.format, d.sha256, d.status, d.failure_reason,
             d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
-            d.superseded_at, d.pages_without_text""";
+            d.superseded_at, d.pages_without_text, d.case_document""";
     private final ScopedTransactions tx;
 
     public PostgresDocumentRepository(ScopedTransactions tx) {
@@ -111,6 +114,22 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument) {
+        String ids = documentIds.stream().map(id -> id.value().toString()).collect(Collectors.joining(","));
+        return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> {
+            int updated = jdbc.sql("""
+                    UPDATE document SET case_document = :flag
+                    WHERE company_id = :company AND id = ANY (CAST(string_to_array(:ids, ',') AS uuid[]))""")
+                    .param("flag", caseDocument).param("company", companyId.value()).param("ids", ids).update();
+            if (updated != documentIds.size()) {
+                // al lanzar se deshace la transacción: no cambia ninguno
+                throw new NotFoundException("Documento no encontrado");
+            }
+            return updated;
+        });
+    }
+
+    @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
                 .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha")
@@ -119,7 +138,8 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
-            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit) {
+            Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
+            int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
                 + SupersessionSql.joins("d.superseded_by", "d.company_id") + """
@@ -127,11 +147,13 @@ public class PostgresDocumentRepository implements DocumentRepository {
                   AND (CAST(:topic AS uuid) IS NULL OR EXISTS (SELECT 1 FROM document_topic x
                       JOIN topic p ON p.id = x.topic_id AND p.deleted_at IS NULL
                       WHERE x.document_id = d.id AND x.topic_id = :topic AND x.state = 'ACTIVE'))
+                  AND (CAST(:caseDocument AS boolean) IS NULL OR d.case_document = :caseDocument)
                   AND (CAST(:status AS text) IS NULL OR d.status = :status) AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
                 Sql.inVisibleProjects("d.project_id"));
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
+                .param("caseDocument", caseDocument.orElse(null))
                 .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
                 .param("limit", limit).query((rs, n) -> entry(rs)).list());
     }
@@ -179,9 +201,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
         jdbc.sql("""
                 INSERT INTO document (id, company_id, project_id, title, filename, format, sha256, status,
                     failure_reason, paginated, uploaded_by, uploaded_at, processing_started_at, attempt_count,
-                    pages_without_text)
+                    pages_without_text, case_document)
                 VALUES (:id, :company, :project, :title, :filename, :format, :sha, :status, :reason, :paginated,
-                    :uploader, :uploaded, :started, :attempts, :blankPages)
+                    :uploader, :uploaded, :started, :attempts, :blankPages, :caseDocument)
                 ON CONFLICT (id) DO UPDATE SET project_id = :project, title = :title, filename = :filename,
                     format = :format, status = :status, failure_reason = :reason, paginated = :paginated,
                     processing_started_at = :started, attempt_count = :attempts,
@@ -193,7 +215,8 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 .param("paginated", d.paginated()).param("uploader", d.uploadedBy().value())
                 .param("uploaded", Sql.ts(d.uploadedAt())).param("started", Sql.ts(d.processingStartedAt()))
                 .param("attempts", d.attemptCount())
-                .param("blankPages", d.pagesWithoutText().toArray(Integer[]::new)).update();
+                .param("blankPages", d.pagesWithoutText().toArray(Integer[]::new))
+                .param("caseDocument", d.caseDocument()).update();
     }
 
     private static DocumentEntry entry(ResultSet rs) throws SQLException {
@@ -209,6 +232,6 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 Sql.optionalInstant(rs, "processing_started_at"), rs.getInt("attempt_count"),
                 Optional.ofNullable(Sql.uuid(rs, "superseded_by")).map(DocumentId::new),
                 Sql.optionalInstant(rs, "superseded_at"),
-                List.of((Integer[]) rs.getArray("pages_without_text").getArray()));
+                List.of((Integer[]) rs.getArray("pages_without_text").getArray()), rs.getBoolean("case_document"));
     }
 }

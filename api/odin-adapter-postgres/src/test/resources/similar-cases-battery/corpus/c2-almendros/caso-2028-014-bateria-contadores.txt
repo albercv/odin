@@ -1,0 +1,42 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2028-014
+Comunidad: Residencial Los Almendros
+Categoría: Instalación común de suministro
+Fecha de apertura: 15 de marzo de 2028
+Comunicante: conserje del residencial
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 15 de marzo de 2028 el conserje del residencial comunicó al despacho, por teléfono y con fotografías, que al abrir el cuarto de contadores situado junto al acceso peatonal del garaje había encontrado el pavimento cubierto por una lámina de líquido de varios milímetros, que salía por debajo de la puerta hacia el pasillo del garaje. El cuarto aloja la batería de contadores divisionarios de las viviendas 31 a 60, con sus llaves de entrada y de salida, y la llave general de esa rama de suministro. El conserje observó además que el contador general de la rama seguía girando sin consumo aparente de las viviendas.
+
+ACTUACIONES REALIZADAS
+- 15 de marzo de 2028: por indicación del administrador, el conserje cierra la llave general de la rama durante media hora y el caudal cesa. Se avisa al fontanero de la Comunidad.
+- 15 de marzo de 2028: el fontanero localiza la salida de caudal en el racor de entrada del contador divisionario de la vivienda 47, en la tercera fila de la batería, donde la junta plana estaba partida.
+- 15 de marzo de 2028: sustitución provisional de la junta y reapertura de la llave general. El fontanero observa juntas endurecidas en varios racores de la batería.
+- 16 de marzo de 2028: el administrador comunica la incidencia a la compañía suministradora, propietaria de los contadores, y solicita la revisión de la batería.
+- 22 de marzo de 2028: visita conjunta del técnico de la compañía suministradora y del fontanero de la Comunidad.
+
+DOCUMENTACIÓN ARCHIVADA
+- Parte de trabajo del fontanero, de 15 de marzo de 2028.
+- Comunicación a la compañía suministradora.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico de la compañía suministradora y el fontanero coincidieron en que la junta partida y el endurecimiento de las juntas planas de la batería se deben al envejecimiento de los materiales, con más de veinte años de servicio, y a la presión estática de la red en horario nocturno, superior a la recomendada para la batería. La compañía sustituyó a su cargo los racores de los contadores divisionarios. Las juntas de las llaves de entrada y de la propia batería forman parte de la instalación común del residencial, por lo que su sustitución corrió a cargo de la Comunidad. El fontanero cambió todas las juntas de la batería y colocó una válvula reductora de presión a la salida de la llave general de la rama. Los trabajos se ejecutaron el 5 de abril de 2028, con un corte de suministro de dos horas avisado con antelación a las viviendas afectadas.
+
+SEGUIMIENTO
+El 12 de abril de 2028 el conserje comprobó a medianoche que el contador general de la rama permanecía parado con las viviendas sin consumo. El 3 de mayo de 2028 el fontanero revisó la batería, sin observar salida de caudal en ningún racor, y midió la presión a la salida de la reductora, dentro del valor ajustado. El cuarto de contadores y el pasillo del garaje quedaron secos y sin daños en los revestimientos.
+
+RESULTADO
+Cerrado el 10 de mayo de 2028. La batería funciona con normalidad y la presión de la rama queda regulada por la nueva válvula reductora.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Acta de la visita conjunta con la compañía suministradora.
+- Parte de trabajo y factura del fontanero, de 5 de abril de 2028.
+- Lecturas del contador general de la rama de abril y mayo de 2028.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

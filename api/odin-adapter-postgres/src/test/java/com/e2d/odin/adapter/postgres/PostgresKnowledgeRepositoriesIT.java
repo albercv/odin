@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.e2d.odin.domain.knowledge.CardReview;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.shared.CardId;
@@ -75,11 +76,37 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
         UserId author = newUser(a);
-        QuestionRecord q = new QuestionRecord(UUID.randomUUID(), a, author, "¿Cuánto cuesta?", 2, NOW);
+        QuestionRecord q = new QuestionRecord(UUID.randomUUID(), a, author, "¿Cuánto cuesta?", 2, NOW, QuestionKind.SEARCH);
         new PostgresQuestionLog(tx).record(q);
         assertThat(questionTexts(CompanyScope.of(a))).containsExactly("¿Cuánto cuesta?");
         assertThat(questionTexts(CompanyScope.of(b))).isEmpty();
         assertThat(hitCounts()).containsExactly(2);
+    }
+
+    @Test
+    void storesKind() {
+        CompanyId a = newCompany();
+        UserId author = newUser(a);
+        PostgresQuestionLog log = new PostgresQuestionLog(tx);
+        log.record(new QuestionRecord(UUID.randomUUID(), a, author, "busca", 1, NOW, QuestionKind.SEARCH));
+        log.record(new QuestionRecord(UUID.randomUUID(), a, author, "casos", 3, NOW, QuestionKind.SIMILAR_CASES));
+
+        List<String> kinds = tx.inScope(CompanyScope.of(a), (JdbcClient jdbc) -> jdbc
+                .sql("SELECT kind FROM question_record ORDER BY text").query(String.class).list());
+
+        assertThat(kinds).containsExactly("SEARCH", "SIMILAR_CASES");
+    }
+
+    @Test
+    void kindOnlyAcceptsKnownValues() {
+        CompanyId a = newCompany();
+        UserId author = newUser(a);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> tx.runInScope(CompanyScope.of(a), jdbc -> jdbc.sql("""
+                INSERT INTO question_record (id, company_id, author_id, text, hit_count, asked_at, kind)
+                VALUES (:id, :company, :author, 'x', 0, now(), 'OTRA')""").param("id", UUID.randomUUID())
+                .param("company", a.value()).param("author", author.value()).update()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     private List<String> questionTexts(CompanyScope scope) {

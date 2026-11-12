@@ -251,6 +251,34 @@
         }
       }
     },
+    "/v1/similar-cases" : {
+      "post" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "similarCases",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SimilarCasesRequestBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimilarCasesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/setup" : {
       "post" : {
         "tags" : [ "setup-controller" ],
@@ -872,6 +900,14 @@
             "type" : "string",
             "format" : "uuid"
           }
+        }, {
+          "name" : "caseDocument",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
         } ],
         "requestBody" : {
           "content" : {
@@ -906,6 +942,43 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Upload"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/documents/case-marks" : {
+      "post" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "markCases",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CaseMarksRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseMarksResult"
                 }
               }
             }
@@ -1005,10 +1078,72 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}" : {
+      "get" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "get",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateDocumentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}" : {
       "patch" : {
         "tags" : [ "company-controller" ],
-        "operationId" : "update_1",
+        "operationId" : "update_2",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1213,7 +1348,7 @@
       },
       "patch" : {
         "tags" : [ "member-controller" ],
-        "operationId" : "update_2",
+        "operationId" : "update_3",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1312,6 +1447,13 @@
             "format" : "uuid"
           }
         }, {
+          "name" : "caseDocument",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
           "name" : "offset",
           "in" : "query",
           "required" : false,
@@ -1392,33 +1534,6 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/AdminMe"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/admin/documents/{documentId}" : {
-      "get" : {
-        "tags" : [ "admin-document-controller" ],
-        "operationId" : "get",
-        "parameters" : [ {
-          "name" : "documentId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/DocumentView"
                 }
               }
             }
@@ -1715,9 +1830,12 @@
             "items" : {
               "$ref" : "#/components/schemas/TopicLabelView"
             }
+          },
+          "caseDocument" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
+        "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
       },
       "TopicLabelView" : {
         "type" : "object",
@@ -1742,7 +1860,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
             },
             "uniqueItems" : true
           }
@@ -1765,12 +1883,127 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
             },
             "uniqueItems" : true
           }
         },
         "required" : [ "capabilities", "code", "id", "name" ]
+      },
+      "SimilarCasesRequestBody" : {
+        "type" : "object",
+        "properties" : {
+          "queries" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "CasePageView" : {
+        "type" : "object",
+        "properties" : {
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "number", "text" ]
+      },
+      "Replacement" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "title" ]
+      },
+      "SimilarCaseView" : {
+        "type" : "object",
+        "properties" : {
+          "sourceType" : {
+            "type" : "string"
+          },
+          "sourceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "addedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "pageCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CasePageView"
+            }
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          },
+          "excerpt" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "originLabel" : {
+            "type" : "string"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          }
+        },
+        "required" : [ "addedAt", "excerpt", "origin", "pageCount", "pages", "sourceId", "sourceType", "superseded", "title", "truncated" ]
+      },
+      "SimilarCasesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "cases" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SimilarCaseView"
+            }
+          },
+          "noSource" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "cases", "noSource" ]
       },
       "Setup" : {
         "type" : "object",
@@ -1878,19 +2111,6 @@
           }
         },
         "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
-      },
-      "Replacement" : {
-        "type" : "object",
-        "properties" : {
-          "documentId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "title" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "documentId", "title" ]
       },
       "SearchResponse" : {
         "type" : "object",
@@ -2172,6 +2392,34 @@
         },
         "required" : [ "document", "duplicate" ]
       },
+      "CaseMarksRequest" : {
+        "type" : "object",
+        "properties" : {
+          "documentIds" : {
+            "type" : "array",
+            "description" : "De 1 a 500 documentos de la empresa.",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "caseDocument" : {
+            "type" : "boolean",
+            "description" : "Verdadero para marcarlos como casos, falso para quitar la marca."
+          }
+        },
+        "required" : [ "caseDocument", "documentIds" ]
+      },
+      "CaseMarksResult" : {
+        "type" : "object",
+        "properties" : {
+          "updated" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "updated" ]
+      },
       "Review" : {
         "type" : "object",
         "properties" : {
@@ -2265,6 +2513,16 @@
             "type" : "boolean"
           }
         }
+      },
+      "UpdateDocumentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "caseDocument" : {
+            "type" : "boolean",
+            "description" : "Si el documento es la ficha de un caso resuelto."
+          }
+        },
+        "required" : [ "caseDocument" ]
       },
       "UpdateCompany" : {
         "type" : "object",
@@ -2369,7 +2627,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
             },
             "uniqueItems" : true
           }
@@ -2446,9 +2704,12 @@
             "items" : {
               "$ref" : "#/components/schemas/TopicLabelView"
             }
+          },
+          "caseDocument" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
+        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",

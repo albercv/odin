@@ -9,6 +9,7 @@ import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.QuestionKind;
 import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CardId;
@@ -18,6 +19,9 @@ import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.topic.Topic;
+import com.e2d.odin.domain.topic.TopicId;
+import com.e2d.odin.domain.topic.TopicState;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,7 +37,7 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 class RowLevelSecurityIT extends AbstractPostgresIT {
 
     private static final List<String> TABLES = List.of("company", "project", "membership", "document", "document_page",
-            "knowledge_card", "question_record", "project_member");
+            "knowledge_card", "question_record", "project_member", "topic", "document_topic", "document_tagging");
     private static final List<String> PROJECT_TABLES = List.of("document", "document_page", "knowledge_card");
 
     private Document closedDocument;
@@ -57,7 +61,11 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
         docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, "texto", "lector", "1")));
         cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), "T", "B",
                 Optional.empty(), user, NOW, CardStatus.PENDING, Optional.empty()));
-        new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), company, user, "pregunta", 0, NOW));
+        Topic topic = new Topic(new TopicId(UUID.randomUUID()), company, "Agua", "Fugas");
+        new PostgresTopicRepository(tx).save(topic);
+        new PostgresTaggingRepository(tx).decide(CompanyScope.of(company), d.id(), topic.id(), TopicState.ACTIVE, user,
+                NOW);
+                new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), company, user, "pregunta", 0, NOW, QuestionKind.SEARCH));
     }
 
     private long count(Connection c, String table) throws SQLException {
@@ -308,6 +316,35 @@ class RowLevelSecurityIT extends AbstractPostgresIT {
                 s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
             }
             assertThat(count(c, "document")).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void topicTablesRejectWritesForAnotherCompany() throws SQLException {
+        try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
+            s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
+            String ids = "gen_random_uuid(), gen_random_uuid(), '" + b.value() + "'";
+            for (String insert : List.of(
+                    "INSERT INTO topic (id, company_id, name, definition) VALUES (gen_random_uuid(), '" + b.value()
+                            + "', 'X', 'x')",
+                    "INSERT INTO document_tagging (document_id, company_id, topic_list_version, status, attempt_count)"
+                            + " VALUES (gen_random_uuid(), '" + b.value() + "', 1, 'PENDING', 0)",
+                    "INSERT INTO document_topic (document_id, topic_id, company_id, source, state) VALUES ("
+                            + ids + ", 'ADMIN', 'ACTIVE')")) {
+                org.assertj.core.api.Assertions.assertThatThrownBy(() -> s.execute(insert)).as(insert)
+                        .hasMessageContaining("row-level security");
+            }
+        }
+    }
+
+    @Test
+    void appRoleCannotDeleteTopicsButCanDeleteTheirLinksAndTaggingState() throws SQLException {
+        try (Connection c = Db.app().getConnection(); Statement s = c.createStatement()) {
+            s.execute("SELECT set_config('app.company_ids', '" + a.value() + "', false)");
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> s.execute("DELETE FROM topic"))
+                    .hasMessageContaining("permission denied");
+            assertThat(s.executeUpdate("DELETE FROM document_topic")).isEqualTo(1);
+            assertThat(s.executeUpdate("DELETE FROM document_tagging")).isEqualTo(1);
         }
     }
 }
