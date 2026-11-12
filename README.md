@@ -166,9 +166,18 @@ Sin lector, los PDF escaneados y las imágenes no se leen: quedan «Esperando al
 
 Para leerlos, arranca el puente en el Mac, desde el repositorio OCR: `make serve`. En este equipo la URL del puente, vista desde Docker, va en `deploy/.env` (`ODIN_READER_URL`, y `ODIN_READER_TOKEN` si el puente lleva token). Al llegar el lector, los documentos que esperaban se leen solos. Un PDF con algunas páginas sin texto queda listo y el panel dice cuáles no se han leído.
 
+## Etiquetado por tema
+
+Cada empresa tiene su lista de temas (con una definición de cada uno) y un modelo local pone a cada documento leído los temas que le encajan. Lo hace el Ollama que ya está en el equipo, por defecto con `qwen3.5:9b` (con poca memoria, `qwen3.5:4b-q4_K_M`).
+
+1. Descarga el modelo una vez: `make tagger-model MODEL=qwen3.5:9b` (única orden del etiquetado que usa la red).
+2. Pon en `deploy/.env` `ODIN_TAGGER_URL=http://host.docker.internal:11434` (el Ollama del equipo visto desde Docker; no hay servicio de Ollama en Compose) y reinicia la API. Las demás variables están comentadas en `deploy/.env.example`.
+
+El equipo tiene que estar encendido durante la ventana del etiquetado (por defecto de 22:00 a 07:00, hora de `ODIN_TIMEZONE`), o hay que cambiar `ODIN_TAGGER_WINDOW`. Sin eso los documentos se pueden buscar, pero no tienen temas.
+
 ## Fuera de la fase 1
 
-- Lo demás de la fase 2: etiquetado por tema, casos parecidos, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
+- Lo demás de la fase 2: casos parecidos, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
 - Fuera de alcance: acceso desde internet, TLS y SSO.
 
 ## Datos

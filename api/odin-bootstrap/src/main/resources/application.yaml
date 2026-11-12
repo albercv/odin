@@ -6,7 +6,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 2
+        size: 3
   datasource:
     url: ${ODIN_DB_URL}
     username: ${ODIN_DB_APP_USER}
@@ -23,6 +23,7 @@ spring:
       max-request-size: ${odin.upload-max-bytes}B
 
 odin:
+  timezone: ${ODIN_TIMEZONE:Europe/Madrid}
   setup-token: ${ODIN_SETUP_TOKEN:}
   panel-origin: ${ODIN_PANEL_ORIGIN:}
   originals-dir: ${ODIN_ORIGINALS_DIR}
@@ -32,6 +33,14 @@ odin:
     timeout: ${ODIN_READER_TIMEOUT:PT30M}
     connect-timeout: ${ODIN_READER_CONNECT_TIMEOUT:PT5S}
     token: ${ODIN_READER_TOKEN:}
+  tagger:
+    url: ${ODIN_TAGGER_URL:}
+    model: ${ODIN_TAGGER_MODEL:qwen3.5:9b}
+    window: ${ODIN_TAGGER_WINDOW:22:00-07:00}
+    timeout: ${ODIN_TAGGER_TIMEOUT:PT5M}
+    chunk-characters: ${ODIN_TAGGER_CHUNK_CHARS:6000}
+    num-gpu: ${ODIN_TAGGER_NUM_GPU:}
+    num-thread: ${ODIN_TAGGER_NUM_THREAD:}
 
 springdoc:
   default-produces-media-type: application/json
