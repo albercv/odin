@@ -33,12 +33,15 @@ public class SupersedeDocument {
         }
         // El sustituto es de la misma empresa que el documento, también para el administrador del grupo.
         CompanyScope company = CompanyScope.of(document.companyId());
-        Document replacement = documents.findById(company, ProjectVisibility.all(), replacementId)
-                .orElseThrow(() -> new NotFoundException("Documento que lo sustituye no encontrado"));
-        requireVisibleToWhoSeesTheDocument(document, replacement);
-        rejectCircularChain(company, document, replacement);
-        documents.markSuperseded(document.companyId(), documentId, replacementId, clock.instant());
-        return documents.findEntry(company, ProjectVisibility.all(), documentId).orElseThrow();
+        // Con los dos documentos bloqueados: dos marcas cruzadas a la vez no pueden dejar un ciclo.
+        return documents.withDocumentsLocked(document.companyId(), documentId, replacementId, () -> {
+            Document replacement = documents.findById(company, ProjectVisibility.all(), replacementId)
+                    .orElseThrow(() -> new NotFoundException("Documento que lo sustituye no encontrado"));
+            requireVisibleToWhoSeesTheDocument(document, replacement);
+            rejectCircularChain(company, document, replacement);
+            documents.markSuperseded(document.companyId(), documentId, replacementId, clock.instant());
+            return documents.findEntry(company, ProjectVisibility.all(), documentId).orElseThrow();
+        });
     }
 
     public void unmark(Actor actor, DocumentId documentId) {

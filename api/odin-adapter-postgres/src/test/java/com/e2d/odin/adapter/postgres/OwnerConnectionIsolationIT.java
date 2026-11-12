@@ -131,4 +131,33 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         assertThat(ownerOrgs.listCompanies(CompanyScope.all())).extracting(c -> c.id())
                 .containsExactlyInAnyOrder(a, b);
     }
+
+    @Test
+    void markIntoAnotherCompanyResolvesNothingThroughAConnectionThatBypassesRls() {
+        Document foreign = newDocument(b, newUser(b), "Ajeno de B", DocumentStatus.READY);
+        docs.replacePages(foreign.id(), List.of(new DocumentPage(foreign.id(), 1, "baliza vieja", "lector", "1")));
+        forceMarkAcrossCompanies(foreign, documentOfA);
+        CompanyScope scope = CompanyScope.of(b);
+
+        var entry = ownerDocs.findEntry(scope, ProjectVisibility.all(), foreign.id()).orElseThrow();
+        assertThat(entry.supersededBy()).isEmpty();
+        assertThat(entry.replacement()).isEmpty();
+        assertThat(ownerDocs.list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10))
+                .allSatisfy(e -> {
+                    assertThat(e.supersededBy()).isEmpty();
+                    assertThat(e.replacement()).isEmpty();
+                });
+        var hits = ownerSearch.search(new SearchQuery(List.of("baliza"), scope, ProjectVisibility.all(),
+                Optional.empty(), 10)).hits();
+        assertThat(hits).hasSize(1);
+        assertThat(hits.get(0).replacement()).isEmpty();
+    }
+
+    @Test
+    void projectFilterNeverBringsCompanyWideDocumentsOfAnotherCompanyThroughAConnectionThatBypassesRls() {
+        ProjectId projectOfB = newProject(b, "Obra de B");
+        var query = new SearchQuery(List.of("filtración"), CompanyScope.of(b), ProjectVisibility.all(),
+                Optional.of(projectOfB), 10);
+        assertThat(ownerSearch.search(query).hits()).isEmpty();
+    }
 }

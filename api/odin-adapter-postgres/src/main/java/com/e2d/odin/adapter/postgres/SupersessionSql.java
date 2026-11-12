@@ -19,23 +19,24 @@ final class SupersessionSql {
 
     /**
      * LEFT JOIN del sustituto directo (alias sd) y del vigente del final de la cadena (alias sc) de la columna dada.
-     * Cada salto lleva el filtro explícito de empresa y de proyectos, y va bajo la seguridad por filas. Si la cadena
+     * Cada salto es de la empresa del documento de partida (la columna dada), lleva el filtro explícito de empresa y de
+     * proyectos del que lee, y va bajo la seguridad por filas. Si la cadena
      * se corta (un eslabón no se ve) o no termina (circular, con tope de saltos), el vigente es nulo.
      * Usa los parámetros de {@link Sql#scoped} y {@link Sql#visible}.
      */
-    static String joins(String supersededByColumn) {
+    static String joins(String supersededByColumn, String companyColumn) {
         return """
-                LEFT JOIN document sd ON sd.id = %s AND %s AND %s
+                LEFT JOIN document sd ON sd.id = %s AND sd.company_id = %s AND %s AND %s
                 LEFT JOIN LATERAL (
-                    WITH RECURSIVE chain(id, title, superseded_by, hops) AS (
-                        SELECT sd.id, sd.title, sd.superseded_by, 1 WHERE sd.id IS NOT NULL
+                    WITH RECURSIVE chain(id, title, superseded_by, company_id, hops) AS (
+                        SELECT sd.id, sd.title, sd.superseded_by, sd.company_id, 1 WHERE sd.id IS NOT NULL
                         UNION ALL
-                        SELECT n.id, n.title, n.superseded_by, c.hops + 1
-                        FROM chain c JOIN document n ON n.id = c.superseded_by AND %s AND %s
+                        SELECT n.id, n.title, n.superseded_by, n.company_id, c.hops + 1
+                        FROM chain c JOIN document n ON n.id = c.superseded_by AND n.company_id = c.company_id AND %s AND %s
                         WHERE c.hops < %d
                     )
                     SELECT id AS current_id, title AS current_title FROM chain WHERE superseded_by IS NULL
-                ) sc ON true""".formatted(supersededByColumn, Sql.inScope("sd.company_id"),
+                ) sc ON true""".formatted(supersededByColumn, companyColumn, Sql.inScope("sd.company_id"),
                 Sql.inVisibleProjects("sd.project_id"), Sql.inScope("n.company_id"),
                 Sql.inVisibleProjects("n.project_id"), Document.MAX_SUPERSESSION_CHAIN);
     }

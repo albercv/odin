@@ -192,12 +192,76 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
-    void markOfAnotherCompanyDoesNothing() {
+    void markOfAnotherCompanyIsRejectedAndLeavesNoMark() {
         CompanyId a = newCompany();
         Document old = ready(a, "Póliza 2022");
         Document b = ready(a, "Póliza 2023");
-        docs.markSuperseded(newCompany(), old.id(), b.id(), MARKED_AT);
+        assertThatThrownBy(() -> docs.markSuperseded(newCompany(), old.id(), b.id(), MARKED_AT))
+                .isInstanceOf(ConflictException.class);
         assertThat(reread(old).superseded()).isFalse();
+    }
+
+    @Test
+    void replacementOfAnotherCompanyIsRejectedByTheRepositoryAndByTheTable() {
+        CompanyId a = newCompany();
+        Document x = ready(a, "A");
+        Document foreign = ready(newCompany(), "Ajeno");
+        assertThatThrownBy(() -> mark(x, foreign)).isInstanceOf(ConflictException.class);
+        assertThat(reread(x).superseded()).isFalse();
+        assertThatThrownBy(() -> forceMark(x, foreign)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void replacementMustBeInTheSameProjectOrWithoutProject() {
+        CompanyId a = newCompany();
+        ProjectId p1 = newProject(a, "Uno");
+        ProjectId p2 = newProject(a, "Dos");
+        Document free = ready(a, "Libre");
+        Document in1 = inProject(ready(a, "En uno"), p1);
+        Document other1 = inProject(ready(a, "Otro en uno"), p1);
+        Document in2 = inProject(ready(a, "En dos"), p2);
+        assertThatThrownBy(() -> mark(free, in1)).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> mark(in1, in2)).isInstanceOf(ConflictException.class);
+        assertThat(reread(free).superseded()).isFalse();
+        assertThat(reread(in1).superseded()).isFalse();
+        mark(in1, other1);
+        mark(in1, free);
+        assertThat(reread(in1).supersededBy()).contains(free.id());
+    }
+
+    @Test
+    void lockHoldsTheTwoDocumentsUntilTheWorkEnds() throws Exception {
+        CompanyId a = newCompany();
+        Document x = ready(a, "A");
+        Document y = ready(a, "B");
+        java.util.concurrent.CountDownLatch inside = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var first = pool.submit(() -> docs.withDocumentsLocked(a, x.id(), y.id(), () -> {
+                inside.countDown();
+                await(release);
+                return "primero";
+            }));
+            assertThat(inside.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            var second = pool.submit(() -> docs.withDocumentsLocked(a, y.id(), x.id(), () -> "segundo"));
+            assertThatThrownBy(() -> second.get(500, java.util.concurrent.TimeUnit.MILLISECONDS))
+                    .isInstanceOf(java.util.concurrent.TimeoutException.class);
+            release.countDown();
+            assertThat(first.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo("primero");
+            assertThat(second.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo("segundo");
+        } finally {
+            release.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    private static void await(java.util.concurrent.CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Test
@@ -244,8 +308,8 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         Document x = ready(a, "A");
         Document y = inProject(ready(a, "B"), closed);
         Document z = ready(a, "C");
-        mark(x, y);
-        mark(y, z);
+        forceMark(x, y);
+        forceMark(y, z);
         ProjectVisibility withoutClosed = ProjectVisibility.of(Set.of());
         DocumentEntry entry = entry(a, withoutClosed, x);
         assertThat(entry.document().superseded()).isTrue();
@@ -276,11 +340,30 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         CompanyId b = newCompany();
         Document x = ready(a, "A");
         Document foreign = ready(b, "Ajeno");
-        mark(x, foreign);
+        forceMarkAcrossCompanies(x, foreign);
         assertThat(docs.findEntry(CompanyScope.of(b), ProjectVisibility.all(), x.id())).isEmpty();
         DocumentEntry entry = entry(a, ProjectVisibility.all(), x);
         assertThat(entry.supersededBy()).isEmpty();
         assertThat(entry.replacement()).isEmpty();
+    }
+
+    @Test
+    void groupScopeDoesNotFollowAMarkIntoAnotherCompany() {
+        CompanyId a = newCompany();
+        Document x = ready(a, "A");
+        CompanyId b = newCompany();
+        Document foreign = ready(b, "Ajeno");
+        Document foreignNext = ready(b, "Ajeno siguiente");
+        forceMarkAcrossCompanies(x, foreign);
+        forceMark(foreign, foreignNext);
+        DocumentEntry entry = docs.findEntry(CompanyScope.all(), ProjectVisibility.all(), x.id()).orElseThrow();
+        assertThat(entry.supersededBy()).isEmpty();
+        assertThat(entry.replacement()).isEmpty();
+        assertThat(docs.list(CompanyScope.all(), ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10)
+                .stream().filter(e -> e.document().id().equals(x.id()))).allSatisfy(e -> {
+                    assertThat(e.supersededBy()).isEmpty();
+                    assertThat(e.replacement()).isEmpty();
+                });
     }
 
     @Test

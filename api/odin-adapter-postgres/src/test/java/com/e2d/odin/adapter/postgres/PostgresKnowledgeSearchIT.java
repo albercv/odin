@@ -283,7 +283,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         Document old = page(c, "Viejo", DocumentStatus.READY, "zafiro");
         Document current = page(c, "Nuevo", DocumentStatus.READY, "otra cosa");
         inProject(current, closed);
-        supersede(c, old, current);
+        forceMark(old, current);
         SearchQuery blind = new SearchQuery(List.of("zafiro"), CompanyScope.of(c), ProjectVisibility.of(Set.of()),
                 Optional.empty(), 5);
         List<SearchHit> hits = search.search(blind).hits();
@@ -293,6 +293,19 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         SearchQuery member = new SearchQuery(List.of("zafiro"), CompanyScope.of(c),
                 ProjectVisibility.of(Set.of(closed)), Optional.empty(), 5);
         assertThat(search.search(member).hits().get(0).replacement()).contains(DocumentRef.of(current));
+    }
+
+    @Test
+    void replacementOfAnotherCompanyIsNeverReturned() {
+        CompanyId c = newCompany();
+        Document old = page(c, "Viejo", DocumentStatus.READY, "zafiro");
+        Document foreign = page(newCompany(), "Ajeno", DocumentStatus.READY, "otra cosa");
+        forceMarkAcrossCompanies(old, foreign);
+        for (CompanyScope scope : List.of(CompanyScope.of(c), CompanyScope.all())) {
+            List<SearchHit> hits = find(scope, "zafiro");
+            assertThat(hits).hasSize(1);
+            assertThat(hits.get(0).replacement()).isEmpty();
+        }
     }
 
     @Test

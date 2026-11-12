@@ -19,12 +19,29 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public class InMemoryDocumentRepository implements DocumentRepository {
 
     private final Map<DocumentId, Document> documents = new LinkedHashMap<>();
     private final Map<DocumentId, List<DocumentPage>> pages = new LinkedHashMap<>();
     private CompanyScope lastListScope;
+    private boolean locked;
+    private boolean lastMarkWasLocked;
+
+    public boolean lastMarkWasLocked() {
+        return lastMarkWasLocked;
+    }
+
+    @Override
+    public <T> T withDocumentsLocked(CompanyId companyId, DocumentId first, DocumentId second, Supplier<T> work) {
+        locked = true;
+        try {
+            return work.get();
+        } finally {
+            locked = false;
+        }
+    }
 
     public List<DocumentPage> pagesOf(DocumentId id) {
         return pages.getOrDefault(id, List.of());
@@ -48,6 +65,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at) {
+        lastMarkWasLocked = locked;
         mark(companyId, id, Optional.of(replacementId), Optional.of(at));
     }
 
