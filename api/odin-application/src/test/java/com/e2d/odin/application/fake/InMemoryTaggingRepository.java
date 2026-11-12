@@ -109,7 +109,11 @@ public class InMemoryTaggingRepository implements TaggingRepository {
         }
         Map<TopicId, DocumentTopic> current = documentTopics.computeIfAbsent(documentId, k -> new LinkedHashMap<>());
         current.values().removeIf(t -> t.source() == TopicSource.AI && t.decidedBy().isEmpty());
+        Document owner = docs.get(documentId).orElseThrow();
         for (TopicId topicId : aiTopics) {
+            if (topics.find(owner.companyId(), topicId).isEmpty()) {
+                continue;
+            }
             current.putIfAbsent(topicId, new DocumentTopic(documentId, topicId, TopicSource.AI, TopicState.ACTIVE,
                     Optional.of(taggerVersion), Optional.empty(), Optional.empty()));
         }

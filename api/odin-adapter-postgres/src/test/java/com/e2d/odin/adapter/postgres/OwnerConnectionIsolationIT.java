@@ -16,6 +16,9 @@ import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.topic.Topic;
+import com.e2d.odin.domain.topic.TopicId;
+import com.e2d.odin.domain.topic.TopicState;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -33,6 +36,10 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     private final PostgresProjectMemberRepository ownerProjectMembers = new PostgresProjectMemberRepository(ownerTx);
     private final PostgresMembershipRepository ownerMemberships = new PostgresMembershipRepository(ownerTx);
     private final PostgresOrganizationRepository ownerOrgs = new PostgresOrganizationRepository(ownerTx);
+    private final PostgresTopicRepository topics = new PostgresTopicRepository(tx);
+    private final PostgresTopicRepository ownerTopics = new PostgresTopicRepository(ownerTx);
+    private final PostgresTaggingRepository tagging = new PostgresTaggingRepository(tx);
+    private final PostgresTaggingRepository ownerTagging = new PostgresTaggingRepository(ownerTx);
 
     private CompanyId a;
     private CompanyId b;
@@ -159,5 +166,59 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         var query = new SearchQuery(List.of("filtración"), CompanyScope.of(b), ProjectVisibility.all(),
                 Optional.of(projectOfB), 10);
         assertThat(ownerSearch.search(query).hits()).isEmpty();
+    }
+
+    private Topic topicOf(CompanyId company, String name) {
+        Topic topic = new Topic(new TopicId(UUID.randomUUID()), company, name, "Definición de " + name);
+        topics.save(topic);
+        return topic;
+    }
+
+    @Test
+    void scopeOfBCannotReadOrChangeTopicsOfAThroughAConnectionThatBypassesRls() {
+        Topic water = topicOf(a, "Agua");
+        int versionOfA = topics.listVersion(a);
+
+        assertThat(ownerTopics.find(b, water.id())).isEmpty();
+        assertThat(ownerTopics.list(b)).isEmpty();
+        ownerTopics.save(new Topic(water.id(), b, "Robado", "x"));
+        ownerTopics.delete(b, water.id(), NOW);
+
+        assertThat(topics.find(a, water.id())).contains(water);
+        assertThat(topics.listVersion(a)).isEqualTo(versionOfA);
+    }
+
+    @Test
+    void scopeOfBReadsNoTopicsOrTaggingOfAAndDecidesNothingThroughAConnectionThatBypassesRls() {
+        Topic water = topicOf(a, "Agua");
+        Topic fires = topicOf(a, "Incendios");
+        UserId admin = newUser(a);
+        tagging.decide(CompanyScope.of(a), documentOfA.id(), water.id(), TopicState.ACTIVE, admin, NOW);
+        CompanyScope scopeOfB = CompanyScope.of(b);
+        var all = ProjectVisibility.all();
+
+        ownerTagging.decide(scopeOfB, documentOfA.id(), fires.id(), TopicState.ACTIVE, newUser(b), NOW);
+        ownerTagging.retag(scopeOfB, documentOfA.id());
+
+        assertThat(ownerTagging.topicsOf(scopeOfB, documentOfA.id())).isEmpty();
+        assertThat(ownerTagging.activeTopicsOf(scopeOfB, all, List.of(documentOfA.id()))).isEmpty();
+        assertThat(ownerTagging.taggingOf(scopeOfB, all, List.of(documentOfA.id()))).isEmpty();
+        assertThat(ownerTagging.pendingCount(b, all)).isZero();
+        assertThat(ownerTagging.backlog(b).pendingDocuments()).isZero();
+        assertThat(tagging.topicsOf(CompanyScope.of(a), documentOfA.id())).extracting(t -> t.topicId())
+                .containsExactly(water.id());
+        assertThat(ownerTagging.taggingOf(CompanyScope.of(a), all, List.of(documentOfA.id()))).hasSize(1);
+    }
+
+    @Test
+    void topicFilterOfAnotherCompanyBringsNoDocumentsThroughAConnectionThatBypassesRls() {
+        Topic water = topicOf(a, "Agua");
+        tagging.decide(CompanyScope.of(a), documentOfA.id(), water.id(), TopicState.ACTIVE, newUser(a), NOW);
+        newDocument(b, newUser(b), "Propio de B", DocumentStatus.READY);
+
+        assertThat(ownerDocs.list(CompanyScope.of(b), ProjectVisibility.all(), Optional.empty(),
+                Optional.of(water.id()), Optional.empty(), 0, 10)).isEmpty();
+        assertThat(ownerDocs.list(CompanyScope.of(a), ProjectVisibility.all(), Optional.empty(),
+                Optional.of(water.id()), Optional.empty(), 0, 10)).hasSize(1);
     }
 }
