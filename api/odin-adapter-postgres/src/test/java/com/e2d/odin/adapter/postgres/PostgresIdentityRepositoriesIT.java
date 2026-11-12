@@ -219,15 +219,37 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
                 Instant.parse("2026-11-09T10:00:00Z"), Optional.empty());
     }
 
+    private User groupAdmin(String name, String email) {
+        return new User(new UserId(UUID.randomUUID()), name, Optional.empty(), uniqueCode(), Optional.of(email), true,
+                true, Optional.of("hash"));
+    }
+
     @Test
-    void findGroupAdminReturnsTheOnlyGroupAdmin() {
-        assertThat(users.findGroupAdmin()).isEmpty();
-        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.empty(), uniqueCode(),
-                Optional.of("gema@x.com"), true, true, Optional.of("hash"));
+    void listGroupAdminsReturnsEveryOneInOrderWithoutTheDeleted() {
+        assertThat(users.listGroupAdmins()).isEmpty();
+        User first = groupAdmin("Gema", "gema@x.com");
+        User second = groupAdmin("Gael", "gael@x.com");
+        User gone = groupAdmin("Gus", "gus@x.com");
         users.save(user("c@x.com"));
+        users.save(first);
+        users.save(second);
+        users.save(gone);
+
+        assertThat(users.listGroupAdmins()).containsExactly(first, second, gone);
+        users.delete(gone.id(), Instant.now());
+        assertThat(users.listGroupAdmins()).containsExactly(first, second);
+    }
+
+    @Test
+    void findGroupAdminByEmailIgnoresCaseNonAdminsAndTheDeleted() {
+        User admin = groupAdmin("Gema", "gema@x.com");
+        User plain = user("c@x.com");
+        users.save(plain);
         users.save(admin);
-        assertThat(users.findGroupAdmin()).contains(admin);
+
+        assertThat(users.findGroupAdminByEmail("GEMA@x.com")).contains(admin);
+        assertThat(users.findGroupAdminByEmail("c@x.com")).isEmpty();
         users.delete(admin.id(), Instant.now());
-        assertThat(users.findGroupAdmin()).isEmpty();
+        assertThat(users.findGroupAdminByEmail("gema@x.com")).isEmpty();
     }
 }

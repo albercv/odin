@@ -109,4 +109,18 @@ class ListMembersTest {
         assertThat(list.execute(Actors.groupAdmin(), company)).filteredOn(m -> m.userId().equals(workerId))
                 .singleElement().satisfies(m -> assertThat(m.active()).isFalse());
     }
+
+    @Test
+    void showsWhetherThePersonIsActiveInTheWholeGroup() {
+        User wanda = users.findAllById(java.util.List.of(workerId)).get(0);
+        users.save(wanda.withActive(false));
+
+        assertThat(list.execute(Actors.companyAdmin(company), company)).filteredOn(m -> m.userId().equals(workerId))
+                .singleElement().satisfies(m -> {
+                    assertThat(m.personActive()).isFalse();
+                    assertThat(m.active()).isFalse();
+                });
+        assertThat(list.execute(Actors.companyAdmin(company), company)).filteredOn(m -> m.userId().equals(adminId))
+                .singleElement().satisfies(m -> assertThat(m.personActive()).isTrue());
+    }
 }

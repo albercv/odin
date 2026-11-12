@@ -52,9 +52,9 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record CompanyRef(UUID id, String name, String code) {
+    public record CompanyRef(UUID id, String name, String code, boolean codeReviewed) {
         public static CompanyRef from(Company c) {
-            return new CompanyRef(c.id().value(), c.name(), c.code());
+            return new CompanyRef(c.id().value(), c.name(), c.code(), c.codeReviewed());
         }
     }
 
@@ -70,9 +70,9 @@ public final class Responses {
         }
     }
 
-    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities) {
+    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities, boolean codeReviewed) {
         public static CompanyView from(Company c) {
-            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities());
+            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities(), c.codeReviewed());
         }
     }
 
@@ -131,10 +131,11 @@ public final class Responses {
 
     public record MemberView(UUID userId, String displayName, String firstName, @Nullable String lastName,
             String personCode, String memberCode, @Nullable String email, Set<Role> roles, boolean active,
-            boolean hasPassword) {
+            boolean personActive, boolean hasPassword) {
         public static MemberView from(com.e2d.odin.application.identity.MemberView m) {
             return new MemberView(m.userId().value(), m.displayName(), m.firstName(), m.lastName().orElse(null),
-                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.hasPassword());
+                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.personActive(),
+                    m.hasPassword());
         }
     }
 
@@ -142,6 +143,21 @@ public final class Responses {
         public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added, Actor viewer) {
             return new MemberAdded(MemberView.from(com.e2d.odin.application.identity.MemberView.of(added.user(),
                     added.membership(), added.company().code(), viewer)), added.alreadyExisted(),
+                    added.keptPassword());
+        }
+    }
+
+    public record GroupAdminView(UUID userId, String firstName, @Nullable String lastName, String displayName,
+            @Nullable String email, String personCode, boolean active) {
+        public static GroupAdminView from(User u) {
+            return new GroupAdminView(u.id().value(), u.firstName(), u.lastName().orElse(null), u.displayName(),
+                    u.email().orElse(null), u.personCode(), u.active());
+        }
+    }
+
+    public record GroupAdminAdded(GroupAdminView admin, boolean alreadyExisted, boolean keptPassword) {
+        public static GroupAdminAdded from(com.e2d.odin.application.identity.GroupAdminAdded added) {
+            return new GroupAdminAdded(GroupAdminView.from(added.admin()), added.alreadyExisted(),
                     added.keptPassword());
         }
     }

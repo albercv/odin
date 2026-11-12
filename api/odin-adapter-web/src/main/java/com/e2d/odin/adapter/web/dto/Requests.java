@@ -62,7 +62,14 @@ public final class Requests {
     public record SetPassword(String currentPassword, String newPassword) {
     }
 
-    public record RecoverAdmin(String setupToken, String newPassword) {
+    public record AddGroupAdmin(String firstName, String lastName,
+            @Schema(description = "Obligatorio: es la puerta al panel.") String email,
+            @Schema(description = "Solo hace falta si la persona no tiene ya contraseña.") String password) {
+    }
+
+    public record RecoverAdmin(String setupToken,
+            @Schema(description = "Obligatorio si hay más de un administrador del grupo.") String email,
+            String newPassword) {
     }
 
     public record KeyLabel(String label) {

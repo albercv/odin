@@ -49,7 +49,7 @@ test.beforeAll(async ({ browser }) => {
   await page.getByLabel('Correo').fill(state.admin.email);
   await page.getByLabel('Contraseña').fill(state.admin.password);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Empresas', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Grupo', exact: true })).toBeVisible();
   sessionCookies = await context.cookies();
   await seedReviewData(context.request);
   await context.close();
@@ -138,6 +138,13 @@ async function openRejectPanel(page: Page): Promise<void> {
   await expect(page.getByLabel('Motivo del rechazo')).toBeVisible();
 }
 
+async function openGroupAdmins(page: Page): Promise<void> {
+  await page.goto(PANEL);
+  await page.getByRole('link', { name: 'Administración del grupo' }).click();
+  await expect(page.getByRole('heading', { name: 'Administración del grupo', level: 1 })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Administrador/ }).first()).toBeVisible();
+}
+
 const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   login: async (page) => { await page.goto(PANEL); await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible(); },
   cover: async (page) => { await page.goto(`${PANEL}/#cover`); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); },
@@ -148,6 +155,8 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   'company keys': openKeys,
   'project members': openProjectMembers,
   'company switcher': openSwitcher,
+  'group switcher': openSwitcher,
+  'group admins': openGroupAdmins,
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,
   'review reject panel': openRejectPanel,

@@ -197,6 +197,12 @@ class MigrationFromPhaseOneIT {
     }
 
     @Test
+    void existingCompaniesNeedTheirCodeReviewed() {
+        assertThat(jdbc.sql("SELECT count(*) FROM company WHERE code_reviewed").query(Long.class).single()).isZero();
+        assertThat(jdbc.sql("SELECT count(*) FROM company").query(Long.class).single()).isEqualTo(4);
+    }
+
+    @Test
     void groupAdminIsFlaggedAndHasNoMembership() {
         List<UUID> flagged = jdbc.sql("SELECT id FROM app_user WHERE group_admin").query(UUID.class).list();
 

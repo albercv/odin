@@ -429,6 +429,53 @@
         }
       }
     },
+    "/v1/admin/group-admins" : {
+      "get" : {
+        "tags" : [ "group-admin-controller" ],
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/GroupAdminView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "group-admin-controller" ],
+        "operationId" : "add_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AddGroupAdmin"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupAdminAdded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/documents/{documentId}/topics/retag" : {
       "post" : {
         "tags" : [ "document-topic-controller" ],
@@ -479,7 +526,7 @@
     "/v1/admin/companies" : {
       "get" : {
         "tags" : [ "company-controller" ],
-        "operationId" : "list",
+        "operationId" : "list_1",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -656,7 +703,7 @@
     "/v1/admin/companies/{companyId}/members" : {
       "get" : {
         "tags" : [ "member-controller" ],
-        "operationId" : "list_1",
+        "operationId" : "list_2",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -684,7 +731,7 @@
       },
       "post" : {
         "tags" : [ "member-controller" ],
-        "operationId" : "add_1",
+        "operationId" : "add_2",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -802,7 +849,7 @@
     "/v1/admin/companies/{companyId}/documents" : {
       "get" : {
         "tags" : [ "admin-document-controller" ],
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1483,7 +1530,7 @@
     "/v1/admin/companies/{companyId}/projects/{projectId}/members" : {
       "get" : {
         "tags" : [ "project-member-controller" ],
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1559,7 +1606,7 @@
     "/v1/admin/companies/{companyId}/cards" : {
       "get" : {
         "tags" : [ "admin-card-controller" ],
-        "operationId" : "list_4",
+        "operationId" : "list_5",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1601,6 +1648,26 @@
         "operationId" : "revoke",
         "parameters" : [ {
           "name" : "keyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/group-admins/{userId}" : {
+      "delete" : {
+        "tags" : [ "group-admin-controller" ],
+        "operationId" : "revoke_1",
+        "parameters" : [ {
+          "name" : "userId",
           "in" : "path",
           "required" : true,
           "schema" : {
@@ -1768,9 +1835,12 @@
               "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
             },
             "uniqueItems" : true
+          },
+          "codeReviewed" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "capabilities", "code", "id", "name" ]
+        "required" : [ "capabilities", "code", "codeReviewed", "id", "name" ]
       },
       "Setup" : {
         "type" : "object",
@@ -1807,6 +1877,10 @@
         "properties" : {
           "setupToken" : {
             "type" : "string"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Obligatorio si hay más de un administrador del grupo."
           },
           "newPassword" : {
             "type" : "string"
@@ -1974,6 +2048,68 @@
           }
         }
       },
+      "AddGroupAdmin" : {
+        "type" : "object",
+        "properties" : {
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Obligatorio: es la puerta al panel."
+          },
+          "password" : {
+            "type" : "string",
+            "description" : "Solo hace falta si la persona no tiene ya contraseña."
+          }
+        }
+      },
+      "GroupAdminAdded" : {
+        "type" : "object",
+        "properties" : {
+          "admin" : {
+            "$ref" : "#/components/schemas/GroupAdminView"
+          },
+          "alreadyExisted" : {
+            "type" : "boolean"
+          },
+          "keptPassword" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "admin", "alreadyExisted", "keptPassword" ]
+      },
+      "GroupAdminView" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "personCode" : {
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active", "displayName", "firstName", "personCode", "userId" ]
+      },
       "NewCompany" : {
         "type" : "object",
         "properties" : {
@@ -2130,11 +2266,14 @@
           "active" : {
             "type" : "boolean"
           },
+          "personActive" : {
+            "type" : "boolean"
+          },
           "hasPassword" : {
             "type" : "boolean"
           }
         },
-        "required" : [ "active", "displayName", "firstName", "hasPassword", "memberCode", "personCode", "roles", "userId" ]
+        "required" : [ "active", "displayName", "firstName", "hasPassword", "memberCode", "personActive", "personCode", "roles", "userId" ]
       },
       "KeyLabel" : {
         "type" : "object",
@@ -2533,9 +2672,12 @@
           },
           "code" : {
             "type" : "string"
+          },
+          "codeReviewed" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "code", "id", "name" ]
+        "required" : [ "code", "codeReviewed", "id", "name" ]
       },
       "DocumentTopicView" : {
         "type" : "object",

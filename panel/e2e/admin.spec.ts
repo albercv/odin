@@ -13,6 +13,8 @@ const CLOSED_PROJECT = 'Proyecto cerrado E2E';
 const PROJECT_PEOPLE = ['Paula Uno', 'Pedro Dos', 'Pilar Tres'];
 const WORKER = { name: 'Trabajador E2E', email: 'e2e-worker@demo.test', renamed: 'Trabajador Renombrado' };
 const COMPANY_ADMIN = { name: 'Admin E2E', email: 'e2e-admin@demo.test', password: `clave-${randomUUID()}`, newPassword: `clave-${randomUUID()}`, resetPassword: `clave-${randomUUID()}` };
+const FIRST_GROUP_ADMIN = 'Administrador Demo';
+const SECOND_GROUP_ADMIN = { name: 'Segundo Relevo', email: 'e2e-relevo@demo.test', password: `clave-${randomUUID()}` };
 const PROJECT = { name: 'Proyecto E2E', renamed: 'Proyecto E2E renombrado' };
 
 const usersSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Personas' }) });
@@ -197,7 +199,7 @@ async function resetCompanyAdminPasswordAndEnter(page: Page): Promise<void> {
   await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Empresa' }).selectOption({ label: COMPANY });
   await expect(page.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Empresas' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Grupo', exact: true })).toHaveCount(0);
   console.log('✓ Admin 9: contraseña restablecida; quien administra dos empresas entra, ve el selector y no ve el resto del grupo');
 }
 
@@ -213,7 +215,7 @@ async function changeOwnPassword(page: Page): Promise<void> {
 }
 
 async function samePersonInSecondCompany(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Empresas' }).click();
+  await page.getByRole('link', { name: 'Grupo', exact: true }).click();
   await createCompany(page, SECOND_COMPANY, 'E2B');
   await openCompany(page, SECOND_COMPANY);
   await createUser(page, { name: COMPANY_ADMIN.name, email: COMPANY_ADMIN.email, password: COMPANY_ADMIN.password, role: 'COMPANY_ADMIN', alsoWorker: true });
@@ -222,8 +224,9 @@ async function samePersonInSecondCompany(page: Page): Promise<void> {
   await expect(person).toContainText('Administra la empresa · Trabaja con su IA');
   await expect(person.locator('code')).toHaveText(/^[2-9A-HJKMNP-Z]{4}-E2B$/);
   await giveKey(page, COMPANY_ADMIN.name, 'clave segunda empresa');
-  await page.getByRole('link', { name: 'Empresas' }).click();
-  await openCompany(page, COMPANY);
+  await page.getByRole('combobox', { name: 'Empresa' }).selectOption({ label: COMPANY });
+  await expect(page.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Grupo', exact: true })).toBeVisible();
   console.log('✓ Admin 11: la misma persona en una segunda empresa (aviso de que ya existía), con los dos papeles y una clave en ella');
 }
 
@@ -305,6 +308,61 @@ async function deleteProjectMember(page: Page): Promise<void> {
   console.log('✓ Admin 16: una persona miembro de un proyecto, borrada por el administrador del grupo: «Quién lo ve» baja en uno y ya no figura');
 }
 
+const groupAdminsSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Administradores del grupo' }) });
+
+async function openGroupAdmins(page: Page, email: string, password: string): Promise<void> {
+  await page.goto(process.env.DEMO_PANEL_URL ?? '');
+  await logIn(page, email, password);
+  await page.getByRole('link', { name: 'Administración del grupo' }).click();
+  await expect(page.getByRole('heading', { name: 'Administración del grupo', level: 1 })).toBeVisible();
+}
+
+async function addSecondGroupAdmin(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Añadir administrador del grupo' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Añadir administrador del grupo' });
+  await dialog.getByLabel('Nombre', { exact: true }).fill(firstNameOf(SECOND_GROUP_ADMIN.name));
+  await dialog.getByLabel('Apellidos').fill(lastNamesOf(SECOND_GROUP_ADMIN.name));
+  await dialog.getByLabel('Correo').fill(SECOND_GROUP_ADMIN.email);
+  await dialog.getByLabel('Contraseña').fill(SECOND_GROUP_ADMIN.password);
+  await dialog.getByRole('button', { name: 'Añadir administrador' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(row(groupAdminsSection(page), SECOND_GROUP_ADMIN.name)).toContainText(SECOND_GROUP_ADMIN.email);
+  await expect(row(groupAdminsSection(page), SECOND_GROUP_ADMIN.name).locator('code')).toHaveText(/^[2-9A-HJKMNP-Z]{4}$/);
+}
+
+async function toggleGroupAdmin(page: Page, name: string, action: 'Desactivar' | 'Activar', message: string): Promise<void> {
+  const admins = groupAdminsSection(page);
+  await openActions(admins, name);
+  await admins.getByRole('button', { name: `${action} ${name}`, exact: true }).click();
+  await confirmDialog(page, message, action);
+}
+
+// Al final, porque desactivar al primero cierra su sesión: demo.spec.ts y visual.spec.ts entran con él de nuevo.
+async function groupAdminHandover(browser: Browser): Promise<void> {
+  const first = await browser.newContext();
+  const firstPage = await first.newPage();
+  await openGroupAdmins(firstPage, state.admin.email, state.admin.password);
+  await addSecondGroupAdmin(firstPage);
+  await first.close();
+  const second = await browser.newContext();
+  const page = await second.newPage();
+  await openGroupAdmins(page, SECOND_GROUP_ADMIN.email, SECOND_GROUP_ADMIN.password);
+  await expect(page.getByRole('button', { name: `Más acciones de ${SECOND_GROUP_ADMIN.name}` })).toHaveCount(0);
+  await toggleGroupAdmin(page, FIRST_GROUP_ADMIN, 'Desactivar', `¿Desactivar a ${FIRST_GROUP_ADMIN} en todo el grupo? No podrá usar Odín en ninguna empresa hasta que se reactive. Sus claves y sus proyectos se conservan.`);
+  await expect(row(groupAdminsSection(page), FIRST_GROUP_ADMIN)).toContainText('Desactivado');
+  const locked = await browser.newContext();
+  const attempt = await locked.newPage();
+  await attempt.goto(process.env.DEMO_PANEL_URL ?? '');
+  await logIn(attempt, state.admin.email, state.admin.password);
+  await expect(attempt.getByRole('alert')).toBeVisible();
+  await expect(attempt.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible();
+  await locked.close();
+  await toggleGroupAdmin(page, FIRST_GROUP_ADMIN, 'Activar', `¿Activar a ${FIRST_GROUP_ADMIN}? Vuelve a entrar en el panel y sus claves vuelven a valer.`);
+  await expect(row(groupAdminsSection(page), FIRST_GROUP_ADMIN)).toContainText('Activo');
+  await second.close();
+  console.log('✓ Admin 17: relevo del administrador del grupo: el segundo entra, desactiva al primero (que ya no entra) y lo reactiva');
+}
+
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
 // El administrador del grupo reutiliza la sesión de prepare (sin login) y los pasos que entran de nuevo van al final.
 test('administración del panel de extremo a extremo', async ({ page, context, browser }) => {
@@ -327,4 +385,5 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await deleteProjectMember(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);
+  await groupAdminHandover(browser);
 });

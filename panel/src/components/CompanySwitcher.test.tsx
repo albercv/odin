@@ -6,14 +6,8 @@ import { AppShell } from '../layout/AppShell';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-const acme = { id: 'c1', name: 'Acme', code: 'ACM' };
-const beta = { id: 'c2', name: 'Beta', code: 'BET' };
-
-test('hiddenWithOneCompany', () => {
-  const { container } = render(<CompanySwitcher companies={[acme]} currentId="c1" onChange={() => {}} />);
-  expect(screen.queryByRole('combobox')).toBeNull();
-  expect(container).toBeEmptyDOMElement();
-});
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true };
+const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true };
 
 test('offersEveryCompanyWithTheCurrentOneSelected', async () => {
   const onChange = vi.fn();
@@ -39,5 +33,22 @@ test('switchingLoadsTheOtherCompany', async () => {
   expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
   await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Empresa' }), 'Beta');
   expect(await screen.findByRole('heading', { name: 'Beta' })).toBeInTheDocument();
+  await waitFor(() => expect(calls.some((c) => c.key === 'GET /v1/admin/companies/c2/members')).toBe(true));
+});
+
+test('choosingACompanyOpensIt', async () => {
+  const me = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', role: 'GROUP_ADMIN' as const, companies: [acme, beta], scannedDocumentsSupported: false };
+  const calls = mockFetch({
+    'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
+    'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c2/projects': () => [],
+    'GET /v1/admin/companies/c2/members': () => [],
+  });
+  renderWithProviders(<AppShell me={me} onLogout={() => {}} onPasswordChanged={() => {}} onProfileChanged={() => {}} />);
+  const select = await screen.findByRole('combobox', { name: 'Empresa' });
+  await screen.findByRole('option', { name: 'Beta' });
+  await userEvent.selectOptions(select, 'Beta');
+  expect(await screen.findByRole('heading', { name: 'Beta' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Empresa' })).toHaveAttribute('aria-current', 'page');
   await waitFor(() => expect(calls.some((c) => c.key === 'GET /v1/admin/companies/c2/members')).toBe(true));
 });
