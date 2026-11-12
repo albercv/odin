@@ -40,9 +40,9 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record CompanyRef(UUID id, String name, String code) {
+    public record CompanyRef(UUID id, String name, String code, boolean codeReviewed) {
         public static CompanyRef from(Company c) {
-            return new CompanyRef(c.id().value(), c.name(), c.code());
+            return new CompanyRef(c.id().value(), c.name(), c.code(), c.codeReviewed());
         }
     }
 
@@ -57,9 +57,9 @@ public final class Responses {
         }
     }
 
-    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities) {
+    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities, boolean codeReviewed) {
         public static CompanyView from(Company c) {
-            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities());
+            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities(), c.codeReviewed());
         }
     }
 

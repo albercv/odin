@@ -6,8 +6,8 @@ import { AppShell } from '../layout/AppShell';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-const acme = { id: 'c1', name: 'Acme', code: 'ACM' };
-const beta = { id: 'c2', name: 'Beta', code: 'BET' };
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true };
+const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true };
 
 test('hiddenWithOneCompany', () => {
   const { container } = render(<CompanySwitcher companies={[acme]} currentId="c1" onChange={() => {}} />);

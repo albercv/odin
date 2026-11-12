@@ -1402,9 +1402,12 @@
               "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD" ]
             },
             "uniqueItems" : true
+          },
+          "codeReviewed" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "capabilities", "code", "id", "name" ]
+        "required" : [ "capabilities", "code", "codeReviewed", "id", "name" ]
       },
       "Setup" : {
         "type" : "object",
@@ -2180,9 +2183,12 @@
           },
           "code" : {
             "type" : "string"
+          },
+          "codeReviewed" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "code", "id", "name" ]
+        "required" : [ "code", "codeReviewed", "id", "name" ]
       },
       "ProjectMemberView" : {
         "type" : "object",
