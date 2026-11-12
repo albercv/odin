@@ -199,7 +199,7 @@ async function resetCompanyAdminPasswordAndEnter(page: Page): Promise<void> {
   await expect(page.getByRole('combobox', { name: 'Empresa' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Empresa' }).selectOption({ label: COMPANY });
   await expect(page.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Empresas' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Grupo', exact: true })).toHaveCount(0);
   console.log('✓ Admin 9: contraseña restablecida; quien administra dos empresas entra, ve el selector y no ve el resto del grupo');
 }
 
@@ -215,7 +215,7 @@ async function changeOwnPassword(page: Page): Promise<void> {
 }
 
 async function samePersonInSecondCompany(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Empresas' }).click();
+  await page.getByRole('link', { name: 'Grupo', exact: true }).click();
   await createCompany(page, SECOND_COMPANY, 'E2B');
   await openCompany(page, SECOND_COMPANY);
   await createUser(page, { name: COMPANY_ADMIN.name, email: COMPANY_ADMIN.email, password: COMPANY_ADMIN.password, role: 'COMPANY_ADMIN', alsoWorker: true });
@@ -224,8 +224,9 @@ async function samePersonInSecondCompany(page: Page): Promise<void> {
   await expect(person).toContainText('Administra la empresa · Trabaja con su IA');
   await expect(person.locator('code')).toHaveText(/^[2-9A-HJKMNP-Z]{4}-E2B$/);
   await giveKey(page, COMPANY_ADMIN.name, 'clave segunda empresa');
-  await page.getByRole('link', { name: 'Empresas' }).click();
-  await openCompany(page, COMPANY);
+  await page.getByRole('combobox', { name: 'Empresa' }).selectOption({ label: COMPANY });
+  await expect(page.getByRole('heading', { name: COMPANY, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Grupo', exact: true })).toBeVisible();
   console.log('✓ Admin 11: la misma persona en una segunda empresa (aviso de que ya existía), con los dos papeles y una clave en ella');
 }
 

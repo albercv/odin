@@ -1,7 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { Sidebar } from './Sidebar';
+
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true };
+const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true };
 
 type Props = Partial<React.ComponentProps<typeof Sidebar>>;
 const show = (props: Props = {}) => {
@@ -14,15 +17,43 @@ const show = (props: Props = {}) => {
 describe('Sidebar', () => {
   it('sidebarHidesCompaniesForCompanyAdmins', () => {
     show();
-    expect(screen.queryByRole('link', { name: 'Empresas' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Grupo' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Empresa' })).toBeInTheDocument();
     expect(screen.getByText('Acme')).toBeInTheDocument();
   });
 
   it('sidebarShowsCompaniesForGroupAdmins', async () => {
     const { setPage } = show({ isGroup: true });
-    await userEvent.click(screen.getByRole('link', { name: 'Empresas' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Grupo' }));
     expect(setPage).toHaveBeenCalledWith('companies');
+  });
+
+  it('menuSaysGrupo', () => {
+    show({ isGroup: true });
+    expect(screen.getByRole('link', { name: 'Grupo' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Empresas' })).toBeNull();
+  });
+
+  it('groupAdminAlwaysSeesTheSwitcherWithAllCompanies', () => {
+    const { unmount } = render(<Sidebar isGroup name="Bea" page="companies" pending={0} setPage={() => {}} onLogout={() => {}} switcher={{ companies: [acme], currentId: 'c1', onChange: () => {} }} />);
+    expect(screen.getByRole('combobox', { name: 'Empresa' })).toHaveValue('c1');
+    unmount();
+    show({ isGroup: true, switcher: { companies: [acme, beta], currentId: 'c2', onChange: () => {} } });
+    const select = screen.getByRole('combobox', { name: 'Empresa' });
+    expect(select).toHaveValue('c2');
+    expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['Acme', 'Beta']);
+  });
+
+  it('noCompanyChosenShowsThePrompt', () => {
+    show({ isGroup: true, switcher: { companies: [acme, beta], currentId: '', onChange: () => {} } });
+    expect(screen.getByRole('combobox', { name: 'Empresa' })).toHaveValue('');
+    expect(screen.getByRole('option', { name: 'Elige una empresa' })).toBeInTheDocument();
+  });
+
+  it('companyAdminWithOneCompanyShowsTheNameNotTheSwitcher', () => {
+    show({ switcher: { companies: [acme], currentId: 'c1', onChange: () => {} } });
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByText('Acme')).toBeInTheDocument();
   });
 
   it('groupAdminsLinkOnlyForTheGroupAdmin', async () => {

@@ -49,7 +49,7 @@ test.beforeAll(async ({ browser }) => {
   await page.getByLabel('Correo').fill(state.admin.email);
   await page.getByLabel('Contraseña').fill(state.admin.password);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Empresas', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Grupo', exact: true })).toBeVisible();
   sessionCookies = await context.cookies();
   await seedReviewData(context.request);
   await context.close();
@@ -155,6 +155,7 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   'company keys': openKeys,
   'project members': openProjectMembers,
   'company switcher': openSwitcher,
+  'group switcher': openSwitcher,
   'group admins': openGroupAdmins,
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,
