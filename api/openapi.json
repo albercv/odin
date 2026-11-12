@@ -35,6 +35,61 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/superseded-by" : {
+      "put" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "supersede",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SupersedeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "unsupersede",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}" : {
       "put" : {
         "tags" : [ "project-member-controller" ],
@@ -1302,6 +1357,80 @@
           }
         }
       },
+      "SupersedeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "replacementId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "El documento que lo sustituye entero."
+          }
+        }
+      },
+      "DocumentLink" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "title" ]
+      },
+      "DocumentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "companyId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "format" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "paginated" : {
+            "type" : "boolean"
+          },
+          "uploadedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "attemptCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "supersededBy" : {
+            "$ref" : "#/components/schemas/DocumentLink"
+          },
+          "supersededAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "paginated", "status", "title", "uploadedAt" ]
+      },
       "Capabilities" : {
         "type" : "object",
         "properties" : {
@@ -1521,50 +1650,6 @@
             "type" : "string"
           }
         }
-      },
-      "DocumentView" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "companyId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "projectId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "title" : {
-            "type" : "string"
-          },
-          "filename" : {
-            "type" : "string"
-          },
-          "format" : {
-            "type" : "string"
-          },
-          "status" : {
-            "type" : "string"
-          },
-          "failureReason" : {
-            "type" : "string"
-          },
-          "paginated" : {
-            "type" : "boolean"
-          },
-          "uploadedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "attemptCount" : {
-            "type" : "integer",
-            "format" : "int32"
-          }
-        },
-        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "paginated", "status", "title", "uploadedAt" ]
       },
       "NewCompany" : {
         "type" : "object",

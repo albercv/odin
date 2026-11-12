@@ -1,6 +1,7 @@
 package com.e2d.odin.application.port;
 
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -21,9 +22,16 @@ public interface DocumentRepository {
 
     Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id);
 
+    Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id);
+
+    /** Pone la marca de sustituido con su propia orden: {@link #save} no la escribe ni la borra. */
+    void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at);
+
+    void clearSuperseded(CompanyId companyId, DocumentId id);
+
     Optional<Document> findBySha256(CompanyId companyId, String sha256);
 
-    List<Document> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
+    List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<DocumentStatus> status, int offset, int limit);
 
     Optional<DocumentPage> findPage(CompanyScope scope, ProjectVisibility visibility, DocumentId id, int pageNumber);

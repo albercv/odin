@@ -57,7 +57,7 @@ final class ArchiveLoader {
             String key, Path file) throws IOException {
         Document d = new Document(new DocumentId(UUID.randomUUID()), company, project, key,
                 file.getFileName().toString(), DocumentFormat.PLAIN_TEXT, UUID.randomUUID().toString(),
-                DocumentStatus.READY, Optional.empty(), true, uploader, AbstractPostgresIT.NOW, Optional.empty(), 0);
+                DocumentStatus.READY, Optional.empty(), true, uploader, AbstractPostgresIT.NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
         it.docs.save(d);
         Map<Integer, String> pages = splitPages(Files.readString(file));
         it.docs.replacePages(d.id(), pages.entrySet().stream()

@@ -2,7 +2,9 @@ package com.e2d.odin.application.fake;
 
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
@@ -38,7 +40,27 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public void save(Document document) {
-        documents.put(document.id(), document);
+        Document stored = documents.get(document.id());
+        // Como el upsert de PostgreSQL: guardar no escribe ni borra la marca.
+        documents.put(document.id(), stored == null ? document.withSupersession(Optional.empty(), Optional.empty())
+                : document.withSupersession(stored.supersededBy(), stored.supersededAt()));
+    }
+
+    @Override
+    public void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at) {
+        mark(companyId, id, Optional.of(replacementId), Optional.of(at));
+    }
+
+    @Override
+    public void clearSuperseded(CompanyId companyId, DocumentId id) {
+        mark(companyId, id, Optional.empty(), Optional.empty());
+    }
+
+    private void mark(CompanyId companyId, DocumentId id, Optional<DocumentId> by, Optional<Instant> at) {
+        Document d = documents.get(id);
+        if (d != null && d.companyId().equals(companyId)) {
+            documents.put(id, d.withSupersession(by, at));
+        }
     }
 
     @Override
@@ -53,13 +75,40 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
+        return findById(scope, visibility, id).map(d -> entry(scope, visibility, d));
+    }
+
+    private DocumentEntry entry(CompanyScope scope, ProjectVisibility visibility, Document d) {
+        Optional<Document> direct = d.supersededBy().flatMap(by -> findById(scope, visibility, by));
+        return new DocumentEntry(d, direct.map(DocumentRef::of),
+                direct.flatMap(first -> endOfChain(scope, visibility, first)).map(DocumentRef::of));
+    }
+
+    /** El vigente del final de la cadena; vacío si se corta, no termina o pasa del tope, como en PostgreSQL. */
+    private Optional<Document> endOfChain(CompanyScope scope, ProjectVisibility visibility, Document first) {
+        Document current = first;
+        for (int hops = 0; hops < Document.MAX_SUPERSESSION_CHAIN; hops++) {
+            if (current.supersededBy().isEmpty()) {
+                return Optional.of(current);
+            }
+            Optional<Document> next = findById(scope, visibility, current.supersededBy().get());
+            if (next.isEmpty()) {
+                return Optional.empty();
+            }
+            current = next.get();
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return documents.values().stream()
                 .filter(d -> d.companyId().equals(companyId) && d.sha256().equals(sha256)).findFirst();
     }
 
     @Override
-    public List<Document> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
+    public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<DocumentStatus> status, int offset, int limit) {
         lastListScope = scope;
         return documents.values().stream()
@@ -67,7 +116,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
                         && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
                 .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
-                .skip(offset).limit(limit).toList();
+                .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
     }
 
     @Override

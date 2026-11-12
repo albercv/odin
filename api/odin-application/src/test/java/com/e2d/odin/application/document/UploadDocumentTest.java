@@ -13,6 +13,7 @@ import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.document.DocumentFormat;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -72,6 +73,20 @@ class UploadDocumentTest {
         assertThat(other.document().id()).isNotEqualTo(first.document().id());
         assertThat(other.document().sha256()).isEqualTo(first.document().sha256());
         assertThat(store.size()).isEqualTo(1);
+    }
+
+    @Test
+    void duplicateUploadKeepsTheMark() {
+        UploadOutcome old = send(adminA, companyA, CONTENT);
+        UploadOutcome renewed = send(adminA, companyA, "otra-poliza".getBytes());
+        docs.markSuperseded(companyA, old.document().id(), renewed.document().id(), Fixtures.NOW);
+
+        UploadOutcome again = send(adminA, companyA, CONTENT);
+
+        assertThat(again.duplicate()).isTrue();
+        assertThat(again.document().supersededBy()).contains(renewed.document().id());
+        assertThat(again.entry().supersededBy()).contains(DocumentRef.of(renewed.document()));
+        assertThat(docs.get(old.document().id()).orElseThrow().supersededBy()).contains(renewed.document().id());
     }
 
     @Test

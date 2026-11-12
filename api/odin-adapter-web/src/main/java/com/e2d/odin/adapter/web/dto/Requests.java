@@ -22,6 +22,9 @@ public final class Requests {
     public record Name(String name) {
     }
 
+    public record SupersedeRequest(@Schema(description = "El documento que lo sustituye entero.") UUID replacementId) {
+    }
+
     public record Capabilities(Set<Capability> capabilities) {
     }
 

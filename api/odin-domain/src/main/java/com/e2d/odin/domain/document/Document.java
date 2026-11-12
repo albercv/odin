@@ -21,7 +21,31 @@ public record Document(
         UserId uploadedBy,
         Instant uploadedAt,
         Optional<Instant> processingStartedAt,
-        int attemptCount) {
+        int attemptCount,
+        Optional<DocumentId> supersededBy,
+        Optional<Instant> supersededAt) {
+
+    /** Tope de saltos al seguir las marcas de sustituido; evita que una cadena circular cuelgue las lecturas. */
+    public static final int MAX_SUPERSESSION_CHAIN = 50;
+
+    public Document {
+        if (supersededBy.isPresent() != supersededAt.isPresent()) {
+            throw new IllegalArgumentException("La marca de sustituido necesita el sustituto y la fecha a la vez");
+        }
+        if (supersededBy.filter(id::equals).isPresent()) {
+            throw new IllegalArgumentException("Un documento no puede sustituirse a sí mismo");
+        }
+    }
+
+    public boolean superseded() {
+        return supersededBy.isPresent();
+    }
+
+    public Document withSupersession(Optional<DocumentId> newSupersededBy, Optional<Instant> newSupersededAt) {
+        return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
+                paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, newSupersededBy,
+                newSupersededAt);
+    }
 
     public Document startProcessing(Instant now) {
         return copy(DocumentStatus.PROCESSING, Optional.empty(), paginated, Optional.of(now), attemptCount + 1);
@@ -50,6 +74,6 @@ public record Document(
     private Document copy(DocumentStatus newStatus, Optional<String> reason, boolean isPaginated,
             Optional<Instant> startedAt, int attempts) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, newStatus, reason,
-                isPaginated, uploadedBy, uploadedAt, startedAt, attempts);
+                isPaginated, uploadedBy, uploadedAt, startedAt, attempts, supersededBy, supersededAt);
     }
 }
