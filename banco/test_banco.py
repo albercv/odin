@@ -9,7 +9,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from types import SimpleNamespace
+
 from banco import banco, judge, run
+from banco.cache import RunCache
+from banco.ledger import Ledger
 from banco.config import ConfigError
 from banco.fakes.fake_ollama import start_fake_ollama
 from banco.layout import Layout
@@ -194,7 +198,8 @@ class RunTest(Harness):
         finals = self.read_jsonl(folder, "final.jsonl")
         self.assertEqual(len(finals), 3)
         self.assertEqual(sum(f["answer"] is not None for f in finals), 1)
-        self.assertEqual(self.read_jsonl(folder, "veredictos.jsonl"), [])
+        verdicts = self.read_jsonl(folder, "veredictos.jsonl")  # parada antes de jueces: sin jueces, la pregunta queda sin veredicto
+        self.assertEqual([(v["jury"], v["judges"], v["motivo"]) for v in verdicts], [(None, [], "parada")])
         summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
         self.assertEqual(summary["accuracy"]["total"], 1)  # las dos sin respuesta no son fallos
         self.assertEqual(summary["notMeasured"], 2)
@@ -466,6 +471,81 @@ class RelaunchCacheTest(Harness):
         summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
         self.assertEqual(summary["cost"]["notifiedUsd"], 0.0)
         self.assertEqual(summary["accuracy"]["total"], 3)
+
+
+    def test_changing_think_rejudges_ollama_verdicts_only(self):
+        self.assertEqual(self.run_cli(self.config()), 0)
+        path = self.config()
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            'model = "ollama:qwen3.5:9b"', 'model = "ollama:qwen3.5:9b"\nthink = true'), encoding="utf-8")
+        with mock.patch("banco.judge.run_claude_judge", wraps=judge.run_claude_judge) as claude, \
+                mock.patch("banco.judge.run_ollama_judge", wraps=judge.run_ollama_judge) as ollama:
+            with fake_env(FAKE_VEREDICTO="si"):
+                code = banco.main(["run", "--config", str(path), "--reiniciar-presupuesto"], layout=self.layout)
+        self.assertEqual(code, 0)
+        self.assertEqual(claude.call_count, 0)  # mismo juez de Claude: sale de la caché
+        self.assertEqual(ollama.call_count, 3)  # think cambió: el veredicto de Ollama no se reutiliza
+        self.assertTrue(all(c.kwargs["think"] is True for c in ollama.call_args_list))
+
+    def test_invalid_verdicts_are_not_cached_and_are_judged_again(self):
+        self.assertEqual(self.run_cli(self.config(), env={"FAKE_VEREDICTO": "invalido"}), 0)
+        with mock.patch("banco.judge.run_claude_judge", wraps=judge.run_claude_judge) as claude:
+            with fake_env(FAKE_VEREDICTO="si"):
+                code = banco.main(["run", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
+        self.assertEqual(code, 0)
+        self.assertEqual(claude.call_count, 6)  # 3 preguntas × 2 jueces de Claude: los inválidos no se guardaron
+
+    def test_cached_verdicts_are_served_when_budget_is_exhausted(self):
+        self.assertEqual(self.run_cli(self.config()), 0)
+        with mock.patch("banco.ledger.Ledger.can_launch", return_value=False), \
+                mock.patch("banco.judge.run_claude_judge") as claude, mock.patch("banco.judge.run_ollama_judge") as ollama:
+            with fake_env(FAKE_VEREDICTO="si"):
+                code = banco.main(["run", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
+        self.assertEqual(code, 0)
+        self.assertEqual((claude.call_count, ollama.call_count), (0, 0))
+        verdicts = self.read_jsonl(max((self.tmp / "resultados").iterdir()), "veredictos.jsonl")
+        self.assertEqual(len(verdicts), 3)
+        self.assertTrue(all(v["jury"] is not None and v["motivo"] is None for v in verdicts))
+
+    def test_cached_verdicts_are_served_when_the_run_is_stopping(self):
+        self.assertEqual(self.run_cli(self.config()), 0)
+        real_answer_stage = run.answer_stage
+
+        def stopping(sess, runs, finals):
+            real_answer_stage(sess, runs, finals)
+            run._stop(sess, "parada de prueba")
+
+        with mock.patch("banco.run.answer_stage", side_effect=stopping), \
+                mock.patch("banco.judge.run_claude_judge") as claude:
+            with fake_env(FAKE_VEREDICTO="si"):
+                code = banco.main(["run", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
+        self.assertEqual(code, 2)
+        self.assertEqual(claude.call_count, 0)
+        verdicts = self.read_jsonl(max((self.tmp / "resultados").iterdir()), "veredictos.jsonl")
+        self.assertEqual(len(verdicts), 3)  # la parada no quita los veredictos de la caché
+        self.assertTrue(all(v["jury"] is not None for v in verdicts))
+
+
+class ComposedKeyTest(unittest.TestCase):
+    """Un registro de buscador sin clave no hace caer al redactor: compone sin caché segura, sin guardar."""
+
+    def test_run_without_key_composes_without_raising_and_without_caching(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        sess = SimpleNamespace(cfg=SimpleNamespace(combiner=SimpleNamespace(kind="composer", model="haiku")),
+                               settings=SimpleNamespace(odin_commit="abc", stack_digest="s"), stack={},
+                               cache=RunCache(Path(tmp.name)), ledger=Ledger(10.0))
+        item = {"id": "Q1", "pregunta": "¿Cuánto?"}
+        runs = [{"id": "Q1", "approach": "main", "replica": 0, "error": None,
+                 "respuesta": {"respuesta": "10 €", "no_lo_se": False, "citas": []}}]
+        record = {"respuesta": {"respuesta": "10 €", "no_lo_se": False, "citas": []}, "coste_usd": 0.001,
+                  "tokens": None, "duracion_s": 1.0, "error": None}
+        with mock.patch("banco.run.compose", return_value=record) as compose_mock:
+            out = run._composed(sess, item, runs)
+            again = run._composed(sess, item, runs)
+        self.assertEqual(compose_mock.call_count, 2)  # nada guardado: la segunda también paga
+        self.assertFalse(out["cached"])
+        self.assertAlmostEqual(sess.ledger.spent, 0.002)
 
 
 class StopRecordsTest(Harness):

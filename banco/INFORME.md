@@ -41,9 +41,9 @@ La clave de cada ejecución (`banco/cache.py`) incluye la pregunta, el enfoque, 
 
 Limitación: el hash cubre los ficheros con cambios seguidos por git; un fichero nuevo sin añadir a git no entra en la huella.
 
-La respuesta del redactor tiene su propia clave (`final_key`): pregunta, tipo de redactor, modelo, las claves de las ejecuciones de entrada que usó (sin orden, solo las sin error), huella del código y pila. Cada veredicto de juez tiene la suya (`verdict_key`): hash del JSON de la respuesta final, rúbrica, modelo, número de juez y semilla. Los veredictos de Ollama también se guardan, porque cuestan tiempo. La clave del veredicto no incluye la huella del código ni la pila: si cambia el texto que recibe el juez (p. ej. `banco/judge.py`) sin cambiar la rúbrica, el modelo ni la respuesta, un relanzamiento reutiliza el veredicto antiguo. Para forzar una nueva ronda de jueces, cambia la rúbrica o borra `banco/cache/`.
+La respuesta del redactor tiene su propia clave (`final_key`): pregunta, tipo de redactor, modelo, las claves de las ejecuciones de entrada que usó (sin orden, solo las sin error), huella del código y pila. Cada veredicto de juez tiene la suya (`verdict_key`): pregunta (id y texto, que el juez lee), hash del JSON de la respuesta final, rúbrica, modelo, número de juez, semilla, `think`, `timeoutS`, huella del código y pila. Cambiar cualquiera de ellos hace que el veredicto se vuelva a juzgar. Los veredictos de Ollama también se guardan, porque cuestan tiempo.
 
-Los registros con error no se guardan en la caché (`RunCache.put`): se relanzan.
+Los registros con error no se guardan en la caché (`RunCache.put`), ni tampoco los veredictos inválidos (`invalido`, p. ej. una respuesta sin campos válidos): se relanzan. Un veredicto guardado se sirve aunque se haya agotado el presupuesto o la orden esté parándose: no lanza nada, así que no necesita presupuesto. Solo los lanzamientos reales consumen presupuesto. Las órdenes `sweep` no juzgan: no tienen veredictos que cachear.
 
 ## Presupuesto (un solo tope por experimento)
 
@@ -74,7 +74,7 @@ singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 
 
 ## Jueces
 
-En `[[judges]]`, `think` (false por defecto) se envía a Ollama como `"think"` en `/api/chat`, y `timeoutS` (600 por defecto) es el tiempo de espera de su petición. Ambas claves solo se admiten en jueces `ollama:`; en un juez de Claude se rechazan con error de configuración.
+En `[[judges]]`, `think` (false por defecto) se envía a Ollama como `"think"` en `/api/chat`, y `timeoutS` (600 por defecto) es el tiempo de espera de su petición. Ambas claves solo se admiten en jueces `ollama:`; en un juez de Claude se rechazan con error de configuración. Si la orden ya está parada cuando empiezan los jueces, no se lanza ningún juez (tampoco de Ollama): solo se sirven los veredictos guardados, y cada pregunta respondida tiene su fila de veredicto (sin veredicto si no estaba en caché).
 
 ## Criterios que fija el código (no están en la configuración)
 

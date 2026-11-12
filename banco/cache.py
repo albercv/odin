@@ -26,10 +26,13 @@ def final_key(question_id: str, question_text: str, kind: str, model: str, input
     return hashlib.sha256(json.dumps(parts).encode("utf-8")).hexdigest()
 
 
-def verdict_key(answer: dict, rubric_text: str, model: str, judge_index: int, seed: int) -> str:
-    """Clave de un veredicto: respuesta final (hash de su JSON), rúbrica, modelo, número de juez y semilla."""
+def verdict_key(question_id: str, question_text: str, answer: dict, rubric_text: str, model: str, judge_index: int,
+                seed: int, think: bool, timeout_s: int, odin_commit: str, stack_digest: str) -> str:
+    """Clave de un veredicto: pregunta (el juez la lee), respuesta final (hash de su JSON), rúbrica, modelo, número de
+    juez, semilla, opciones del juez, huella del código y pila. Cualquiera cambiada hace que se vuelva a juzgar."""
     answer_json = json.dumps(answer, ensure_ascii=False, sort_keys=True)
-    parts = ["juez", _digest(answer_json), _digest(rubric_text), model, judge_index, seed]
+    parts = ["juez", question_id, _digest(question_text), _digest(answer_json), _digest(rubric_text), model, judge_index,
+             seed, think, timeout_s, odin_commit, stack_digest]
     return hashlib.sha256(json.dumps(parts).encode("utf-8")).hexdigest()
 
 

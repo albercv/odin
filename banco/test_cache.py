@@ -16,7 +16,9 @@ def _final(**changes):
 
 
 def _verdict(**changes):
-    args = {"answer": ANSWER, "rubric_text": "Eres un juez.", "model": "haiku", "judge_index": 0, "seed": 7}
+    args = {"question_id": "Q1", "question_text": "¿Cuánto?", "answer": ANSWER, "rubric_text": "Eres un juez.",
+            "model": "haiku", "judge_index": 0, "seed": 7,
+            "think": False, "timeout_s": 600, "odin_commit": "abc", "stack_digest": "s1"}
     return verdict_key(**{**args, **changes})
 
 
@@ -38,8 +40,10 @@ class VerdictKeyTest(unittest.TestCase):
 
     def test_each_part_changes_the_key(self):
         base = _verdict()
-        for changes in ({"answer": {**ANSWER, "respuesta": "otra"}}, {"rubric_text": "otra"}, {"model": "sonnet"},
-                        {"judge_index": 1}, {"seed": 8}):
+        for changes in ({"question_id": "Q2"}, {"question_text": "otra"},
+                        {"answer": {**ANSWER, "respuesta": "otra"}}, {"rubric_text": "otra"}, {"model": "sonnet"},
+                        {"judge_index": 1}, {"seed": 8}, {"think": True}, {"timeout_s": 90},
+                        {"odin_commit": "def"}, {"stack_digest": "s2"}):
             with self.subTest(changes=changes):
                 self.assertNotEqual(base, _verdict(**changes))
 
