@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiClient } from './api/client.js';
 import { registerListDocuments } from './tools/listDocuments.js';
+import { registerListProjects } from './tools/listProjects.js';
 import { registerReadPage } from './tools/readPage.js';
 import { registerSaveKnowledgeCard } from './tools/saveKnowledgeCard.js';
 import { registerSearchKnowledge } from './tools/searchKnowledge.js';
@@ -10,6 +11,7 @@ export const INSTRUCTIONS = [
   'Odín es el cerebro digital de la empresa del trabajador.',
   'Cita el documento y la página de toda afirmación sobre el trabajo de la empresa.',
   'Si no hay resultados, di «no consta»; no lo inventes.',
+  'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.',
   'Comprueba las citas con verifyCitation antes de darlas por buenas.',
   'Los resultados KNOWLEDGE_CARD son fichas aportadas por trabajadores con resumen hecho por IA: cítalas por título, autor y fecha, preséntalas como fichas y no como documentos, y no tienen página; verifyCitation es solo para documentos, y si verifyCitation devuelve false, no uses esa cita.',
   'Presenta el conocimiento general aparte, como información añadida, nunca mezclado con lo que consta en los documentos.',
@@ -23,6 +25,7 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
     registerSearchKnowledge(server, api);
     registerReadPage(server, api);
     registerListDocuments(server, api);
+    registerListProjects(server, api);
     registerVerifyCitation(server, api);
   }
   if (capabilities.has('SAVE_KNOWLEDGE_CARD')) registerSaveKnowledgeCard(server, api);

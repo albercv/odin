@@ -28,9 +28,39 @@ describe('buildServer', () => {
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['listDocuments', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
+  });
+
+  it('registersListProjectsWithSearchCapability', async () => {
+    const search = await connect(() => meWith(['SEARCH_KNOWLEDGE']));
+    expect((await search.listTools()).tools.map((t) => t.name)).toContain('listProjects');
+    await fake.close();
+    const save = await connect(() => meWith(['SAVE_KNOWLEDGE_CARD']));
+    expect((await save.listTools()).tools.map((t) => t.name)).not.toContain('listProjects');
+  });
+
+  it('listProjectsReturnsIdAndName', async () => {
+    const projects = [{ id: 'p1', name: 'Comunidad Sol' }, { id: 'p2', name: 'Obra Norte' }];
+    const client = await connect(() => meWith(ALL, 'Empresa Uno', projects));
+    const parsed = JSON.parse(textOf(await client.callTool({ name: 'listProjects', arguments: {} })));
+    expect(parsed).toEqual({ projects: [{ projectId: 'p1', name: 'Comunidad Sol' }, { projectId: 'p2', name: 'Obra Norte' }] });
+  });
+
+  it('listProjectsOnlyShowsMyProjects', async () => {
+    // El proyecto cerrado p9 existe en la empresa, pero /v1/me no lo devuelve porque el trabajador no es miembro.
+    const client = await connect((r) =>
+      r.url === '/v1/me' ? meWith(ALL, 'Empresa Uno', [{ id: 'p1', name: 'Comunidad Sol' }]) : { status: 500, body: {} });
+    const parsed = JSON.parse(textOf(await client.callTool({ name: 'listProjects', arguments: {} })));
+    expect(parsed.projects.map((p: { projectId: string }) => p.projectId)).toEqual(['p1']);
+    expect(fake.requests.map((r) => r.url).filter((u) => u !== '/v1/me')).toEqual([]);
+  });
+
+  it('instructionsTellToFilterByProject', async () => {
+    const client = await connect(() => meWith(ALL));
+    expect(client.getInstructions()).toContain(
+      'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.');
   });
 
   it('searchMapsHitsWithCitation', async () => {
