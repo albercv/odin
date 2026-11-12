@@ -121,6 +121,21 @@ public final class Responses {
         }
     }
 
+    public record GroupAdminView(UUID userId, String firstName, @Nullable String lastName, String displayName,
+            @Nullable String email, String personCode, boolean active) {
+        public static GroupAdminView from(User u) {
+            return new GroupAdminView(u.id().value(), u.firstName(), u.lastName().orElse(null), u.displayName(),
+                    u.email().orElse(null), u.personCode(), u.active());
+        }
+    }
+
+    public record GroupAdminAdded(GroupAdminView admin, boolean alreadyExisted, boolean keptPassword) {
+        public static GroupAdminAdded from(com.e2d.odin.application.identity.GroupAdminAdded added) {
+            return new GroupAdminAdded(GroupAdminView.from(added.admin()), added.alreadyExisted(),
+                    added.keptPassword());
+        }
+    }
+
     public record KeyView(UUID id, String label, String prefix, Instant createdAt, @Nullable Instant revokedAt) {
         public static KeyView from(AccessKey k) {
             return new KeyView(k.id().value(), k.label(), k.prefix(), k.createdAt(), k.revokedAt().orElse(null));

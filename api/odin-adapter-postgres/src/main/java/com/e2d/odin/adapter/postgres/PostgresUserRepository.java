@@ -59,10 +59,17 @@ public class PostgresUserRepository implements UserRepository {
     }
 
     @Override
-    public Optional<User> findGroupAdmin() {
+    public List<User> listGroupAdmins() {
         return tx.inScope(ALL, jdbc -> jdbc
-                .sql("SELECT " + COLUMNS + " FROM app_user WHERE group_admin AND deleted_at IS NULL LIMIT 1")
-                .query((rs, n) -> user(rs)).optional());
+                .sql("SELECT " + COLUMNS + " FROM app_user WHERE group_admin AND deleted_at IS NULL ORDER BY seq")
+                .query((rs, n) -> user(rs)).list());
+    }
+
+    @Override
+    public Optional<User> findGroupAdminByEmail(String email) {
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT " + COLUMNS
+                + " FROM app_user WHERE group_admin AND lower(email) = lower(:email) AND deleted_at IS NULL")
+                .param("email", email).query((rs, n) -> user(rs)).optional());
     }
 
     @Override

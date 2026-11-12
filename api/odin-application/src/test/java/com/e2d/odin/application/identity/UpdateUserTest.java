@@ -137,6 +137,27 @@ class UpdateUserTest {
     }
 
     @Test
+    void cannotDeactivateTheLastActiveGroupAdmin() {
+        UserId gemaId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gemaId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        Actor other = new Actor(new UserId(UUID.randomUUID()), "Otra", Role.GROUP_ADMIN, Set.of());
+
+        assertThatThrownBy(() -> update.execute(other, gemaId, active(false))).isInstanceOf(ConflictException.class)
+                .hasMessage("Tiene que quedar al menos un administrador del grupo activo");
+        assertThat(users.findById(gemaId).orElseThrow().active()).isTrue();
+    }
+
+    @Test
+    void deactivatesAGroupAdminWhenAnotherIsActive() {
+        UserId gemaId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gemaId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        People.groupAdmin(users, new UserId(UUID.randomUUID()), "Gael", Optional.of("gael@demo.test"), true,
+                Optional.of("pw:x"));
+
+        assertThat(update.execute(Actors.groupAdmin(), gemaId, active(false)).active()).isFalse();
+    }
+
+    @Test
     void onlyGroupAdminDeactivatesAPerson() {
         assertThatThrownBy(() -> update.execute(admin, workerId, active(false)))
                 .isInstanceOf(ForbiddenException.class)

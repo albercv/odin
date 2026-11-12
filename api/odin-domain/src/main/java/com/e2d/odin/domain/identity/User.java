@@ -26,6 +26,10 @@ public record User(UserId id, String firstName, Optional<String> lastName, Strin
         return new User(id, firstName, lastName, personCode, email, groupAdmin, newActive, passwordHash);
     }
 
+    public User withGroupAdmin(boolean newGroupAdmin) {
+        return new User(id, firstName, lastName, personCode, email, newGroupAdmin, active, passwordHash);
+    }
+
     public User withPasswordHash(String newPasswordHash) {
         return new User(id, firstName, lastName, personCode, email, groupAdmin, active,
                 Optional.of(newPasswordHash));

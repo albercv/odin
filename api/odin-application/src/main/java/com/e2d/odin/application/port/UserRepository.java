@@ -18,7 +18,10 @@ public interface UserRepository {
     /** Las personas que existen entre las pedidas, en una sola consulta. */
     List<User> findAllById(Collection<UserId> ids);
 
-    Optional<User> findGroupAdmin();
+    /** Las personas con la marca de administrador del grupo, activas o no, sin las borradas. */
+    List<User> listGroupAdmins();
+
+    Optional<User> findGroupAdminByEmail(String email);
 
     /** Si el código ya lo tiene una persona, también borrada: un código nunca se reutiliza. */
     boolean personCodeExists(String personCode);
