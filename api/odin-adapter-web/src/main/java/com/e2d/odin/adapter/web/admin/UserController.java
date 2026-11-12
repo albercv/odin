@@ -42,8 +42,9 @@ public class UserController {
     @PatchMapping("/v1/admin/users/{userId}")
     public Responses.UserRef update(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID userId, @RequestBody Requests.UpdateUser request) {
-        UserChanges changes = new UserChanges(Optional.ofNullable(request.displayName()),
-                Optional.ofNullable(request.email()), Optional.ofNullable(request.active()));
+        UserChanges changes = new UserChanges(Optional.ofNullable(request.firstName()),
+                Optional.ofNullable(request.lastName()), Optional.ofNullable(request.email()),
+                Optional.ofNullable(request.active()));
         return new Responses.UserRef(updateUser.execute(actor, new UserId(userId), changes).id().value());
     }
 

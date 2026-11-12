@@ -7,6 +7,7 @@ import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.util.List;
 
 public class ListCardsForReview {
@@ -19,6 +20,6 @@ public class ListCardsForReview {
 
     public List<KnowledgeCard> execute(Actor actor, CompanyId companyId, CardStatus status) {
         AccessPolicy.requireAdminOf(actor, companyId);
-        return cards.listByStatus(CompanyScope.of(companyId), status);
+        return cards.listByStatus(CompanyScope.of(companyId), ProjectVisibility.all(), status);
     }
 }

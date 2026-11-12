@@ -25,13 +25,27 @@ public final class Requests {
     public record Capabilities(Set<Capability> capabilities) {
     }
 
-    public record AddMember(String displayName, String email, Set<Role> roles, String password) {
+    public record NewCompany(String name,
+            @Schema(description = "De 2 a 6 letras mayúsculas o cifras; único en el grupo.") String code) {
+    }
+
+    public record UpdateCompany(String name,
+            @Schema(description = "Solo lo cambia el administrador del grupo.") String code) {
+    }
+
+    public record AddMember(String firstName, String lastName, String email, Set<Role> roles, String password,
+            Set<UUID> projectIds) {
+    }
+
+    public record UpdateProject(String name,
+            @Schema(description = "Verdadero: solo lo ven sus miembros. Falso: visible para toda la empresa.")
+            Boolean restricted) {
     }
 
     public record UpdateMember(Set<Role> roles, Boolean active, String password) {
     }
 
-    public record UpdateUser(String displayName,
+    public record UpdateUser(String firstName, String lastName,
             @Schema(description = "Cadena vacía: quita el correo de un trabajador. Ausente o null: no cambia.")
             String email, Boolean active) {
     }

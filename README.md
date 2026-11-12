@@ -54,7 +54,7 @@ La contraseña necesita al menos 12 caracteres.
 
 Ábrelo en http://127.0.0.1:8088 y entra con ese correo y esa contraseña. Usa `127.0.0.1`, no `localhost`: la API comprueba que el `Origin` sea el de `ODIN_PANEL_ORIGIN` y, con `localhost`, la entrada da 403.
 
-Desde el panel se crean las empresas, los trabajadores y sus claves personales, se suben documentos y se revisan las fichas.
+Desde el panel se crean las empresas, las personas con sus pertenencias y claves personales, los proyectos, se suben documentos y se revisan las fichas.
 
 ## Marca
 
@@ -71,8 +71,11 @@ Si `brand.json` falta o no es válido, el panel arranca con un tema neutro y avi
 
 ## Quién entra dónde
 
-- Los administradores entran en el panel con su correo y su contraseña.
-- Los trabajadores no entran en el panel. Usan Odín desde su IA, por MCP, con su clave personal (`odin_...`), que un administrador les da desde el panel.
+- Una persona tiene un nombre, unos apellidos y un código de persona al azar. En cada empresa donde está tiene una pertenencia, con su papel o sus dos papeles: administra la empresa, trabaja con su IA, o ambos. En el panel se ve como `<código de persona>-<código de la empresa>`.
+- Quien administra una empresa entra en el panel con su correo y su contraseña. Si administra varias, elige empresa en el selector de la barra lateral.
+- Quien trabaja con su IA usa Odín por MCP con su clave personal (`odin_...`), que un administrador le da desde el panel. Cada clave vale solo para la pertenencia que la recibió y da acceso a lo mismo que esa persona ve en esa empresa.
+- Los proyectos nacen cerrados: solo los ven sus miembros. Para que lo vea toda la empresa hay que marcar «Visible para toda la empresa». Un trabajador no encuentra, lista ni lee nada de un proyecto cerrado al que no está asignado.
+- Quitar a una persona de una empresa quita sus pertenencias a proyectos de esa empresa y deja de valer sus claves de ella.
 
 ## MCP por stdio (IA de escritorio)
 
@@ -138,6 +141,16 @@ curl -X POST http://127.0.0.1:8080/v1/setup/admin-password -H 'Content-Type: app
 
 Responde 204: la contraseña queda cambiada, el administrador vuelve a estar activo y sus sesiones del panel se cierran. Si el token no vale responde 403; si la instalación aún no está configurada, 409. Tiene el mismo límite de intentos que el login.
 
+## Cómo cambiar al administrador del grupo
+
+Hoy una instalación tiene un solo administrador del grupo. Si esa persona deja la empresa, el relevo lo hace quien controla `deploy/.env`. Los tres pasos son obligatorios y van en este orden (D-051):
+
+1. **Cortar su entrada al panel.** Pon una contraseña nueva con el token de instalación, con la orden de «Contraseña olvidada». Sus sesiones del panel se cierran en ese momento.
+2. **Revocar sus claves personales.** Entra en el panel con esa contraseña. En cada empresa en la que la cuenta trabaja con su IA, abre «Claves» en su fila y usa «Revocar clave» en todas. Si te saltas este paso, sus claves siguen valiendo en el MCP aunque ya no entre en el panel.
+3. **Pasar la cuenta a la persona nueva.** En «Mi cuenta», cambia el nombre, los apellidos y el correo por los suyos, y la contraseña por una que elija ella.
+
+**Límite:** es la misma cuenta y el mismo código de persona. Lo que revisó o escribió el anterior aparecerá con el nombre nuevo. Por eso este relevo vale para la demostración y las pruebas, pero no para un cliente real: antes del primer cliente real, Odín tendrá varios administradores del grupo y relevo con una persona nueva (B-007).
+
 ## Sesión del panel
 
 Hoy el panel usa un token aleatorio y opaco, en una cookie `HttpOnly` con `SameSite=Strict`. En la base solo se guarda su huella, nunca el token. La sesión caduca por inactividad y se revoca al cerrarla o al cambiar la contraseña.
@@ -147,7 +160,7 @@ Esa lógica está detrás del puerto `AdminSessions` (`api/odin-application/src/
 ## Fuera de la fase 1
 
 - El lector OCR: los PDF escaneados y las imágenes quedan en «Pendiente de lector» hasta la fase 2.
-- Lo demás de la fase 2: etiquetado por tema, casos parecidos, permisos por proyecto, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
+- Lo demás de la fase 2: etiquetado por tema, casos parecidos, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
 - Fuera de alcance: acceso desde internet, TLS y SSO.
 
 ## Datos

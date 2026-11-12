@@ -51,7 +51,7 @@ class ResolveActorTest {
     }
 
     private void givenWorker(boolean personActive, boolean membershipActive) {
-        users.save(new User(workerId, "Wanda", Optional.empty(), false, personActive, Optional.empty()));
+        users.save(new User(workerId, "Wanda", Optional.of("Pérez"), People.nextCode(), Optional.empty(), false, personActive, Optional.empty()));
         memberships.save(new Membership(workerId, company, Set.of(Role.WORKER), membershipActive));
         keys.save(new AccessKey(keyId, workerId, company, "portátil", "abcdefgh", "h:secreto", clock.instant(),
                 Optional.empty()));
@@ -66,6 +66,20 @@ class ResolveActorTest {
     private String openSession(UserId userId) {
         sessions.save(new AdminSession(secrets.hash("tok"), userId, clock.instant(), clock.instant()));
         return "tok";
+    }
+
+    @Test
+    void groupAdminWithAWorkerMembershipWorksWithTheirKeyAndStaysGroupAdminInThePanel() {
+        People.groupAdmin(users, workerId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        memberships.save(new Membership(workerId, company, Set.of(Role.WORKER), true));
+        keys.save(new AccessKey(keyId, workerId, company, "portátil", "abcdefgh", "h:secreto", clock.instant(),
+                Optional.empty()));
+
+        Actor worker = resolve.fromAccessKey(PLAIN_KEY);
+        Actor panel = resolve.fromSessionToken(openSession(workerId));
+
+        assertThat(worker).isEqualTo(new Actor(workerId, "Gema Pérez", Role.WORKER, Set.of(company)));
+        assertThat(panel.role()).isEqualTo(Role.GROUP_ADMIN);
     }
 
     @Test
@@ -189,7 +203,7 @@ class ResolveActorTest {
         String token = givenSession();
         UserId adminId = sessions.findByTokenHash(secrets.hash(token)).orElseThrow().userId();
         User admin = users.findById(adminId).orElseThrow();
-        users.save(admin.updated(admin.displayName(), admin.email(), false));
+        users.save(admin.withActive(false));
 
         assertThatThrownBy(() -> resolve.fromSessionToken(token))
                 .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);

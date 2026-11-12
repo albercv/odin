@@ -5,19 +5,22 @@ import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class InMemoryUserRepository implements UserRepository {
 
     private final Map<UserId, User> users = new LinkedHashMap<>();
+    private final Set<String> personCodes = new HashSet<>();
 
     @Override
     public void save(User u) {
         users.put(u.id(), u);
+        personCodes.add(u.personCode());
     }
 
     @Override
@@ -32,12 +35,17 @@ public class InMemoryUserRepository implements UserRepository {
 
     @Override
     public List<User> findAllById(Collection<UserId> ids) {
-        return ids.stream().map(users::get).filter(Objects::nonNull).toList();
+        return users.values().stream().filter(u -> ids.contains(u.id())).toList();
     }
 
     @Override
     public Optional<User> findGroupAdmin() {
         return users.values().stream().filter(u -> u.groupAdmin()).findFirst();
+    }
+
+    @Override
+    public boolean personCodeExists(String personCode) {
+        return personCodes.contains(personCode);
     }
 
     @Override

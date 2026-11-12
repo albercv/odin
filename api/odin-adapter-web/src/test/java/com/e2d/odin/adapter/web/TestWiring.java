@@ -13,42 +13,49 @@ import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryQuestionLog;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.fake.SequencePersonCodeGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
+import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
-import com.e2d.odin.application.identity.RecoverGroupAdmin;
+import com.e2d.odin.application.identity.DescribeAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListMembers;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
-import com.e2d.odin.application.identity.AddMember;
+import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.RemoveMember;
-import com.e2d.odin.application.identity.UpdateMember;
-import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.ResolveActor;
-import com.e2d.odin.application.identity.StoredAdminSessions;
-import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.identity.RevokeAccessKey;
 import com.e2d.odin.application.identity.SetUpInstallation;
+import com.e2d.odin.application.identity.StoredAdminSessions;
+import com.e2d.odin.application.identity.UpdateMember;
+import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
 import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
+import com.e2d.odin.application.organization.AddProjectMember;
 import com.e2d.odin.application.organization.CreateCompany;
 import com.e2d.odin.application.organization.CreateProject;
 import com.e2d.odin.application.organization.DeleteProject;
 import com.e2d.odin.application.organization.DescribeMe;
 import com.e2d.odin.application.organization.ListCompanies;
+import com.e2d.odin.application.organization.ListMemberProjects;
+import com.e2d.odin.application.organization.ListProjectMembers;
 import com.e2d.odin.application.organization.ListProjects;
-import com.e2d.odin.application.organization.RenameCompany;
-import com.e2d.odin.application.organization.RenameProject;
+import com.e2d.odin.application.organization.RemoveProjectMember;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
+import com.e2d.odin.application.organization.UpdateCompany;
+import com.e2d.odin.application.organization.UpdateProject;
+import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
@@ -67,6 +74,7 @@ public class TestWiring {
     static final long MAX_UPLOAD = 1000;
 
     final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
+    final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(orgs);
     final InMemoryUserRepository users = new InMemoryUserRepository();
     final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
@@ -77,6 +85,7 @@ public class TestWiring {
     final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     final MutableClock clock = new MutableClock();
     final SequenceIdGenerator ids = new SequenceIdGenerator();
+    final SequencePersonCodeGenerator personCodes = new SequencePersonCodeGenerator();
     final SequenceTokenGenerator tokens = new SequenceTokenGenerator();
     final FakeSecretHasher secrets = new FakeSecretHasher();
     final FakePasswordHasher passwords = new FakePasswordHasher();
@@ -95,7 +104,7 @@ public class TestWiring {
     }
 
     @Bean SetUpInstallation setUpInstallation() {
-        return new SetUpInstallation(orgs, users, passwords, ids, new InstallationSettings("setup-secret"));
+        return new SetUpInstallation(orgs, users, passwords, ids, personCodes, new InstallationSettings("setup-secret"));
     }
 
     @Bean LogInAdmin logInAdmin() {
@@ -114,8 +123,8 @@ public class TestWiring {
         return new ListCompanies(orgs);
     }
 
-    @Bean RenameCompany renameCompany() {
-        return new RenameCompany(orgs);
+    @Bean UpdateCompany updateCompany() {
+        return new UpdateCompany(orgs);
     }
 
     @Bean SetCompanyCapabilities setCompanyCapabilities() {
@@ -130,8 +139,24 @@ public class TestWiring {
         return new ListProjects(orgs);
     }
 
-    @Bean RenameProject renameProject() {
-        return new RenameProject(orgs);
+    @Bean UpdateProject updateProject() {
+        return new UpdateProject(orgs);
+    }
+
+    @Bean AddProjectMember addProjectMember() {
+        return new AddProjectMember(orgs, memberships, projectMembers);
+    }
+
+    @Bean RemoveProjectMember removeProjectMember() {
+        return new RemoveProjectMember(orgs, projectMembers);
+    }
+
+    @Bean ListProjectMembers listProjectMembers() {
+        return new ListProjectMembers(orgs, users, projectMembers);
+    }
+
+    @Bean ListMemberProjects listMemberProjects() {
+        return new ListMemberProjects(orgs, memberships, projectMembers);
     }
 
     @Bean DeleteProject deleteProject() {
@@ -139,19 +164,23 @@ public class TestWiring {
     }
 
     @Bean AddMember addMember() {
-        return new AddMember(users, memberships, orgs, passwords, ids);
+        return new AddMember(users, memberships, orgs, projectMembers, passwords, ids, personCodes);
     }
 
     @Bean ListMembers listMembers() {
-        return new ListMembers(users, memberships);
+        return new ListMembers(users, memberships, orgs);
     }
 
     @Bean UpdateMember updateMember() {
-        return new UpdateMember(users, memberships, passwords, adminSessions());
+        return new UpdateMember(users, memberships, orgs, passwords, adminSessions());
     }
 
     @Bean RemoveMember removeMember() {
-        return new RemoveMember(memberships, keys, adminSessions(), clock);
+        return new RemoveMember(users, memberships, keys, projectMembers, adminSessions(), clock);
+    }
+
+    @Bean DescribeAdmin describeAdmin() {
+        return new DescribeAdmin(users);
     }
 
     @Bean UpdateUser updateUser() {
@@ -167,7 +196,7 @@ public class TestWiring {
     }
 
     @Bean DeleteUser deleteUser() {
-        return new DeleteUser(users, memberships, adminSessions(), clock);
+        return new DeleteUser(users, memberships, projectMembers, adminSessions(), clock);
     }
 
     @Bean IssueAccessKey issueAccessKey() {
@@ -207,26 +236,26 @@ public class TestWiring {
     }
 
     @Bean SaveKnowledgeCard saveKnowledgeCard() {
-        return new SaveKnowledgeCard(orgs, cards, ids, clock);
+        return new SaveKnowledgeCard(orgs, projectMembers, cards, ids, clock);
     }
 
     @Bean DescribeMe describeMe() {
-        return new DescribeMe(orgs);
+        return new DescribeMe(orgs, projectMembers);
     }
 
     @Bean SearchKnowledge searchKnowledge() {
-        return new SearchKnowledge(orgs, search, new InMemoryQuestionLog(), ids, clock);
+        return new SearchKnowledge(orgs, projectMembers, search, new InMemoryQuestionLog(), ids, clock);
     }
 
     @Bean ListDocuments listDocuments() {
-        return new ListDocuments(orgs, docs);
+        return new ListDocuments(orgs, projectMembers, docs);
     }
 
     @Bean ReadPage readPage() {
-        return new ReadPage(orgs, docs);
+        return new ReadPage(orgs, projectMembers, docs);
     }
 
     @Bean VerifyCitation verifyCitation() {
-        return new VerifyCitation(orgs, docs);
+        return new VerifyCitation(orgs, projectMembers, docs);
     }
 }

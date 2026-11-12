@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 public class PostgresUserRepository implements UserRepository {
 
-    private static final String COLUMNS = "id, display_name, email, group_admin, active, password_hash";
+    private static final String COLUMNS = "id, first_name, last_name, person_code, email, group_admin, active, password_hash";
     private static final CompanyScope ALL = CompanyScope.all();
     private final ScopedTransactions tx;
 
@@ -25,11 +25,12 @@ public class PostgresUserRepository implements UserRepository {
     @Override
     public void save(User u) {
         tx.runInScope(ALL, jdbc -> jdbc.sql("""
-                INSERT INTO app_user (id, display_name, email, group_admin, active, password_hash)
-                VALUES (:id, :name, :email, :groupAdmin, :active, :hash)
-                ON CONFLICT (id) DO UPDATE SET display_name = :name, email = :email, group_admin = :groupAdmin,
-                    active = :active, password_hash = :hash""")
-                .param("id", u.id().value()).param("name", u.displayName()).param("email", u.email().orElse(null))
+                INSERT INTO app_user (id, first_name, last_name, person_code, email, group_admin, active, password_hash)
+                VALUES (:id, :firstName, :lastName, :personCode, :email, :groupAdmin, :active, :hash)
+                ON CONFLICT (id) DO UPDATE SET first_name = :firstName, last_name = :lastName, email = :email,
+                    group_admin = :groupAdmin, active = :active, password_hash = :hash""")
+                .param("id", u.id().value()).param("firstName", u.firstName()).param("lastName", u.lastName().orElse(null))
+                .param("personCode", u.personCode()).param("email", u.email().orElse(null))
                 .param("groupAdmin", u.groupAdmin()).param("active", u.active()).param("hash", u.passwordHash().orElse(null)).update());
     }
 
@@ -65,13 +66,20 @@ public class PostgresUserRepository implements UserRepository {
     }
 
     @Override
+    public boolean personCodeExists(String personCode) {
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT EXISTS (SELECT 1 FROM app_user WHERE person_code = :code)")
+                .param("code", personCode).query(Boolean.class).single());
+    }
+
+    @Override
     public void delete(UserId id, Instant at) {
         tx.runInScope(ALL, jdbc -> jdbc.sql("UPDATE app_user SET deleted_at = :at WHERE id = :id AND deleted_at IS NULL")
                 .param("id", id.value()).param("at", Sql.ts(at)).update());
     }
 
     private static User user(ResultSet rs) throws SQLException {
-        return new User(new UserId(Sql.uuid(rs, "id")), rs.getString("display_name"),
+        return new User(new UserId(Sql.uuid(rs, "id")), rs.getString("first_name"),
+                Optional.ofNullable(rs.getString("last_name")), rs.getString("person_code"),
                 Optional.ofNullable(rs.getString("email")), rs.getBoolean("group_admin"), rs.getBoolean("active"),
                 Optional.ofNullable(rs.getString("password_hash")));
     }

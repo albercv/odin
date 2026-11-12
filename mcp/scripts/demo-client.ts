@@ -1,4 +1,4 @@
-// Demostración de cierre de la fase 1 (spec 3.1). Fases: `prepare` (pasos 1-7) y `confirm` (paso 9).
+// Demostración de cierre de la fase 1 (spec 3.1). Fases: `prepare` (pasos 1-7c) y `confirm` (paso 9).
 // El paso 8 (panel) lo hace Playwright en panel/e2e/demo.spec.ts entre ambas fases.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -37,23 +37,24 @@ async function json<T>(r: Response, expected: number): Promise<T> {
 }
 
 type Id = { id: string };
-async function createCompany(name: string): Promise<string> {
-  const c = await json<Id>(await http('POST', '/v1/admin/companies', { name }), 201);
+async function createCompany(name: string, code: string): Promise<string> {
+  const c = await json<Id>(await http('POST', '/v1/admin/companies', { name, code }), 201);
   const caps = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'];
   await http('PUT', `/v1/admin/companies/${c.id}/capabilities`, { capabilities: caps });
   return c.id;
 }
-async function createWorker(companyId: string, name: string, email: string): Promise<{ id: string; key: string }> {
+async function createWorker(companyId: string, firstName: string, lastName: string, email: string): Promise<{ id: string; key: string }> {
   const added = await json<{ member: { userId: string } }>(
-    await http('POST', `/v1/admin/companies/${companyId}/members`, { displayName: name, email, roles: ['WORKER'] }), 201);
+    await http('POST', `/v1/admin/companies/${companyId}/members`, { firstName, lastName, email, roles: ['WORKER'] }), 201);
   const { userId } = added.member;
   const k = await json<{ key: string }>(await http('POST', `/v1/admin/companies/${companyId}/members/${userId}/keys`, { label: 'demo' }), 201);
   return { id: userId, key: k.key };
 }
-async function uploadPdf(companyId: string): Promise<string> {
+async function uploadPdf(companyId: string, projectId?: string): Promise<string> {
   const form = new FormData();
   form.append('file', new Blob([readFileSync(PDF)], { type: 'application/pdf' }), 'poliza-ficticia.pdf');
-  const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent('Póliza ficticia')}`, form);
+  const scope = projectId ? `&projectId=${projectId}` : '';
+  const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent('Póliza ficticia')}${scope}`, form);
   return (await json<{ document: Id }>(r, 201)).document.id;
 }
 async function waitReady(companyId: string, docId: string): Promise<void> {
@@ -97,16 +98,31 @@ async function searchAsA(key: string, docId: string): Promise<{ hit: Hit; verifi
   });
 }
 
+async function closedProjectStep(): Promise<void> {
+  const c = await createCompany('Empresa C', 'EC');
+  const assigned = await createWorker(c, 'Trabajadora', 'Asignada', 'asignada@demo.invalid');
+  const outsider = await createWorker(c, 'Trabajador', 'Ajeno', 'ajeno@demo.invalid');
+  const project = await json<Id>(await http('POST', `/v1/admin/companies/${c}/projects`, { name: 'Proyecto cerrado' }), 201);
+  const assign = await http('PUT', `/v1/admin/companies/${c}/projects/${project.id}/members/${assigned.id}`);
+  if (assign.status !== 204) throw new Error(`HTTP ${assign.status} al asignar el proyecto: ${await assign.text()}`);
+  const docId = await uploadPdf(c, project.id);
+  await waitReady(c, docId);
+  const found = await searchAsA(assigned.key, docId);
+  check(found.verified, 'Paso 7b: el trabajador asignado al proyecto cerrado encuentra su documento y la cita se verifica');
+  const outBlind = await withMcp(outsider.key, (call) => call('searchKnowledge', { queries: [QUERY] }));
+  check(outBlind === NO_SOURCE, 'Paso 7c: el trabajador no asignado recibe «No consta en los documentos de tu empresa.»');
+}
+
 async function prepare(): Promise<void> {
   const setup = await http('POST', '/v1/setup', { setupToken: SETUP_TOKEN, groupName: 'Grupo Demo', adminName: 'Administrador Demo', adminEmail: ADMIN.email, password: ADMIN.password });
   check(setup.status === 201, `Paso 1: setup inicial del grupo`);
   const login = await http('POST', '/v1/admin/session', ADMIN);
   cookie = (login.headers.get('set-cookie') ?? '').split(';')[0] ?? '';
   check(login.status === 200 && cookie.startsWith('odin_session='), 'Paso 2: sesión del administrador del grupo');
-  const a = await createCompany('Empresa A');
-  const b = await createCompany('Empresa B');
-  const wa = await createWorker(a, 'Trabajadora A', 'a@demo.invalid');
-  const wb = await createWorker(b, 'Trabajador B', 'b@demo.invalid');
+  const a = await createCompany('Empresa A', 'EA');
+  const b = await createCompany('Empresa B', 'EB');
+  const wa = await createWorker(a, 'Trabajadora', 'A', 'a@demo.invalid');
+  const wb = await createWorker(b, 'Trabajador', 'B', 'b@demo.invalid');
   check(!!wa.key && !!wb.key, 'Paso 3: empresas A y B, un trabajador cada una y sus claves personales');
   const docId = await uploadPdf(a);
   await waitReady(a, docId);
@@ -124,6 +140,7 @@ async function prepare(): Promise<void> {
   check(page.status === 404, 'Paso 6b: el trabajador de B no puede leer la página del PDF de A (404)');
   const saved = await withMcp(wa.key, (call) => call('saveKnowledgeCard', CARD));
   check(saved.includes('PENDING') && saved.includes('Ficha guardada; queda pendiente de revisión.'), 'Paso 7: MCP de A guarda la ficha, queda PENDING');
+  await closedProjectStep();
   writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie }));
 }
 

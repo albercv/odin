@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RowActions } from './RowActions';
+import { RowAction, RowActions } from './RowActions';
 
 const setup = () => render(<RowActions label="Acciones de Marta Ibáñez"><button>Editar Marta Ibáñez</button></RowActions>);
 
@@ -22,4 +22,10 @@ it('rowActionsClosesOnEscape', async () => {
   await userEvent.keyboard('{Escape}');
   expect(toggle).toHaveAttribute('aria-expanded', 'false');
   expect(toggle).toHaveFocus();
+});
+
+it('rowActionShowsShortTextAndNamesTheTarget', () => {
+  render(<RowAction text="Editar" target="Marta Ibáñez" />);
+  const button = screen.getByRole('button', { name: 'Editar Marta Ibáñez' });
+  expect(button).toHaveTextContent(/^Editar$/);
 });

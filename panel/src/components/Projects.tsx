@@ -2,52 +2,67 @@ import { useState } from 'react';
 import { api, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
-import { RowActions } from '../ui/RowActions';
+import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
-import { Table, tableStyles } from '../ui/Table';
+import { Table, Td, Tr, tableStyles } from '../ui/Table';
 import { NameDialog } from './NameDialog';
 import { Notice } from './Notice';
+import { ProjectMembers, whoSees } from './ProjectMembers';
 import { RenameForm } from './RenameForm';
 import { useAction, useLoad } from './useLoad';
 
-function ProjectRow({ project, companyId, onChanged }: { project: S['ProjectView']; companyId: string; onChanged: () => void }) {
-  const [editing, setEditing] = useState(false);
+type Panel = 'rename' | 'access' | undefined;
+type RowProps = { project: S['ProjectView']; companyId: string; onChanged: () => void };
+
+function ProjectActions({ project, companyId, onChanged, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
   const { error, act } = useAction();
   const confirm = useConfirm();
   const remove = async () => {
     if (!(await confirm({ message: `¿Borrar el proyecto ${project.name}? Sus documentos se conservan.`, confirmLabel: 'Borrar', danger: true }))) return;
     if (await act(() => api.deleteProject(companyId, project.id))) onChanged();
   };
-  const done = () => { setEditing(false); onChanged(); };
   return (
     <>
-      <tr>
-        <td>{project.name}</td>
-        <td className={tableStyles.actions}>
-          <RowActions label={`Más acciones de ${project.name}`}>
-            <Button variant="ghost" onClick={() => setEditing(true)}>Renombrar {project.name}</Button>
-            <Button variant="danger" onClick={remove}>Borrar {project.name}</Button>
-          </RowActions>
-        </td>
-      </tr>
-      {(editing || error) && (
-        <tr className={tableStyles.panelRow}>
-          <td colSpan={2}>{editing
-            ? <RenameForm name={project.name} label="Nombre" onSave={(n) => api.renameProject(companyId, project.id, n)} onSaved={done} onCancel={() => setEditing(false)} />
-            : <Notice message={error} />}</td>
-        </tr>
+      <RowActions label={`Más acciones de ${project.name}`}>
+        <RowAction variant="ghost" text="Renombrar" target={project.name} onClick={() => show('rename')} />
+        <RowAction variant="ghost" text="Miembros" label="Miembros de" target={project.name} aria-expanded={panel === 'access'} onClick={() => show('access')} />
+        <RowAction variant="danger" text="Borrar" target={project.name} onClick={remove} />
+      </RowActions>
+      <Notice message={error} />
+    </>
+  );
+}
+
+function ProjectRow(props: RowProps) {
+  const { project, companyId, onChanged } = props;
+  const [panel, setPanel] = useState<Panel>();
+  const show = (p: Panel) => setPanel(panel === p ? undefined : p);
+  return (
+    <>
+      <Tr>
+        <Td label="Proyecto">{project.name}</Td>
+        <Td label="Quién lo ve">{whoSees(project)}</Td>
+        <Td className={tableStyles.actions}><ProjectActions {...props} panel={panel} show={show} /></Td>
+      </Tr>
+      {panel && (
+        <Tr className={tableStyles.panelRow}>
+          <Td colSpan={3}>{panel === 'rename'
+            ? <RenameForm name={project.name} label="Nombre" onSave={(name) => api.updateProject(companyId, project.id, { name })} onSaved={() => { setPanel(undefined); onChanged(); }} onCancel={() => setPanel(undefined)} />
+            : <ProjectMembers companyId={companyId} project={project} onChanged={onChanged} />}</Td>
+        </Tr>
       )}
     </>
   );
 }
 
-export function Projects({ companyId }: { companyId: string }) {
-  const list = useLoad(() => api.projects(companyId), [companyId]);
+/** `version` changes when something elsewhere (a person's accesses, a removal) altered the project members. */
+export function Projects({ companyId, version = 0 }: { companyId: string; version?: number }) {
+  const list = useLoad(() => api.projects(companyId), [companyId, version]);
   const [adding, setAdding] = useState(false);
   return (
-    <Section title="Proyectos" actions={<Button icon="plus" onClick={() => setAdding(true)}>Nuevo proyecto</Button>}>
+    <Section title="Proyectos" description="Un proyecto nuevo nace cerrado: solo lo ven sus miembros." actions={<Button icon="plus" onClick={() => setAdding(true)}>Nuevo proyecto</Button>}>
       <Notice message={list.error} />
-      <Table columns={['Proyecto']}>
+      <Table columns={['Proyecto', 'Quién lo ve']}>
         {list.data?.map((p) => <ProjectRow key={p.id} project={p} companyId={companyId} onChanged={list.reload} />)}
       </Table>
       <NameDialog title="Nuevo proyecto" label="Nombre del proyecto" submitLabel="Crear proyecto" open={adding}

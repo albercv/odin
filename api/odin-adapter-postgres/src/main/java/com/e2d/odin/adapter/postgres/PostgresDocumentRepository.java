@@ -9,6 +9,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,12 +33,12 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public void save(Document d) {
-        tx.runInScope(CompanyScope.of(d.companyId()), jdbc -> upsert(jdbc, d));
+        tx.runInScope(CompanyScope.of(d.companyId()), ProjectVisibility.all(), jdbc -> upsert(jdbc, d));
     }
 
     @Override
     public void replacePages(DocumentId id, List<DocumentPage> pages) {
-        tx.runInScope(CompanyScope.all(), jdbc -> {
+        tx.runInScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> {
             jdbc.sql("DELETE FROM document_page WHERE document_id = :id").param("id", id.value()).update();
             for (DocumentPage p : pages) {
                 jdbc.sql("""
@@ -50,37 +51,43 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public Optional<Document> findById(CompanyScope scope, DocumentId id) {
-        String sql = "SELECT " + COLUMNS + " FROM document WHERE id = :id AND " + Sql.inScope("company_id");
-        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("id", id.value())
-                .query((rs, n) -> document(rs)).optional());
+    public Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
+        String sql = "SELECT " + COLUMNS + " FROM document WHERE id = :id AND " + Sql.inScope("company_id")
+                + " AND " + Sql.inVisibleProjects("project_id");
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("id", id.value()).query((rs, n) -> document(rs)).optional());
     }
 
     @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
-        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc
+        return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
                 .sql("SELECT " + COLUMNS + " FROM document WHERE company_id = :company AND sha256 = :sha")
                 .param("company", companyId.value()).param("sha", sha256).query((rs, n) -> document(rs)).optional());
     }
 
     @Override
-    public List<Document> list(CompanyScope scope, Optional<ProjectId> projectId, Optional<DocumentStatus> status,
-            int offset, int limit) {
+    public List<Document> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
+            Optional<DocumentStatus> status, int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
         String sql = "SELECT " + COLUMNS + """
                  FROM document WHERE (CAST(:project AS uuid) IS NULL OR project_id = :project)
-                  AND (CAST(:status AS text) IS NULL OR status = :status) AND %s
-                ORDER BY title, id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("company_id"));
-        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql(sql), scope).param("project", project)
+                  AND (CAST(:status AS text) IS NULL OR status = :status) AND %s AND %s
+                ORDER BY title, id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("company_id"),
+                Sql.inVisibleProjects("project_id"));
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("project", project)
                 .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
                 .param("limit", limit).query((rs, n) -> document(rs)).list());
     }
 
     @Override
-    public Optional<DocumentPage> findPage(CompanyScope scope, DocumentId id, int pageNumber) {
-        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql("""
-                SELECT document_id, number, text, reader_name, reader_version FROM document_page
-                WHERE document_id = :id AND number = :number AND """ + Sql.inScope("company_id")), scope)
+    public Optional<DocumentPage> findPage(CompanyScope scope, ProjectVisibility visibility, DocumentId id,
+            int pageNumber) {
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql("""
+                SELECT p.document_id, p.number, p.text, p.reader_name, p.reader_version
+                FROM document_page p JOIN document d ON d.id = p.document_id
+                WHERE p.document_id = :id AND p.number = :number AND """ + Sql.inScope("p.company_id")
+                + " AND " + Sql.inVisibleProjects("d.project_id")), scope), visibility)
                 .param("id", id.value()).param("number", pageNumber)
                 .query((rs, n) -> new DocumentPage(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("number"),
                         rs.getString("text"), rs.getString("reader_name"), rs.getString("reader_version")))
@@ -89,7 +96,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> claimNextForProcessing(Instant now, Duration staleAfter) {
-        return tx.inScope(CompanyScope.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS + """
+        return tx.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS + """
                  FROM document WHERE status = 'RECEIVED' OR (status = 'PROCESSING'
                     AND (processing_started_at IS NULL OR processing_started_at <= :threshold))
                 ORDER BY seq LIMIT 1 FOR UPDATE SKIP LOCKED""")

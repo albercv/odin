@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryQuestionLog;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
@@ -20,6 +21,8 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.EnumSet;
 import java.util.List;
@@ -30,9 +33,10 @@ import org.junit.jupiter.api.Test;
 class SearchKnowledgeTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
+    private final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(orgs);
     private final ScriptedKnowledgeSearch search = new ScriptedKnowledgeSearch();
     private final InMemoryQuestionLog log = new InMemoryQuestionLog();
-    private final SearchKnowledge useCase = new SearchKnowledge(orgs, search, log, new SequenceIdGenerator(),
+    private final SearchKnowledge useCase = new SearchKnowledge(orgs, members, search, log, new SequenceIdGenerator(),
             new MutableClock());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
@@ -112,5 +116,77 @@ class SearchKnowledgeTest {
 
         assertThatThrownBy(() -> useCase.execute(Actors.worker(companyB), forA)).isInstanceOf(NotFoundException.class);
         assertThat(search.lastQuery()).isNull();
+    }
+
+    @Test
+    void unassignedProjectIsInvisible() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        SearchRequest forClosed = new SearchRequest(List.of("x"), Optional.of(closed), Optional.empty());
+
+        assertThatThrownBy(() -> useCase.execute(Actors.worker(companyA), forClosed))
+                .isInstanceOf(NotFoundException.class).hasMessage("Proyecto no encontrado");
+        assertThat(search.lastQuery()).isNull();
+        assertThat(log.records()).isEmpty();
+
+        useCase.execute(Actors.worker(companyA), request(Optional.empty()));
+        assertThat(search.lastQuery().visibility().projects()).doesNotContain(closed);
+    }
+
+    @Test
+    void documentWithoutProjectIsVisibleToEveryWorker() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+
+        useCase.execute(Actors.worker(companyA), request(Optional.empty()));
+
+        ProjectVisibility visibility = search.lastQuery().visibility();
+        assertThat(visibility.allows(Optional.empty())).isTrue();
+        assertThat(visibility.allows(Optional.of(closed))).isFalse();
+    }
+
+    @Test
+    void closingACompanyWideProjectHidesItAtOnce() {
+        ProjectId project = Fixtures.companyWideProject(orgs, companyA);
+        Actor worker = Actors.worker(companyA);
+        SearchRequest forProject = new SearchRequest(List.of("x"), Optional.of(project), Optional.empty());
+        useCase.execute(worker, forProject);
+        assertThat(search.lastQuery().visibility().includes(project)).isTrue();
+
+        orgs.saveProject(orgs.findProject(companyA, project).orElseThrow().withRestricted(true));
+
+        assertThatThrownBy(() -> useCase.execute(worker, forProject)).isInstanceOf(NotFoundException.class);
+        useCase.execute(worker, request(Optional.empty()));
+        assertThat(search.lastQuery().visibility().includes(project)).isFalse();
+    }
+
+    @Test
+    void assignedWorkerSeesTheClosedProject() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        Actor worker = Actors.worker(companyA);
+        members.add(closed, worker.userId());
+
+        useCase.execute(worker, new SearchRequest(List.of("x"), Optional.of(closed), Optional.empty()));
+
+        assertThat(search.lastQuery().visibility().includes(closed)).isTrue();
+        assertThat(search.lastQuery().projectId()).contains(closed);
+    }
+
+    @Test
+    void deletedProjectContentStaysVisibleToWhoCouldSeeIt() {
+        ProjectId closed = Fixtures.project(orgs, companyA);
+        ProjectId companyWide = Fixtures.companyWideProject(orgs, companyA);
+        Actor member = Actors.worker(companyA);
+        Actor stranger = Actors.worker(companyA);
+        members.add(closed, member.userId());
+        orgs.deleteProject(companyA, closed, Fixtures.NOW);
+        orgs.deleteProject(companyA, companyWide, Fixtures.NOW);
+
+        useCase.execute(member, request(Optional.empty()));
+        assertThat(search.lastQuery().visibility().includes(closed)).isTrue();
+        assertThat(search.lastQuery().visibility().includes(companyWide)).isTrue();
+        useCase.execute(stranger, request(Optional.empty()));
+        assertThat(search.lastQuery().visibility().includes(closed)).isFalse();
+        assertThat(search.lastQuery().visibility().includes(companyWide)).isTrue();
+        SearchRequest filtered = new SearchRequest(List.of("x"), Optional.of(closed), Optional.empty());
+        assertThatThrownBy(() -> useCase.execute(member, filtered)).isInstanceOf(NotFoundException.class);
     }
 }

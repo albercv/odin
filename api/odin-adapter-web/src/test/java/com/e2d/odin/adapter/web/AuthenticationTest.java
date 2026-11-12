@@ -48,7 +48,7 @@ class AuthenticationTest extends WebTestSupport {
     @Test
     void foreignOriginIs403() throws Exception {
         var cookie = adminCookie(Role.GROUP_ADMIN, Optional.empty());
-        String body = "{\"name\":\"Nueva\"}";
+        String body = "{\"name\":\"Nueva\",\"code\":\"NUE\"}";
         mvc.perform(post("/v1/admin/companies").cookie(cookie).header(HttpHeaders.ORIGIN, "http://evil.test")
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
         mvc.perform(post("/v1/admin/companies").cookie(cookie).header(HttpHeaders.ORIGIN, PANEL)

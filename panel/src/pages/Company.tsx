@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { api, type S } from '../api/client';
 import { Capabilities } from '../components/Capabilities';
+import { Members } from '../components/Members';
 import { Notice } from '../components/Notice';
 import { Projects } from '../components/Projects';
-import { Users } from '../components/Users';
 import { useAction, useLoad } from '../components/useLoad';
 import { Button } from '../ui/Button';
 import { PageHeader } from '../ui/PageHeader';
@@ -11,6 +11,7 @@ import { PageHeader } from '../ui/PageHeader';
 export function Company({ companyId, me }: { companyId: string; me: S['AdminMe'] }) {
   const companies = useLoad(api.companies, []);
   const [adding, setAdding] = useState(false);
+  const [projectsVersion, setProjectsVersion] = useState(0);
   const { error, act } = useAction();
   const company = companies.data?.find((c) => c.id === companyId);
   const isGroup = me.role === 'GROUP_ADMIN';
@@ -21,8 +22,9 @@ export function Company({ companyId, me }: { companyId: string; me: S['AdminMe']
         actions={<Button variant="primary" icon="plus" onClick={() => setAdding(true)}>Añadir persona</Button>} />
       <Notice message={error ?? companies.error} />
       {company && <Capabilities company={company} onChange={isGroup ? change : undefined} />}
-      <Projects companyId={companyId} />
-      <Users companyId={companyId} me={me} addOpen={adding} onAddClose={() => setAdding(false)} />
+      <Projects companyId={companyId} version={projectsVersion} />
+      <Members companyId={companyId} me={me} addOpen={adding} onAddClose={() => setAdding(false)}
+        onProjectsChanged={() => setProjectsVersion((v) => v + 1)} />
     </div>
   );
 }

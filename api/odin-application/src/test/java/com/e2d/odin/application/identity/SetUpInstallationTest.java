@@ -8,6 +8,7 @@ import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.fake.SequencePersonCodeGenerator;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -24,7 +25,7 @@ class SetUpInstallationTest {
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final SetUpInstallation setUp = new SetUpInstallation(organizations, users, new FakePasswordHasher(),
-            new SequenceIdGenerator(), new InstallationSettings("token-secreto"));
+            new SequenceIdGenerator(), new SequencePersonCodeGenerator("7F3K"), new InstallationSettings("token-secreto"));
 
     @Test
     void createsGroupAndFirstAdmin() {
@@ -36,6 +37,13 @@ class SetUpInstallationTest {
         assertThat(memberships.listByUser(id)).isEmpty();
         assertThat(admin.email()).contains("gema@demo.test");
         assertThat(admin.passwordHash()).contains("pw:" + PASSWORD);
+    }
+
+    @Test
+    void firstAdminGetsAGeneratedPersonCode() {
+        UserId id = setUp.execute("token-secreto", "Grupo Demo", "Gema", "g@demo.test", PASSWORD);
+
+        assertThat(users.findById(id).orElseThrow().personCode()).isEqualTo("7F3K");
     }
 
     @Test

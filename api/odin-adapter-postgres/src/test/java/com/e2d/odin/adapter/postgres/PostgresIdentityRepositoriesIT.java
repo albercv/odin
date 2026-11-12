@@ -27,12 +27,12 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     private final PostgresAdminSessionRepository sessions = new PostgresAdminSessionRepository(tx);
 
     private User user(String email) {
-        return new User(new UserId(UUID.randomUUID()), "Ana", Optional.ofNullable(email), false, true,
-                Optional.of("hash"));
+        return new User(new UserId(UUID.randomUUID()), "Ana", Optional.of("Gil"), uniqueCode(),
+                Optional.ofNullable(email), false, true, Optional.of("hash"));
     }
 
     private static User inactive(User u) {
-        return u.updated(u.displayName(), u.email(), false);
+        return u.withActive(false);
     }
 
     @Test
@@ -52,6 +52,31 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     }
 
     @Test
+    void personCodeIsUniqueAmongDeletedToo() {
+        User first = user("codigo@x.com");
+        users.save(first);
+        users.delete(first.id(), Instant.now());
+        User second = new User(new UserId(UUID.randomUUID()), "Ana", Optional.of("Gil"), first.personCode(),
+                Optional.empty(), false, true, Optional.empty());
+
+        assertThat(users.personCodeExists(first.personCode())).isTrue();
+        assertThat(users.personCodeExists("ZZZZ")).isFalse();
+        assertThatThrownBy(() -> users.save(second)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void savesAndReadsFirstNameLastNameAndCode() {
+        User withoutSurnames = new User(new UserId(UUID.randomUUID()), "Migrada", Optional.empty(), uniqueCode(),
+                Optional.empty(), false, true, Optional.empty());
+        users.save(withoutSurnames);
+        User complete = user("c2@x.com");
+        users.save(complete);
+
+        assertThat(users.findById(withoutSurnames.id())).contains(withoutSurnames);
+        assertThat(users.findById(complete.id()).orElseThrow().displayName()).isEqualTo("Ana Gil");
+    }
+
+    @Test
     void savesFindsAndUpdatesUsers() {
         User u = user("Ana@Example.com");
         users.save(u);
@@ -66,7 +91,7 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         CompanyId company = newCompany();
         UserId kept = newUser(company);
         UserId gone = newUser(company);
-        ListMembers list = new ListMembers(users, memberships);
+        ListMembers list = new ListMembers(users, memberships, orgs);
         Actor admin = new Actor(new UserId(UUID.randomUUID()), "Carlos", Role.COMPANY_ADMIN, Set.of(company));
         assertThat(list.execute(admin, company)).extracting(MemberView::userId).containsExactly(kept, gone);
 
@@ -197,8 +222,8 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
     @Test
     void findGroupAdminReturnsTheOnlyGroupAdmin() {
         assertThat(users.findGroupAdmin()).isEmpty();
-        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.of("gema@x.com"), true, true,
-                Optional.of("hash"));
+        User admin = new User(new UserId(UUID.randomUUID()), "Gema", Optional.empty(), uniqueCode(),
+                Optional.of("gema@x.com"), true, true, Optional.of("hash"));
         users.save(user("c@x.com"));
         users.save(admin);
         assertThat(users.findGroupAdmin()).contains(admin);

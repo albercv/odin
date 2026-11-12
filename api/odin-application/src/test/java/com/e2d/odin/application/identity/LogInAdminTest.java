@@ -77,7 +77,7 @@ class LogInAdminTest {
     @Test
     void personWhoIsAdminAndWorkerLogsIn() {
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Carlos", Optional.of("c@demo.test"), false, true,
+        users.save(new User(id, "Carlos", Optional.of("Pérez"), People.nextCode(), Optional.of("c@demo.test"), false, true,
                 Optional.of("pw:una-clave-larga-1")));
         memberships.save(new Membership(id, new CompanyId(UUID.randomUUID()), Set.of(Role.COMPANY_ADMIN, Role.WORKER),
                 true));
@@ -88,7 +88,7 @@ class LogInAdminTest {
     @Test
     void adminWhoseMembershipIsInactiveCannotLogIn() {
         UserId id = new UserId(UUID.randomUUID());
-        users.save(new User(id, "Carlos", Optional.of("c@demo.test"), false, true,
+        users.save(new User(id, "Carlos", Optional.of("Pérez"), People.nextCode(), Optional.of("c@demo.test"), false, true,
                 Optional.of("pw:una-clave-larga-1")));
         memberships.save(new Membership(id, new CompanyId(UUID.randomUUID()), Set.of(Role.COMPANY_ADMIN), false));
 

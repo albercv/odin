@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.e2d.odin.application.fake.Fixtures;
@@ -38,6 +39,34 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void companyAdminCannotChangeACompanyCode() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String before = w.orgs.findCompany(a).orElseThrow().code();
+
+        for (CompanyId own : new CompanyId[] {a, b}) {
+            mvc.perform(patch("/v1/admin/companies/" + a.value())
+                    .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(own))).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"HACKED\"}")).andExpect(status().isForbidden());
+        }
+        org.assertj.core.api.Assertions.assertThat(w.orgs.findCompany(a).orElseThrow().code()).isEqualTo(before);
+    }
+
+    @Test
+    void workerRoutesCarryNoCodes() throws Exception {
+        CompanyId a = newCompany();
+        w.orgs.saveProject(new com.e2d.odin.domain.organization.Project(
+                new com.e2d.odin.domain.shared.ProjectId(java.util.UUID.randomUUID()), a, "Obra", false));
+
+        String body = mvc.perform(get("/v1/me").header("Authorization", workerKey(a))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.projects[0].name").value("Obra"))
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(body).doesNotContainIgnoringCase("code")
+                .doesNotContain("restricted").doesNotContain("memberCount").doesNotContain("companyId");
+    }
+
+    @Test
     void otherCompanyAdminCannotPatchOrDeleteUser() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
@@ -58,7 +87,7 @@ class IsolationTest extends WebTestSupport {
         String base = "/v1/admin/companies/" + a.value() + "/members";
         mvc.perform(get(base).cookie(other)).andExpect(status().isForbidden());
         mvc.perform(post(base).cookie(other).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Intruso\",\"roles\":[\"WORKER\"]}"))
+                .content("{\"firstName\":\"Intruso\",\"lastName\":\"Gil\",\"roles\":[\"WORKER\"]}"))
                 .andExpect(status().isForbidden());
         mvc.perform(patch(base + "/" + member.value()).cookie(other).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"active\":false}")).andExpect(status().isForbidden());
@@ -112,5 +141,36 @@ class IsolationTest extends WebTestSupport {
                 .andExpect(status().isNotFound());
         mvc.perform(delete("/v1/admin/companies/" + b.value() + "/projects/" + id).cookie(other))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void otherCompanyAdminCannotManageProjectMembers() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String project = Fixtures.project(w.orgs, a).value().toString();
+        UserId worker = workerId(a);
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        String inA = "/v1/admin/companies/" + a.value() + "/projects/" + project + "/members";
+        String inB = "/v1/admin/companies/" + b.value() + "/projects/" + project + "/members";
+        mvc.perform(get(inA).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(put(inA + "/" + worker.value()).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(delete(inA + "/" + worker.value()).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(inB).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(put(inB + "/" + worker.value()).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(delete(inB + "/" + worker.value()).cookie(other)).andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.projectMembers.listMembers(
+                new com.e2d.odin.domain.shared.ProjectId(java.util.UUID.fromString(project)))).isEmpty();
+    }
+
+    @Test
+    void otherCompanyAdminCannotListMemberProjects() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId worker = workerId(a);
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        mvc.perform(get("/v1/admin/companies/" + a.value() + "/members/" + worker.value() + "/projects")
+                .cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/members/" + worker.value() + "/projects")
+                .cookie(other)).andExpect(status().isNotFound());
     }
 }

@@ -1,4 +1,4 @@
-.scroll { overflow-x: auto; }
+.scroll { position: relative; overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; }
 .table th {
   text-align: left; font-size: 13px; font-weight: 500; color: var(--text-muted); padding: 10px 22px;
@@ -12,3 +12,22 @@
 .panelRow td { background: var(--surface-muted); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .notice { padding: 0 22px 14px; }
+
+@media (min-width: 721px) { .actions { min-width: 22rem; } }
+
+/* Below 720 px every row becomes a block; cells show their column label (data-label) and wrap at word boundaries. */
+@media (max-width: 720px) {
+  .table, .table tbody, .table tr, .table td { display: block; }
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .table tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .table tr:last-child { border-bottom: 0; }
+  .table td { padding: 6px 16px; border: 0; overflow-wrap: break-word; word-break: normal; }
+  .table td[data-label] { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 12px; align-items: start; }
+  .table td[data-label] > * { grid-column: 2; }
+  .table td[data-label]::before { grid-column: 1; content: attr(data-label); color: var(--text-muted); font-size: 13px; font-weight: 500; }
+  .table td.actions { width: auto; text-align: left; }
+  .table .panelRow td { padding: 14px 16px; }
+}
+
+/* The person column keeps a readable width even when an open row menu asks for space; addresses wrap only at «@» or dots. */
+.person { min-width: 13rem; overflow-wrap: normal; }

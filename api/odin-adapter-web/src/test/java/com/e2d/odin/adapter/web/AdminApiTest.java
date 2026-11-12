@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -91,20 +92,40 @@ class AdminApiTest extends WebTestSupport {
     void addMemberReturns201AndListingHasNoHashes() throws Exception {
         CompanyId company = newCompany();
         Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
-        mvc.perform(post("/v1/admin/companies/" + company.value() + "/members").cookie(group)
+        var added = mvc.perform(post("/v1/admin/companies/" + company.value() + "/members").cookie(group)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Cora\",\"email\":\"cora@e.test\",\"roles\":[\"COMPANY_ADMIN\","
+                .content("{\"firstName\":\"Cora\",\"lastName\":\"Gil\",\"email\":\"cora@e.test\",\"roles\":[\"COMPANY_ADMIN\","
                         + "\"WORKER\"],\"password\":\"clave-muy-larga-1\"}")).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.alreadyExisted").value(false))
-                .andExpect(jsonPath("$.member.displayName").value("Cora"))
+                .andExpect(jsonPath("$.member.displayName").value("Cora Gil"))
+                .andExpect(jsonPath("$.member.firstName").value("Cora"))
+                .andExpect(jsonPath("$.member.lastName").value("Gil"))
+                .andExpect(jsonPath("$.member.personCode").value(matchesPattern("[A-Z0-9]{4}")))
                 .andExpect(jsonPath("$.member.roles", containsInAnyOrder("COMPANY_ADMIN", "WORKER")))
-                .andExpect(jsonPath("$.member.active").value(true)).andExpect(jsonPath("$.password").doesNotExist());
+                .andExpect(jsonPath("$.member.active").value(true)).andExpect(jsonPath("$.member.hasPassword").value(true))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andReturn();
+        String personCode = com.jayway.jsonpath.JsonPath.read(added.getResponse().getContentAsString(),
+                "$.member.personCode");
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/members").cookie(group))
+                .andExpect(jsonPath("$[0].memberCode")
+                        .value(personCode + "-" + w.orgs.findCompany(company).orElseThrow().code()));
         String listing = mvc.perform(get("/v1/admin/companies/" + company.value() + "/members").cookie(group))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].userId").isNotEmpty()).andExpect(jsonPath("$[0].email").value("cora@e.test"))
+                .andExpect(jsonPath("$[0].personCode").value(personCode)).andExpect(jsonPath("$[0].lastName").value("Gil"))
                 .andReturn().getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(listing).doesNotContainIgnoringCase("hash")
                 .doesNotContain("clave-muy-larga-1");
+    }
+
+    @Test
+    void memberListSaysWhetherThePersonHasAPassword() throws Exception {
+        CompanyId company = newCompany();
+        UserId worker = workerId(company);
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/members").cookie(admin))
+                .andExpect(jsonPath("$[?(@.userId=='" + worker.value() + "')].hasPassword").value(false));
     }
 
     @Test
@@ -114,12 +135,12 @@ class AdminApiTest extends WebTestSupport {
         companyAdmin(first, "dup@e.test");
         mvc.perform(post("/v1/admin/companies/" + second.value() + "/members")
                 .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(second))).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Otro\",\"email\":\"dup@e.test\",\"roles\":[\"WORKER\"]}"))
+                .content("{\"firstName\":\"Otro\",\"lastName\":\"Nombre\",\"email\":\"dup@e.test\",\"roles\":[\"WORKER\"]}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.alreadyExisted").value(true))
-                .andExpect(jsonPath("$.member.displayName").value("Carlos"));
+                .andExpect(jsonPath("$.member.displayName").value("Carlos Pérez"));
         mvc.perform(post("/v1/admin/companies/" + second.value() + "/members")
                 .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(second))).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Otro\",\"email\":\"dup@e.test\",\"roles\":[\"WORKER\"]}"))
+                .content("{\"firstName\":\"Otro\",\"lastName\":\"Nombre\",\"email\":\"dup@e.test\",\"roles\":[\"WORKER\"]}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").value("Esa persona ya pertenece a esta empresa"));
     }
@@ -132,7 +153,9 @@ class AdminApiTest extends WebTestSupport {
         mvc.perform(patch("/v1/admin/companies/" + company.value() + "/members/" + worker.value()).cookie(admin)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(worker.value().toString()))
-                .andExpect(jsonPath("$.roles", containsInAnyOrder("WORKER"))).andExpect(jsonPath("$.active").value(false));
+                .andExpect(jsonPath("$.roles", containsInAnyOrder("WORKER"))).andExpect(jsonPath("$.active").value(false))
+                .andExpect(jsonPath("$.memberCode").value(w.users.findById(worker).orElseThrow().personCode() + "-"
+                        + w.orgs.findCompany(company).orElseThrow().code()));
         mvc.perform(patch("/v1/admin/companies/" + company.value() + "/members/" + worker.value())
                 .cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty())).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"active\":true,\"roles\":[\"WORKER\"]}")).andExpect(status().isOk())
@@ -177,6 +200,10 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.companies[*].id", containsInAnyOrder(first.value().toString(),
                         second.value().toString())))
                 .andExpect(jsonPath("$.companies[0].name").isNotEmpty())
+                .andExpect(jsonPath("$.companies[0].code").isNotEmpty())
+                .andExpect(jsonPath("$.personCode").value(w.users.findById(id).orElseThrow().personCode()))
+                .andExpect(jsonPath("$.firstName").value(w.users.findById(id).orElseThrow().firstName()))
+                .andExpect(jsonPath("$.lastName").value(w.users.findById(id).orElseThrow().lastName().orElseThrow()))
                 .andExpect(jsonPath("$.companyId").doesNotExist());
     }
 
@@ -197,11 +224,11 @@ class AdminApiTest extends WebTestSupport {
         workerKey(company);
         UserId worker = w.memberships.listByCompany(company).get(0).userId();
         mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"Nuevo\",\"email\":\"N@e.test\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"firstName\":\"Nuevo\",\"lastName\":\"Apellido\",\"email\":\"N@e.test\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.userId").value(worker.value().toString()));
         org.assertj.core.api.Assertions.assertThat(w.users.findById(worker).orElseThrow())
                 .satisfies(u -> {
-                    org.assertj.core.api.Assertions.assertThat(u.displayName()).isEqualTo("Nuevo");
+                    org.assertj.core.api.Assertions.assertThat(u.displayName()).isEqualTo("Nuevo Apellido");
                     org.assertj.core.api.Assertions.assertThat(u.email()).contains("n@e.test");
                 });
     }
@@ -267,19 +294,67 @@ class AdminApiTest extends WebTestSupport {
         CompanyId company = newCompany();
         mvc.perform(post("/v1/admin/companies/" + company.value() + "/members")
                 .cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty())).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\":\"Wanda\",\"roles\":[\"WORKER\"],\"password\":\"clave-muy-larga-1\"}"))
+                .content("{\"firstName\":\"Wanda\",\"lastName\":\"Gil\",\"roles\":[\"WORKER\"],"
+                        + "\"password\":\"clave-muy-larga-1\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Un trabajador no tiene contraseña: entra con su clave personal"));
+    }
+
+    @Test
+    void companyCodeIsValidatedAndUnique() throws Exception {
+        Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+        String first = "{\"name\":\"Acme\",\"code\":\"ACM\"}";
+        mvc.perform(post("/v1/admin/companies").cookie(group).contentType(MediaType.APPLICATION_JSON).content(first))
+                .andExpect(status().isCreated());
+
+        mvc.perform(post("/v1/admin/companies").cookie(group).contentType(MediaType.APPLICATION_JSON).content(first))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Ya existe una empresa con ese código"));
+        mvc.perform(post("/v1/admin/companies").cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Sin\"}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail")
+                        .value("El código de la empresa tiene de 2 a 6 letras mayúsculas o cifras"));
+    }
+
+    @Test
+    void missingNamesIs400() throws Exception {
+        CompanyId company = newCompany();
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/members")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company))).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstName\":\"Wanda\",\"roles\":[\"WORKER\"]}")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Faltan el nombre o los apellidos"));
+        org.assertj.core.api.Assertions.assertThat(w.memberships.listByCompany(company)).hasSize(1);
+    }
+
+    @Test
+    void personCodeInARequestIsIgnored() throws Exception {
+        CompanyId company = newCompany();
+        UserId worker = workerId(company);
+        String code = w.users.findById(worker).orElseThrow().personCode();
+
+        mvc.perform(patch("/v1/admin/users/" + worker.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"firstName\":\"Otra\",\"personCode\":\"AAAA\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/v1/admin/companies/" + company.value() + "/members")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(company))).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstName\":\"Nuevo\",\"lastName\":\"Gil\",\"personCode\":\"AAAA\","
+                        + "\"roles\":[\"WORKER\"]}")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.member.personCode").value(org.hamcrest.Matchers.not("AAAA")));
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(worker).orElseThrow().personCode()).isEqualTo(code);
     }
 
     @Test
     void companyLifecycleAndCardReview() throws Exception {
         Cookie group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
         var created = mvc.perform(post("/v1/admin/companies").cookie(group).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Acme\"}")).andExpect(status().isCreated()).andReturn();
+                .content("{\"name\":\"Acme\",\"code\":\"ACM\"}")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code").value("ACM")).andReturn();
         String id = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
         mvc.perform(patch("/v1/admin/companies/" + id).cookie(group).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Acme 2\"}")).andExpect(jsonPath("$.name").value("Acme 2"));
+                .content("{\"name\":\"Acme 2\"}")).andExpect(jsonPath("$.name").value("Acme 2"))
+                .andExpect(jsonPath("$.code").value("ACM"));
+        mvc.perform(patch("/v1/admin/companies/" + id).cookie(group).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"ACME2\"}")).andExpect(jsonPath("$.code").value("ACME2"))
+                .andExpect(jsonPath("$.name").value("Acme 2"));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                 .put("/v1/admin/companies/" + id + "/capabilities").cookie(group)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"capabilities\":[\"SEARCH_KNOWLEDGE\"]}"))
@@ -340,5 +415,91 @@ class AdminApiTest extends WebTestSupport {
         return multipart("/v1/admin/companies/" + company.value() + "/documents")
                 .file(new MockMultipartFile("file", "manual.pdf", "application/pdf", bytes))
                 .param("title", "Manual").cookie(admin);
+    }
+
+    @Test
+    void newProjectIsClosedAndPatchTogglesCompanyWide() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String id = createProject(admin, company, "Obra");
+        String url = "/v1/admin/companies/" + company.value() + "/projects/" + id;
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/projects").cookie(admin))
+                .andExpect(jsonPath("$[0].restricted").value(true));
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"restricted\":false}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.restricted").value(false)).andExpect(jsonPath("$.name").value("Obra"));
+        mvc.perform(patch(url).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"restricted\":true,\"name\":\"Reforma\"}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.restricted").value(true)).andExpect(jsonPath("$.name").value("Reforma"));
+    }
+
+    @Test
+    void projectListCarriesTheMemberCount() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String obra = createProject(admin, company, "Obra");
+        createProject(admin, company, "Otra");
+        mvc.perform(put("/v1/admin/companies/" + company.value() + "/projects/" + obra + "/members/"
+                + workerId(company).value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/projects").cookie(admin))
+                .andExpect(jsonPath("$[0].memberCount").value(1)).andExpect(jsonPath("$[1].memberCount").value(0));
+    }
+
+    @Test
+    void projectMemberRoutes() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String project = createProject(admin, company, "Obra");
+        UserId worker = workerId(company);
+        String members = "/v1/admin/companies/" + company.value() + "/projects/" + project + "/members";
+        mvc.perform(get(members).cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(put(members + "/" + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(put(members + "/" + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(members).cookie(admin)).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].userId").value(worker.value().toString()))
+                .andExpect(jsonPath("$[0].displayName").value("Wilma Pérez"));
+        mvc.perform(delete(members + "/" + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(members).cookie(admin)).andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    void onlyWorkersCanBeProjectMembers() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String project = createProject(admin, company, "Obra");
+        mvc.perform(put("/v1/admin/companies/" + company.value() + "/projects/" + project + "/members/"
+                + UUID.randomUUID()).cookie(admin)).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Solo un trabajador de la empresa puede ser miembro"));
+    }
+
+    @Test
+    void memberProjectsListsTheProjectsThePersonBelongsTo() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String obra = createProject(admin, company, "Obra");
+        createProject(admin, company, "Otra");
+        UserId worker = workerId(company);
+        mvc.perform(put("/v1/admin/companies/" + company.value() + "/projects/" + obra + "/members/"
+                + worker.value()).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/members/" + worker.value() + "/projects")
+                .cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(obra)).andExpect(jsonPath("$[0].restricted").value(true));
+    }
+
+    @Test
+    void addMemberAcceptsProjectIds() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String obra = createProject(admin, company, "Obra");
+        String url = "/v1/admin/companies/" + company.value() + "/members";
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content(
+                "{\"firstName\":\"Pepa\",\"lastName\":\"Gil\",\"roles\":[\"WORKER\"],\"projectIds\":[\"" + obra + "\"]}"))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/projects/" + obra + "/members").cookie(admin))
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].displayName").value("Pepa Gil"));
+        mvc.perform(post(url).cookie(admin).contentType(MediaType.APPLICATION_JSON).content(
+                "{\"firstName\":\"Pepe\",\"lastName\":\"Gil\",\"roles\":[\"WORKER\"],\"projectIds\":[\"" + UUID.randomUUID()
+                        + "\"]}")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Proyecto no encontrado"));
     }
 }

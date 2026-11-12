@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '../ui/Button';
+import { RowAction } from '../ui/RowActions';
 import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
 import { Notice } from './Notice';
@@ -20,8 +20,8 @@ export function RenameForm({ name, label, onSave, onSaved, onCancel }: Props) {
       <Notice message={error} />
       <Field label={label}><input required value={value} onChange={(e) => setValue(e.target.value)} /></Field>
       <div className={form.buttons}>
-        <Button type="submit" variant="primary">Guardar {name}</Button>
-        <Button onClick={onCancel}>Cancelar {name}</Button>
+        <RowAction type="submit" variant="primary" text="Guardar" target={name} />
+        <RowAction text="Cancelar" target={name} onClick={onCancel} />
       </div>
     </form>
   );

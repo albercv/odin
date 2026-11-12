@@ -11,12 +11,16 @@ import com.e2d.odin.application.identity.MemberChanges;
 import com.e2d.odin.application.identity.NewMember;
 import com.e2d.odin.application.identity.RemoveMember;
 import com.e2d.odin.application.identity.UpdateMember;
+import com.e2d.odin.application.organization.ListMemberProjects;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,15 +44,18 @@ public class MemberController {
     private final RemoveMember removeMember;
     private final IssueAccessKey issueKey;
     private final ListAccessKeys listKeys;
+    private final ListMemberProjects listMemberProjects;
 
     public MemberController(ListMembers listMembers, AddMember addMember, UpdateMember updateMember,
-            RemoveMember removeMember, IssueAccessKey issueKey, ListAccessKeys listKeys) {
+            RemoveMember removeMember, IssueAccessKey issueKey, ListAccessKeys listKeys,
+            ListMemberProjects listMemberProjects) {
         this.listMembers = listMembers;
         this.addMember = addMember;
         this.updateMember = updateMember;
         this.removeMember = removeMember;
         this.issueKey = issueKey;
         this.listKeys = listKeys;
+        this.listMemberProjects = listMemberProjects;
     }
 
     @GetMapping
@@ -61,9 +68,21 @@ public class MemberController {
     @ResponseStatus(HttpStatus.CREATED)
     public Responses.MemberAdded add(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestBody Requests.AddMember request) {
-        NewMember member = new NewMember(request.displayName(), Optional.ofNullable(request.email()), request.roles(),
-                Optional.ofNullable(request.password()));
-        return Responses.MemberAdded.from(addMember.execute(actor, new CompanyId(companyId), member));
+        NewMember member = new NewMember(request.firstName(), request.lastName(), Optional.ofNullable(request.email()),
+                request.roles(), Optional.ofNullable(request.password()), projectIds(request));
+        return Responses.MemberAdded.from(addMember.execute(actor, new CompanyId(companyId), member), actor);
+    }
+
+    private static Set<ProjectId> projectIds(Requests.AddMember request) {
+        return request.projectIds() == null ? Set.of()
+                : request.projectIds().stream().map(ProjectId::new).collect(Collectors.toSet());
+    }
+
+    @GetMapping("/{userId}/projects")
+    public List<Responses.ProjectView> projects(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID userId) {
+        return listMemberProjects.execute(actor, new CompanyId(companyId), new UserId(userId)).stream()
+                .map(Responses.ProjectView::from).toList();
     }
 
     @PatchMapping("/{userId}")

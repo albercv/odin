@@ -1,8 +1,8 @@
 import type { S } from '../api/client';
 import { authorName, projectName } from './reviewNames';
 
-const members: S['MemberView'][] = [{ userId: 'u1', displayName: 'Jorge Salas', roles: ['WORKER'], active: true }];
-const projects: S['ProjectView'][] = [{ id: 'p1', companyId: 'c1', name: 'Garajes Plaza Sol' }];
+const members: S['MemberView'][] = [{ userId: 'u1', displayName: 'Jorge Salas', firstName: 'Jorge', lastName: 'Salas', personCode: 'JJJJ', memberCode: 'JJJJ-ACM', roles: ['WORKER'], active: true, hasPassword: false }];
+const projects: S['ProjectView'][] = [{ id: 'p1', companyId: 'c1', name: 'Garajes Plaza Sol', restricted: true }];
 
 test('authorNameFallsBackWhenTheAuthorLeft', () => {
   expect(authorName('u1', members)).toBe('Jorge Salas');
