@@ -274,17 +274,26 @@ def _counts(folder):
     return {"respuestas_finales": sum(f["answer"] is not None for f in data["finals"]), "buscadores_validos": dict(valid)}
 
 
+def _state(sess, started, reason=None, counts=None):
+    """Lo que hace falta para continuar en la misma carpeta: se escribe al empezar la tanda y al parar."""
+    return {"config": str(sess.config_path), "mode": sess.mode, "carpeta": str(sess.folder),
+            "huella": sess.settings.odin_commit, "stack_digest": sess.settings.stack_digest,
+            "motivo": reason, "renovacion": tanda.renewal_time(reason), "fecha_tanda": started, "recuentos": counts}
+
+
+def _open_batch(sess):
+    """Antes de la primera llamada de pago, el estado de reanudación ya existe: un corte de golpe deja algo que reanudar."""
+    tanda.save_state(sess.state_file, _state(sess, datetime.now().isoformat(timespec="seconds")))
+
+
 def _finish_batch(sess, done):
     """Al parar, el estado de reanudación guarda el motivo, la hora de renovación y lo hecho; al terminar completo, se borra."""
     if done and not _stopped(sess):
         tanda.delete_state(sess.state_file)
         return
     reason = sess.stop_file.read_text(encoding="utf-8").strip() if _stopped(sess) else "interrumpida"
-    state = {"config": str(sess.config_path), "mode": sess.mode, "carpeta": str(sess.folder),
-             "huella": sess.settings.odin_commit, "stack_digest": sess.settings.stack_digest,
-             "motivo": reason, "renovacion": tanda.renewal_time(reason),
-             "fecha_tanda": datetime.now().isoformat(timespec="seconds"), "recuentos": _counts(sess.folder)}
-    tanda.save_state(sess.state_file, state)
+    started = (tanda.read_state(sess.state_file) or {}).get("fecha_tanda") or datetime.now().isoformat(timespec="seconds")
+    tanda.save_state(sess.state_file, _state(sess, started, reason, _counts(sess.folder)))
 
 
 def _exit_code(sess):
@@ -557,6 +566,7 @@ def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
 
 def run_experiment(config_path, layout, reset_budget=False, sin_prueba=False, resume=None):
     sess = prepare(config_path, layout, reset_budget=reset_budget, resume=resume)
+    _open_batch(sess)
     runs, finals, verdicts = [], [], []
     done = False
     try:
@@ -623,6 +633,7 @@ def _curves(sess, runs, turn_runs):
 
 def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False, resume=None):
     sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget, resume=resume)
+    _open_batch(sess)
     runs, turn_runs = [], []
     done = False
     try:

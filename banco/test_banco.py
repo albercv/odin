@@ -883,5 +883,71 @@ class ResumeTest(Harness):
         self.assertIn("no hay estado de reanudación", err.getvalue())
 
 
+class CrashSafetyTest(Harness):
+    """El estado se escribe al empezar la tanda; un corte de golpe deja una tanda reanudable; la caché y el libro se
+    escriben llamada a llamada."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        self.counter = self.tmp / "contador"
+        self.config_path = self.config(concurrency=1)
+
+    def _state(self):
+        return json.loads((self.state_dir / "reanudar-prueba.json").read_text(encoding="utf-8"))
+
+    def test_state_exists_before_the_first_paid_call(self):
+        seen = []
+        inner = ejecutar.responder
+
+        def watching(*args, **kwargs):
+            if not seen:
+                seen.append(json.loads((self.state_dir / "reanudar-prueba.json").read_text(encoding="utf-8")))
+            return inner(*args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=watching):
+            self.run_cli(self.config_path)
+        self.assertEqual(seen[0]["motivo"], None)
+        self.assertEqual(seen[0]["mode"], "run")
+        self.assertIn("fecha_tanda", seen[0])
+
+    def test_killed_batch_resumes_with_only_the_missing_calls(self):
+        calls = []
+        inner = ejecutar.responder
+
+        def dying(*args, **kwargs):
+            calls.append(1)
+            if len(calls) >= 3:
+                raise KeyboardInterrupt  # corte de golpe: nada más se escribe al cerrar la tanda
+            return inner(*args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=dying), \
+                mock.patch("banco.run._finish_batch"), self.assertRaises(KeyboardInterrupt):
+            banco.main(["run", "--sin-prueba", "--config", str(self.config_path)], layout=self.layout)
+        with fake_env(FAKE_CONTADOR=str(self.counter), FAKE_MODO_DESDE="1", FAKE_MODO_DESDE_MODO="ok"):
+            code = banco.main(["reanudar", "--config", str(self.config_path)], layout=self.layout)
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.counter.read_text(encoding="utf-8").splitlines()), 1 + 4)  # prueba + 4 que faltaban
+        records = self.read_jsonl(self.only_folder(), "buscadores.jsonl")
+        self.assertEqual(sum(r["cached"] for r in records), 2)
+
+    def test_cache_and_ledger_are_written_call_by_call(self):
+        observed = []
+        inner = ejecutar.responder
+        ledger_file = self.state_dir / "libro-prueba.json"
+
+        def watching(*args, **kwargs):
+            if len(observed) < 2:
+                cached = len(list((self.tmp / "cache").glob("*.json"))) if (self.tmp / "cache").exists() else 0
+                charges = len(json.loads(ledger_file.read_text(encoding="utf-8"))["cargos"]) if ledger_file.exists() else 0
+                observed.append((cached, charges))
+            return inner(*args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=watching):
+            self.run_cli(self.config_path)
+        self.assertEqual(observed[0], (0, 0))
+        self.assertEqual(observed[1], (1, 1))  # antes de la segunda llamada, la primera ya está en caché y en el libro
+
+
 if __name__ == "__main__":
     unittest.main()
