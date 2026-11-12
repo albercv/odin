@@ -1,5 +1,6 @@
 """Pruebas de las métricas del informe: jueces, acuerdo entre buscadores, coste y latencia. Sin IA ni red."""
 import unittest
+from unittest import mock
 
 from banco import metrics
 
@@ -63,11 +64,11 @@ class AgreementTest(unittest.TestCase):
 
 class CostTest(unittest.TestCase):
     def test_notified_cost_excludes_cached_runs(self):
-        runs = [{"coste_usd": 0.001, "cached": False, "tokens": {"entrada": 10, "salida": 5}},
-                {"coste_usd": 0.002, "cached": True, "tokens": {"entrada": 10, "salida": 5}}]
+        runs = [{"id": "Q1", "coste_usd": 0.001, "cached": False, "tokens": {"entrada": 10, "salida": 5}},
+                {"id": "Q1", "coste_usd": 0.002, "cached": True, "tokens": {"entrada": 10, "salida": 5}}]
         finals = [_final("Q1", True, _answer("a"))]
         verdicts = [{"id": "Q1", "jury": True, "judges": [{"coste_usd": 0.0005, "tokens": {"entrada": 3}}]}]
-        cost = metrics.cost_block(1, runs, finals, verdicts)
+        cost = metrics.cost_block(runs, finals, verdicts)
         self.assertEqual(cost["notifiedUsd"], 0.0015)
         self.assertEqual(cost["searchers"]["tokensPerAnswer"], 30.0)
         self.assertEqual(cost["judges"]["tokensPerAnswer"], 3.0)
@@ -75,10 +76,47 @@ class CostTest(unittest.TestCase):
 
 class UnknownCostTest(unittest.TestCase):
     def test_unknown_cost_is_counted_not_zero(self):
-        runs = [{"coste_usd": None, "cached": False, "tokens": None}, {"coste_usd": 0.001, "cached": False, "tokens": None}]
-        cost = metrics.cost_block(1, runs, [_final("Q1", True, _answer("a"))], [])
+        runs = [{"id": "Q1", "coste_usd": None, "cached": False, "tokens": None},
+                {"id": "Q1", "coste_usd": 0.001, "cached": False, "tokens": None}]
+        cost = metrics.cost_block(runs, [_final("Q1", True, _answer("a"))], [])
         self.assertEqual(cost["unknownCostRecords"], 1)
         self.assertEqual(cost["notifiedUsd"], 0.001)
+
+
+class DenominatorTest(unittest.TestCase):
+    """Por respuesta: los buscadores dividen entre las preguntas ejecutadas; redactor y jueces, entre las medidas."""
+
+    def test_searcher_cost_divides_by_executed_questions_not_the_battery(self):
+        runs = [{"id": "Q1", "coste_usd": 0.002, "cached": False, "tokens": None},
+                {"id": "Q2", "coste_usd": 0.002, "cached": False, "tokens": None}]
+        cost = metrics.cost_block(runs, [], [])
+        self.assertEqual(cost["searchers"]["usdPerAnswer"], 0.002)
+
+    def test_combiner_cost_divides_by_measured_answers(self):
+        finals = [{**_final("Q1", True, _answer("a")), "coste_usd": 0.004}, {**_final("Q2", False), "coste_usd": 0.0}]
+        cost = metrics.cost_block([], finals, [])
+        self.assertEqual(cost["combiner"]["usdPerAnswer"], 0.004)
+
+
+class ApproachDenominatorTest(unittest.TestCase):
+    ITEMS = {"Q1": {"id": "Q1", "citas_resueltas": [{"doc": "a.txt", "paginas": [1]}]},
+             "Q2": {"id": "Q2", "citas_resueltas": [{"doc": "a.txt", "paginas": [2]}]},
+             "Q3": {"id": "Q3", "citas_resueltas": [{"doc": "a.txt", "paginas": [3]}]}}
+
+    def test_recall_divides_by_measured_questions_with_expected_pages(self):
+        runs = [{"id": "Q1", "approach": "main", "error": None, "respuesta": None,
+                 "consultas": [{"vistos": [{"documentId": "d1", "pagina": 1}]}]}]
+        with mock.patch.object(metrics.scoring, "is_correct", return_value=True):
+            block = metrics.approach_block(self.ITEMS, runs, None, {"a.txt": "d1"})
+        self.assertEqual(block["main"]["recall"], 1.0)
+
+    def test_accuracy_excludes_errored_runs_and_counts_them_apart(self):
+        runs = [{"id": "Q1", "approach": "main", "error": None, "respuesta": _answer("a"), "consultas": []},
+                {"id": "Q2", "approach": "main", "error": "fallo", "respuesta": None, "consultas": []}]
+        with mock.patch.object(metrics.scoring, "is_correct", side_effect=lambda i, a, c: a is not None):
+            block = metrics.approach_block(self.ITEMS, runs, None, {"a.txt": "d1"})
+        self.assertEqual(block["main"]["accuracy"], 1.0)
+        self.assertEqual(block["main"]["errors"], 1)
 
 
 class LatencyTest(unittest.TestCase):

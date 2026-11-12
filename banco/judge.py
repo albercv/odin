@@ -41,9 +41,10 @@ def _verdict_or_invalid(data):
     return data if _is_valid(data) else _invalid("veredicto con campos ausentes o de tipo incorrecto")
 
 
-def _record(model, verdict, cost, tokens, t0):
+def _record(model, verdict, cost, tokens, t0, error=None):
+    """Registro de un juez. `error` lleva el texto del fallo (p. ej. una cuota) para que el banco pueda parar."""
     return {"model": model, "verdict": verdict, "coste_usd": cost, "tokens": tokens,
-            "duracion_s": round(time.monotonic() - t0, 1)}
+            "duracion_s": round(time.monotonic() - t0, 1), "error": error}
 
 
 def check_judge_init(init):
@@ -76,6 +77,13 @@ def _from_result(result):
     return _verdict_or_invalid(result.get("structured_output"))
 
 
+def _result_error(result):
+    """Texto del resultado de error del juez (p. ej. «usage limit»), o None si no hubo error."""
+    if result is not None and result.get("is_error"):
+        return str(result.get("result") or result.get("subtype"))[:500]
+    return None
+
+
 def run_claude_judge(material, rubric_text, model, claude_bin, timeout):
     t0 = time.monotonic()
     command = [claude_bin, "-p", "--model", model, "--output-format", "stream-json", "--verbose",
@@ -85,18 +93,20 @@ def run_claude_judge(material, rubric_text, model, claude_bin, timeout):
             proc = subprocess.run(command, input=rubric_text + "\n\n" + material, cwd=empty_dir, text=True,
                                   capture_output=True, timeout=timeout, env={**os.environ, **ejecutar.ENTORNO_AISLADO})
         except subprocess.TimeoutExpired:
-            return _record(model, _invalid(f"tiempo agotado ({timeout} s)"), None, None, t0)
+            reason = f"tiempo agotado ({timeout} s)"
+            return _record(model, _invalid(reason), None, None, t0, reason)
     events = _events(proc.stdout)
     init = next((e for e in events if e.get("type") == "system" and e.get("subtype") == "init"), None)
     if init is None:
-        return _record(model, _invalid(f"sin evento de inicio (código {proc.returncode})"), None, None, t0)
+        reason = f"sin evento de inicio (código {proc.returncode}): {(proc.stderr or proc.stdout)[-300:]}"
+        return _record(model, _invalid(reason), None, None, t0, reason)
     check_judge_init(init)
     result = next((e for e in reversed(events) if e.get("type") == "result"), None)
     usage = (result or {}).get("usage") or {}
     tokens = {"entrada": usage.get("input_tokens"), "salida": usage.get("output_tokens"),
               "cache_lectura": usage.get("cache_read_input_tokens"), "cache_creacion": usage.get("cache_creation_input_tokens")}
     cost = (result or {}).get("total_cost_usd")  # None si falta: coste desconocido, no 0
-    return _record(model, _from_result(result), cost, tokens, t0)
+    return _record(model, _from_result(result), cost, tokens, t0, _result_error(result))
 
 
 def run_ollama_judge(material, rubric_text, model, url, timeout):
@@ -109,15 +119,17 @@ def run_ollama_judge(material, rubric_text, model, url, timeout):
             "stream": False, "format": VERDICT_SCHEMA, "options": {"temperature": 0}}
     request = urllib.request.Request(f"{url}/api/chat", data=json.dumps(body).encode("utf-8"), method="POST",
                                      headers={"Content-Type": "application/json"})
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # local: ni HTTP_PROXY ni el proxy del sistema
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener.open(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         verdict = _verdict_or_invalid(json.loads(data["message"]["content"]))
     except (OSError, ValueError, KeyError, TypeError) as error:
-        return _record(model, _invalid(f"respuesta de Ollama no válida: {error}"), 0.0, None, t0)
+        reason = f"respuesta de Ollama no válida: {error}"
+        return _record(model, _invalid(reason), 0.0, None, t0, reason)
     tokens = {"entrada": data.get("prompt_eval_count"), "salida": data.get("eval_count")}
     return {"model": model, "verdict": verdict, "coste_usd": 0.0, "tokens": tokens,
-            "duracion_s": _seconds(data.get("total_duration"))}
+            "duracion_s": _seconds(data.get("total_duration")), "error": None}
 
 
 def _seconds(nanoseconds):

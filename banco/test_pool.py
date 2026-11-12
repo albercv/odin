@@ -10,8 +10,10 @@ from unittest import mock
 
 from banco.cache import RunCache, run_key
 from banco.config import SearcherSpec
+from banco.ledger import Ledger
 from banco.medir_path import ejecutar
-from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, run_pool
+from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, _build_jobs, run_pool
+from banco.run import stack_digest
 
 FAKE = str(Path(__file__).resolve().parent / "fakes" / "fake_claude_turno.py")
 ITEMS = [{"id": "Q001", "actor": "t01", "pregunta": "¿Cuánto cuesta?"}, {"id": "Q002", "actor": "t01", "pregunta": "¿Quién?"}]
@@ -32,6 +34,30 @@ def fake_env(**env):
 def _launches(counter):
     """Número de llamadas al falso claude (una línea por llamada)."""
     return len(counter.read_text().splitlines()) if counter.exists() else 0
+
+
+class CacheKeyTest(unittest.TestCase):
+    """La clave de caché depende de la huella del código y de los mapas de ids de la pila."""
+
+    def _settings(self, **changes):
+        base = dict(claude_bin=FAKE, timeout=30, concurrency=1, budget_usd=100.0, max_turns=None, odin_commit="abc")
+        return PoolSettings(**{**base, **changes})
+
+    def test_key_changes_when_the_stack_ids_change(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        approaches = Path(tmp.name)
+        (approaches / "main.txt").write_text("", encoding="utf-8")
+        (approaches / "topic.txt").write_text("Busca por tema.", encoding="utf-8")
+        keys = [{job.key for job in _build_jobs(ITEMS, SPECS, approaches, self._settings(stack_digest=digest))}
+                for digest in ("pila-1", "pila-2")]
+        self.assertTrue(keys[0].isdisjoint(keys[1]))
+
+    def test_stack_digest_depends_on_the_id_maps_not_on_their_order(self):
+        same = stack_digest({"doc_ruta": {"d1": "a.txt", "d2": "b.txt"}, "ficha_f": {}})
+        self.assertEqual(same, stack_digest({"doc_ruta": {"d2": "b.txt", "d1": "a.txt"}, "ficha_f": {}}))
+        self.assertNotEqual(same, stack_digest({"doc_ruta": {"d1": "c.txt", "d2": "b.txt"}, "ficha_f": {}}))
+        self.assertNotEqual(same, stack_digest({"doc_ruta": {"d1": "a.txt", "d2": "b.txt"}, "ficha_f": {"F001": "c1"}}))
 
 
 class PoolTest(unittest.TestCase):
@@ -64,6 +90,47 @@ class PoolTest(unittest.TestCase):
         self.assertEqual(sum(r["approach"] == "main" for r in records), 6)
         self.assertEqual(sum(r["approach"] == "topic" for r in records), 4)
         self.assertTrue(all(r["error"] is None and r["cached"] is False for r in records))
+
+    def test_stop_carries_the_records_already_made_including_failed_ones(self):
+        real = ejecutar.responder
+        calls = []
+
+        def second_hits_quota(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 2:
+                return {"id": "Q001", "actor": "t01", "error": "Claude AI usage limit reached", "coste_usd": 0.0,
+                        "duracion_s": 1.0, "respuesta": None, "consultas": [], "tokens": None}
+            return real(*args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=second_hits_quota):
+            with self.assertRaises(PoolStopped) as caught:
+                self._run(specs=(SearcherSpec("main", 3, "haiku"),))
+        records = caught.exception.records
+        self.assertEqual(len(records), 2)
+        self.assertEqual(sum(r["error"] is not None for r in records), 1)
+
+    def test_sin_clave_no_gasta_y_no_es_coste_desconocido(self):
+        settings = PoolSettings(claude_bin=FAKE, timeout=30, concurrency=1, budget_usd=100.0, max_turns=None, odin_commit="abc")
+        ledger = Ledger(100.0)
+        records = run_pool(ITEMS, (SearcherSpec("main", 1, "haiku"),), {**CARGA, "claves": {}}, self.cache, settings,
+                           self.dir / "enfoques", self.stop, ledger=ledger)
+        self.assertEqual(len(records), 2)
+        self.assertTrue(all(r["error"] and r["coste_usd"] == 0.0 for r in records))
+        self.assertEqual((ledger.unknown, ledger.spent), (0, 0.0))
+        self.assertFalse(self.stop.exists())
+
+    def test_timeout_keeps_cost_unknown(self):
+        def timed_out(*args, **kwargs):
+            return {"id": "Q001", "actor": "t01", "error": "tiempo agotado (30 s)", "coste_usd": None, "duracion_s": 30.0,
+                    "respuesta": None, "consultas": [], "tokens": None}
+
+        ledger = Ledger(100.0)
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=timed_out):
+            with self.assertRaises(BudgetExceeded):
+                run_pool(ITEMS, (SearcherSpec("main", 1, "haiku"),), CARGA, self.cache,
+                         PoolSettings(claude_bin=FAKE, timeout=30, concurrency=1, budget_usd=100.0, max_turns=None,
+                                      odin_commit="abc"), self.dir / "enfoques", self.stop, ledger=ledger)
+        self.assertEqual(ledger.unknown, 1)
 
     def test_second_run_hits_cache(self):
         self._run()

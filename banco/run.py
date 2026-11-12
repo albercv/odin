@@ -1,5 +1,6 @@
 """Órdenes run y sweep: preparan la carpeta, lanzan buscadores, respuesta final y jueces bajo un mismo tope, y escriben la salida."""
 
+import hashlib
 import json
 import random
 import subprocess
@@ -15,7 +16,7 @@ from banco.cache import RunCache
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
 from banco.layout import Layout
-from banco.ledger import Ledger
+from banco.ledger import Ledger, open_ledger
 from banco.medir_path import carga_mod, ejecutar
 from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, _build_jobs, run_pool
 from banco.subsample import beats_single_frontier, curve
@@ -125,10 +126,25 @@ def _select_items(layout, cfg):
     return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed)
 
 
-def _git(repo):
+CODE_PATHS = ("banco", "experimentos/2026-11-12-archivo-ficticio/medir")
+
+
+def code_fingerprint(repo):
+    """Huella del código para la caché: HEAD y, si hay cambios sin commit en banco y medir, un hash de esos cambios."""
     def run_git(*args):
-        return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
-    return run_git("rev-parse", "HEAD"), run_git("rev-parse", "--abbrev-ref", "HEAD")
+        return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True).stdout
+    head = run_git("rev-parse", "HEAD").strip()
+    branch = run_git("rev-parse", "--abbrev-ref", "HEAD").strip()
+    changes = run_git("diff", "HEAD", "--", *CODE_PATHS)
+    if changes:
+        head += "+" + hashlib.sha256(changes.encode("utf-8")).hexdigest()[:16]
+    return head, branch
+
+
+def stack_digest(stack):
+    """Huella de los mapas de ids (documentos y fichas) de la pila: recargarla cambia los ids y la caché no se reutiliza."""
+    ids = {"doc_ruta": stack["doc_ruta"], "ficha_f": stack["ficha_f"]}
+    return hashlib.sha256(json.dumps(ids, sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def _new_folder(results_dir, name):
@@ -156,8 +172,9 @@ def _write_start(sess, branch, commit):
     (sess.folder / "ids.json").write_text(json.dumps(ids, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-def prepare(config_path, layout, sweep=False):
-    """Valida todo lo que puede fallar antes de crear la carpeta de resultados."""
+def prepare(config_path, layout, sweep=False, reset_budget=False):
+    """Valida todo lo que puede fallar antes de crear la carpeta de resultados. El libro del experimento se abre
+    antes de crearla: si ya se gastó el tope, no queda carpeta a medias."""
     cfg = load_config(Path(config_path), layout.banco)
     _check_supported(cfg)
     _check_main(cfg, sweep)
@@ -165,12 +182,14 @@ def prepare(config_path, layout, sweep=False):
     stack = _load_stack(layout)
     items = _select_items(layout, cfg)
     ctx = scoring.build_context(layout.exp, stack)
-    commit, branch = _git(layout.repo)
+    commit, branch = code_fingerprint(layout.repo)
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
-                            budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit)
+                            budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit,
+                            stack_digest=stack_digest(stack))
+    ledger = open_ledger(layout.state_dir / f"libro-{cfg.name}.json", cfg.budget_usd, reset_budget)
     folder = _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,
-                   cache=RunCache(layout.cache), ledger=Ledger(cfg.budget_usd), sweep=spec)
+                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec)
     _write_start(sess, branch, commit)
     return sess
 
@@ -210,18 +229,26 @@ def _from_cache(cache, jobs, before):
     return out
 
 
+def _merged(records, cached):
+    """Lo que hizo el grupo y lo de la caché que no está ya, sin duplicar (pregunta, enfoque, réplica)."""
+    key = lambda r: (r["id"], r["approach"], r["replica"])
+    seen = {key(r) for r in records}
+    return [*records, *(r for r in cached if key(r) not in seen)]
+
+
 def _pool(sess, specs, settings, sink):
-    """Lanza un grupo de buscadores con el libro compartido. Se pare como se pare, lo que hay en caché va a `sink`."""
+    """Lanza un grupo de buscadores con el libro compartido. Se pare como se pare, lo hecho (también lo fallido)
+    y lo de la caché van a `sink`."""
     approaches = sess.layout.banco / "enfoques"
     jobs = _build_jobs(sess.items, specs, approaches, settings)
     before = {job.key for job in jobs if sess.cache.get(job.key) is not None}
     try:
         records = run_pool(sess.items, specs, sess.stack, sess.cache, settings, approaches, sess.stop_file,
                            ledger=sess.ledger)
-    except (BudgetExceeded, PoolStopped, ejecutar.Aislamiento):  # el pool ya escribió PARADA.txt
-        records = _from_cache(sess.cache, jobs, before)
-    except Exception:
-        sink.extend(_from_cache(sess.cache, jobs, before))
+    except (BudgetExceeded, PoolStopped, ejecutar.Aislamiento) as error:  # el pool ya escribió PARADA.txt
+        records = _merged(getattr(error, "records", []), _from_cache(sess.cache, jobs, before))
+    except Exception as error:
+        sink.extend(_merged(getattr(error, "records", []), _from_cache(sess.cache, jobs, before)))
         raise
     sink.extend(records)
     return records
@@ -323,25 +350,32 @@ def _unjudged(item, records, error):
     return {"id": item["id"], "judges": records, "jury": None, "error": error}
 
 
+def _may_launch(sess, spec):
+    """Un juez de pago arranca solo sin parada y con presupuesto; los de Ollama son gratis y siguen."""
+    return not _is_paid(spec) or (not _stopped(sess) and sess.ledger.can_launch())
+
+
 def _judge_question(sess, jobs, item, answer):
     """Veredictos de los jueces de una pregunta. Devuelve (fila, motivo de parada o None, llamadas de pago sin lanzar).
-    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo; la pregunta queda sin veredicto."""
+    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo; la pregunta queda sin veredicto.
+    Una cuota en un juez de Claude para el experimento, igual que en el redactor."""
     records, skipped = [], 0
     try:
         for index, spec, rubric in jobs:
-            if _is_paid(spec) and not sess.ledger.can_launch():
+            if not _may_launch(sess, spec):
                 skipped += 1
                 continue
             record = _call_judge(sess, index, spec, rubric, item, answer)
             if _is_paid(spec):
                 sess.ledger.charge(record.get("coste_usd"))
+                _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
             records.append(record)
     except ejecutar.Aislamiento as error:
         return _unjudged(item, records, str(error)), f"AISLAMIENTO ROTO en juez: {error}", skipped
     except Exception as error:  # un juez roto no pierde los veredictos de las demás preguntas
         return _unjudged(item, records, repr(error)), None, skipped
     if skipped:
-        return _unjudged(item, records, "presupuesto agotado"), BUDGET, skipped
+        return _unjudged(item, records, "parada o presupuesto agotado"), BUDGET, skipped
     jury = judge.aggregate([r["verdict"] for r in records], sess.cfg.aggregation)
     return {"id": item["id"], "judges": records, "jury": jury, "error": None}, None, 0
 
@@ -381,8 +415,8 @@ def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
     report.rebuild(sess.folder, sess.layout)
 
 
-def run_experiment(config_path, layout):
-    sess = prepare(config_path, layout)
+def run_experiment(config_path, layout, reset_budget=False):
+    sess = prepare(config_path, layout, reset_budget=reset_budget)
     runs, finals, verdicts = [], [], []
     try:
         _pool(sess, sess.cfg.searchers, sess.settings, runs)
@@ -443,8 +477,8 @@ def _curves(sess, runs, turn_runs):
     return {"variacion": variation, "mezclas": mix_rows, "single": turn_rows, "single_por_defecto": default}
 
 
-def sweep_experiment(config_path, layout):
-    sess = prepare(config_path, layout, sweep=True)
+def sweep_experiment(config_path, layout, reset_budget=False):
+    sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget)
     runs, turn_runs = [], []
     try:
         _pool(sess, sess.cfg.searchers, sess.settings, runs)

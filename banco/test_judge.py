@@ -90,6 +90,16 @@ class ClaudeJudgeTest(unittest.TestCase):
         self.assertEqual(record["coste_usd"], 0.0005)
         self.assertEqual(record["tokens"]["entrada"], 120)
 
+    def test_quota_error_text_is_kept_in_record(self):
+        with fake_env(FAKE_VEREDICTO="limite"):
+            record = self._judge()
+        self.assertTrue(record["verdict"]["invalido"])
+        self.assertEqual(record["error"], "Claude AI usage limit reached")
+
+    def test_ok_record_has_no_error(self):
+        with fake_env(FAKE_VEREDICTO="si"):
+            self.assertIsNone(self._judge()["error"])
+
     def test_invalid_structured_output_is_marked_invalid(self):
         with fake_env(FAKE_VEREDICTO="invalido"):
             self.assertTrue(self._judge()["verdict"]["invalido"])
@@ -146,6 +156,14 @@ class OllamaJudgeTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     run_ollama_judge("material", RUBRIC, "qwen", url, 30)
                 urlopen.assert_not_called()
+
+    def test_ollama_ignores_http_proxy_variables(self):
+        """Ollama es local: un proxy del entorno (aquí, uno cerrado) no debe interceptar la llamada."""
+        url, stop = start_fake_ollama("ok")
+        self.addCleanup(stop)
+        with fake_env(HTTP_PROXY="http://127.0.0.1:9", http_proxy="http://127.0.0.1:9", NO_PROXY="", no_proxy=""):
+            record = run_ollama_judge("material", RUBRIC, "ollama:qwen3.5:9b", url, 30)
+        self.assertEqual(record["verdict"], VALID_YES)
 
     def test_ollama_prefix_is_stripped_before_request(self):
         received = []

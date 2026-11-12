@@ -28,6 +28,7 @@ class PoolSettings:
     budget_usd: float
     max_turns: int | None
     odin_commit: str
+    stack_digest: str = ""  # huella de los mapas de ids de carga.json: una pila recargada no reutiliza caché
 
 
 @dataclass(frozen=True)
@@ -60,13 +61,24 @@ def _build_jobs(items, specs, approaches_dir, settings):
         for item in items:
             for replica in range(spec.count):
                 key = run_key(item["id"], item["pregunta"], spec.approach, text, spec.model, replica,
-                              settings.odin_commit, settings.max_turns)
+                              settings.odin_commit, settings.max_turns, settings.stack_digest)
                 jobs.append(_Job(item, spec, replica, text, args, key))
     return jobs
 
 
 def _with_extras(record, job, cached):
     return {**record, "approach": job.spec.approach, "replica": job.replica, "cached": cached}
+
+
+def _carrying(error, records):
+    """Adjunta a la excepción los registros ya hechos, también los fallidos, para que el banco los escriba."""
+    error.records = records
+    return error
+
+
+def _never_launched(record):
+    """Un error sin duración nunca llegó a lanzar claude (p. ej. sin clave de API): no hubo gasto."""
+    return record.get("error") is not None and record.get("duracion_s") is None
 
 
 def _halt(state, reason):
@@ -97,6 +109,8 @@ def _process_job(job, carga, cache, temp_dir, state):
     except Exception:  # la llamada pudo gastar antes de fallar: coste desconocido
         state.ledger.charge(None)
         raise
+    if _never_launched(record):
+        record["coste_usd"] = 0.0
     state.ledger.charge(record.get("coste_usd"))
     if record["error"] and ejecutar.LIMITE.search(record["error"]):
         _halt(state, f"cuota o límite en {job.item['id']}: {record['error'][:200]}")
@@ -122,19 +136,19 @@ def _write_stop(stop_file, message):
     stop_file.write_text(message + "\n", encoding="utf-8")
 
 
-def _close(state, stop_file):
+def _close(state, stop_file, records):
     if state.isolation_error is not None:
         _write_stop(stop_file, f"AISLAMIENTO ROTO: {state.isolation_error}")
-        raise state.isolation_error
+        raise _carrying(state.isolation_error, records)
     if state.reasons:
         _write_stop(stop_file, "\n".join(state.reasons))
         if state.unexpected_error is not None:
-            raise state.unexpected_error
-        raise PoolStopped("; ".join(state.reasons))
+            raise _carrying(state.unexpected_error, records)
+        raise _carrying(PoolStopped("; ".join(state.reasons)), records)
     if state.skipped or state.ledger.unknown:
         message = state.ledger.stop_message(state.skipped)
         _write_stop(stop_file, message)
-        raise BudgetExceeded(message)
+        raise _carrying(BudgetExceeded(message), records)
 
 
 def run_pool(items: list[dict], specs: tuple[SearcherSpec, ...], carga: dict, cache: RunCache,
@@ -144,5 +158,6 @@ def run_pool(items: list[dict], specs: tuple[SearcherSpec, ...], carga: dict, ca
     with ThreadPoolExecutor(max(1, settings.concurrency)) as pool:
         futures = [pool.submit(_execute_job, job, carga, cache, stop_file.parent, state) for job in jobs]
         results = [f.result() for f in futures]
-    _close(state, stop_file)
-    return [r for r in results if r is not None]
+    records = [r for r in results if r is not None]
+    _close(state, stop_file, records)
+    return records

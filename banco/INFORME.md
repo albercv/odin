@@ -23,7 +23,7 @@ Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:
 
 | Fichero | Contenido |
 |---|---|
-| `ORIGEN.txt` | configuración, rama, commit, modo, batería, muestra, fecha |
+| `ORIGEN.txt` | configuración, rama, huella del código (commit; con «+hash» si había cambios sin commit en banco o medir), modo, batería, muestra, fecha |
 | `ids.json` | documentos y fichas (ids de Odín a rutas), preguntas; sin claves de API |
 | `buscadores.jsonl` | una línea por ejecución de buscador (con `cached`) |
 | `final.jsonl` | respuesta final por pregunta, `correcta_script`, coste del redactor y `error` si lo hubo (`run`) |
@@ -33,7 +33,13 @@ Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:
 | `libro.json` | gasto real del experimento (`spent`), registros de coste desconocido (`unknown`) y tope (`cap`) |
 | `PARADA.txt` | solo si hubo parada: tope de gasto, coste desconocido, cuota o límite, aislamiento roto |
 
-`buscadores`, `final`, `veredictos` y `libro.json` se escriben siempre, también si algo falla a mitad (`try/finally`); tras una parada, `buscadores.jsonl` incluye lo que quedó en la caché. La orden sale con código 2 si hubo parada.
+`buscadores`, `final`, `veredictos` y `libro.json` se escriben siempre, también si algo falla a mitad (`try/finally`); tras una parada, `buscadores.jsonl` incluye lo que se hizo antes de parar, también los registros de pago fallidos (la excepción de parada lleva `records`), y lo que quedó en la caché, sin duplicados. La orden sale con código 2 si hubo parada.
+
+## Caché y reanudación
+
+La clave de cada ejecución (`banco/cache.py`) incluye la pregunta, el enfoque, el modelo, la réplica, el tope de turnos, la **huella del código** y un hash de los **mapas de ids** de la pila (`doc_ruta` y `ficha_f` de `carga.json`). La huella del código es el HEAD; si hay cambios sin commit en `banco/` o en `medir/`, se añade un hash de esos cambios (`git diff HEAD`). Así, cambiar el código del banco o recargar la pila con ids nuevos no reutiliza ejecuciones antiguas.
+
+Limitación: el hash cubre los ficheros con cambios seguidos por git; un fichero nuevo sin añadir a git no entra en la huella.
 
 ## Presupuesto (un solo tope por experimento)
 
@@ -41,13 +47,15 @@ Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:
 
 En `sweep` el tope es acumulativo: el grupo principal y cada pasada de turnos comparten el mismo libro.
 
-Los jueces de Ollama son locales y de coste 0: no pasan por la comprobación de presupuesto ni cargan en el libro. Si se agota el presupuesto, siguen corriendo; los de pago de esa pregunta no, y la pregunta queda sin veredicto.
+**El tope es del experimento, no de la orden.** El libro se guarda en `banco/estado/libro-<nombre>.json` (con el total y la lista de cargos con fecha, escrita de forma atómica en cada cargo). Al arrancar, `run` y `sweep` leen ese libro: si ya se gastó el tope, la orden se niega con código 2 y un mensaje antes de crear carpeta alguna. Relanzar tras una parada no vuelve a gastar: lo ya hecho sale de la caché y lo gastado sigue contando. Con `--reiniciar-presupuesto` (en make, `REINICIAR=1`) el libro anterior se archiva como `libro-<nombre>.<fecha>.json` y el tope empieza en cero. Un libro con algún coste desconocido también se niega a arrancar.
+
+Los jueces de Ollama son locales y de coste 0. Su llamada ignora los proxies del entorno (`HTTP_PROXY`), así que solo va al host local configurado: no pasan por la comprobación de presupuesto ni cargan en el libro. Si se agota el presupuesto, siguen corriendo; los de pago de esa pregunta no, y la pregunta queda sin veredicto.
 
 **Fallos tras una llamada de pago:** un buscador, el redactor o un juez de Claude que falla tras llamar a `claude` carga su coste como desconocido (`charge(None)`) y agota el presupuesto. Así no se pierde el gasto ni se sigue gastando sin contarlo.
 
 **Gasto notificado:** `cost.notifiedUsd` es el total real cargado en el libro. `cost.notifiedUsdFromRecords` es la suma de los registros, como diagnóstico.
 
-**Coste desconocido:** un registro de pago nuevo sin `coste_usd` numérico no cuenta como 0. Se suma a `unknownCostRecords` (en `resumen.json` y en el informe) y agota el presupuesto: no se lanza ninguna llamada de pago más, con la razón «coste desconocido». Un juez de Claude sin `total_cost_usd` en su resultado, o una llamada fallida sin coste, cae en este caso.
+**Coste desconocido:** un registro de pago nuevo sin `coste_usd` numérico no cuenta como 0. Se suma a `unknownCostRecords` (en `resumen.json` y en el informe) y agota el presupuesto: no se lanza ninguna llamada de pago más, con la razón «coste desconocido». Un juez de Claude sin `total_cost_usd` en su resultado, o una llamada fallida sin coste, cae en este caso. Un error de buscador sin llamada a `claude` (sin duración, p. ej. «sin clave de API») no es coste desconocido: se carga con 0. Los tiempos agotados y los fallos después de lanzar `claude` siguen como desconocidos.
 
 ## Configuración del barrido
 
@@ -62,11 +70,13 @@ singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 
 
 - **Muestra:** estratos por `sample.strata`, en orden alfabético; cada estrato se baraja con `random.Random(seed)` y se reparte por turnos.
 - **Semilla de los jueces:** `sample.seed + índice del juez` (0 sin muestra). Cada juez baraja las fuentes con su propia semilla.
-- **Recuperación por enfoque:** de las preguntas con citas resueltas, las que tienen alguna página esperada vista o citada por algún buscador de ese enfoque. Las preguntas sin citas (abstenciones) no cuentan.
+- **Recuperación por enfoque:** de las preguntas que ese enfoque midió (con alguna ejecución sin error) y que tienen citas resueltas, las que tienen alguna página esperada vista o citada. Las preguntas sin citas (abstenciones) no cuentan. El denominador es ese conjunto, no toda la batería.
+- **Acierto por enfoque:** sobre las ejecuciones sin error, igual que el acierto global. Las ejecuciones con error se cuentan aparte (`errors`).
+- **Firma de mayoría:** `answer_signature` = (`no_lo_se`, cifras normalizadas, conjunto de páginas citadas `(documentId, pagina)`). Así, dos respuestas sin cifras que citan páginas distintas no coinciden; la redacción sigue sin contar.
 - **Acuerdo entre buscadores:** `k` = cuántos buscadores coinciden con la firma mayoritaria. El acierto de cada grupo es el de la respuesta final, no el del buscador.
 - **Jueces frente al script:** kappa y tasas solo con preguntas con clave o abstención. Con una sola clase en el script valen «no calculable». El PPI solo se calcula si hay preguntas sin clave; en la batería de desarrollo no hay ninguna.
-- **Coste:** «gasto notificado» es el total del libro (ver arriba). El coste de la estrategia por respuesta suma todos los buscadores (incluidos los de caché) más el redactor, dividido por el número de preguntas.
-- **Sin medir:** las preguntas sin respuesta final (parada o error) no son fallos. Quedan fuera de todos los denominadores de acierto, de tipo, de acuerdo y de jueces, y se cuentan aparte como «no medidas por la parada» (`notMeasured`).
+- **Coste:** «gasto notificado» es el total del libro (ver arriba). Por respuesta, los buscadores dividen entre las preguntas ejecutadas (con alguna ejecución); el redactor, los jueces, el coste de la estrategia (buscadores más redactor) y los tokens totales, entre las respuestas medidas. Así, una parada no diluye ni infla las cifras con preguntas que nunca se midieron.
+- **Sin medir:** las preguntas sin respuesta final (parada o error) no son fallos. Quedan fuera de todos los denominadores de acierto, de tipo, de acuerdo y de jueces, y se cuentan aparte como «no medidas (parada o error)» (`notMeasured`).
 - **Latencia estimada (jueces en paralelo):** por respuesta, el buscador más lento, más el redactor, más el juez más lento, como si los jueces corrieran en paralelo como en el producto. Las ejecuciones de caché usan su duración guardada, igual que su coste. Percentiles 50 y 95 con `statistics.quantiles`.
 - **Barrido:** un tramo de `single` por cada tope de turnos (un buscador `main`, réplica 0). La variación es la mitad del intervalo de acierto de `single` con la configuración por defecto. Una mezcla con un solo buscador se resuelve con su única respuesta, sin IA.
 
@@ -74,6 +84,6 @@ singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 
 
 - El redactor se ejecuta pregunta a pregunta, sin concurrencia. Con la batería completa, el paso de respuesta final puede ser lento.
 - Los jueces se paralelizan por pregunta, con `concurrency`.
-- Un fallo inesperado en una pregunta (redactor o juez) queda registrado en su fila (`error`); el coste de esa llamada queda desconocido y para el experimento por presupuesto. Una cuota o límite detectado en el redactor sí para. Los jueces no exponen el texto del error, así que una cuota en un juez aparece como veredicto inválido, no como parada.
+- Un fallo inesperado en una pregunta (redactor o juez) queda registrado en su fila (`error`); el coste de esa llamada queda desconocido y para el experimento por presupuesto. Una cuota o límite detectado en el redactor o en un juez de Claude sí para: el registro del juez lleva el texto del error (`error`) y se aplica el mismo patrón que a los buscadores (`PARADA.txt` y código 2). Los jueces de Ollama no tienen cuota.
 - `banco/resultados/` se versiona como el resto de experimentos (decisión del controlador); solo la reserva queda fuera.
 - La variable `ODIN_BANCO_CLAUDE_JUEZ` conserva su nombre en español por ser un ajuste de entorno.

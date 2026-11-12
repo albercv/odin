@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +14,7 @@ from banco.config import ConfigError
 from banco.fakes.fake_ollama import start_fake_ollama
 from banco.layout import Layout
 from banco.medir_path import ejecutar
-from banco.run import draw_sample, prepare
+from banco.run import code_fingerprint, draw_sample, prepare
 
 BANCO = Path(__file__).resolve().parent
 EXP = BANCO.parent / "experimentos" / "2026-11-12-archivo-ficticio"
@@ -111,7 +112,7 @@ class Harness(unittest.TestCase):
         return folders[0]
 
     def run_cli(self, config, env=None):
-        with fake_env(FAKE_VEREDICTO="si", **(env or {})):
+        with fake_env(**{"FAKE_VEREDICTO": "si", **(env or {})}):
             return banco.main(["run", "--config", str(config)], layout=self.layout)
 
 
@@ -184,7 +185,7 @@ class RunTest(Harness):
         summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
         self.assertEqual(summary["accuracy"]["total"], 1)  # las dos sin respuesta no son fallos
         self.assertEqual(summary["notMeasured"], 2)
-        self.assertIn("No medidas por la parada: 2", (folder / "informe.md").read_text(encoding="utf-8"))
+        self.assertIn("No medidas (parada o error): 2", (folder / "informe.md").read_text(encoding="utf-8"))
 
     def test_judge_spend_crossing_cap_stops_and_writes_stop_file(self):
         # buscadores 0,006 USD; los dos jueces de Haiku de la primera pregunta llegan a 0,007 USD (tope 0,0068)
@@ -196,6 +197,15 @@ class RunTest(Harness):
         # sin presupuesto, los jueces de Claude no corren, pero el de Ollama (gratis) sí
         self.assertEqual([len(v["judges"]) for v in verdicts], [3, 1, 1])
         self.assertIsNone(verdicts[1]["jury"])
+
+    def test_judge_quota_error_is_stop_reason(self):
+        code = self.run_cli(self.config(), env={"FAKE_VEREDICTO": "limite"})
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("cuota o límite en el juez", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        verdicts = self.read_jsonl(folder, "veredictos.jsonl")
+        self.assertIn("usage limit", verdicts[0]["judges"][0]["error"])
+        self.assertTrue((folder / "resumen.json").exists())
 
     def test_sweep_cap_is_cumulative_across_pools(self):
         # el grupo principal (0,006 USD) no pasa de 0,0075; los turnos suman hasta cruzarlo
@@ -336,6 +346,98 @@ class PaidPathsTest(Harness):
         self.assertEqual(len(self.read_jsonl(folder, "buscadores.jsonl")), 1)
         self.assertTrue((folder / "resumen.json").exists())
         self.assertAlmostEqual(json.loads((folder / "libro.json").read_text(encoding="utf-8"))["spent"], 0.001)
+
+
+class BudgetPersistenceTest(Harness):
+    """El tope es del experimento: relanzar tras una parada no vuelve a gastar; la opción reinicia el libro."""
+
+    def test_relaunch_after_budget_stop_does_not_spend(self):
+        self.assertEqual(self.run_cli(self.config(budget=0.0015)), 2)
+        with mock.patch("banco.medir_path.ejecutar.responder", wraps=ejecutar.responder) as responder, contextlib.redirect_stderr(io.StringIO()) as errors:
+            code = banco.main(["run", "--config", str(self.config(budget=0.0015))], layout=self.layout)
+        self.assertEqual(code, 2)
+        self.assertEqual(responder.call_count, 0)
+        self.assertIn("ya gastó", errors.getvalue())
+        self.assertEqual(len(list((self.tmp / "resultados").iterdir())), 1)  # no se crea carpeta nueva
+
+    def test_reiniciar_presupuesto_starts_the_book_again(self):
+        self.assertEqual(self.run_cli(self.config(budget=0.0015)), 2)
+        with fake_env(FAKE_VEREDICTO="si"):
+            code = banco.main(["run", "--config", str(self.config(budget=0.0015)), "--reiniciar-presupuesto"],
+                              layout=self.layout)
+        folders = list((self.tmp / "resultados").iterdir())
+        self.assertEqual(len(folders), 2)
+        self.assertEqual(code, 2)  # el tope de 0,0015 USD vuelve a cortar la nueva orden, pero ya no se niega al arrancar
+        records = self.read_jsonl(max(folders), "buscadores.jsonl")
+        self.assertEqual(sum(not r["cached"] for r in records), 2)  # las dos de la primera orden salen de la caché
+        self.assertIn("Tope de gasto", (max(folders) / "PARADA.txt").read_text(encoding="utf-8"))
+        self.assertEqual(len(list((self.state_dir).glob("libro-prueba.*.json"))), 1)
+
+
+class StopRecordsTest(Harness):
+    """Lo pagado antes de una parada, también lo fallido, queda en buscadores.jsonl; lo de la caché no se duplica."""
+
+    def test_quota_stop_keeps_the_failed_paid_record(self):
+        code = self.run_cli(self.config(concurrency=1), env={"FAKE_MODO": "limite"})
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        records = self.read_jsonl(folder, "buscadores.jsonl")
+        self.assertEqual(len(records), 1)
+        self.assertIn("usage limit", records[0]["error"])
+
+    def test_stop_keeps_cached_and_fresh_records_once(self):
+        real = ejecutar.responder
+        calls = []
+
+        def third_hits_quota(item, *args, **kwargs):
+            calls.append(1)
+            if len(calls) == 3:
+                return {"id": item["id"], "actor": item["actor"], "error": "Claude AI usage limit reached",
+                        "coste_usd": 0.0, "duracion_s": 1.0, "respuesta": None, "consultas": [], "tokens": None}
+            return real(item, *args, **kwargs)
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=third_hits_quota):
+            code = self.run_cli(self.config(concurrency=1))
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        records = self.read_jsonl(folder, "buscadores.jsonl")
+        keys = [(r["id"], r["approach"], r["replica"]) for r in records]
+        self.assertEqual(len(records), 3)
+        self.assertEqual(len(set(keys)), 3)
+
+
+class CodeFingerprintTest(unittest.TestCase):
+    """La huella del código: HEAD, y un hash de los cambios sin commit en banco y medir."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.repo = Path(tmp.name)
+        (self.repo / "banco").mkdir()
+        (self.repo / "banco" / "x.py").write_text("a = 1\n", encoding="utf-8")
+        (self.repo / "otro.txt").write_text("uno\n", encoding="utf-8")
+        self.git("init", "-q")
+        self.git("add", "-A")
+        self.git("-c", "user.name=prueba", "-c", "user.email=prueba@invalid", "commit", "-qm", "inicio")
+
+    def git(self, *args):
+        return subprocess.run(["git", *args], cwd=self.repo, check=True, capture_output=True, text=True)
+
+    def test_clean_tree_is_plain_head(self):
+        head, _ = code_fingerprint(self.repo)
+        self.assertRegex(head, r"^[0-9a-f]{40}$")
+
+    def test_uncommitted_change_in_bench_code_changes_the_fingerprint(self):
+        clean, _ = code_fingerprint(self.repo)
+        (self.repo / "banco" / "x.py").write_text("a = 2\n", encoding="utf-8")
+        dirty, _ = code_fingerprint(self.repo)
+        self.assertNotEqual(clean, dirty)
+        self.assertTrue(dirty.startswith(clean + "+"))
+
+    def test_change_outside_the_code_paths_is_ignored(self):
+        clean, _ = code_fingerprint(self.repo)
+        (self.repo / "otro.txt").write_text("dos\n", encoding="utf-8")
+        self.assertEqual(clean, code_fingerprint(self.repo)[0])
 
 
 class SweepTest(Harness):

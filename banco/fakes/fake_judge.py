@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Falso `claude` del juez, sin MCP. FAKE_VEREDICTO: si (por defecto), no, invalido (sin campos), tools_extra (Bash en el inicio),
-sin_salida (sin structured_output), sin_init (sin evento de inicio), sin_tools / sin_mcp / sin_plugins (inicio sin ese campo).
+sin_salida (sin structured_output), sin_init (sin evento de inicio), sin_tools / sin_mcp / sin_plugins (inicio sin ese campo),
+limite (resultado de error por cuota, sin structured_output).
 FAKE_SLEEP: espera antes de responder."""
 import json
 import os
@@ -27,6 +28,9 @@ result = {"type": "result", "subtype": "success", "is_error": False, "duration_a
           "structured_output": VERDICTS.get(mode, VERDICTS["si"])}
 if mode == "sin_salida":
     result.pop("structured_output")
+if mode == "limite":
+    result.pop("structured_output")
+    result.update(is_error=True, result="Claude AI usage limit reached")
 events = [] if mode == "sin_init" else [init]
 for event in [*events, result]:
     print(json.dumps(event), flush=True)

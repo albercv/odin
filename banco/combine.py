@@ -4,16 +4,18 @@ from fractions import Fraction
 
 from banco.medir_path import puntuar
 
-NO_CONSTA_EMPATE = "No consta: los buscadores no coincidieron."
+NO_CONSENSUS_ANSWER = "No consta: los buscadores no coincidieron."
 
 
 def _usable(runs: list[dict]) -> list[dict]:
     return [r for r in runs if r.get("error") is None and r.get("respuesta") is not None]
 
 
-def answer_signature(answer: dict) -> tuple[bool, frozenset[str]]:
-    cifras = frozenset(puntuar.TOKEN_NUM.findall(puntuar.normalise(answer["respuesta"])))
-    return (bool(answer["no_lo_se"]), cifras)
+def answer_signature(answer: dict) -> tuple[bool, frozenset[str], frozenset[tuple]]:
+    """Firma de una respuesta: abstención, cifras normalizadas y páginas citadas (documentId, página)."""
+    figures = frozenset(puntuar.TOKEN_NUM.findall(puntuar.normalise(answer["respuesta"])))
+    pages = frozenset((c.get("documentId"), c.get("pagina")) for c in answer["citas"])
+    return (bool(answer["no_lo_se"]), figures, pages)
 
 
 def single(runs: list[dict]) -> dict:
@@ -42,16 +44,16 @@ def majority_vote(runs: list[dict]) -> dict | None:
     top_size = max(sizes.values())
     leaders = [sig for sig, size in sizes.items() if size == top_size]
     if len(leaders) > 1:
-        return {"respuesta": NO_CONSTA_EMPATE, "no_lo_se": True, "citas": []}
+        return {"respuesta": NO_CONSENSUS_ANSWER, "no_lo_se": True, "citas": []}
     return _representative(groups[leaders[0]])
 
 
 def _ranked_pages(run: dict) -> list[tuple[str, int]]:
-    citas = run["respuesta"]["citas"]
-    vistos = [v for consulta in run["consultas"] for v in consulta["vistos"]]
-    pares = [(e.get("documentId"), e.get("pagina")) for e in citas + vistos]
-    paginas = [p for p in pares if p[0] is not None and p[1] is not None]
-    return list(dict.fromkeys(paginas))
+    citations = run["respuesta"]["citas"]
+    seen = [v for query in run["consultas"] for v in query["vistos"]]
+    pairs = [(e.get("documentId"), e.get("pagina")) for e in citations + seen]
+    located = [p for p in pairs if p[0] is not None and p[1] is not None]
+    return list(dict.fromkeys(located))
 
 
 def rrf_pages(runs: list[dict], k: int = 60, top: int = 5) -> list[tuple[str, int]]:
