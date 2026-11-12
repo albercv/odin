@@ -540,6 +540,7 @@ export interface components {
             supersededBy?: components["schemas"]["DocumentLink"];
             /** Format: date-time */
             supersededAt?: string;
+            pagesWithoutText: number[];
         };
         Capabilities: {
             capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
@@ -787,6 +788,7 @@ export interface components {
             text: string;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            readerName: string;
         };
         AdminMe: {
             /** Format: uuid */
@@ -800,6 +802,7 @@ export interface components {
             /** Format: uuid */
             companyId?: string;
             companies: components["schemas"]["CompanyRef"][];
+            scannedDocumentsSupported: boolean;
         };
         CompanyRef: {
             /** Format: uuid */

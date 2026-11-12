@@ -136,8 +136,8 @@ test('issuedKeyShownOnceWithCopy', async () => {
 test('documentsListShowsStatusAndReason', async () => {
   const calls = mockFetch({
     'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => [
-      { id: 'd1', title: 'Contrato', filename: 'c.pdf', status: 'FAILED', failureReason: 'Fichero ilegible' },
-      { id: 'd2', title: 'Manual', filename: 'm.txt', status: 'READY' },
+      { id: 'd1', title: 'Contrato', filename: 'c.pdf', status: 'FAILED', failureReason: 'Fichero ilegible', pagesWithoutText: [] },
+      { id: 'd2', title: 'Manual', filename: 'm.txt', status: 'READY', pagesWithoutText: [] },
     ],
     'GET /v1/admin/companies/c1/projects': () => [],
     'POST /v1/admin/documents/d1/retry': () => ({ id: 'd1', status: 'RECEIVED' }),
@@ -154,7 +154,7 @@ test('documentsListShowsStatusAndReason', async () => {
 });
 
 const docs = (from: number, n: number) =>
-  Array.from({ length: n }, (_, i) => ({ id: `d${from + i}`, title: `Doc ${from + i}`, filename: 'f.pdf', status: 'READY' }));
+  Array.from({ length: n }, (_, i) => ({ id: `d${from + i}`, title: `Doc ${from + i}`, filename: 'f.pdf', status: 'READY', pagesWithoutText: [] }));
 
 test('documentsListWalksAllPagesAndRefreshes', async () => {
   const calls = mockFetch({

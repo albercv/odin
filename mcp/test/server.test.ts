@@ -144,6 +144,17 @@ describe('buildServer', () => {
     expect(listed.documents[0]).toMatchObject({ superseded: true, replacement, projectName: 'Comunidad Sol' });
   });
 
+  it('readPagePassesReaderNameAndInstructionsExplainOcrAndEmptyPages', async () => {
+    const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL)
+      : { status: 200, body: { documentId: 'd1', title: 'T', pageNumber: 1, paginated: true, text: '', superseded: false, readerName: 'unlimited-ocr-2' } }));
+    const page = JSON.parse(textOf(await client.callTool({ name: 'readPage', arguments: { documentId: 'd1', pageNumber: 1 } })));
+    expect(page.readerName).toBe('unlimited-ocr-2');
+    const instructions = client.getInstructions() ?? '';
+    expect(instructions).toContain(
+      'Si readerName es unlimited-ocr-2, la página viene de un escaneo leído por OCR y puede tener errores de lectura: cítala tal como está.');
+    expect(instructions).toContain('Una página con el texto vacío no se ha leído: no concluyas nada de ella.');
+  });
+
   it('instructionsTellHowToTreatSupersededAndConflictingSources', async () => {
     const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
     expect(instructions).toContain(

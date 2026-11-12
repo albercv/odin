@@ -11,6 +11,7 @@ const SETUP_TOKEN = need('DEMO_SETUP_TOKEN');
 const STATE = need('DEMO_STATE');
 const PDF = need('DEMO_PDF');
 const RENEWED = need('DEMO_RENEWED');
+const SCAN = need('DEMO_SCAN');
 const ADMIN = { email: 'admin@demo.invalid', password: 'demo-clave-ficticia-1234' };
 const QUERY = 'franquicia daños por agua ATL-4417-2024';
 const TITLE = 'Póliza ficticia';
@@ -28,6 +29,7 @@ function check(ok: boolean, text: string): void {
   if (!ok) throw new Error(`falló: ${text}`);
 }
 
+const MIME: Record<string, string> = { '.pdf': 'application/pdf', '.png': 'image/png' };
 let cookie = '';
 async function http(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Response> {
   const isRaw = body instanceof FormData;
@@ -56,7 +58,7 @@ async function createWorker(companyId: string, firstName: string, lastName: stri
 }
 async function uploadFile(companyId: string, path: string, title: string, projectId?: string): Promise<string> {
   const form = new FormData();
-  form.append('file', new Blob([readFileSync(path)], { type: path.endsWith('.pdf') ? 'application/pdf' : 'text/plain' }), basename(path));
+  form.append('file', new Blob([readFileSync(path)], { type: MIME[path.slice(path.lastIndexOf('.'))] ?? 'text/plain' }), basename(path));
   const scope = projectId ? `&projectId=${projectId}` : '';
   const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent(title)}${scope}`, form);
   return (await json<{ document: Id }>(r, 201)).document.id;
@@ -117,6 +119,21 @@ async function closedProjectStep(): Promise<void> {
   check(outBlind === NO_SOURCE, 'Paso 7c: el trabajador no asignado recibe «No consta en los documentos de tu empresa.»');
 }
 
+async function scannedStep(): Promise<void> {
+  const companyId = await createCompany('Empresa D', 'ED');
+  const { key } = await createWorker(companyId, 'Trabajadora', 'Escaneos', 'escaneos@demo.invalid');
+  const scanId = await uploadFile(companyId, SCAN, 'Acta ficticia escaneada');
+  await waitReady(companyId, scanId);
+  const found = await withMcp(key, async (call) => {
+    const { hits } = JSON.parse(await call('searchKnowledge', { queries: ['bajante del patio'] })) as { hits: Hit[] };
+    const hit = hits.find((h) => h.documentId === scanId && h.pageNumber === 1);
+    const page = hit && (JSON.parse(await call('readPage', { documentId: scanId, pageNumber: 1 })) as { readerName?: string });
+    return { hit, readerName: page?.readerName };
+  });
+  check(!!found.hit, 'Paso 7e: el escaneado ficticio se lee con el lector de prueba y searchKnowledge lo encuentra en la página 1');
+  check(found.readerName === 'reader-stub', 'Paso 7f: readPage devuelve readerName «reader-stub»');
+}
+
 async function prepare(): Promise<void> {
   const setup = await http('POST', '/v1/setup', { setupToken: SETUP_TOKEN, groupName: 'Grupo Demo', adminName: 'Administrador Demo', adminEmail: ADMIN.email, password: ADMIN.password });
   check(setup.status === 201, `Paso 1: setup inicial del grupo`);
@@ -148,6 +165,7 @@ async function prepare(): Promise<void> {
   const renewedId = await uploadFile(a, RENEWED, RENEWED_TITLE);
   await waitReady(a, renewedId);
   check(true, 'Paso 7d: póliza ficticia renovada subida a la empresa A y procesada (READY)');
+  await scannedStep();
   writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie, workerKey: wa.key, oldId: docId, renewedId }));
 }
 

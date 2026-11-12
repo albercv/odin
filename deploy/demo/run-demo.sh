@@ -17,7 +17,7 @@ ODIN_API_PORT=$DEMO_API_PORT
 ODIN_PANEL_PORT=$DEMO_PANEL_PORT
 ODIN_MCP_PORT=$DEMO_MCP_PORT
 EOF
-COMPOSE=(docker compose -p odin-demo -f "$ROOT/deploy/compose.yaml" --env-file "$ENV_FILE")
+COMPOSE=(docker compose -p odin-demo -f "$ROOT/deploy/compose.yaml" -f "$ROOT/deploy/demo/compose.reader-stub.yaml" --env-file "$ENV_FILE")
 cleanup() {
   [ $? -eq 0 ] || { echo "== últimas líneas del registro de postgres y la API =="; "${COMPOSE[@]}" logs --no-color --tail 40 postgres api 2>&1 || true; }
   "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TMP"; }
@@ -25,7 +25,7 @@ trap cleanup EXIT
 
 export DEMO_API_URL="http://127.0.0.1:$DEMO_API_PORT" DEMO_PANEL_URL="http://127.0.0.1:$DEMO_PANEL_PORT"
 export DEMO_SETUP_TOKEN="demo-falso-token-$$" DEMO_STATE="$TMP/state.json" DEMO_PDF="$ROOT/deploy/demo/poliza-ficticia.pdf"
-export DEMO_RENEWED="$ROOT/deploy/demo/poliza-ficticia-renovada.txt"
+export DEMO_RENEWED="$ROOT/deploy/demo/poliza-ficticia-renovada.txt" DEMO_SCAN="$ROOT/deploy/demo/escaneo-ficticio.png"
 export PLAYWRIGHT_BROWSERS_PATH=0
 
 echo "== Demostración de cierre de la fase 1 =="

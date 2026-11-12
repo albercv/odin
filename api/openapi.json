@@ -1427,9 +1427,16 @@
           "supersededAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "pagesWithoutText" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
           }
         },
-        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "paginated", "status", "title", "uploadedAt" ]
+        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "uploadedAt" ]
       },
       "Capabilities" : {
         "type" : "object",
@@ -2108,9 +2115,12 @@
           },
           "replacement" : {
             "$ref" : "#/components/schemas/Replacement"
+          },
+          "readerName" : {
+            "type" : "string"
           }
         },
-        "required" : [ "documentId", "pageNumber", "paginated", "superseded", "text", "title" ]
+        "required" : [ "documentId", "pageNumber", "paginated", "readerName", "superseded", "text", "title" ]
       },
       "AdminMe" : {
         "type" : "object",
@@ -2144,9 +2154,12 @@
             "items" : {
               "$ref" : "#/components/schemas/CompanyRef"
             }
+          },
+          "scannedDocumentsSupported" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "userId" ]
+        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "scannedDocumentsSupported", "userId" ]
       },
       "CompanyRef" : {
         "type" : "object",

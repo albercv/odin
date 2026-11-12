@@ -10,7 +10,7 @@ afterEach(() => vi.restoreAllMocks());
 const list = 'GET /v1/admin/companies/c1/documents?offset=0&limit=500';
 const projects = 'GET /v1/admin/companies/c1/projects';
 const supersede = 'PUT /v1/admin/documents/d1/superseded-by';
-const base = { companyId: 'c1', filename: 'f.pdf', format: 'PDF', paginated: true, attemptCount: 1, uploadedAt: '2026-03-10T10:00:00Z' };
+const base = { companyId: 'c1', filename: 'f.pdf', format: 'PDF', paginated: true, attemptCount: 1, pagesWithoutText: [] as number[], uploadedAt: '2026-03-10T10:00:00Z' };
 const old = { ...base, id: 'd1', title: 'Póliza 2022', status: 'READY', projectId: 'p1' };
 const renewed = { ...base, id: 'd2', title: 'Póliza 2024', status: 'READY', projectId: 'p1', uploadedAt: '2026-05-02T10:00:00Z' };
 const draft = { ...base, id: 'd3', title: 'Borrador', status: 'FAILED' };
@@ -19,9 +19,9 @@ const routes = (documents: unknown[], more: Routes = {}): Routes => ({
   [list]: () => documents, [projects]: () => [{ id: 'p1', name: 'Los Almendros' }], ...more,
 });
 
-const show = (r: Routes) => {
+const show = (r: Routes, scannedDocumentsSupported = false) => {
   const calls = mockFetch(r);
-  renderWithProviders(<Documents companyId="c1" />);
+  renderWithProviders(<Documents companyId="c1" scannedDocumentsSupported={scannedDocumentsSupported} />);
   return calls;
 };
 const openMenu = async (title: string) => {
@@ -103,4 +103,27 @@ test('detailShowsReplacementAndMarkDate', async () => {
   expect(within(dialog).getByText('10 mar 2026')).toBeInTheDocument();
   expect(within(dialog).getByText('Sustituido por Póliza 2024')).toBeInTheDocument();
   expect(within(dialog).getByText('Marcado el 1 jun 2026')).toBeInTheDocument();
+});
+
+const waiting = { ...base, id: 'd4', title: 'Acta escaneada', status: 'PENDING_READER' };
+const reading = { ...base, id: 'd5', title: 'Plano', status: 'READER_PROCESSING' };
+
+test('pendingReaderAndReaderProcessingLabels', async () => {
+  show(routes([waiting, reading]), true);
+  expect(within((await screen.findByText('Acta escaneada')).closest('tr')!).getByText('Esperando al lector OCR')).toBeInTheDocument();
+  expect(within(screen.getByText('Plano').closest('tr')!).getByText('Leyendo con OCR')).toBeInTheDocument();
+});
+
+test('pendingReaderSaysInstallationDoesNotReadScansWhenUnsupported', async () => {
+  show(routes([waiting]), false);
+  const row = (await screen.findByText('Acta escaneada')).closest('tr')!;
+  expect(within(row).getByText('Esta instalación no lee documentos escaneados')).toBeInTheDocument();
+  expect(within(row).queryByText('Esperando al lector OCR')).toBeNull();
+});
+
+test('listsPagesWithoutText', async () => {
+  show(routes([{ ...old, pagesWithoutText: [3, 5] }, renewed]));
+  const row = (await screen.findByText('Póliza 2022')).closest('tr')!;
+  expect(within(row).getByText('Páginas sin texto, no leídas: 3, 5')).toBeInTheDocument();
+  expect(within(screen.getByText('Póliza 2024', { selector: 'td' }).closest('tr')!).queryByText(/Páginas sin texto/)).toBeNull();
 });

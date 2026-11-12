@@ -92,6 +92,10 @@ public class TestWiring {
     final FakePasswordHasher passwords = new FakePasswordHasher();
     final InMemoryOriginalFileStore files = new InMemoryOriginalFileStore();
 
+    @Bean InstallationSettings installationSettings() {
+        return new InstallationSettings("setup-secret", true);
+    }
+
     @Bean Clock clock() {
         return clock;
     }
