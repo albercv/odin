@@ -4,6 +4,12 @@ import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.organization.MeView;
 import com.e2d.odin.application.search.PageView;
+import com.e2d.odin.application.shared.TaggingWindow;
+import com.e2d.odin.application.topic.DocumentTopicLine;
+import com.e2d.odin.application.topic.DocumentTopicsReport;
+import com.e2d.odin.application.topic.TaggedDocument;
+import com.e2d.odin.application.topic.TaggingStatusReport;
+import com.e2d.odin.application.topic.TopicLabel;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentRef;
@@ -19,11 +25,14 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
+import com.e2d.odin.domain.topic.DocumentTagging;
+import com.e2d.odin.domain.topic.DocumentTopic;
 import com.e2d.odin.domain.topic.Topic;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -107,10 +116,16 @@ public final class Responses {
         }
     }
 
-    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<MeProject> projects) {
+    /** Documentos visibles para quien pregunta que aún no tienen sus temas al día: una lista por tema puede faltar. */
+    public record MeTagging(int pendingDocuments) {
+    }
+
+    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<MeProject> projects,
+            List<TopicView> topics, MeTagging tagging) {
         public static Me from(MeView m) {
             return new Me(m.userId().value(), m.displayName(), m.role(), MeCompany.from(m.company()),
-                    m.projects().stream().map(MeProject::from).toList());
+                    m.projects().stream().map(MeProject::from).toList(),
+                    m.topics().stream().map(TopicView::from).toList(), new MeTagging(m.taggingPending()));
         }
     }
 
@@ -150,17 +165,71 @@ public final class Responses {
         }
     }
 
+    /** Un tema activo de un documento en las listas: quién lo puso, la IA o el administrador. */
+    public record TopicLabelView(UUID id, String name, String source) {
+        static TopicLabelView from(TopicLabel label) {
+            return new TopicLabelView(label.id().value(), label.name(), label.source().name());
+        }
+    }
+
+    /** {@code taggingStatus} y {@code topics} solo van completos en la lista de la empresa; en el resto, nulo y vacío. */
     public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
             int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt,
-            List<Integer> pagesWithoutText) {
+            List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics) {
         public static DocumentView from(DocumentEntry entry) {
+            return from(new TaggedDocument(entry, Optional.empty(), List.of()));
+        }
+
+        public static DocumentView from(TaggedDocument tagged) {
+            DocumentEntry entry = tagged.entry();
             Document d = entry.document();
             return new DocumentView(d.id().value(), d.companyId().value(),
                     d.projectId().map(p -> p.value()).orElse(null), d.title(), d.filename(), d.format().name(),
                     d.status().name(), d.failureReason().orElse(null), d.paginated(), d.uploadedAt(),
                     d.attemptCount(), entry.supersededBy().map(DocumentLink::from).orElse(null),
-                    d.supersededAt().orElse(null), d.pagesWithoutText());
+                    d.supersededAt().orElse(null), d.pagesWithoutText(),
+                    tagged.tagging().map(t -> t.status().name()).orElse(null),
+                    tagged.topics().stream().map(TopicLabelView::from).toList());
+        }
+    }
+
+    public record DocumentTopicView(UUID topicId, String name, String source, String state,
+            @Nullable String taggerVersion, @Nullable String decidedByName, @Nullable Instant decidedAt) {
+        static DocumentTopicView from(DocumentTopicLine line) {
+            DocumentTopic t = line.topic();
+            return new DocumentTopicView(t.topicId().value(), line.topicName(), t.source().name(), t.state().name(),
+                    t.taggerVersion().orElse(null), line.decidedByName().orElse(null), t.decidedAt().orElse(null));
+        }
+    }
+
+    public record TaggingInfo(String status, int topicListVersion, @Nullable String failureReason) {
+        static TaggingInfo from(DocumentTagging t) {
+            return new TaggingInfo(t.status().name(), t.topicListVersion(), t.failureReason().orElse(null));
+        }
+    }
+
+    public record DocumentTopicsResponse(List<DocumentTopicView> topics, @Nullable TaggingInfo tagging) {
+        public static DocumentTopicsResponse from(DocumentTopicsReport report) {
+            return new DocumentTopicsResponse(report.topics().stream().map(DocumentTopicView::from).toList(),
+                    report.tagging().map(TaggingInfo::from).orElse(null));
+        }
+    }
+
+    /** Con {@code always}, {@code from} y {@code to} van nulos. */
+    public record TaggingWindowView(@Nullable String from, @Nullable String to, boolean always) {
+        static TaggingWindowView from(TaggingWindow w) {
+            return w.always() ? new TaggingWindowView(null, null, true)
+                    : new TaggingWindowView(w.from().toString(), w.to().toString(), false);
+        }
+    }
+
+    public record TaggingStatusView(int pendingDocuments, @Nullable Instant oldestPendingSince,
+            TaggingWindowView window, String timezone) {
+        public static TaggingStatusView from(TaggingStatusReport report) {
+            return new TaggingStatusView(report.backlog().pendingDocuments(),
+                    report.backlog().oldestPendingSince().orElse(null), TaggingWindowView.from(report.window()),
+                    report.window().zone().getId());
         }
     }
 
@@ -173,12 +242,14 @@ public final class Responses {
 
     /** Vista del trabajador: solo documentos listos y sin datos internos del proceso. */
     public record WorkerDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
-            boolean paginated, Instant uploadedAt, boolean superseded, @Nullable Replacement replacement) {
-        public static WorkerDocumentView from(DocumentEntry entry) {
-            Document d = entry.document();
+            boolean paginated, Instant uploadedAt, boolean superseded, @Nullable Replacement replacement,
+            List<TopicLabelView> topics) {
+        public static WorkerDocumentView from(TaggedDocument tagged) {
+            Document d = tagged.entry().document();
             return new WorkerDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
-                    entry.replacement().map(Replacement::from).orElse(null));
+                    tagged.entry().replacement().map(Replacement::from).orElse(null),
+                    tagged.topics().stream().map(TopicLabelView::from).toList());
         }
     }
 

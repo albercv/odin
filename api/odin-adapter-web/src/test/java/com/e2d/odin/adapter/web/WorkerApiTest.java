@@ -205,4 +205,29 @@ class WorkerApiTest extends WebTestSupport {
                 .andExpect(status().isOk());
         mvc.perform(get("/v1/me").header(AUTH, key)).andExpect(jsonPath("$.projects", hasSize(1)));
     }
+
+    @Test
+    void listDocumentsByTopic() throws Exception {
+        CompanyId company = newCompany();
+        var water = new com.e2d.odin.domain.topic.Topic(new com.e2d.odin.domain.topic.TopicId(UUID.randomUUID()),
+                company, "Agua", "Fugas");
+        w.topics.save(water);
+        Document tagged = Fixtures.readyDocument(w.docs, company, "uno");
+        Fixtures.readyDocument(w.docs, company, "dos");
+        w.tagging.seed(tagged.id(), water.id(), com.e2d.odin.domain.topic.TopicSource.AI,
+                com.e2d.odin.domain.topic.TopicState.ACTIVE);
+        String key = workerKey(company);
+
+        mvc.perform(get("/v1/documents?topicId=" + water.id().value()).header(AUTH, key)).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].id").value(tagged.id().value().toString()))
+                .andExpect(jsonPath("$[0].topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$[0].topics[0].source").value("AI"));
+        mvc.perform(get("/v1/documents").header(AUTH, key)).andExpect(jsonPath("$", hasSize(2)));
+        mvc.perform(get("/v1/documents?topicId=" + UUID.randomUUID()).header(AUTH, key))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("Tema no encontrado"));
+        mvc.perform(get("/v1/me").header(AUTH, key)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$.topics[0].definition").value("Fugas"))
+                .andExpect(jsonPath("$.tagging.pendingDocuments").value(2));
+    }
 }

@@ -36,6 +36,8 @@ Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplo
 
 El lector de prueba (`reader-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el puente real con Unlimited-OCR 2.
 
+El etiquetador de prueba (`tagger-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el modelo real.
+
 ## Primer arranque
 
 Tras `make up`, crea el grupo y su primer administrador con el token de instalación de `deploy/.env`. Solo funciona una vez:

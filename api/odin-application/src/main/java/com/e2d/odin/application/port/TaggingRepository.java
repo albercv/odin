@@ -6,11 +6,14 @@ import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.topic.DocumentTagging;
 import com.e2d.odin.domain.topic.DocumentTopic;
 import com.e2d.odin.domain.topic.TopicId;
 import com.e2d.odin.domain.topic.TopicState;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -34,6 +37,14 @@ public interface TaggingRepository {
     void retag(CompanyScope scope, DocumentId documentId);
 
     List<DocumentTopic> topicsOf(CompanyScope scope, DocumentId documentId);
+
+    /** Los temas {@code ACTIVE} de cada documento pedido (los de temas borrados no salen), en una sola consulta. */
+    Map<DocumentId, List<DocumentTopic>> activeTopicsOf(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> documentIds);
+
+    /** El estado del etiquetado de cada documento pedido que lo tenga, en una sola consulta. */
+    Map<DocumentId, DocumentTagging> taggingOf(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> documentIds);
 
     /** Bloquea la fila del documento, como {@link #saveResult}, y guarda la decisión del administrador. */
     void decide(CompanyScope scope, DocumentId documentId, TopicId topicId, TopicState state, UserId by, Instant at);

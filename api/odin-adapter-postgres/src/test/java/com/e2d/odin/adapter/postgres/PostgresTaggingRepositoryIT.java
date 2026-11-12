@@ -389,6 +389,61 @@ class PostgresTaggingRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
+    void listsActiveTopicsAndTaggingStateOfManyDocumentsRespectingVisibility() {
+        CompanyId company = newCompany();
+        Topic water = topic(company, "Agua");
+        Topic insurance = topic(company, "Seguros");
+        ProjectId closed = newProject(company, "Cerrado");
+        Document tagged = readyDocument(company, "Etiquetado");
+        Document hidden = readyDocument(company, Optional.of(closed), "Oculto");
+        Document untagged = readyDocument(company, "Sin etiquetar");
+        tagDone(tagged, NOW, water.id(), insurance.id());
+        tagDone(hidden, NOW, water.id(), insurance.id());
+        tagging.decide(CompanyScope.all(), tagged.id(), insurance.id(), TopicState.REMOVED, newUser(company), NOW);
+        topics.delete(company, water.id(), NOW);
+        Topic gas = topic(company, "Gas");
+        tagging.decide(CompanyScope.all(), tagged.id(), gas.id(), TopicState.ACTIVE, newUser(company), NOW);
+        List<DocumentId> ids = List.of(tagged.id(), hidden.id(), untagged.id());
+        ProjectVisibility outsider = ProjectVisibility.of(Set.of());
+
+        var active = tagging.activeTopicsOf(CompanyScope.of(company), outsider, ids);
+        var states = tagging.taggingOf(CompanyScope.of(company), outsider, ids);
+
+        assertThat(active).containsOnlyKeys(tagged.id());
+        assertThat(active.get(tagged.id())).extracting(DocumentTopic::topicId).containsExactly(gas.id());
+        assertThat(states).containsOnlyKeys(tagged.id());
+        assertThat(states.get(tagged.id()).status().name()).isEqualTo("DONE");
+        assertThat(tagging.activeTopicsOf(CompanyScope.of(company), ProjectVisibility.all(), ids))
+                .containsOnlyKeys(tagged.id(), hidden.id());
+        assertThat(tagging.taggingOf(CompanyScope.of(newCompany()), ProjectVisibility.all(), ids)).isEmpty();
+        assertThat(tagging.activeTopicsOf(CompanyScope.of(newCompany()), ProjectVisibility.all(), ids)).isEmpty();
+    }
+
+    @Test
+    void documentListFiltersByActiveTopicWithinVisibleProjects() {
+        CompanyId company = newCompany();
+        Topic water = topic(company, "Agua");
+        ProjectId closed = newProject(company, "Cerrado");
+        Document free = readyDocument(company, "Libre");
+        Document hidden = readyDocument(company, Optional.of(closed), "Oculto");
+        Document removed = readyDocument(company, "Quitado");
+        readyDocument(company, "Sin tema");
+        tagDone(free, NOW, water.id());
+        tagDone(hidden, NOW, water.id());
+        tagDone(removed, NOW, water.id());
+        tagging.decide(CompanyScope.all(), removed.id(), water.id(), TopicState.REMOVED, newUser(company), NOW);
+        CompanyScope scope = CompanyScope.of(company);
+        Optional<TopicId> byWater = Optional.of(water.id());
+
+        assertThat(docs.list(scope, ProjectVisibility.of(Set.of()), Optional.empty(), byWater, Optional.empty(), 0, 10))
+                .extracting(e -> e.document().id()).containsExactly(free.id());
+        assertThat(docs.list(scope, ProjectVisibility.all(), Optional.empty(), byWater, Optional.empty(), 0, 10))
+                .extracting(e -> e.document().id()).containsExactlyInAnyOrder(free.id(), hidden.id());
+        assertThat(docs.list(CompanyScope.of(newCompany()), ProjectVisibility.all(), Optional.empty(), byWater,
+                Optional.empty(), 0, 10)).isEmpty();
+    }
+
+    @Test
     void pendingCountIsZeroWhenTheCompanyHasNoTopics() {
         CompanyId company = newCompany();
         readyDocument(company, "Sin lista");

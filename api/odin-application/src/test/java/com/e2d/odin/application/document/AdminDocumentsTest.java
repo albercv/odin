@@ -7,6 +7,8 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryTaggingRepository;
+import com.e2d.odin.application.fake.InMemoryTopicRepository;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentRef;
@@ -26,7 +28,9 @@ class AdminDocumentsTest {
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
-    private final ListCompanyDocuments list = new ListCompanyDocuments(docs);
+    private final InMemoryTopicRepository topics = new InMemoryTopicRepository();
+    private final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
+    private final ListCompanyDocuments list = new ListCompanyDocuments(docs, topics, tagging);
     private final GetDocument get = new GetDocument(docs);
     private final RetryDocument retry = new RetryDocument(docs);
 
@@ -35,7 +39,7 @@ class AdminDocumentsTest {
         Document a = Fixtures.document(docs, companyA, DocumentStatus.READY);
         Fixtures.document(docs, companyB, DocumentStatus.READY);
 
-        assertThat(list.execute(Actors.companyAdmin(companyA), companyA, 0, 10)).extracting(DocumentEntry::document)
+        assertThat(list.execute(Actors.companyAdmin(companyA), companyA, 0, 10)).extracting(t -> t.entry().document())
                 .containsExactly(a);
     }
 
@@ -51,7 +55,7 @@ class AdminDocumentsTest {
     void groupAdminListsAnyCompany() {
         Document a = Fixtures.document(docs, companyA, DocumentStatus.READY);
 
-        assertThat(list.execute(Actors.groupAdmin(), companyA, 0, 10)).extracting(DocumentEntry::document)
+        assertThat(list.execute(Actors.groupAdmin(), companyA, 0, 10)).extracting(t -> t.entry().document())
                 .isEqualTo(List.of(a));
     }
 
@@ -122,7 +126,7 @@ class AdminDocumentsTest {
         assertThat(got.supersededBy()).contains(DocumentRef.of(b));
         assertThat(got.replacement()).contains(DocumentRef.of(c));
         assertThat(got.document().supersededAt()).contains(Fixtures.NOW);
-        assertThat(list.execute(admin, companyA, 0, 10)).extracting(e -> e.supersededBy().map(DocumentRef::id))
+        assertThat(list.execute(admin, companyA, 0, 10)).extracting(e -> e.entry().supersededBy().map(DocumentRef::id))
                 .containsExactlyInAnyOrder(Optional.of(b.id()), Optional.of(c.id()), Optional.empty());
     }
 

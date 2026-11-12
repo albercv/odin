@@ -99,6 +99,30 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void otherCompanyAdminCannotReviewForeignDocumentTopics() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        var ownerOfA = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        var created = mvc.perform(post("/v1/admin/companies/" + a.value() + "/topics").cookie(ownerOfA)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Agua\",\"definition\":\"Fugas\"}"))
+                .andReturn();
+        String topic = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+        Document secret = Fixtures.readyDocument(w.docs, a, "secreto de A");
+        w.tagging.seedRow(secret, com.e2d.odin.domain.topic.TaggingStatus.DONE);
+        String base = "/v1/admin/documents/" + secret.id().value() + "/topics";
+
+        mvc.perform(get(base).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(put(base + "/" + topic).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(delete(base + "/" + topic).cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(post(base + "/retag").cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(get("/v1/admin/companies/" + a.value() + "/tagging-status").cookie(other))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(base).cookie(ownerOfA)).andExpect(jsonPath("$.tagging.status").value("DONE"))
+                .andExpect(jsonPath("$.topics.length()").value(0));
+    }
+
+    @Test
     void companyAdminCannotChangeACompanyCode() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();

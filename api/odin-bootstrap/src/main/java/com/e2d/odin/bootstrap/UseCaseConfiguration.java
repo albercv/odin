@@ -58,6 +58,7 @@ import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
+import com.e2d.odin.application.port.TaggingRepository;
 import com.e2d.odin.application.port.TopicRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
@@ -69,7 +70,11 @@ import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
 import com.e2d.odin.application.topic.CreateTopic;
 import com.e2d.odin.application.topic.DeleteTopic;
+import com.e2d.odin.application.shared.TaggingWindow;
+import com.e2d.odin.application.topic.GetTaggingStatus;
+import com.e2d.odin.application.topic.ListDocumentTopics;
 import com.e2d.odin.application.topic.ListTopics;
+import com.e2d.odin.application.topic.ReviewDocumentTopics;
 import com.e2d.odin.application.topic.UpdateTopic;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
@@ -159,6 +164,23 @@ public class UseCaseConfiguration {
     @Bean
     ListTopics listTopics(TopicRepository topics) {
         return new ListTopics(topics);
+    }
+
+    @Bean
+    ReviewDocumentTopics reviewDocumentTopics(DocumentRepository documents, TopicRepository topics,
+            TaggingRepository tagging, Clock clock) {
+        return new ReviewDocumentTopics(documents, topics, tagging, clock);
+    }
+
+    @Bean
+    ListDocumentTopics listDocumentTopics(DocumentRepository documents, TopicRepository topics,
+            TaggingRepository tagging, UserRepository users) {
+        return new ListDocumentTopics(documents, topics, tagging, users);
+    }
+
+    @Bean
+    GetTaggingStatus getTaggingStatus(TaggingRepository tagging, TaggingWindow window) {
+        return new GetTaggingStatus(tagging, window);
     }
 
     @Bean
@@ -314,8 +336,9 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ListCompanyDocuments listCompanyDocuments(DocumentRepository documents) {
-        return new ListCompanyDocuments(documents);
+    ListCompanyDocuments listCompanyDocuments(DocumentRepository documents, TopicRepository topics,
+            TaggingRepository tagging) {
+        return new ListCompanyDocuments(documents, topics, tagging);
     }
 
     @Bean
@@ -354,8 +377,9 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DescribeMe describeMe(OrganizationRepository organizations, ProjectMemberRepository projectMembers) {
-        return new DescribeMe(organizations, projectMembers);
+    DescribeMe describeMe(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            TopicRepository topics, TaggingRepository tagging) {
+        return new DescribeMe(organizations, projectMembers, topics, tagging);
     }
 
     @Bean
@@ -373,8 +397,10 @@ public class UseCaseConfiguration {
     ListDocuments listDocuments(
             OrganizationRepository organizations,
             ProjectMemberRepository projectMembers,
-            DocumentRepository documents) {
-        return new ListDocuments(organizations, projectMembers, documents);
+            DocumentRepository documents,
+            TopicRepository topics,
+            TaggingRepository tagging) {
+        return new ListDocuments(organizations, projectMembers, documents, topics, tagging);
     }
 
     @Bean

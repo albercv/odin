@@ -11,6 +11,7 @@ import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
 public class InMemoryDocumentRepository implements DocumentRepository {
@@ -26,6 +28,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     private final Map<DocumentId, Document> documents = new LinkedHashMap<>();
     private final Map<DocumentId, List<DocumentPage>> pages = new LinkedHashMap<>();
     private CompanyScope lastListScope;
+    private BiPredicate<DocumentId, TopicId> activeTopic = (document, topic) -> false;
     private boolean locked;
     private boolean lastMarkWasLocked;
 
@@ -54,6 +57,11 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     public Optional<Document> get(DocumentId id) {
         return Optional.ofNullable(documents.get(id));
+    }
+
+    /** Quien guarda los temas de los documentos dice cuáles están activos, para el filtro por tema. */
+    public void useActiveTopics(BiPredicate<DocumentId, TopicId> predicate) {
+        activeTopic = predicate;
     }
 
     public CompanyScope lastListScope() {
@@ -132,12 +140,13 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
-            Optional<DocumentStatus> status, int offset, int limit) {
+            Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit) {
         lastListScope = scope;
         return documents.values().stream()
                 .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId())
                         && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
+                .filter(d -> topicId.isEmpty() || activeTopic.test(d.id(), topicId.get()))
                 .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
                 .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
     }

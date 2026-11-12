@@ -574,6 +574,69 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.detail").value("Un nombre de tema no puede contener a otro: Agua"));
     }
 
+    @Test
+    void taggingStatusViewHasWindowShape() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        createTopic(admin, company, "Agua");
+        Document pending = Fixtures.readyDocument(w.docs, company, "uno");
+        String url = "/v1/admin/companies/" + company.value() + "/tagging-status";
+
+        mvc.perform(get(url).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendingDocuments").value(1))
+                .andExpect(jsonPath("$.oldestPendingSince").value(pending.uploadedAt().toString()))
+                .andExpect(jsonPath("$.window.from").value("22:00")).andExpect(jsonPath("$.window.to").value("07:00"))
+                .andExpect(jsonPath("$.window.always").value(false))
+                .andExpect(jsonPath("$.timezone").value("Europe/Madrid"));
+        mvc.perform(get(url).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(newCompany()))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void documentViewIncludesTopicsAndTaggingStatus() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String water = createTopic(admin, company, "Agua");
+        Document tagged = Fixtures.readyDocument(w.docs, company, "uno");
+        w.tagging.seed(tagged.id(), new com.e2d.odin.domain.topic.TopicId(UUID.fromString(water)),
+                com.e2d.odin.domain.topic.TopicSource.AI, com.e2d.odin.domain.topic.TopicState.ACTIVE);
+        w.tagging.seedRow(tagged, com.e2d.odin.domain.topic.TaggingStatus.DONE);
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].taggingStatus").value("DONE"))
+                .andExpect(jsonPath("$[0].topics[0].id").value(water))
+                .andExpect(jsonPath("$[0].topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$[0].topics[0].source").value("AI"));
+    }
+
+    @Test
+    void documentTopicsAreReviewedListedAndRetagged() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        String water = createTopic(admin, company, "Agua");
+        Document document = Fixtures.readyDocument(w.docs, company, "uno");
+        w.tagging.seedRow(document, com.e2d.odin.domain.topic.TaggingStatus.DONE);
+        String base = "/v1/admin/documents/" + document.id().value() + "/topics";
+
+        mvc.perform(put(base + "/" + water).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(base).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.topics[0].topicId").value(water))
+                .andExpect(jsonPath("$.topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$.topics[0].source").value("ADMIN"))
+                .andExpect(jsonPath("$.topics[0].state").value("ACTIVE"))
+                .andExpect(jsonPath("$.topics[0].decidedByName").value("Admin Pérez"))
+                .andExpect(jsonPath("$.tagging.status").value("DONE"))
+                .andExpect(jsonPath("$.tagging.topicListVersion").value(1));
+        mvc.perform(delete(base + "/" + water).cookie(admin)).andExpect(status().isNoContent());
+        mvc.perform(get(base).cookie(admin)).andExpect(jsonPath("$.topics[0].state").value("REMOVED"));
+        mvc.perform(post(base + "/retag").cookie(admin)).andExpect(status().isAccepted());
+        mvc.perform(get(base).cookie(admin)).andExpect(jsonPath("$.tagging").doesNotExist())
+                .andExpect(jsonPath("$.topics[0].state").value("REMOVED"));
+        mvc.perform(put(base + "/" + UUID.randomUUID()).cookie(admin)).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Tema no encontrado"));
+    }
+
     private static org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder upload(
             CompanyId company, Cookie admin, byte[] bytes) {
         return multipart("/v1/admin/companies/" + company.value() + "/documents")

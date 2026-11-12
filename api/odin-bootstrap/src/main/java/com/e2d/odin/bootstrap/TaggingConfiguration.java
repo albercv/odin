@@ -11,8 +11,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.OptionalInt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -34,11 +32,10 @@ public class TaggingConfiguration {
     }
 
     @Bean
-    TaggingSettings taggingSettings(@Value("${odin.tagger.window:22:00-07:00}") String window,
-            @Value("${odin.timezone:Europe/Madrid}") ZoneId zone,
+    TaggingSettings taggingSettings(TaggingWindow window,
             @Value("${odin.tagger.timeout:PT5M}") Duration timeout,
             @Value("${odin.tagger.chunk-characters:6000}") int chunkCharacters, ProcessingSettings processing) {
-        return new TaggingSettings(window(window, zone), timeout, chunkCharacters, processing.maxAttempts());
+        return new TaggingSettings(window, timeout, chunkCharacters, processing.maxAttempts());
     }
 
     @Bean
@@ -50,18 +47,6 @@ public class TaggingConfiguration {
     @Bean
     TaggingScheduler taggingScheduler(TagPendingDocuments tag) {
         return new TaggingScheduler(tag);
-    }
-
-    /** «always» o «HH:mm-HH:mm»; cualquier otra cosa impide arrancar en vez de etiquetar a horas inesperadas. */
-    static TaggingWindow window(String value, ZoneId zone) {
-        if ("always".equalsIgnoreCase(value.strip())) {
-            return TaggingWindow.always(zone);
-        }
-        String[] parts = value.strip().split("-");
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("odin.tagger.window debe ser «always» o «HH:mm-HH:mm»: " + value);
-        }
-        return TaggingWindow.between(LocalTime.parse(parts[0]), LocalTime.parse(parts[1]), zone);
     }
 
     private static OptionalInt optionalInt(String value) {

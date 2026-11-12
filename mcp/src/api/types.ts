@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/topics/{topicId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["addTopic"];
+        post?: never;
+        delete: operations["removeTopic"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/documents/{documentId}/superseded-by": {
         parameters: {
             query?: never;
@@ -159,6 +175,22 @@ export interface paths {
         put?: never;
         post: operations["login"];
         delete: operations["logout"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/documents/{documentId}/topics/retag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retag"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -468,6 +500,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/topics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["documentTopics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/tagging-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["taggingStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/projects/{projectId}/members": {
         parameters: {
             query?: never;
@@ -573,6 +637,14 @@ export interface components {
             /** Format: date-time */
             supersededAt?: string;
             pagesWithoutText: number[];
+            taggingStatus?: string;
+            topics: components["schemas"]["TopicLabelView"][];
+        };
+        TopicLabelView: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            source: string;
         };
         Capabilities: {
             capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
@@ -795,6 +867,8 @@ export interface components {
             role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
             company: components["schemas"]["MeCompany"];
             projects: components["schemas"]["MeProject"][];
+            topics: components["schemas"]["TopicView"][];
+            tagging: components["schemas"]["MeTagging"];
         };
         MeCompany: {
             /** Format: uuid */
@@ -806,6 +880,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+        };
+        MeTagging: {
+            /** Format: int32 */
+            pendingDocuments: number;
         };
         Health: {
             status: string;
@@ -823,6 +901,7 @@ export interface components {
             uploadedAt: string;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            topics: components["schemas"]["TopicLabelView"][];
         };
         Page: {
             /** Format: uuid */
@@ -855,6 +934,40 @@ export interface components {
             id: string;
             name: string;
             code: string;
+        };
+        DocumentTopicView: {
+            /** Format: uuid */
+            topicId: string;
+            name: string;
+            source: string;
+            state: string;
+            taggerVersion?: string;
+            decidedByName?: string;
+            /** Format: date-time */
+            decidedAt?: string;
+        };
+        DocumentTopicsResponse: {
+            topics: components["schemas"]["DocumentTopicView"][];
+            tagging?: components["schemas"]["TaggingInfo"];
+        };
+        TaggingInfo: {
+            status: string;
+            /** Format: int32 */
+            topicListVersion: number;
+            failureReason?: string;
+        };
+        TaggingStatusView: {
+            /** Format: int32 */
+            pendingDocuments: number;
+            /** Format: date-time */
+            oldestPendingSince?: string;
+            window: components["schemas"]["TaggingWindowView"];
+            timezone: string;
+        };
+        TaggingWindowView: {
+            from?: string;
+            to?: string;
+            always: boolean;
         };
         ProjectMemberView: {
             /** Format: uuid */
@@ -894,6 +1007,48 @@ export interface operations {
                 "application/json": components["schemas"]["SetPassword"];
             };
         };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    addTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+                topicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removeTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+                topicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description No Content */
             204: {
@@ -1175,6 +1330,26 @@ export interface operations {
         responses: {
             /** @description Sesión cerrada */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    retag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1794,6 +1969,7 @@ export interface operations {
         parameters: {
             query?: {
                 projectId?: string;
+                topicId?: string;
                 offset?: number;
                 limit?: number;
             };
@@ -1875,6 +2051,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+        };
+    };
+    documentTopics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTopicsResponse"];
+                };
+            };
+        };
+    };
+    taggingStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaggingStatusView"];
                 };
             };
         };
