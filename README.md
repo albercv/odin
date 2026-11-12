@@ -116,13 +116,13 @@ Registrarlo en un equipo es configuración fuera del repositorio: hazlo solo con
 
 ## Datos de prueba y conector
 
-Para probar Odín desde Claude Desktop con datos ficticios. Las órdenes actúan sobre la instalación de `deploy/.env` (la de `make up`); lánzalas desde la copia del repositorio que la ejecuta. Llevan cerrojo (`data/instalacion.lock`): nunca van dos a la vez.
+Para probar Odín desde Claude Desktop con datos ficticios. Las órdenes actúan sobre la instalación de la copia principal del repositorio (su `deploy/.env`, la de `make up`), aunque se lancen desde una worktree. Sus copias, credenciales y cerrojo van al `data/` de esa copia principal. Llevan cerrojo (`data/instalacion.lock`): nunca van dos a la vez.
 
 | Orden | Qué hace |
 |---|---|
 | `make instalacion-reiniciar CONFIRMAR=BORRAR` | Copia la base y los originales en `data/copias/`, borra todos los datos y deja la instalación lista para el primer arranque. Dice qué había y en qué copia queda. Sin `CONFIRMAR=BORRAR` no hace nada: explica qué haría |
 | `make datos-prueba-cargar` | Hace el primer arranque y carga los datos de prueba por la API. Solo en una instalación vacía: si ya tiene datos, para sin tocarlos. Si falla a medias, la vuelve a dejar vacía |
-| `make mcp-claude-desktop [TRABAJADOR=marta\|javier\|ignacio]` | Compila `mcp/` y añade o actualiza solo la entrada `odin` de `~/Library/Application Support/Claude/claude_desktop_config.json`, con copia previa en `data/copias/`. Usa la clave de ese trabajador sin mostrarla (por defecto, `marta`). Después hay que reiniciar Claude Desktop |
+| `make mcp-claude-desktop [TRABAJADOR=marta\|javier\|ignacio]` | Compila `mcp/` de la copia desde la que se lanza y lo copia en `data/mcp-claude-desktop/`. Añade o actualiza solo la entrada `odin` de `~/Library/Application Support/Claude/claude_desktop_config.json`, con copia previa en `data/copias/`, apuntando a esa copia del MCP: recompilar o cambiar de rama no cambia el MCP de Claude Desktop. Usa la clave de ese trabajador sin mostrarla (por defecto, `marta`). Después hay que reiniciar Claude Desktop |
 | `make instalacion-restaurar COPIA=data/copias/odin-….sql CONFIRMAR=BORRAR` | Vuelve a una copia, con sus originales. Antes copia lo que hay |
 
 Orden habitual: reiniciar, cargar y registrar. Para probar el aislamiento, vuelve a registrar con otro trabajador y reinicia Claude Desktop.
