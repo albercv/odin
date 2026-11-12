@@ -16,6 +16,7 @@ import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryQuestionLog;
+import com.e2d.odin.application.fake.InMemoryTaggingRepository;
 import com.e2d.odin.application.fake.InMemoryTopicRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
@@ -64,13 +65,19 @@ import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
 import com.e2d.odin.application.topic.CreateTopic;
 import com.e2d.odin.application.topic.DeleteTopic;
+import com.e2d.odin.application.topic.GetTaggingStatus;
+import com.e2d.odin.application.topic.ListDocumentTopics;
 import com.e2d.odin.application.topic.ListTopics;
+import com.e2d.odin.application.topic.ReviewDocumentTopics;
+import com.e2d.odin.application.shared.TaggingWindow;
 import com.e2d.odin.application.topic.UpdateTopic;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.document.DocumentFormat;
 import java.time.Clock;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
@@ -88,6 +95,7 @@ public class TestWiring {
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
     final InMemoryTopicRepository topics = new InMemoryTopicRepository();
+    final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
     final ScriptedKnowledgeSearch search = new ScriptedKnowledgeSearch();
     final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     final MutableClock clock = new MutableClock();
@@ -227,7 +235,7 @@ public class TestWiring {
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {
-        return new ListCompanyDocuments(docs);
+        return new ListCompanyDocuments(docs, topics, tagging);
     }
 
     @Bean GetDocument getDocument() {
@@ -255,7 +263,7 @@ public class TestWiring {
     }
 
     @Bean DescribeMe describeMe() {
-        return new DescribeMe(orgs, projectMembers);
+        return new DescribeMe(orgs, projectMembers, topics, tagging);
     }
 
     @Bean SearchKnowledge searchKnowledge() {
@@ -263,7 +271,7 @@ public class TestWiring {
     }
 
     @Bean ListDocuments listDocuments() {
-        return new ListDocuments(orgs, projectMembers, docs);
+        return new ListDocuments(orgs, projectMembers, docs, topics, tagging);
     }
 
     @Bean ReadPage readPage() {
@@ -288,5 +296,21 @@ public class TestWiring {
 
     @Bean ListTopics listTopics() {
         return new ListTopics(topics);
+    }
+
+    @Bean ReviewDocumentTopics reviewDocumentTopics() {
+        return new ReviewDocumentTopics(docs, topics, tagging, clock);
+    }
+
+    @Bean ListDocumentTopics listDocumentTopics() {
+        return new ListDocumentTopics(docs, topics, tagging, users);
+    }
+
+    @Bean TaggingWindow taggingWindow() {
+        return TaggingWindow.between(LocalTime.of(22, 0), LocalTime.of(7, 0), ZoneId.of("Europe/Madrid"));
+    }
+
+    @Bean GetTaggingStatus getTaggingStatus() {
+        return new GetTaggingStatus(tagging, taggingWindow());
     }
 }

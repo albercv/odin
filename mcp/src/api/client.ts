@@ -23,7 +23,12 @@ export class ApiError extends Error {
 export interface ApiClient {
   me(): Promise<Me>;
   search(body: SearchRequest): Promise<SearchResponse>;
-  listDocuments(projectId: string | undefined, offset: number, limit: number): Promise<WorkerDocumentView[]>;
+  listDocuments(
+    projectId: string | undefined,
+    offset: number,
+    limit: number,
+    topicId?: string,
+  ): Promise<WorkerDocumentView[]>;
   readPage(documentId: string, pageNumber: number): Promise<Page>;
   verifyCitation(body: VerifyCitationRequest): Promise<Verification>;
   saveCard(body: SaveCardRequest): Promise<SavedCard>;
@@ -40,8 +45,12 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
   return {
     me: () => call('GET', '/v1/me'),
     search: (body) => call('POST', '/v1/search', body),
-    listDocuments: (projectId, offset, limit) =>
-      call('GET', `/v1/documents?offset=${offset}&limit=${limit}${projectId ? `&projectId=${enc(projectId)}` : ''}`),
+    listDocuments: (projectId, offset, limit, topicId) =>
+      call(
+        'GET',
+        `/v1/documents?offset=${offset}&limit=${limit}${projectId ? `&projectId=${enc(projectId)}` : ''}` +
+          (topicId ? `&topicId=${enc(topicId)}` : ''),
+      ),
     readPage: (documentId, pageNumber) => call('GET', `/v1/documents/${enc(documentId)}/pages/${pageNumber}`),
     verifyCitation: (body) => call('POST', '/v1/citations/verify', body),
     saveCard: (body) => call('POST', '/v1/cards', body),

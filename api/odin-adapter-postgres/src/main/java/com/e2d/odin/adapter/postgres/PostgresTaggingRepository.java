@@ -12,7 +12,9 @@ import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.topic.DocumentTagging;
 import com.e2d.odin.domain.topic.DocumentTopic;
+import com.e2d.odin.domain.topic.TaggingStatus;
 import com.e2d.odin.domain.topic.Topic;
 import com.e2d.odin.domain.topic.TopicId;
 import com.e2d.odin.domain.topic.TopicSource;
@@ -21,10 +23,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 public class PostgresTaggingRepository implements TaggingRepository {
@@ -171,15 +177,45 @@ public class PostgresTaggingRepository implements TaggingRepository {
 
     @Override
     public List<DocumentTopic> topicsOf(CompanyScope scope, DocumentId documentId) {
-        ProjectVisibility everything = ProjectVisibility.all();
+        return topicsIn(scope, ProjectVisibility.all(), List.of(documentId), "");
+    }
+
+    @Override
+    public Map<DocumentId, List<DocumentTopic>> activeTopicsOf(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> documentIds) {
+        return topicsIn(scope, visibility, documentIds, "AND x.state = 'ACTIVE'").stream()
+                .collect(Collectors.groupingBy(DocumentTopic::documentId));
+    }
+
+    private List<DocumentTopic> topicsIn(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> documentIds, String extraFilter) {
         String sql = """
                 SELECT x.document_id, x.topic_id, x.source, x.state, x.tagger_version, x.decided_by, x.decided_at
                 FROM document_topic x JOIN topic p ON p.id = x.topic_id AND p.deleted_at IS NULL
                 JOIN document d ON d.id = x.document_id
-                WHERE x.document_id = :id AND %s AND %s ORDER BY lower(p.name), p.id"""
-                .formatted(Sql.inScope("x.company_id"), Sql.inVisibleProjects("d.project_id"));
-        return tx.inScope(scope, everything, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), everything)
-                .param("id", documentId.value()).query((rs, n) -> documentTopic(rs)).list());
+                WHERE x.document_id = ANY (CAST(string_to_array(:ids, ',') AS uuid[])) %s AND %s AND %s
+                ORDER BY lower(p.name), p.id""".formatted(extraFilter, Sql.inScope("x.company_id"),
+                Sql.inVisibleProjects("d.project_id"));
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("ids", idList(documentIds)).query((rs, n) -> documentTopic(rs)).list());
+    }
+
+    @Override
+    public Map<DocumentId, DocumentTagging> taggingOf(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> documentIds) {
+        String sql = """
+                SELECT t.document_id, t.company_id, t.topic_list_version, t.status, t.attempt_count, t.deadline_at,
+                    t.failure_reason, t.tagger_version
+                FROM document_tagging t JOIN document d ON d.id = t.document_id
+                WHERE t.document_id = ANY (CAST(string_to_array(:ids, ',') AS uuid[])) AND %s AND %s"""
+                .formatted(Sql.inScope("t.company_id"), Sql.inVisibleProjects("d.project_id"));
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("ids", idList(documentIds)).query((rs, n) -> tagging(rs)).list().stream()
+                .collect(Collectors.toMap(DocumentTagging::documentId, Function.identity())));
+    }
+
+    private static String idList(Collection<DocumentId> documentIds) {
+        return documentIds.stream().map(id -> id.value().toString()).collect(Collectors.joining(","));
     }
 
     @Override
@@ -241,6 +277,14 @@ public class PostgresTaggingRepository implements TaggingRepository {
     private static Topic topic(ResultSet rs) throws SQLException {
         return new Topic(new TopicId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
                 rs.getString("name"), rs.getString("definition"));
+    }
+
+    private static DocumentTagging tagging(ResultSet rs) throws SQLException {
+        return new DocumentTagging(new DocumentId(Sql.uuid(rs, "document_id")),
+                new CompanyId(Sql.uuid(rs, "company_id")), rs.getInt("topic_list_version"),
+                TaggingStatus.valueOf(rs.getString("status")), rs.getInt("attempt_count"),
+                Sql.optionalInstant(rs, "deadline_at"), Optional.ofNullable(rs.getString("failure_reason")),
+                Optional.ofNullable(rs.getString("tagger_version")));
     }
 
     private static DocumentTopic documentTopic(ResultSet rs) throws SQLException {

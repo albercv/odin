@@ -17,7 +17,7 @@ ODIN_API_PORT=$DEMO_API_PORT
 ODIN_PANEL_PORT=$DEMO_PANEL_PORT
 ODIN_MCP_PORT=$DEMO_MCP_PORT
 EOF
-COMPOSE=(docker compose -p odin-demo -f "$ROOT/deploy/compose.yaml" -f "$ROOT/deploy/demo/compose.reader-stub.yaml" --env-file "$ENV_FILE")
+COMPOSE=(docker compose -p odin-demo -f "$ROOT/deploy/compose.yaml" -f "$ROOT/deploy/demo/compose.reader-stub.yaml" -f "$ROOT/deploy/demo/compose.tagger-stub.yaml" --env-file "$ENV_FILE")
 cleanup() {
   [ $? -eq 0 ] || { echo "== últimas líneas del registro de postgres y la API =="; "${COMPOSE[@]}" logs --no-color --tail 40 postgres api 2>&1 || true; }
   "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TMP"; }

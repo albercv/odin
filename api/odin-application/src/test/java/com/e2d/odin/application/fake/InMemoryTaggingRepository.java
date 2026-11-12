@@ -19,6 +19,7 @@ import com.e2d.odin.domain.topic.TopicId;
 import com.e2d.odin.domain.topic.TopicSource;
 import com.e2d.odin.domain.topic.TopicState;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,6 +40,22 @@ public class InMemoryTaggingRepository implements TaggingRepository {
         this.orgs = orgs;
         this.docs = docs;
         this.topics = topics;
+        docs.useActiveTopics((document, topic) -> documentTopics.getOrDefault(document, Map.of()).values().stream()
+                .anyMatch(t -> t.topicId().equals(topic) && t.state() == TopicState.ACTIVE));
+    }
+
+    /** Un tema ya guardado de un documento, sin pasar por el etiquetador ni por una decisión. */
+    public void seed(DocumentId documentId, TopicId topicId, TopicSource source, TopicState state) {
+        documentTopics.computeIfAbsent(documentId, k -> new LinkedHashMap<>()).put(topicId,
+                new DocumentTopic(documentId, topicId, source, state,
+                        source == TopicSource.AI ? Optional.of("modelo; instrucciones v1") : Optional.empty(),
+                        Optional.empty(), Optional.empty()));
+    }
+
+    /** El estado del etiquetado de un documento con la versión actual de la lista. */
+    public void seedRow(Document d, TaggingStatus status) {
+        rows.put(d.id(), new DocumentTagging(d.id(), d.companyId(), topics.listVersion(d.companyId()), status, 1,
+                Optional.empty(), Optional.empty(), Optional.empty()));
     }
 
     public Optional<DocumentTagging> rowOf(DocumentId id) {
@@ -136,6 +153,30 @@ public class InMemoryTaggingRepository implements TaggingRepository {
                 .map(d -> documentTopics.getOrDefault(documentId, Map.of()).values().stream()
                         .filter(t -> topics.find(d.companyId(), t.topicId()).isPresent()).toList())
                 .orElse(List.of());
+    }
+
+    @Override
+    public Map<DocumentId, List<DocumentTopic>> activeTopicsOf(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> documentIds) {
+        Map<DocumentId, List<DocumentTopic>> found = new LinkedHashMap<>();
+        for (DocumentId id : documentIds) {
+            List<DocumentTopic> active = docs.findById(scope, visibility, id).map(d -> documentTopics
+                    .getOrDefault(id, Map.of()).values().stream().filter(t -> t.state() == TopicState.ACTIVE)
+                    .filter(t -> topics.find(d.companyId(), t.topicId()).isPresent()).toList()).orElse(List.of());
+            if (!active.isEmpty()) {
+                found.put(id, active);
+            }
+        }
+        return found;
+    }
+
+    @Override
+    public Map<DocumentId, DocumentTagging> taggingOf(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> documentIds) {
+        Map<DocumentId, DocumentTagging> found = new LinkedHashMap<>();
+        documentIds.stream().filter(id -> docs.findById(scope, visibility, id).isPresent())
+                .filter(rows::containsKey).forEach(id -> found.put(id, rows.get(id)));
+        return found;
     }
 
     @Override

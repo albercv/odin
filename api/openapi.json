@@ -35,6 +35,60 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/topics/{topicId}" : {
+      "put" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "addTopic",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "removeTopic",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/documents/{documentId}/superseded-by" : {
       "put" : {
         "tags" : [ "admin-document-controller" ],
@@ -371,6 +425,26 @@
         "responses" : {
           "204" : {
             "description" : "Sesión cerrada"
+          }
+        }
+      }
+    },
+    "/v1/admin/documents/{documentId}/topics/retag" : {
+      "post" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "retag",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
           }
         }
       }
@@ -1230,6 +1304,14 @@
             "format" : "uuid"
           }
         }, {
+          "name" : "topicId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
           "name" : "offset",
           "in" : "query",
           "required" : false,
@@ -1337,6 +1419,60 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/documents/{documentId}/topics" : {
+      "get" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "documentTopics",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentTopicsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/tagging-status" : {
+      "get" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "taggingStatus",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TaggingStatusView"
                 }
               }
             }
@@ -1570,9 +1706,34 @@
               "type" : "integer",
               "format" : "int32"
             }
+          },
+          "taggingStatus" : {
+            "type" : "string"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicLabelView"
+            }
           }
         },
-        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "uploadedAt" ]
+        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
+      },
+      "TopicLabelView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name", "source" ]
       },
       "Capabilities" : {
         "type" : "object",
@@ -2181,9 +2342,18 @@
             "items" : {
               "$ref" : "#/components/schemas/MeProject"
             }
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicView"
+            }
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/MeTagging"
           }
         },
-        "required" : [ "company", "displayName", "projects", "role", "userId" ]
+        "required" : [ "company", "displayName", "projects", "role", "tagging", "topics", "userId" ]
       },
       "MeCompany" : {
         "type" : "object",
@@ -2218,6 +2388,16 @@
           }
         },
         "required" : [ "id", "name" ]
+      },
+      "MeTagging" : {
+        "type" : "object",
+        "properties" : {
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "pendingDocuments" ]
       },
       "Health" : {
         "type" : "object",
@@ -2260,9 +2440,15 @@
           },
           "replacement" : {
             "$ref" : "#/components/schemas/Replacement"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicLabelView"
+            }
           }
         },
-        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "uploadedAt" ]
+        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -2350,6 +2536,101 @@
           }
         },
         "required" : [ "code", "id", "name" ]
+      },
+      "DocumentTopicView" : {
+        "type" : "object",
+        "properties" : {
+          "topicId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "taggerVersion" : {
+            "type" : "string"
+          },
+          "decidedByName" : {
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "name", "source", "state", "topicId" ]
+      },
+      "DocumentTopicsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DocumentTopicView"
+            }
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/TaggingInfo"
+          }
+        },
+        "required" : [ "topics" ]
+      },
+      "TaggingInfo" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "topicListVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "failureReason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "status", "topicListVersion" ]
+      },
+      "TaggingStatusView" : {
+        "type" : "object",
+        "properties" : {
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "oldestPendingSince" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "window" : {
+            "$ref" : "#/components/schemas/TaggingWindowView"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "pendingDocuments", "timezone", "window" ]
+      },
+      "TaggingWindowView" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "always" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "always" ]
       },
       "ProjectMemberView" : {
         "type" : "object",

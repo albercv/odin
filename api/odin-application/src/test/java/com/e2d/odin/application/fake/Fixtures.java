@@ -28,6 +28,14 @@ public final class Fixtures {
     private Fixtures() {
     }
 
+    /** El caso de uso con repositorios de temas vacíos, para quien no los mira. */
+    public static com.e2d.odin.application.organization.DescribeMe describeMe(InMemoryOrganizationRepository orgs,
+            InMemoryProjectMemberRepository members) {
+        InMemoryTopicRepository topics = new InMemoryTopicRepository();
+        return new com.e2d.odin.application.organization.DescribeMe(orgs, members, topics,
+                new InMemoryTaggingRepository(orgs, new InMemoryDocumentRepository(), topics));
+    }
+
     public static CompanyId company(InMemoryOrganizationRepository orgs) {
         return companyWith(orgs, EnumSet.allOf(Capability.class));
     }

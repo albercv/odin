@@ -276,13 +276,15 @@ class MigrationFromPhaseOneIT {
     void migratedWorkerStillFindsTheDocumentOfAProjectDeletedBeforeMigratingButNotItsFilter() {
         ScopedTransactions tx = new ScopedTransactions(database);
         ListDocuments list = new ListDocuments(new PostgresOrganizationRepository(tx),
-                new PostgresProjectMemberRepository(tx), new PostgresDocumentRepository(tx));
+                new PostgresProjectMemberRepository(tx), new PostgresDocumentRepository(tx), new PostgresTopicRepository(tx),
+                new PostgresTaggingRepository(tx));
         Actor worker = new Actor(new UserId(ACTIVE_WORKER), "Persona", Role.WORKER, Set.of(new CompanyId(COMPANY)));
 
-        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty())).extracting(e -> e.document().id().value())
+        assertThat(list.execute(worker, Optional.empty(), Optional.empty(), 0, Optional.empty()))
+                .extracting(e -> e.entry().document().id().value())
                 .contains(DOCUMENT_IN_DELETED_PROJECT);
-        assertThatThrownBy(() -> list.execute(worker, Optional.of(new ProjectId(DELETED_PROJECT)), 0,
-                Optional.empty())).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> list.execute(worker, Optional.of(new ProjectId(DELETED_PROJECT)),
+                Optional.empty(), 0, Optional.empty())).isInstanceOf(NotFoundException.class);
     }
 
     @Test

@@ -35,6 +35,17 @@ services:
       ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:?falta ODIN_UPLOAD_MAX_BYTES en deploy/.env}
       ODIN_READER_URL: ${ODIN_READER_URL:-}
       ODIN_READER_TOKEN: ${ODIN_READER_TOKEN:-}
+      # etiquetado por tema: sin URL no se etiqueta. Usa el Ollama del equipo (host.docker.internal), sin servicio propio
+      ODIN_TAGGER_URL: ${ODIN_TAGGER_URL:-}
+      ODIN_TAGGER_MODEL: ${ODIN_TAGGER_MODEL:-qwen3.5:9b}
+      ODIN_TAGGER_WINDOW: ${ODIN_TAGGER_WINDOW:-22:00-07:00}
+      ODIN_TAGGER_TIMEOUT: ${ODIN_TAGGER_TIMEOUT:-PT5M}
+      ODIN_TAGGER_CHUNK_CHARS: ${ODIN_TAGGER_CHUNK_CHARS:-6000}
+      ODIN_TAGGER_NUM_GPU: ${ODIN_TAGGER_NUM_GPU:-}
+      ODIN_TAGGER_NUM_THREAD: ${ODIN_TAGGER_NUM_THREAD:-}
+      ODIN_TIMEZONE: ${ODIN_TIMEZONE:-Europe/Madrid}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - originals:/var/lib/odin/originals
     ports:
