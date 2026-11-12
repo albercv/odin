@@ -11,9 +11,11 @@ def _usable(runs: list[dict]) -> list[dict]:
     return [r for r in runs if r.get("error") is None and r.get("respuesta") is not None]
 
 
-def answer_signature(answer: dict) -> tuple[bool, frozenset[str]]:
-    cifras = frozenset(puntuar.TOKEN_NUM.findall(puntuar.normalise(answer["respuesta"])))
-    return (bool(answer["no_lo_se"]), cifras)
+def answer_signature(answer: dict) -> tuple[bool, frozenset[str], frozenset[tuple]]:
+    """Firma de una respuesta: abstención, cifras normalizadas y páginas citadas (documentId, página)."""
+    figures = frozenset(puntuar.TOKEN_NUM.findall(puntuar.normalise(answer["respuesta"])))
+    pages = frozenset((c.get("documentId"), c.get("pagina")) for c in answer["citas"])
+    return (bool(answer["no_lo_se"]), figures, pages)
 
 
 def single(runs: list[dict]) -> dict:

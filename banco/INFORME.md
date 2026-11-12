@@ -65,6 +65,7 @@ singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 
 - **Muestra:** estratos por `sample.strata`, en orden alfabético; cada estrato se baraja con `random.Random(seed)` y se reparte por turnos.
 - **Semilla de los jueces:** `sample.seed + índice del juez` (0 sin muestra). Cada juez baraja las fuentes con su propia semilla.
 - **Recuperación por enfoque:** de las preguntas con citas resueltas, las que tienen alguna página esperada vista o citada por algún buscador de ese enfoque. Las preguntas sin citas (abstenciones) no cuentan.
+- **Firma de mayoría:** `answer_signature` = (`no_lo_se`, cifras normalizadas, conjunto de páginas citadas `(documentId, pagina)`). Así, dos respuestas sin cifras que citan páginas distintas no coinciden; la redacción sigue sin contar.
 - **Acuerdo entre buscadores:** `k` = cuántos buscadores coinciden con la firma mayoritaria. El acierto de cada grupo es el de la respuesta final, no el del buscador.
 - **Jueces frente al script:** kappa y tasas solo con preguntas con clave o abstención. Con una sola clase en el script valen «no calculable». El PPI solo se calcula si hay preguntas sin clave; en la batería de desarrollo no hay ninguna.
 - **Coste:** «gasto notificado» es el total del libro (ver arriba). El coste de la estrategia por respuesta suma todos los buscadores (incluidos los de caché) más el redactor, dividido por el número de preguntas.

@@ -32,9 +32,15 @@ def _consulta(*vistos):
 
 class SignatureTest(unittest.TestCase):
     def test_signature_ignores_wording(self):
-        a = _answer("La franquicia es de 300 €")
-        b = _answer("300 euros de franquicia")
+        a = _answer("La franquicia es de 300 €", citas=[_cita("d1", 1)])
+        b = _answer("300 euros de franquicia", citas=[_cita("d1", 1)])
         self.assertEqual(answer_signature(a), answer_signature(b))
+
+    def test_signature_differs_on_cited_pages_even_without_figures(self):
+        self.assertNotEqual(
+            answer_signature(_answer("no consta", citas=[_cita("d1", 1)])),
+            answer_signature(_answer("no consta", citas=[_cita("d1", 2)])),
+        )
 
     def test_signature_differs_on_numbers(self):
         self.assertNotEqual(
@@ -78,10 +84,18 @@ class MajorityVoteTest(unittest.TestCase):
     def test_majority_representative_has_most_citations(self):
         runs = [
             _run("a", 0, _answer("300 €", citas=[_cita("d1", 1)])),
-            _run("b", 0, _answer("300 euros", citas=[_cita("d1", 1), _cita("d2", 2)])),
+            _run("b", 0, _answer("300 euros", citas=[_cita("d1", 1), _cita("d1", 1)])),  # mismas páginas, más citas
             _run("c", 0, _answer("500 €")),
         ]
         self.assertEqual(len(majority_vote(runs)["citas"]), 2)
+
+    def test_majority_splits_figureless_answers_by_cited_pages(self):
+        runs = [
+            _run("a", 0, _answer("no consta", citas=[_cita("d1", 1)])),
+            _run("b", 0, _answer("no consta", citas=[_cita("d1", 2)])),
+            _run("c", 0, _answer("no consta", citas=[_cita("d1", 2)])),
+        ]
+        self.assertEqual(majority_vote(runs)["citas"][0]["pagina"], 2)
 
     def test_tie_returns_no_consta_with_trace(self):
         runs = [
