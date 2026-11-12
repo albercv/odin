@@ -109,14 +109,14 @@ def run_claude_judge(material, rubric_text, model, claude_bin, timeout):
     return _record(model, _from_result(result), cost, tokens, t0, _result_error(result))
 
 
-def run_ollama_judge(material, rubric_text, model, url, timeout):
+def run_ollama_judge(material, rubric_text, model, url, timeout, think=False):
     host = urllib.parse.urlsplit(url).hostname
     if host not in LOCAL_HOSTS:
         raise ValueError(f"el juez de Ollama solo admite hosts locales (127.0.0.1, localhost, ::1), no {host}")
     t0 = time.monotonic()
     model = model.removeprefix(OLLAMA_PREFIX)
     body = {"model": model, "messages": [{"role": "system", "content": rubric_text}, {"role": "user", "content": material}],
-            "stream": False, "format": VERDICT_SCHEMA, "options": {"temperature": 0}}
+            "stream": False, "format": VERDICT_SCHEMA, "options": {"temperature": 0}, "think": think}
     request = urllib.request.Request(f"{url}/api/chat", data=json.dumps(body).encode("utf-8"), method="POST",
                                      headers={"Content-Type": "application/json"})
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # local: ni HTTP_PROXY ni el proxy del sistema

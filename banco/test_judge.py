@@ -165,6 +165,20 @@ class OllamaJudgeTest(unittest.TestCase):
             record = run_ollama_judge("material", RUBRIC, "ollama:qwen3.5:9b", url, 30)
         self.assertEqual(record["verdict"], VALID_YES)
 
+    def test_request_sends_think_false_by_default(self):
+        received = []
+        url, stop = start_fake_ollama("ok", received)
+        self.addCleanup(stop)
+        run_ollama_judge("material", RUBRIC, "ollama:qwen", url, 30)
+        self.assertIs(received[0]["think"], False)
+
+    def test_request_sends_think_true_when_configured(self):
+        received = []
+        url, stop = start_fake_ollama("ok", received)
+        self.addCleanup(stop)
+        run_ollama_judge("material", RUBRIC, "ollama:qwen", url, 30, think=True)
+        self.assertIs(received[0]["think"], True)
+
     def test_ollama_prefix_is_stripped_before_request(self):
         received = []
         url, stop = start_fake_ollama("ok", received)

@@ -337,7 +337,8 @@ def _one_judge(sess, index, spec, rubric, item, answer):
     rng = random.Random(sess.seed + index)
     material = judge.judge_material(item, answer, lambda ident, pagina: scoring.page_text(ident, pagina, sess.ctx), rng)
     if not _is_paid(spec):
-        return judge.run_ollama_judge(material, rubric, spec.model, sess.layout.ollama_url, sess.layout.timeout)
+        return judge.run_ollama_judge(material, rubric, spec.model, sess.layout.ollama_url, spec.timeout_s,
+                                      think=spec.think)
     return judge.run_claude_judge(material, rubric, spec.model, sess.layout.claude_judge_bin, sess.layout.timeout)
 
 

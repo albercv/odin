@@ -13,6 +13,7 @@ PLAIN_MODELS = ("haiku", "sonnet")
 OLLAMA_MODEL = re.compile(r"ollama:[A-Za-z0-9._:-]+")
 PLAIN_NAME = re.compile(r"[A-Za-z][A-Za-z0-9]*")
 AT_LEAST = re.compile(r"atLeast:(\d+)")
+JUDGE_TIMEOUT_S = 600
 ROOT = "la configuración"
 
 
@@ -32,6 +33,8 @@ class JudgeSpec:
     rubric: str
     count: int
     model: str
+    think: bool = False  # solo jueces ollama: «think» de la petición /api/chat
+    timeout_s: int = JUDGE_TIMEOUT_S  # solo jueces ollama
 
 
 @dataclass(frozen=True)
@@ -132,16 +135,30 @@ def _searchers(raw: dict, base_dir: Path) -> tuple[SearcherSpec, ...]:
     )
 
 
+def _judge_options(item: dict, model: str) -> tuple[bool, int]:
+    """«think» y «timeoutS» solo tienen efecto en los jueces de Ollama: en otros se rechazan, no se ignoran."""
+    where = "[[judges]]"
+    if not model.startswith("ollama:") and ("think" in item or "timeoutS" in item):
+        raise ConfigError(f"«think» y «timeoutS» en {where} solo se admiten en jueces ollama:")
+    think = item.get("think", False)
+    if not isinstance(think, bool):
+        raise ConfigError(f"«think» en {where} debe ser true o false")
+    timeout_s = _positive(item, "timeoutS", where, int) if "timeoutS" in item else JUDGE_TIMEOUT_S
+    return think, timeout_s
+
+
 def _judges(raw: dict, base_dir: Path) -> tuple[JudgeSpec, ...]:
     where = "[[judges]]"
-    return tuple(
-        JudgeSpec(
+    judges = []
+    for item in _table_list(raw, "judges"):
+        model = _model(item, where, judge=True)
+        think, timeout_s = _judge_options(item, model)
+        judges.append(JudgeSpec(
             rubric=_file_name(item, "rubric", where, "rubricas", base_dir),
             count=_positive(item, "count", where, int),
-            model=_model(item, where, judge=True),
-        )
-        for item in _table_list(raw, "judges")
-    )
+            model=model, think=think, timeout_s=timeout_s,
+        ))
+    return tuple(judges)
 
 
 def _combiner(raw: dict) -> CombinerSpec:

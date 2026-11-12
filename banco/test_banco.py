@@ -254,6 +254,15 @@ class RunTest(Harness):
         self.assertFalse((folder / "curvas.json").exists())
         self.assertEqual(len(self.read_jsonl(folder, "turnos.jsonl")), 2)
 
+    def test_ollama_judge_gets_configured_timeout_and_think(self):
+        path = self.config()
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            'model = "ollama:qwen3.5:9b"', 'model = "ollama:qwen3.5:9b"\ntimeoutS = 7'), encoding="utf-8")
+        with mock.patch("banco.judge.run_ollama_judge", side_effect=judge.run_ollama_judge) as ollama:
+            self.run_cli(path)
+        self.assertEqual(ollama.call_args.args[4], 7)
+        self.assertIs(ollama.call_args.kwargs["think"], False)
+
     def test_no_consta_answers_are_not_judged(self):
         real = ejecutar.responder
 
