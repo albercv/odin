@@ -157,4 +157,18 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         }
         return Optional.empty();
     }
+
+    @Override
+    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter) {
+        for (Document d : new ArrayList<>(documents.values())) {
+            boolean stale = d.status() == DocumentStatus.READER_PROCESSING
+                    && d.processingStartedAt().map(t -> !t.plus(staleAfter).isAfter(now)).orElse(true);
+            if (d.status() == DocumentStatus.PENDING_READER || stale) {
+                Document claimed = d.startReading(now);
+                documents.put(claimed.id(), claimed);
+                return Optional.of(claimed);
+            }
+        }
+        return Optional.empty();
+    }
 }

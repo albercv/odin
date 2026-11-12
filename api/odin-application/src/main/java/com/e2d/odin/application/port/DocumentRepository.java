@@ -44,4 +44,7 @@ public interface DocumentRepository {
     Optional<DocumentPage> findPage(CompanyScope scope, ProjectVisibility visibility, DocumentId id, int pageNumber);
 
     Optional<Document> claimNextForProcessing(Instant now, Duration staleAfter);
+
+    /** Toma el siguiente documento del carril del lector (en espera o con la lectura caducada) y lo pasa a lectura. */
+    Optional<Document> claimNextForReader(Instant now, Duration staleAfter);
 }

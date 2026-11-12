@@ -156,6 +156,11 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 }));
     }
 
+    @Override
+    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter) {
+        throw new UnsupportedOperationException("Pendiente de la tarea 5");
+    }
+
     private static void upsert(JdbcClient jdbc, Document d) {
         jdbc.sql("""
                 INSERT INTO document (id, company_id, project_id, title, filename, format, sha256, status,
