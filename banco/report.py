@@ -19,12 +19,13 @@ def _read_origin(folder):
 
 def read_folder(folder):
     ids = json.loads((folder / "ids.json").read_text(encoding="utf-8"))
-    curvas = folder / "curvas.json"
-    parada = folder / "PARADA.txt"
-    return {"ids": ids, "runs": _read_jsonl(folder / "buscadores.jsonl"), "turnos": _read_jsonl(folder / "turnos.jsonl"),
+    curves_file = folder / "curvas.json"
+    stop_file = folder / "PARADA.txt"
+    return {"ids": ids, "runs": _read_jsonl(folder / "buscadores.jsonl"), "turn_runs": _read_jsonl(folder / "turnos.jsonl"),
             "finals": _read_jsonl(folder / "final.jsonl"), "verdicts": _read_jsonl(folder / "veredictos.jsonl"),
-            "curvas": json.loads(curvas.read_text(encoding="utf-8")) if curvas.exists() else None,
-            "origen": _read_origin(folder), "stopped": parada.read_text(encoding="utf-8").strip() if parada.exists() else None}
+            "curves": json.loads(curves_file.read_text(encoding="utf-8")) if curves_file.exists() else None,
+            "origin": _read_origin(folder),
+            "stopped": stop_file.read_text(encoding="utf-8").strip() if stop_file.exists() else None}
 
 
 def rebuild(folder, layout):
@@ -33,11 +34,11 @@ def rebuild(folder, layout):
     data = read_folder(folder)
     ctx = scoring.build_context(layout.exp, {"doc_ruta": data["ids"]["documentos"], "ficha_f": data["ids"]["fichas"]})
     wanted = set(data["ids"]["preguntas"])
-    items = [i for i in json.loads(layout.bateria.read_text(encoding="utf-8")) if i["id"] in wanted]
-    summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turnos"])
-    summary.update(origen=data["origen"], stopped=data["stopped"])
-    if data["curvas"] is not None:
-        summary["curvas"] = data["curvas"]
+    items = [i for i in json.loads(layout.battery_file.read_text(encoding="utf-8")) if i["id"] in wanted]
+    summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"])
+    summary.update(origen=data["origin"], stopped=data["stopped"])
+    if data["curves"] is not None:
+        summary["curvas"] = data["curves"]
     write_report(folder, summary)
     return summary
 
@@ -56,12 +57,12 @@ def _num(value, digits=2):
     return "no calculable" if value is None else f"{value:.{digits}f}".replace(".", ",")
 
 
-def _tokens(value):
-    return "no calculable" if value is None else f"{value:.0f}"
-
-
 def _usd(value):
     return "no calculable" if value is None else f"{value:.4f} USD".replace(".", ",")
+
+
+def _tokens(value):
+    return "no calculable" if value is None else f"{value:.0f}"
 
 
 def _origin_lines(summary):
@@ -111,27 +112,31 @@ def _judge_lines(summary):
     lines = ["## Jueces", ""]
     if "judges" not in summary:
         return lines + ["Sin respuestas que juzgar.", ""]
-    jue = summary["judges"]
-    ppi = jue["ppi"]
+    judges = summary["judges"]
+    ppi = judges["ppi"]
     ppi_text = ("no calculable: no hay preguntas sin clave" if ppi is None else
                 f"{_num(ppi['estimacion'], 3)} (intervalo {_num(ppi['inferior'], 3)} a {_num(ppi['superior'], 3)})")
-    return lines + [f"- Kappa de Cohen frente al script: {_num(jue['kappa'], 3)}",
-                    f"- Aceptaciones falsas: {_pct(jue['falseAcceptRate'])}",
-                    f"- Rechazos falsos: {_pct(jue['falseRejectRate'])}",
-                    f"- Preguntas sin veredicto: {jue['undecided']}",
+    return lines + [f"- Kappa de Cohen frente al script: {_num(judges['kappa'], 3)}",
+                    f"- Aceptaciones falsas: {_pct(judges['falseAcceptRate'])}",
+                    f"- Rechazos falsos: {_pct(judges['falseRejectRate'])}",
+                    f"- Preguntas sin veredicto: {judges['undecided']}",
                     f"- PPI: {ppi_text}", ""]
 
 
 def _cost_lines(summary):
     cost = summary["cost"]
+    unknown = cost.get("unknownCostRecords", 0)
     lines = ["## Coste y tiempo", "",
              f"- Gasto notificado: {_usd(cost['notifiedUsd'])} (ejecuciones nuevas, redactor y jueces)",
              f"- Coste de la estrategia por respuesta: {_usd(cost['strategyUsdPerAnswer'])}",
              f"- Tokens por respuesta: {_tokens(cost['tokensPerAnswer'])} (buscadores {_tokens(cost['searchers']['tokensPerAnswer'])}, "
-             f"redactor {_tokens(cost['combiner']['tokensPerAnswer'])}, jueces {_tokens(cost['judges']['tokensPerAnswer'])})"]
+             f"redactor {_tokens(cost['combiner']['tokensPerAnswer'])}, jueces {_tokens(cost['judges']['tokensPerAnswer'])})",
+             f"- Registros de pago con coste desconocido: {unknown}"
+             + (" (el presupuesto se dio por agotado: no se lanzaron más llamadas de pago)" if unknown else "")]
     if "latency" in summary:
         lat = summary["latency"]
-        lines.append(f"- Latencia por respuesta: p50 {_num(lat['p50'], 1)} s; p95 {_num(lat['p95'], 1)} s")
+        lines.append(f"- Latencia estimada (jueces en paralelo) por respuesta: p50 {_num(lat['p50'], 1)} s; "
+                     f"p95 {_num(lat['p95'], 1)} s")
     return lines + [""]
 
 
@@ -139,25 +144,25 @@ def _mix_text(mix):
     return ", ".join(f"{approach} ×{count}" for approach, count in mix.items())
 
 
-def _curve_lines(curvas):
+def _curve_lines(curves):
     lines = ["## Curvas", "", f"Variación de single por defecto (media de la mitad del intervalo): "
-             f"{_pct(curvas['variacion'])}.", "",
+             f"{_pct(curves['variacion'])}.", "",
              "| Mezcla | Ejecuciones | Acierto medio [mín, máx] | Tokens medios | Coste medio | Latencia p50 / p95 | Supera single |",
              "|---|---|---|---|---|---|---|"]
-    for row in curvas["mezclas"]:
-        supera = "no aplica" if row["supera_single"] is None else ("sí" if row["supera_single"] else "no")
+    for row in curves["mezclas"]:
+        beats = "no aplica" if row["supera_single"] is None else ("sí" if row["supera_single"] else "no")
         lines.append(f"| {_mix_text(row['mix'])} | {row['n']} | {_pct(row['accuracy_mean'])} "
                      f"[{_pct(row['accuracy_min'])}, {_pct(row['accuracy_max'])}] | {_tokens(row['tokens_mean'])} | "
-                     f"{_usd(row['cost_mean'])} | {_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | {supera} |")
+                     f"{_usd(row['cost_mean'])} | {_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s | {beats} |")
     lines += ["", "| Turnos máximos | Acierto | Tokens medios | Latencia p50 / p95 |", "|---|---|---|---|"]
     lines += [f"| {row['max_turns']} | {_pct(row['accuracy_mean'])} | {_tokens(row['tokens_mean'])} | "
-              f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s |" for row in curvas["single"]]
+              f"{_num(row['latency_p50'], 1)} / {_num(row['latency_p95'], 1)} s |" for row in curves["single"]]
     return lines + [""]
 
 
 def render(summary):
-    origen = summary.get("origen", {})
-    parts = [f"# Informe del banco: {origen.get('Configuración', '')}", ""]
+    origin = summary.get("origen", {})
+    parts = [f"# Informe del banco: {origin.get('Configuración', '')}", ""]
     parts += _origin_lines(summary) + _accuracy_lines(summary) + _grave_lines(summary) + _approach_lines(summary)
     parts += _agreement_lines(summary) + _judge_lines(summary) + _cost_lines(summary)
     if "curvas" in summary:

@@ -1,5 +1,6 @@
 """Pruebas de la orden de entrada del banco (run, sweep, report). Con claude, juez y Ollama falsos; nunca los reales."""
 import contextlib
+import io
 import json
 import os
 import tempfile
@@ -7,10 +8,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from banco import banco
+from banco import banco, judge, run
 from banco.config import ConfigError
 from banco.fakes.fake_ollama import start_fake_ollama
 from banco.layout import Layout
+from banco.medir_path import ejecutar
 from banco.run import draw_sample, prepare
 
 BANCO = Path(__file__).resolve().parent
@@ -64,7 +66,7 @@ def fake_env(**env):
 
 
 def _real_items(n):
-    """Las primeras n preguntas de la batería con su cita resuelta: su documento se mapea a un id falso."""
+    """Las primeras n preguntas de la batería con cita resuelta y clave: su documento se mapea a un id falso."""
     items = json.loads((EXP / "datos" / "bateria.json").read_text(encoding="utf-8"))
     return [i for i in items if i["citas_resueltas"] and i.get("claves")][:n]
 
@@ -77,23 +79,25 @@ class Harness(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
         self.items = _real_items(3)
-        self.estado = self.tmp / "estado"
-        self.estado.mkdir()
+        self.state_dir = self.tmp / "estado"
+        self.state_dir.mkdir()
         doc_ruta = {f"doc-{n}": item["citas_resueltas"][0]["doc"] for n, item in enumerate(self.items, start=1)}
         claves = {item["actor"]: "clave-de-prueba" for item in self.items}
-        carga = {"url_mcp": "http://127.0.0.1:1/", "claves": claves, "doc_ruta": doc_ruta, "ficha_f": {}}
-        (self.estado / "carga.json").write_text(json.dumps(carga), encoding="utf-8")
-        bateria = self.tmp / "bateria.json"
-        bateria.write_text(json.dumps(self.items, ensure_ascii=False), encoding="utf-8")
+        stack = {"url_mcp": "http://127.0.0.1:1/", "claves": claves, "doc_ruta": doc_ruta, "ficha_f": {}}
+        (self.state_dir / "carga.json").write_text(json.dumps(stack), encoding="utf-8")
+        battery_file = self.tmp / "bateria.json"
+        battery_file.write_text(json.dumps(self.items, ensure_ascii=False), encoding="utf-8")
         url, stop = start_fake_ollama("ok")
         self.addCleanup(stop)
-        self.layout = Layout(banco=BANCO, exp=EXP, bateria=bateria, estado=self.estado, resultados=self.tmp / "resultados",
-                             cache=self.tmp / "cache", repo=BANCO.parent, claude_bin=FAKE_CLAUDE, claude_juez_bin=FAKE_JUDGE,
-                             ollama_url=url, timeout=30)
+        self.layout = Layout(banco=BANCO, exp=EXP, battery_file=battery_file, state_dir=self.state_dir,
+                             results_dir=self.tmp / "resultados", cache=self.tmp / "cache", repo=BANCO.parent,
+                             claude_bin=FAKE_CLAUDE, claude_judge_bin=FAKE_JUDGE, ollama_url=url, timeout=30)
 
-    def config(self, budget=5.0, kind="majorityVote", combiner_model="", sweep=""):
+    def config(self, budget=5.0, kind="majorityVote", combiner_model="", sweep="", battery="desarrollo", mode="explore"):
         path = self.tmp / "experimento.toml"
-        path.write_text(CONFIG.format(budget=budget, kind=kind, combiner_model=combiner_model, sweep=sweep), encoding="utf-8")
+        text = CONFIG.format(budget=budget, kind=kind, combiner_model=combiner_model, sweep=sweep)
+        text = text.replace('battery = "desarrollo"', f'battery = "{battery}"').replace('mode = "explore"', f'mode = "{mode}"')
+        path.write_text(text, encoding="utf-8")
         return path
 
     def read_jsonl(self, folder, name):
@@ -104,97 +108,199 @@ class Harness(unittest.TestCase):
         self.assertEqual(len(folders), 1)
         return folders[0]
 
+    def run_cli(self, config, env=None):
+        with fake_env(FAKE_VEREDICTO="si", **(env or {})):
+            return banco.main(["run", "--config", str(config)], layout=self.layout)
+
 
 class RunTest(Harness):
     def test_end_to_end_with_fakes(self):
-        with fake_env(FAKE_VEREDICTO="si"):
-            code = banco.main(["run", "--config", str(self.config())], layout=self.layout)
+        code = self.run_cli(self.config())
         folder = self.only_folder()
         self.assertEqual(code, 0)
         for name in ("ORIGEN.txt", "ids.json", "buscadores.jsonl", "final.jsonl", "veredictos.jsonl", "resumen.json", "informe.md"):
             self.assertTrue((folder / name).exists(), name)
-        resumen = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
-        self.assertEqual(resumen["accuracy"]["total"], 3)
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["accuracy"]["total"], 3)
         for key in ("kappa", "falseAcceptRate"):
-            self.assertIn(key, resumen["judges"])
-        self.assertIn("p95", resumen["latency"])
-        self.assertIn("notifiedUsd", resumen["cost"])
-        informe = (folder / "informe.md").read_text(encoding="utf-8")
-        self.assertIn("Acierto", informe)
-        self.assertIn("Jueces", informe)
+            self.assertIn(key, summary["judges"])
+        self.assertIn("p95", summary["latency"])
+        self.assertIn("notifiedUsd", summary["cost"])
+        report = (folder / "informe.md").read_text(encoding="utf-8")
+        self.assertIn("Acierto", report)
+        self.assertIn("Jueces", report)
         self.assertEqual(len(self.read_jsonl(folder, "buscadores.jsonl")), 6)
         self.assertEqual(len(self.read_jsonl(folder, "veredictos.jsonl")), 3)
         self.assertEqual(len(self.read_jsonl(folder, "final.jsonl")), 3)
 
     def test_report_rebuild_without_ai(self):
-        with fake_env(FAKE_VEREDICTO="si"):
-            banco.main(["run", "--config", str(self.config())], layout=self.layout)
+        self.run_cli(self.config())
         folder = self.only_folder()
-        antes = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        before = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
         (folder / "resumen.json").unlink()
         (folder / "informe.md").unlink()
         with mock.patch("subprocess.run", side_effect=AssertionError("report no debe lanzar procesos")):
             code = banco.main(["report", "--results", str(folder)], layout=self.layout)
         self.assertEqual(code, 0)
-        self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8")), antes)
+        self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8")), before)
         self.assertIn("Acierto", (folder / "informe.md").read_text(encoding="utf-8"))
 
-    def test_aislamiento_roto_para_y_sale_con_codigo_2(self):
-        with fake_env(FAKE_MODO="tools_extra", FAKE_VEREDICTO="si"):
-            code = banco.main(["run", "--config", str(self.config())], layout=self.layout)
+    def test_broken_isolation_stops_with_code_2(self):
+        code = self.run_cli(self.config(), env={"FAKE_MODO": "tools_extra"})
         folder = self.only_folder()
         self.assertEqual(code, 2)
         self.assertIn("AISLAMIENTO ROTO", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         self.assertIn("Parada", (folder / "informe.md").read_text(encoding="utf-8"))
 
-    def test_tope_de_gasto_escribe_lo_que_haya(self):
-        with fake_env(FAKE_VEREDICTO="si"):
-            code = banco.main(["run", "--config", str(self.config(budget=0.0015))], layout=self.layout)
+    def test_budget_cap_writes_partial_results(self):
+        code = self.run_cli(self.config(budget=0.0015))
         folder = self.only_folder()
         self.assertEqual(code, 2)
         self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         self.assertEqual(len(self.read_jsonl(folder, "buscadores.jsonl")), 2)
 
-    def test_composer_compone_la_respuesta_final_con_el_redactor(self):
-        with fake_env(FAKE_VEREDICTO="si"):
-            path = self.config(kind="composer", combiner_model='model = "haiku"')
-            code = banco.main(["run", "--config", str(path)], layout=self.layout)
+    def test_composer_composes_final_answer(self):
+        code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"'))
         self.assertEqual(code, 0)
         finals = self.read_jsonl(self.only_folder(), "final.jsonl")
         self.assertEqual({f["approach"] for f in finals}, {"composer"})
 
+    def test_composer_spend_crossing_cap_stops_and_writes_stop_file(self):
+        # 6 buscadores × 0,001 USD = 0,006; el primer redactor cruza el tope de 0,0065 USD
+        code = self.run_cli(self.config(budget=0.0065, kind="composer", combiner_model='model = "haiku"'))
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        finals = self.read_jsonl(folder, "final.jsonl")
+        self.assertEqual(len(finals), 3)
+        self.assertEqual(sum(f["answer"] is not None for f in finals), 1)
+        self.assertEqual(self.read_jsonl(folder, "veredictos.jsonl"), [])
+
+    def test_judge_spend_crossing_cap_stops_and_writes_stop_file(self):
+        # buscadores 0,006 USD; los dos jueces de Haiku de la primera pregunta llegan a 0,007 USD (tope 0,0068)
+        code = self.run_cli(self.config(budget=0.0068))
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        verdicts = self.read_jsonl(folder, "veredictos.jsonl")
+        self.assertEqual([len(v["judges"]) for v in verdicts], [3, 0, 0])
+        self.assertIsNone(verdicts[1]["jury"])
+
+    def test_sweep_cap_is_cumulative_across_pools(self):
+        # el grupo principal (0,006 USD) no pasa de 0,0075; los turnos suman hasta cruzarlo
+        code = banco.main(["sweep", "--config", str(self.config(budget=0.0075, sweep=SWEEP))], layout=self.layout)
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        self.assertFalse((folder / "curvas.json").exists())
+        self.assertEqual(len(self.read_jsonl(folder, "turnos.jsonl")), 2)
+
+    def test_judge_exception_keeps_other_results(self):
+        real_judge = judge.run_claude_judge
+        calls = []
+
+        def flaky(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 1:
+                raise RuntimeError("fallo del juez")
+            return real_judge(*args, **kwargs)
+
+        with mock.patch("banco.judge.run_claude_judge", side_effect=flaky):
+            code = self.run_cli(self.config())
+        folder = self.only_folder()
+        self.assertEqual(code, 0)
+        verdicts = self.read_jsonl(folder, "veredictos.jsonl")
+        self.assertEqual(len(verdicts), 3)
+        self.assertIn("fallo del juez", verdicts[0]["error"])
+        self.assertIsNone(verdicts[0]["jury"])
+        self.assertTrue(all(v["jury"] is not None for v in verdicts[1:]))
+        self.assertTrue((folder / "resumen.json").exists())
+
+    def test_composer_exception_keeps_other_results(self):
+        real_compose = run.compose
+        calls = []
+
+        def flaky(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 1:
+                raise ValueError("redactor roto")
+            return real_compose(*args, **kwargs)
+
+        with mock.patch("banco.run.compose", side_effect=flaky):
+            code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"'))
+        folder = self.only_folder()
+        self.assertEqual(code, 0)
+        finals = self.read_jsonl(folder, "final.jsonl")
+        self.assertEqual(len(finals), 3)
+        self.assertIn("redactor roto", finals[0]["error"])
+        self.assertIsNone(finals[0]["answer"])
+        self.assertTrue((folder / "resumen.json").exists())
+
+    def test_composer_quota_error_is_stop_reason(self):
+        limit = {"respuesta": None, "error": "Claude AI usage limit reached", "coste_usd": 0.0, "tokens": None,
+                 "duracion_s": 0.0}
+        with mock.patch("banco.run.compose", return_value=limit):
+            code = self.run_cli(self.config(kind="composer", combiner_model='model = "haiku"'))
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("cuota o límite", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+
+    def test_unknown_cost_exhausts_budget_and_is_reported(self):
+        real = ejecutar.responder
+        calls = []
+
+        def without_cost(*args, **kwargs):
+            record = real(*args, **kwargs)
+            calls.append(1)
+            if len(calls) == 1:
+                record["coste_usd"] = None  # registro de pago sin coste numérico
+            return record
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=without_cost):
+            code = self.run_cli(self.config())
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("coste desconocido", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(summary["cost"]["unknownCostRecords"], 1)
+        self.assertIn("coste desconocido", (folder / "informe.md").read_text(encoding="utf-8"))
+
 
 class SweepTest(Harness):
-    def test_sweep_escribe_curvas_y_seccion(self):
+    def test_sweep_writes_curves(self):
         code = banco.main(["sweep", "--config", str(self.config(sweep=SWEEP))], layout=self.layout)
         folder = self.only_folder()
         self.assertEqual(code, 0)
-        curvas = json.loads((folder / "curvas.json").read_text(encoding="utf-8"))
-        self.assertEqual(len(curvas["mezclas"]), 2)
-        self.assertEqual(len(curvas["single"]), 1)
+        curves = json.loads((folder / "curvas.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(curves["mezclas"]), 2)
+        self.assertEqual(len(curves["single"]), 1)
         self.assertIn("Curvas", (folder / "informe.md").read_text(encoding="utf-8"))
 
 
 class SampleAndConfigTest(Harness):
-    def test_muestra_estratificada_es_determinista_y_reparte_por_tipo(self):
+    def test_stratified_sample_is_deterministic(self):
         items = [{"id": f"Q{n}", "tipo": t} for n, t in enumerate(["a", "a", "a", "b", "b", "c"], start=1)]
         picked = draw_sample(items, "tipo", 3, seed=7)
         self.assertEqual(picked, draw_sample(items, "tipo", 3, seed=7))
         self.assertEqual({i["tipo"] for i in picked}, {"a", "b", "c"})
 
-    def test_capa_no_disponible_es_error_claro(self):
+    def test_unsupported_archive_is_clear_error(self):
         text = self.config().read_text(encoding="utf-8").replace('archives = ["ficticio"]', 'archives = ["publico"]')
         path = self.tmp / "publico.toml"
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(ConfigError, "capa no disponible todavía: publico"):
             prepare(path, self.layout)
 
-    def test_reserva_no_existe_en_la_fase_0(self):
-        text = self.config().read_text(encoding="utf-8").replace('battery = "desarrollo"', 'battery = "reserva"')
-        path = self.tmp / "reserva.toml"
-        path.write_text(text.replace('mode = "explore"', 'mode = "closing"'), encoding="utf-8")
+    def test_reserve_battery_not_available_in_phase_0(self):
         with self.assertRaisesRegex(ConfigError, "reserva"):
-            prepare(path, self.layout)
+            prepare(self.config(battery="reserva", mode="closing"), self.layout)
+
+    def test_reserve_battery_with_explore_is_rejected_by_cli(self):
+        errors = io.StringIO()
+        with contextlib.redirect_stderr(errors):
+            code = banco.main(["run", "--config", str(self.config(battery="reserva", mode="explore"))], layout=self.layout)
+        self.assertEqual(code, 1)
+        self.assertIn("reserva", errors.getvalue())
 
 
 if __name__ == "__main__":

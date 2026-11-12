@@ -22,7 +22,7 @@ class JudgesTest(unittest.TestCase):
     def setUp(self):
         self.items = {f"Q{n}": {"id": f"Q{n}", "tipo": "t", "claves": [["x"]]} for n in range(1, 5)}
 
-    def test_kappa_y_tasas_nulas_con_una_sola_clase_en_el_script(self):
+    def test_kappa_and_rates_null_with_single_script_class(self):
         finals = [_final(f"Q{n}", True, _answer("a")) for n in range(1, 5)]
         verdicts = [_verdict(f"Q{n}", True) for n in range(1, 5)]
         block = metrics.judges_block(self.items, finals, verdicts)
@@ -30,7 +30,7 @@ class JudgesTest(unittest.TestCase):
         self.assertIsNone(block["falseAcceptRate"])
         self.assertIsNone(block["falseRejectRate"])
 
-    def test_kappa_y_tasas_con_dos_clases(self):
+    def test_kappa_and_rates_with_two_classes(self):
         script = [True, True, False, False]
         jury = [True, False, False, False]
         finals = [_final(f"Q{n}", s, _answer("a")) for n, s in enumerate(script, start=1)]
@@ -41,14 +41,14 @@ class JudgesTest(unittest.TestCase):
         self.assertEqual(block["falseRejectRate"], 0.5)
         self.assertIsNone(block["ppi"])
 
-    def test_sin_veredicto_cuenta_como_indecisa(self):
+    def test_missing_verdict_counts_as_undecided(self):
         finals = [_final("Q1", True, _answer("a")), _final("Q2", False, _answer("b"))]
         block = metrics.judges_block(self.items, finals, [_verdict("Q1", True)])
         self.assertEqual(block["undecided"], 1)
 
 
 class AgreementTest(unittest.TestCase):
-    def test_agrupa_las_preguntas_por_buscadores_que_coinciden(self):
+    def test_groups_questions_by_agreeing_searchers(self):
         runs = [
             {"id": "Q1", "approach": "main", "replica": r, "respuesta": _answer(t), "error": None}
             for r, t in enumerate(["Cuesta 10 €.", "Cuesta 10 €.", "Cuesta 20 €."])
@@ -62,7 +62,7 @@ class AgreementTest(unittest.TestCase):
 
 
 class CostTest(unittest.TestCase):
-    def test_gasto_notificado_excluye_las_ejecuciones_en_caché(self):
+    def test_notified_cost_excludes_cached_runs(self):
         runs = [{"coste_usd": 0.001, "cached": False, "tokens": {"entrada": 10, "salida": 5}},
                 {"coste_usd": 0.002, "cached": True, "tokens": {"entrada": 10, "salida": 5}}]
         finals = [_final("Q1", True, _answer("a"))]
@@ -73,8 +73,16 @@ class CostTest(unittest.TestCase):
         self.assertEqual(cost["judges"]["tokensPerAnswer"], 3.0)
 
 
+class UnknownCostTest(unittest.TestCase):
+    def test_unknown_cost_is_counted_not_zero(self):
+        runs = [{"coste_usd": None, "cached": False, "tokens": None}, {"coste_usd": 0.001, "cached": False, "tokens": None}]
+        cost = metrics.cost_block(1, runs, [_final("Q1", True, _answer("a"))], [])
+        self.assertEqual(cost["unknownCostRecords"], 1)
+        self.assertEqual(cost["notifiedUsd"], 0.001)
+
+
 class LatencyTest(unittest.TestCase):
-    def test_suma_buscador_mas_lento_redactor_y_juez_mas_lento(self):
+    def test_sums_slowest_searcher_composer_and_judge(self):
         runs = [{"id": "Q1", "duracion_s": 2.0}, {"id": "Q1", "duracion_s": 5.0}]
         finals = [{**_final("Q1", True), "duracion_s": 1.0}]
         verdicts = [_verdict("Q1", True, duracion=3.0)]

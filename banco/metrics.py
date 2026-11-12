@@ -50,11 +50,11 @@ def by_type_block(items, finals):
 
 def grave_block(items, finals, ctx):
     rows = [puntuar.score_item(items[f["id"]], f["answer"], ctx) for f in finals if f["answer"] is not None]
-    resumen = puntuar.summarise(rows)
-    return {"leaks": len(resumen["fugas"]),
+    scored = puntuar.summarise(rows)
+    return {"leaks": len(scored["fugas"]),
             "inventedCitations": sum("inventada" in r["estados_cita"] for r in rows),
-            "falseNoConsta": len(resumen["falsas_abstenciones"]),
-            "supersededAsCurrent": len(resumen["sustituidos_como_vigentes"])}
+            "falseNoConsta": len(scored["falsas_abstenciones"]),
+            "supersededAsCurrent": len(scored["sustituidos_como_vigentes"])}
 
 
 def approach_block(items, runs, ctx, id_by_ruta):
@@ -130,8 +130,10 @@ def cost_block(n, runs, finals, verdicts):
     usd = lambda records: sum(r.get("coste_usd") or 0 for r in records)
     tokens = lambda records: sum(_total_tokens(r.get("tokens")) for r in records)
     per = lambda value: round(value / n, 4) if n else None
-    notified = usd([r for r in runs if not r.get("cached")]) + usd(finals) + usd(judges)
-    return {"notifiedUsd": round(notified, 4),
+    fresh = [*(r for r in runs if not r.get("cached")), *finals, *judges]
+    notified = usd(fresh)
+    unknown = sum(not isinstance(r.get("coste_usd"), (int, float)) for r in fresh)  # pago sin coste: no cuenta como 0
+    return {"notifiedUsd": round(notified, 4), "unknownCostRecords": unknown,
             "strategyUsdPerAnswer": per(usd(runs) + usd(finals)),
             "tokensPerAnswer": per(tokens(runs) + tokens(finals) + tokens(judges)),
             "searchers": {"usdPerAnswer": per(usd(runs)), "tokensPerAnswer": per(tokens(runs))},

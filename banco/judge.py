@@ -85,17 +85,17 @@ def run_claude_judge(material, rubric_text, model, claude_bin, timeout):
             proc = subprocess.run(command, input=rubric_text + "\n\n" + material, cwd=empty_dir, text=True,
                                   capture_output=True, timeout=timeout, env={**os.environ, **ejecutar.ENTORNO_AISLADO})
         except subprocess.TimeoutExpired:
-            return _record(model, _invalid(f"tiempo agotado ({timeout} s)"), 0.0, None, t0)
+            return _record(model, _invalid(f"tiempo agotado ({timeout} s)"), None, None, t0)
     events = _events(proc.stdout)
     init = next((e for e in events if e.get("type") == "system" and e.get("subtype") == "init"), None)
     if init is None:
-        return _record(model, _invalid(f"sin evento de inicio (código {proc.returncode})"), 0.0, None, t0)
+        return _record(model, _invalid(f"sin evento de inicio (código {proc.returncode})"), None, None, t0)
     check_judge_init(init)
     result = next((e for e in reversed(events) if e.get("type") == "result"), None)
     usage = (result or {}).get("usage") or {}
     tokens = {"entrada": usage.get("input_tokens"), "salida": usage.get("output_tokens"),
               "cache_lectura": usage.get("cache_read_input_tokens"), "cache_creacion": usage.get("cache_creation_input_tokens")}
-    cost = (result or {}).get("total_cost_usd") or 0.0
+    cost = (result or {}).get("total_cost_usd")  # None si falta: coste desconocido, no 0
     return _record(model, _from_result(result), cost, tokens, t0)
 
 

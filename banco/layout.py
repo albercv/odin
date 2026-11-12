@@ -9,13 +9,13 @@ from pathlib import Path
 class Layout:
     banco: Path
     exp: Path
-    bateria: Path
-    estado: Path
-    resultados: Path
+    battery_file: Path
+    state_dir: Path
+    results_dir: Path
     cache: Path
     repo: Path
     claude_bin: str
-    claude_juez_bin: str
+    claude_judge_bin: str
     ollama_url: str
     timeout: int
 
@@ -26,9 +26,9 @@ def default_layout() -> Layout:
     exp = repo / "experimentos" / "2026-11-12-archivo-ficticio"
     claude = os.environ.get("ODIN_BANCO_CLAUDE", "claude")
     return Layout(
-        banco=banco, exp=exp, bateria=exp / "datos" / "bateria.json",
-        estado=Path(os.environ.get("PILA_ESTADO") or banco / "estado"),
-        resultados=banco / "resultados", cache=banco / "cache", repo=repo,
-        claude_bin=claude, claude_juez_bin=os.environ.get("ODIN_BANCO_CLAUDE_JUEZ", claude),
+        banco=banco, exp=exp, battery_file=exp / "datos" / "bateria.json",
+        state_dir=Path(os.environ.get("PILA_ESTADO") or banco / "estado"),
+        results_dir=banco / "resultados", cache=banco / "cache", repo=repo,
+        claude_bin=claude, claude_judge_bin=os.environ.get("ODIN_BANCO_CLAUDE_JUEZ", claude),
         ollama_url=os.environ.get("ODIN_BANCO_OLLAMA_URL", "http://127.0.0.1:11434"), timeout=600,
     )

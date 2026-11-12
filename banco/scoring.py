@@ -8,14 +8,14 @@ from banco.medir_path import puntuar, sustituciones
 NO_ENCONTRADO = "(no encontrado)"
 
 
-def build_context(exp, carga):
+def build_context(exp, stack):
     """Contexto del puntuador como puntuar.main: corpus, manifiesto y mapas de ids (de carga.json o de ids.json)."""
     datos = Path(exp) / "datos"
     corpus = puntuar.load_corpus(datos / "corpus")
     man = json.loads((datos / "manifiesto.json").read_text(encoding="utf-8"))
     claves = json.loads((datos / "claves.json").read_text(encoding="utf-8"))
     reales = {viejo for viejo, _ in sustituciones.parejas(claves, man)}
-    return puntuar.Contexto(corpus, man, carga["doc_ruta"], carga["ficha_f"], reales)
+    return puntuar.Contexto(corpus, man, stack["doc_ruta"], stack["ficha_f"], reales)
 
 
 def ids_by_path(doc_ruta):
