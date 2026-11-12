@@ -25,6 +25,7 @@ trap cleanup EXIT
 
 export DEMO_API_URL="http://127.0.0.1:$DEMO_API_PORT" DEMO_PANEL_URL="http://127.0.0.1:$DEMO_PANEL_PORT"
 export DEMO_SETUP_TOKEN="demo-falso-token-$$" DEMO_STATE="$TMP/state.json" DEMO_PDF="$ROOT/deploy/demo/poliza-ficticia.pdf"
+export DEMO_RENEWED="$ROOT/deploy/demo/poliza-ficticia-renovada.txt"
 export PLAYWRIGHT_BROWSERS_PATH=0
 
 echo "== Demostración de cierre de la fase 1 =="

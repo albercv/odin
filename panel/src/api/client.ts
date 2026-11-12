@@ -90,6 +90,9 @@ export const api = {
     return request<S['Upload']>('POST', `${co(id)}/documents?${q}`, form);
   },
   retry: (documentId: string) => request<S['DocumentView']>('POST', `${a}/documents/${documentId}/retry`),
+  supersede: (documentId: string, replacementId: string) =>
+    request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/superseded-by`, { replacementId }),
+  unsupersede: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/superseded-by`),
   pendingCards: (id: string) => request<S['CardView'][]>('GET', `${co(id)}/cards?status=PENDING`),
   review: (cardId: string, b: S['Review']) => request<S['CardView']>('POST', `${a}/cards/${cardId}/review`, b),
 };
