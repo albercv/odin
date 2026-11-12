@@ -119,8 +119,9 @@ def run_ollama_judge(material, rubric_text, model, url, timeout):
             "stream": False, "format": VERDICT_SCHEMA, "options": {"temperature": 0}}
     request = urllib.request.Request(f"{url}/api/chat", data=json.dumps(body).encode("utf-8"), method="POST",
                                      headers={"Content-Type": "application/json"})
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # local: ni HTTP_PROXY ni el proxy del sistema
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener.open(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         verdict = _verdict_or_invalid(json.loads(data["message"]["content"]))
     except (OSError, ValueError, KeyError, TypeError) as error:

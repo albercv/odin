@@ -157,6 +157,14 @@ class OllamaJudgeTest(unittest.TestCase):
                     run_ollama_judge("material", RUBRIC, "qwen", url, 30)
                 urlopen.assert_not_called()
 
+    def test_ollama_ignores_http_proxy_variables(self):
+        """Ollama es local: un proxy del entorno (aquí, uno cerrado) no debe interceptar la llamada."""
+        url, stop = start_fake_ollama("ok")
+        self.addCleanup(stop)
+        with fake_env(HTTP_PROXY="http://127.0.0.1:9", http_proxy="http://127.0.0.1:9", NO_PROXY="", no_proxy=""):
+            record = run_ollama_judge("material", RUBRIC, "ollama:qwen3.5:9b", url, 30)
+        self.assertEqual(record["verdict"], VALID_YES)
+
     def test_ollama_prefix_is_stripped_before_request(self):
         received = []
         url, stop = start_fake_ollama("ok", received)

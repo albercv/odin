@@ -49,7 +49,7 @@ En `sweep` el tope es acumulativo: el grupo principal y cada pasada de turnos co
 
 **El tope es del experimento, no de la orden.** El libro se guarda en `banco/estado/libro-<nombre>.json` (con el total y la lista de cargos con fecha, escrita de forma atómica en cada cargo). Al arrancar, `run` y `sweep` leen ese libro: si ya se gastó el tope, la orden se niega con código 2 y un mensaje antes de crear carpeta alguna. Relanzar tras una parada no vuelve a gastar: lo ya hecho sale de la caché y lo gastado sigue contando. Con `--reiniciar-presupuesto` (en make, `REINICIAR=1`) el libro anterior se archiva como `libro-<nombre>.<fecha>.json` y el tope empieza en cero. Un libro con algún coste desconocido también se niega a arrancar.
 
-Los jueces de Ollama son locales y de coste 0: no pasan por la comprobación de presupuesto ni cargan en el libro. Si se agota el presupuesto, siguen corriendo; los de pago de esa pregunta no, y la pregunta queda sin veredicto.
+Los jueces de Ollama son locales y de coste 0. Su llamada ignora los proxies del entorno (`HTTP_PROXY`), así que solo va al host local configurado: no pasan por la comprobación de presupuesto ni cargan en el libro. Si se agota el presupuesto, siguen corriendo; los de pago de esa pregunta no, y la pregunta queda sin veredicto.
 
 **Fallos tras una llamada de pago:** un buscador, el redactor o un juez de Claude que falla tras llamar a `claude` carga su coste como desconocido (`charge(None)`) y agota el presupuesto. Así no se pierde el gasto ni se sigue gastando sin contarlo.
 
