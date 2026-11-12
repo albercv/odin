@@ -1,0 +1,42 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2028-006
+Comunidad: Residencial Los Almendros
+Categoría: Puerta de acceso al garaje común
+Fecha de apertura: 1 de febrero de 2028
+Comunicante: propietarios de las viviendas 1 y 2
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 1 de febrero de 2028 los propietarios de las viviendas 1 y 2, cuyos dormitorios dan a la rampa del garaje común, comunicaron al despacho por escrito que cada apertura y cada cierre de la puerta del garaje producían un chirrido metálico prolongado y un golpe seco al final del recorrido. Según su relato, ambos se percibían con claridad dentro de las viviendas y les despertaban de madrugada con la entrada y la salida de los vehículos de los vecinos que trabajan a turnos. La puerta es seccional, de accionamiento motorizado con mando a distancia, y su mantenimiento lo realiza una empresa de automatismos.
+
+ACTUACIONES REALIZADAS
+- 2 de febrero de 2028: el administrador avisa a la empresa de automatismos.
+- 5 de febrero de 2028: visita del técnico, que observa desgaste en las ruedas de los paneles, una guía lateral deformada en su tramo curvo, los muelles de compensación descompensados y el final de carrera del motor desajustado, de modo que la puerta golpea el suelo al cerrar.
+- 5 de febrero de 2028: ajuste provisional del final de carrera y engrase de las guías.
+- 8 de febrero de 2028: los propietarios de las viviendas 1 y 2 informan de una mejora parcial, aunque el chirrido persiste en el tramo curvo de la guía.
+- 9 de febrero de 2028: la empresa entrega presupuesto para sustituir ruedas, guía y muelles, y para programar un arranque y una parada suaves en el motor.
+
+DOCUMENTACIÓN ARCHIVADA
+- Parte técnico de la visita de 5 de febrero de 2028.
+- Presupuesto de la empresa de automatismos.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico atribuye el chirrido al rozamiento de las ruedas desgastadas sobre la guía deformada, y el golpe final al desajuste del final de carrera y a la descompensación de los muelles, que dejaba caer la puerta en los últimos centímetros. La presidencia aprobó el presupuesto el 12 de febrero de 2028. El 20 de febrero de 2028 la empresa sustituyó las ruedas de los cinco paneles, la guía lateral izquierda y los dos muelles, colocó una goma de amortiguación en el panel inferior y programó en la centralita del motor un arranque y una parada progresivos. Además colocó tacos antivibratorios en el soporte del motor, anclado al techo de la rampa.
+
+SEGUIMIENTO
+El 22 de febrero de 2028 el administrador y el conserje comprobaron varias maniobras de apertura y cierre desde el interior de la vivienda 1, con autorización de su propietaria, sin chirridos ni golpe final apreciables. El 21 de marzo de 2028 los propietarios de las viviendas 1 y 2 confirmaron por escrito que las molestias nocturnas habían desaparecido. La empresa incorporó al contrato de mantenimiento una revisión trimestral de ruedas, guías y muelles.
+
+RESULTADO
+Cerrado el 24 de marzo de 2028. La puerta del garaje funciona con suavidad y sin golpes al final del recorrido.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Parte de trabajo y factura de la empresa de automatismos.
+- Escrito de conformidad de los propietarios de las viviendas 1 y 2.
+- Anexo al contrato de mantenimiento con la revisión trimestral.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

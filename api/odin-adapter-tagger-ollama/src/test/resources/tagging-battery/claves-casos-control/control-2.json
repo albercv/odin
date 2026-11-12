@@ -1,0 +1,50 @@
+[
+ {
+  "doc": "c1-olmo14/caso-2027-003-carpinteria-fachada.txt",
+  "caso": "Caso 2027-003",
+  "agua": true,
+  "motivo": "Penetración de precipitación por el encuentro de la carpintería con la jamba."
+ },
+ {
+  "doc": "c1-olmo14/caso-2027-012-circuito-calefaccion.txt",
+  "caso": "Caso 2027-012",
+  "agua": true,
+  "motivo": "Pérdida de fluido en el circuito de calefacción central por corrosión de una unión."
+ },
+ {
+  "doc": "c2-almendros/caso-2027-016-muro-contencion-lloraderos.txt",
+  "caso": "Caso 2027-016",
+  "agua": true,
+  "motivo": "Drenaje obstruido tras el muro de contención, con empuje del terreno saturado."
+ },
+ {
+  "doc": "c3-puerto3/caso-2027-021-foso-ascensor-freatico.txt",
+  "caso": "Caso 2027-021",
+  "agua": true,
+  "motivo": "Entrada del nivel freático en el foso del ascensor."
+ },
+ {
+  "doc": "c3-puerto3/caso-2027-029-bie-sotano.txt",
+  "caso": "Caso 2027-029",
+  "agua": true,
+  "motivo": "Descarga de una boca de incendio equipada que cubrió de líquido el sótano."
+ },
+ {
+  "doc": "c1-olmo14/caso-2027-008-inspeccion-gas.txt",
+  "caso": "Caso 2027-008",
+  "agua": false,
+  "motivo": "Inspección periódica reglamentaria de la instalación de gas natural."
+ },
+ {
+  "doc": "c2-almendros/caso-2027-024-puerta-garaje.txt",
+  "caso": "Caso 2027-024",
+  "agua": false,
+  "motivo": "Avería eléctrica y mecánica de la puerta basculante del garaje."
+ },
+ {
+  "doc": "c3-puerto3/caso-2027-033-alumbrado-emergencia.txt",
+  "caso": "Caso 2027-033",
+  "agua": false,
+  "motivo": "Deficiencias de alumbrado de emergencia y extintores del sótano."
+ }
+]
