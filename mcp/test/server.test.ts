@@ -24,11 +24,11 @@ afterEach(() => fake?.close());
 describe('buildServer', () => {
   it('registersOnlyEnabledCapabilities', async () => {
     const onlySave = await connect(() => meWith(['SAVE_KNOWLEDGE_CARD']));
-    expect((await onlySave.listTools()).tools.map((t) => t.name)).toEqual(['saveKnowledgeCard']);
+    expect((await onlySave.listTools()).tools.map((t) => t.name)).toEqual(['saveKnowledgeCard', 'listMyKnowledgeCards']);
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
   });

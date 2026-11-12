@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,13 +13,52 @@ import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.knowledge.CardStatus;
+import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.QuestionKind;
+import com.e2d.odin.domain.knowledge.QuestionRecord;
+import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 class IsolationTest extends WebTestSupport {
+
+    @Test
+    void keyOfOtherPersonNeverListsSomeoneElsesCardsOrQuestions() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId author = workerId(a);
+        joinAsWorker(author, b);
+        w.cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), a, Optional.empty(), "Secreta", "texto",
+                Optional.empty(), author, w.clock.instant(), CardStatus.PENDING, Optional.empty()));
+        w.questions.record(new QuestionRecord(UUID.randomUUID(), a, author, "pregunta secreta", 0, w.clock.instant(),
+                QuestionKind.SEARCH));
+        String own = keyOf(author, a);
+        String colleague = workerKey(a);
+        String sameAuthorInOtherCompany = keyOf(author, b);
+
+        mvc.perform(get("/v1/me/cards").header("Authorization", own)).andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(get("/v1/me/questions").header("Authorization", own)).andExpect(jsonPath("$", hasSize(1)));
+        for (String key : new String[] {colleague, sameAuthorInOtherCompany, workerKey(b)}) {
+            mvc.perform(get("/v1/me/cards").header("Authorization", key)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
+            mvc.perform(get("/v1/me/questions").header("Authorization", key)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
+        }
+    }
+
+    @Test
+    void adminSessionNeverListsCardsOrQuestionsOfAWorker() throws Exception {
+        CompanyId a = newCompany();
+        var admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+
+        mvc.perform(get("/v1/me/cards").cookie(admin)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/v1/me/questions").cookie(admin)).andExpect(status().isUnauthorized());
+    }
 
     @Test
     void companyAdminOfBCannotListDocumentsOfA() throws Exception {

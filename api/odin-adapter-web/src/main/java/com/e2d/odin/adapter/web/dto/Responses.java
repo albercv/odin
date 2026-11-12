@@ -23,6 +23,7 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.organization.ProjectSummary;
+import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
 import com.e2d.odin.domain.search.SourceType;
@@ -278,6 +279,38 @@ public final class Responses {
             return new CardView(c.id().value(), c.companyId().value(), c.projectId().map(p -> p.value()).orElse(null),
                     c.title(), c.body(), c.originalBody().orElse(null), c.authorId().value(), c.createdAt(),
                     c.status().name(), c.review().map(ReviewView::from).orElse(null));
+        }
+    }
+
+    /** Lo que el autor ve de la revisión de su ficha: qué se decidió y por qué, sin decir quién revisó. */
+    public record MyReviewView(String decision, @Nullable String note, Instant reviewedAt) {
+        static MyReviewView from(CardReview r) {
+            return new MyReviewView(r.decision().name(), r.note().orElse(null), r.reviewedAt());
+        }
+    }
+
+    /** Una ficha propia: sin autor ni empresa, que son siempre los del que mira. */
+    public record MyCardView(UUID id, String title, String body, @Nullable String originalBody,
+            @Nullable UUID projectId, Instant createdAt, String status, @Nullable MyReviewView review) {
+        static MyCardView from(KnowledgeCard c) {
+            return new MyCardView(c.id().value(), c.title(), c.body(), c.originalBody().orElse(null),
+                    c.projectId().map(p -> p.value()).orElse(null), c.createdAt(), c.status().name(),
+                    c.review().map(MyReviewView::from).orElse(null));
+        }
+
+        public static List<MyCardView> from(List<KnowledgeCard> cards) {
+            return cards.stream().map(MyCardView::from).toList();
+        }
+    }
+
+    /** Una pregunta propia: sin autor (D-048). */
+    public record MyQuestionView(String text, String kind, int hitCount, Instant askedAt) {
+        static MyQuestionView from(QuestionRecord q) {
+            return new MyQuestionView(q.text(), q.kind().name(), q.hitCount(), q.askedAt());
+        }
+
+        public static List<MyQuestionView> from(List<QuestionRecord> questions) {
+            return questions.stream().map(MyQuestionView::from).toList();
         }
     }
 

@@ -15,6 +15,13 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.knowledge.ReviewStatus;
+import com.e2d.odin.domain.shared.CardId;
+import com.e2d.odin.domain.knowledge.ReviewDecision;
+import com.e2d.odin.domain.knowledge.QuestionRecord;
+import com.e2d.odin.domain.knowledge.QuestionKind;
+import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.CardStatus;
+import com.e2d.odin.domain.knowledge.CardReview;
 import com.e2d.odin.domain.search.CasePage;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
@@ -126,6 +133,77 @@ class WorkerApiTest extends WebTestSupport {
                 .content(quote.formatted("vacaciones  SON 22"))).andExpect(jsonPath("$.verified").value(true));
         mvc.perform(post("/v1/citations/verify").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content(quote.formatted("vacaciones son 23"))).andExpect(jsonPath("$.verified").value(false));
+    }
+
+    private KnowledgeCard cardOf(UserId author, CompanyId company, String title, CardStatus status, long minutes) {
+        KnowledgeCard card = new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), title,
+                "Texto " + title, Optional.empty(), author, Fixtures.NOW.plusSeconds(60 * minutes), status,
+                Optional.empty());
+        w.cards.save(card);
+        return card;
+    }
+
+    @Test
+    void myCardsListsOwnCardsWithReviewAndWithoutReviewer() throws Exception {
+        CompanyId company = newCompany();
+        UserId me = workerId(company);
+        cardOf(workerId(company), company, "Del compañero", CardStatus.PENDING, 9);
+        KnowledgeCard corrected = cardOf(me, company, "Corregida", CardStatus.PENDING, 1);
+        w.cards.save(corrected.correct("Texto corregido", new CardReview(workerId(company), ReviewDecision.CORRECT,
+                Fixtures.NOW, Optional.of("Ajustada"))));
+        cardOf(me, company, "Pendiente", CardStatus.PENDING, 2);
+
+        mvc.perform(get("/v1/me/cards").header(AUTH, keyOf(me, company))).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title").value("Pendiente"))
+                .andExpect(jsonPath("$[0].status").value("PENDING"))
+                .andExpect(jsonPath("$[0].review").doesNotExist())
+                .andExpect(jsonPath("$[0].originalBody").doesNotExist())
+                .andExpect(jsonPath("$[1].status").value("APPROVED"))
+                .andExpect(jsonPath("$[1].body").value("Texto corregido"))
+                .andExpect(jsonPath("$[1].originalBody").value("Texto Corregida"))
+                .andExpect(jsonPath("$[1].review.decision").value("CORRECT"))
+                .andExpect(jsonPath("$[1].review.note").value("Ajustada"))
+                .andExpect(jsonPath("$[1].review.reviewedAt").exists())
+                .andExpect(jsonPath("$[1].review.reviewerId").doesNotExist())
+                .andExpect(jsonPath("$[1].authorId").doesNotExist())
+                .andExpect(jsonPath("$[1].companyId").doesNotExist());
+    }
+
+    @Test
+    void myCardsFiltersByStatusAndRejectsUnknownStatus() throws Exception {
+        CompanyId company = newCompany();
+        UserId me = workerId(company);
+        String key = keyOf(me, company);
+        cardOf(me, company, "Pendiente", CardStatus.PENDING, 1);
+        cardOf(me, company, "Rechazada", CardStatus.REJECTED, 2);
+
+        mvc.perform(get("/v1/me/cards?status=REJECTED").header(AUTH, key)).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].title").value("Rechazada"));
+        mvc.perform(get("/v1/me/cards?status=OTRA").header(AUTH, key)).andExpect(status().isBadRequest());
+        mvc.perform(get("/v1/me/cards")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void myQuestionsListsOwnQuestionsNewestFirstWithLimit() throws Exception {
+        CompanyId company = newCompany();
+        UserId me = workerId(company);
+        for (int i = 1; i <= 3; i++) {
+            w.questions.record(new QuestionRecord(UUID.randomUUID(), company, me, "pregunta " + i, i,
+                    Fixtures.NOW.plusSeconds(i), i == 3 ? QuestionKind.SIMILAR_CASES : QuestionKind.SEARCH));
+        }
+
+        mvc.perform(get("/v1/me/questions").header(AUTH, keyOf(me, company))).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].text").value("pregunta 3"))
+                .andExpect(jsonPath("$[0].kind").value("SIMILAR_CASES"))
+                .andExpect(jsonPath("$[0].hitCount").value(3))
+                .andExpect(jsonPath("$[0].askedAt").exists())
+                .andExpect(jsonPath("$[0].authorId").doesNotExist())
+                .andExpect(jsonPath("$[2].kind").value("SEARCH"));
+        mvc.perform(get("/v1/me/questions?limit=1").header(AUTH, keyOf(me, company))).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(get("/v1/me/questions")).andExpect(status().isUnauthorized());
     }
 
     @Test

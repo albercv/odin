@@ -148,4 +148,62 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
         cards.save(c);
         return c;
     }
+
+    private KnowledgeCard cardAt(CompanyId company, UserId author, Optional<ProjectId> project, String title,
+            CardStatus status, long secondsAfterBase) {
+        KnowledgeCard c = new KnowledgeCard(new CardId(UUID.randomUUID()), company, project, title, "Cuerpo",
+                Optional.empty(), author, NOW.plusSeconds(secondsAfterBase), status, Optional.empty());
+        cards.save(c);
+        return c;
+    }
+
+    @Test
+    void listByAuthorFiltersCompanyProjectsAndStatus() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId me = newUser(a);
+        UserId colleague = newUser(a);
+        ProjectId visible = newProject(a, "Visible");
+        ProjectId hidden = newProject(a, "Oculto");
+        KnowledgeCard free = cardAt(a, me, Optional.empty(), "Libre", CardStatus.APPROVED, 1);
+        KnowledgeCard inVisible = cardAt(a, me, Optional.of(visible), "En visible", CardStatus.PENDING, 3);
+        KnowledgeCard rejected = cardAt(a, me, Optional.empty(), "Rechazada", CardStatus.REJECTED, 2);
+        cardAt(a, me, Optional.of(hidden), "En oculto", CardStatus.PENDING, 4);
+        cardAt(a, colleague, Optional.empty(), "Del compañero", CardStatus.PENDING, 5);
+        cardAt(b, me, Optional.empty(), "Con la clave de B", CardStatus.PENDING, 6);
+        ProjectVisibility onlyVisible = ProjectVisibility.of(Set.of(visible));
+
+        assertThat(cards.listByAuthor(CompanyScope.of(a), onlyVisible, me, Optional.empty(), 100))
+                .containsExactly(inVisible, rejected, free);
+        assertThat(cards.listByAuthor(CompanyScope.of(a), onlyVisible, me, Optional.of(CardStatus.REJECTED), 100))
+                .containsExactly(rejected);
+        assertThat(cards.listByAuthor(CompanyScope.of(a), onlyVisible, me, Optional.empty(), 2))
+                .containsExactly(inVisible, rejected);
+        assertThat(cards.listByAuthor(CompanyScope.of(a), ProjectVisibility.of(Set.of()), me, Optional.empty(), 100))
+                .containsExactly(rejected, free);
+        assertThat(cards.listByAuthor(CompanyScope.of(b), ProjectVisibility.all(), colleague, Optional.empty(), 100))
+                .isEmpty();
+        assertThat(cards.listByAuthor(CompanyScope.of(b), ProjectVisibility.all(), me, Optional.empty(), 100))
+                .extracting(KnowledgeCard::title).containsExactly("Con la clave de B");
+    }
+
+    @Test
+    void listByAuthorOfQuestionsFiltersCompany() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId me = newUser(a);
+        UserId colleague = newUser(a);
+        PostgresQuestionLog log = new PostgresQuestionLog(tx);
+        log.record(new QuestionRecord(UUID.randomUUID(), a, me, "vieja", 1, NOW, QuestionKind.SEARCH));
+        log.record(new QuestionRecord(UUID.randomUUID(), a, me, "nueva", 0, NOW.plusSeconds(60),
+                QuestionKind.SIMILAR_CASES));
+        log.record(new QuestionRecord(UUID.randomUUID(), a, colleague, "del compañero", 1, NOW, QuestionKind.SEARCH));
+        log.record(new QuestionRecord(UUID.randomUUID(), b, me, "con la clave de B", 1, NOW, QuestionKind.SEARCH));
+
+        assertThat(log.listByAuthor(a, me, 50)).extracting(QuestionRecord::text).containsExactly("nueva", "vieja");
+        assertThat(log.listByAuthor(a, me, 1)).extracting(QuestionRecord::kind)
+                .containsExactly(QuestionKind.SIMILAR_CASES);
+        assertThat(log.listByAuthor(b, me, 50)).extracting(QuestionRecord::text).containsExactly("con la clave de B");
+        assertThat(log.listByAuthor(b, colleague, 50)).isEmpty();
+    }
 }

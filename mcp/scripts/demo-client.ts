@@ -206,6 +206,29 @@ async function similarCasesStep(): Promise<void> {
   check(found.cases.every((c) => c.pages.length > 0 && c.pages[0]!.text.length > 0 && !('authorName' in c)), 'Paso 12b: cada caso trae sus páginas y ninguno lleva autor');
 }
 
+// El autor ve su ficha pendiente marcada, su compañero no la ve; rechazada, el autor ve la nota y ya no la encuentra (D-036).
+async function authorStep(): Promise<void> {
+  const companyId = await createCompany('Empresa G', 'EG');
+  const author = await createWorker(companyId, 'Autora', 'Fichas', 'autora@demo.invalid');
+  const colleague = await createWorker(companyId, 'Compañero', 'Fichas', 'companero@demo.invalid');
+  const card = { title: 'Reparto de llaves del garaje', body: 'Las llaves del garaje las custodia la portería desde la junta de marzo.' };
+  const saved = JSON.parse(await withMcp(author.key, (call) => call('saveKnowledgeCard', card))) as { id: string };
+  const search = (key: string, query = 'llaves del garaje') => withMcp(key, async (call) =>
+    JSON.parse((await call('searchKnowledge', { queries: [query] })).replace(/^No consta.*$/, '{"hits":[]}')) as { hits: { cardId?: string; reviewStatus?: string }[] });
+  const own = await search(author.key);
+  check(own.hits.some((h) => h.cardId === saved.id && h.reviewStatus === 'PENDING'), 'Paso 13: el autor encuentra su ficha con reviewStatus PENDING');
+  check((await search(colleague.key)).hits.length === 0, 'Paso 13b: el compañero de la misma empresa no la encuentra');
+  const note = 'Falta la fecha de la junta';
+  await json(await http('POST', `/v1/admin/cards/${saved.id}/review`, { decision: 'REJECT', note }), 200);
+  const mine = await withMcp(author.key, async (call) => JSON.parse(await call('listMyKnowledgeCards', { status: 'REJECTED' })) as { cards: { cardId: string; status: string; review: { note: string } }[] });
+  check(mine.cards.some((c) => c.cardId === saved.id && c.status === 'REJECTED' && c.review.note === note), 'Paso 13c: el autor ve su ficha como REJECTED con la nota del revisor');
+  check((await search(author.key, 'portería del garaje')).hits.length === 0, 'Paso 13d: la ficha rechazada ya no sale en su búsqueda');
+  const questions = await withMcp(author.key, async (call) => JSON.parse(await call('listMyQuestions', {})) as { questions: { text: string }[] });
+  check(questions.questions.map((q) => q.text).join('|') === 'portería del garaje|llaves del garaje', 'Paso 13e: listMyQuestions devuelve sus dos consultas, la primera la más reciente');
+  check((await withMcp(colleague.key, async (call) => JSON.parse(await call('listMyQuestions', {})) as { questions: unknown[] })).questions.length === 1,
+    'Paso 13f: el compañero solo ve su propia consulta');
+}
+
 async function prepare(): Promise<void> {
   const setup = await http('POST', '/v1/setup', { setupToken: SETUP_TOKEN, groupName: 'Grupo Demo', adminName: 'Administrador Demo', adminEmail: ADMIN.email, password: ADMIN.password });
   check(setup.status === 201, `Paso 1: setup inicial del grupo`);
@@ -240,6 +263,7 @@ async function prepare(): Promise<void> {
   await scannedStep();
   await taggingStep();
   await similarCasesStep();
+  await authorStep();
   writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie, workerKey: wa.key, oldId: docId, renewedId }));
 }
 

@@ -65,6 +65,17 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
                 .param("status", status.name()).query((rs, n) -> card(rs)).list());
     }
 
+    @Override
+    public List<KnowledgeCard> listByAuthor(CompanyScope scope, ProjectVisibility visibility, UserId authorId,
+            Optional<CardStatus> status, int limit) {
+        String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE author_id = :author AND "
+                + "(CAST(:status AS text) IS NULL OR status = :status) AND " + Sql.inScope("company_id") + " AND "
+                + Sql.inVisibleProjects("project_id") + " ORDER BY created_at DESC, seq DESC LIMIT :limit";
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("author", authorId.value()).param("status", status.map(Enum::name).orElse(null))
+                .param("limit", limit).query((rs, n) -> card(rs)).list());
+    }
+
     private static KnowledgeCard card(ResultSet rs) throws SQLException {
         return new KnowledgeCard(new CardId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), rs.getString("title"),

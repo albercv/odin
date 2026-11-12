@@ -30,6 +30,7 @@ import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
+import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.organization.AddProjectMember;
@@ -68,6 +69,7 @@ import com.e2d.odin.application.port.TokenGenerator;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.ListDocuments;
+import com.e2d.odin.application.search.ListMyQuestions;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
@@ -387,6 +389,18 @@ public class UseCaseConfiguration {
             IdGenerator ids,
             Clock clock) {
         return new SaveKnowledgeCard(organizations, projectMembers, cards, ids, clock);
+    }
+
+    @Bean
+    ListMyKnowledgeCards listMyKnowledgeCards(OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, KnowledgeCardRepository cards) {
+        return new ListMyKnowledgeCards(organizations, projectMembers, cards);
+    }
+
+    @Bean
+    ListMyQuestions listMyQuestions(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            QuestionLog questions) {
+        return new ListMyQuestions(organizations, projectMembers, questions);
     }
 
     @Bean
