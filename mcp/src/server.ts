@@ -17,6 +17,7 @@ export const INSTRUCTIONS = [
   'Los resultados KNOWLEDGE_CARD son fichas aportadas por trabajadores con resumen hecho por IA: cítalas por título, autor y fecha de alta, preséntalas como fichas y no como documentos, y no tienen página; verifyCitation es solo para documentos, y si verifyCitation devuelve false, no uses esa cita.',
   'Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.',
   'De una ficha, cita solo su texto, sin el título, el autor ni la fecha.',
+  'Afirma solo lo que dicen las citas. Si la fuente es parcial, porque falta el documento que lo regula o el que tienes no lo dice todo, dilo y no completes la conclusión.',
   'Presenta el conocimiento general aparte, como información añadida, nunca mezclado con lo que consta en los documentos.',
 ].join(' ');
 

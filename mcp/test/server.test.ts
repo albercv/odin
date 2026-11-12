@@ -152,6 +152,16 @@ describe('buildServer', () => {
     expect(instructions).toContain('cítalas por título, autor y fecha');
   });
 
+  it('instructionsAskForPartialSourceWarning', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).toContain(
+      'Afirma solo lo que dicen las citas. Si la fuente es parcial, porque falta el documento que lo regula o el que tienes no lo dice todo, dilo y no completes la conclusión.');
+  });
+
+  it('instructionsStayUnderLengthBudget', async () => {
+    expect((await connect(() => meWith(ALL))).getInstructions()?.length).toBeLessThanOrEqual(2200);
+  });
+
   it('noSourceMessage', async () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [], noSource: true } }));
     const result = await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['nada'] } });
