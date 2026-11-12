@@ -1,5 +1,5 @@
 package com.e2d.odin.domain.document;
 
 public enum DocumentStatus {
-    RECEIVED, PROCESSING, READY, FAILED, PENDING_READER
+    RECEIVED, PROCESSING, READY, FAILED, PENDING_READER, READER_PROCESSING
 }

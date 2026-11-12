@@ -7,6 +7,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -43,10 +44,53 @@ class DocumentTest {
     void stateChangesKeepTheMark() {
         DocumentId other = new DocumentId(UUID.randomUUID());
         Document marked = document(Optional.of(other), Optional.of(NOW));
-        for (Document changed : new Document[] {marked.startProcessing(NOW), marked.markReady(false),
-                marked.markFailed("roto"), marked.markPendingReader(), marked.requeue(), marked.resetAttempts()}) {
+        for (Document changed : new Document[] {marked.startProcessing(NOW), marked.markReady(false, List.of()),
+                marked.markFailed("roto"), marked.awaitReader(), marked.startReading(NOW),
+                marked.returnToReaderQueue(true), marked.requeue(), marked.resetAttempts()}) {
             assertThat(changed.supersededBy()).contains(other);
             assertThat(changed.supersededAt()).contains(NOW);
         }
+    }
+
+    private static Document withState(DocumentStatus status, int attempts) {
+        Document d = document(Optional.empty(), Optional.empty());
+        return new Document(d.id(), d.companyId(), d.projectId(), d.title(), d.filename(), d.format(), d.sha256(),
+                status, Optional.of("antes"), d.paginated(), d.uploadedBy(), NOW, Optional.empty(), attempts,
+                Optional.empty(), Optional.empty());
+    }
+
+    @Test
+    void awaitReaderResetsAttempts() {
+        Document waiting = withState(DocumentStatus.PROCESSING, 3).awaitReader();
+
+        assertThat(waiting.status()).isEqualTo(DocumentStatus.PENDING_READER);
+        assertThat(waiting.attemptCount()).isZero();
+        assertThat(waiting.failureReason()).isEmpty();
+    }
+
+    @Test
+    void startReadingCountsAttempt() {
+        Document reading = withState(DocumentStatus.PENDING_READER, 1).startReading(NOW);
+
+        assertThat(reading.status()).isEqualTo(DocumentStatus.READER_PROCESSING);
+        assertThat(reading.attemptCount()).isEqualTo(2);
+        assertThat(reading.processingStartedAt()).contains(NOW);
+    }
+
+    @Test
+    void returnToReaderQueueWithoutCountingUndoesTheAttempt() {
+        Document reading = withState(DocumentStatus.PENDING_READER, 1).startReading(NOW);
+
+        assertThat(reading.returnToReaderQueue(false).attemptCount()).isEqualTo(1);
+        assertThat(reading.returnToReaderQueue(true).attemptCount()).isEqualTo(2);
+        assertThat(reading.returnToReaderQueue(false).status()).isEqualTo(DocumentStatus.PENDING_READER);
+    }
+
+    @Test
+    void markReadyKeepsPagesWithoutText() {
+        Document ready = withState(DocumentStatus.PROCESSING, 1).markReady(true, List.of(2, 4));
+
+        assertThat(ready.pagesWithoutText()).containsExactly(2, 4);
+        assertThat(withState(DocumentStatus.PROCESSING, 1).pagesWithoutText()).isEmpty();
     }
 }
