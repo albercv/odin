@@ -725,6 +725,7 @@ export interface components {
             originLabel?: string;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SimilarCasesResponse: {
             cases: components["schemas"]["SimilarCaseView"][];
@@ -770,6 +771,7 @@ export interface components {
             rank: number;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];

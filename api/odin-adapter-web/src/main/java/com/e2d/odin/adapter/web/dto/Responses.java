@@ -289,12 +289,13 @@ public final class Responses {
 
     public record Hit(String sourceType, UUID sourceId, String title, @Nullable Integer pageNumber, boolean paginated,
             @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank,
-            boolean superseded, @Nullable Replacement replacement) {
+            boolean superseded, @Nullable Replacement replacement, @Nullable String reviewStatus) {
         static Hit from(SearchHit h) {
             return new Hit(h.sourceType().name(), h.sourceId(), h.title(), h.pageNumber().orElse(null),
                     h.paginated(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),
                     h.excerpt(), h.rank(), h.superseded(),
-                    h.replacement().map(Replacement::from).orElse(null));
+                    h.replacement().map(Replacement::from).orElse(null),
+                    h.reviewStatus().map(Enum::name).orElse(null));
         }
     }
 
@@ -311,7 +312,7 @@ public final class Responses {
     public record SimilarCaseView(String sourceType, UUID sourceId, String title, @Nullable UUID projectId,
             Instant addedAt, int pageCount, List<CasePageView> pages, @Nullable String body, boolean truncated,
             String excerpt, String origin, @Nullable String originLabel, boolean superseded,
-            @Nullable Replacement replacement) {
+            @Nullable Replacement replacement, @Nullable String reviewStatus) {
         static final String CARD_LABEL = "Ficha aportada por un trabajador, redactada con IA";
 
         static SimilarCaseView from(SimilarCase c) {
@@ -321,7 +322,7 @@ public final class Responses {
                     c.pages().stream().map(p -> new CasePageView(p.number(), p.text())).toList(),
                     c.body().orElse(null), c.truncated(), c.excerpt(),
                     card ? "KNOWLEDGE_CARD" : "ORIGINAL_DOCUMENT", card ? CARD_LABEL : null, c.superseded(),
-                    c.replacement().map(Replacement::from).orElse(null));
+                    c.replacement().map(Replacement::from).orElse(null), c.reviewStatus().map(Enum::name).orElse(null));
         }
     }
 

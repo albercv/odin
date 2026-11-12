@@ -184,6 +184,22 @@ describe('buildServer', () => {
       origin: 'Ficha aportada por Ana, redactada con IA' });
   });
 
+  it('searchCardsCarryReviewStatusAndDescriptionExplainsPending', async () => {
+    const card = { sourceType: 'KNOWLEDGE_CARD', sourceId: 'k1', title: 'Truco', paginated: false, authorName: 'Ana',
+      date: '2026-01-01T00:00:00Z', excerpt: 'x', rank: 1, superseded: false, reviewStatus: 'PENDING' };
+    const parsed = await search([card, docHit('p1')]);
+    expect(parsed.hits[0]).toMatchObject({ cardId: 'k1', reviewStatus: 'PENDING' });
+    expect(parsed.hits[1]).not.toHaveProperty('reviewStatus');
+    const tools = (await (await connect(() => meWith(ALL))).listTools()).tools;
+    expect(tools.find((t) => t.name === 'searchKnowledge')?.description).toContain(
+      'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.');
+  });
+
+  it('pendingCardRuleLivesInToolDescriptionsNotInInstructions', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).not.toContain('reviewStatus');
+  });
+
   it('searchDescriptionExplainsAddedAt', async () => {
     const client = await connect(() => meWith(ALL));
     const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');

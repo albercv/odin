@@ -14,6 +14,7 @@ import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.knowledge.ReviewStatus;
 import com.e2d.odin.domain.search.CasePage;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
@@ -41,7 +42,7 @@ class WorkerApiTest extends WebTestSupport {
     void searchReturnsHitsAndNoSource() throws Exception {
         String key = workerKey(newCompany());
         w.search.returns(new SearchResult(List.of(new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(),
-                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty()))));
+                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty(), Optional.empty()))));
         mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"queries\":[\"vacaciones\"]}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.noSource").value(false))
@@ -128,14 +129,30 @@ class WorkerApiTest extends WebTestSupport {
     }
 
     @Test
+    void searchHitCarriesReviewStatus() throws Exception {
+        String key = workerKey(newCompany());
+        w.search.returns(new SearchResult(List.of(
+                new SearchHit(SourceType.KNOWLEDGE_CARD, UUID.randomUUID(), "Mi ficha", Optional.empty(), false,
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty(),
+                        Optional.of(ReviewStatus.PENDING)),
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Doc", Optional.of(1), true,
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.4, false, Optional.empty(),
+                        Optional.empty()))));
+        mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"x\"]}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.hits[0].reviewStatus").value("PENDING"))
+                .andExpect(jsonPath("$.hits[1].reviewStatus").doesNotExist());
+    }
+
+    @Test
     void searchHitCarriesSupersededAndReplacement() throws Exception {
         String key = workerKey(newCompany());
         Document current = Fixtures.readyDocument(w.docs, newCompany(), "vigente");
         w.search.returns(new SearchResult(List.of(
                 new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Viejo", Optional.of(1), true,
-                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, true, Optional.of(DocumentRef.of(current))),
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, true, Optional.of(DocumentRef.of(current)), Optional.empty()),
                 new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Sin ver", Optional.of(1), true,
-                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.4, true, Optional.empty()))));
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.4, true, Optional.empty(), Optional.empty()))));
         mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"queries\":[\"x\"]}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.hits[0].superseded").value(true))
@@ -248,9 +265,9 @@ class WorkerApiTest extends WebTestSupport {
         w.search.returnsCases(new SimilarCasesResult(List.of(
                 new SimilarCase(SourceType.ORIGINAL_DOCUMENT, docId, "Caso viejo", Optional.empty(), Fixtures.NOW, 5,
                         List.of(new CasePage(1, "uno"), new CasePage(5, "cinco")), Optional.empty(), true, "extracto",
-                        true, Optional.of(DocumentRef.of(replacement))),
+                        true, Optional.of(DocumentRef.of(replacement)), Optional.empty()),
                 new SimilarCase(SourceType.KNOWLEDGE_CARD, UUID.randomUUID(), "Ficha", Optional.empty(), Fixtures.NOW,
-                        0, List.of(), Optional.of("cuerpo"), false, "ext", false, Optional.empty()))));
+                        0, List.of(), Optional.of("cuerpo"), false, "ext", false, Optional.empty(), Optional.of(ReviewStatus.PENDING)))));
     }
 
     @Test
@@ -283,6 +300,16 @@ class WorkerApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.cases[0].author").doesNotExist())
                 .andExpect(jsonPath("$.cases[0].uploadedBy").doesNotExist())
                 .andExpect(jsonPath("$.cases[1].authorId").doesNotExist());
+    }
+
+    @Test
+    void similarCasesCarryReviewStatusOfCards() throws Exception {
+        scriptOldCaseAndCard(UUID.randomUUID());
+
+        mvc.perform(post("/v1/similar-cases").header(AUTH, workerKey(newCompany()))
+                .contentType(MediaType.APPLICATION_JSON).content(similarBody())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.cases[1].reviewStatus").value("PENDING"))
+                .andExpect(jsonPath("$.cases[0].reviewStatus").doesNotExist());
     }
 
     @Test

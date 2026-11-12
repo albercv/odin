@@ -1,6 +1,7 @@
 package com.e2d.odin.domain.search;
 
 import com.e2d.odin.domain.document.DocumentRef;
+import com.e2d.odin.domain.knowledge.ReviewStatus;
 import com.e2d.odin.domain.shared.ProjectId;
 import java.time.Instant;
 import java.util.Optional;
@@ -18,5 +19,6 @@ public record SearchHit(
         String excerpt,
         double rank,
         boolean superseded,
-        Optional<DocumentRef> replacement) {
+        Optional<DocumentRef> replacement,
+        Optional<ReviewStatus> reviewStatus) {
 }

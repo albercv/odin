@@ -1986,6 +1986,9 @@
           },
           "replacement" : {
             "$ref" : "#/components/schemas/Replacement"
+          },
+          "reviewStatus" : {
+            "type" : "string"
           }
         },
         "required" : [ "addedAt", "excerpt", "origin", "pageCount", "pages", "sourceId", "sourceType", "superseded", "title", "truncated" ]
@@ -2108,6 +2111,9 @@
           },
           "replacement" : {
             "$ref" : "#/components/schemas/Replacement"
+          },
+          "reviewStatus" : {
+            "type" : "string"
           }
         },
         "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]

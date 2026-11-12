@@ -8,6 +8,7 @@ import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.ReviewStatus;
 import com.e2d.odin.domain.search.QuoteMatcher;
 import com.e2d.odin.domain.search.CasePage;
 import com.e2d.odin.domain.search.SearchHit;
@@ -21,6 +22,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -47,7 +49,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     }
 
     private List<SearchHit> find(CompanyScope scope, String... terms) {
-        return search.search(new SearchQuery(List.of(terms), scope, ProjectVisibility.all(), Optional.empty(), 5)).hits();
+        return search.search(new SearchQuery(List.of(terms), scope, ProjectVisibility.all(), Optional.empty(), 5, Db.NOBODY)).hits();
     }
 
     @Test
@@ -215,7 +217,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
 
     private List<SearchHit> findIn(CompanyId company, int limit, String... terms) {
         return search.search(new SearchQuery(List.of(terms), CompanyScope.of(company), ProjectVisibility.all(),
-                Optional.empty(), limit)).hits();
+                Optional.empty(), limit, Db.NOBODY)).hits();
     }
 
     private void supersede(CompanyId company, Document old, Document current) {
@@ -289,13 +291,13 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         inProject(current, closed);
         forceMark(old, current);
         SearchQuery blind = new SearchQuery(List.of("zafiro"), CompanyScope.of(c), ProjectVisibility.of(Set.of()),
-                Optional.empty(), 5);
+                Optional.empty(), 5, Db.NOBODY);
         List<SearchHit> hits = search.search(blind).hits();
         assertThat(hits).hasSize(1);
         assertThat(hits.get(0).superseded()).isTrue();
         assertThat(hits.get(0).replacement()).isEmpty();
         SearchQuery member = new SearchQuery(List.of("zafiro"), CompanyScope.of(c),
-                ProjectVisibility.of(Set.of(closed)), Optional.empty(), 5);
+                ProjectVisibility.of(Set.of(closed)), Optional.empty(), 5, Db.NOBODY);
         assertThat(search.search(member).hits().get(0).replacement()).contains(DocumentRef.of(current));
     }
 
@@ -348,7 +350,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
 
     private SimilarCasesResult cases(CompanyId company, ProjectVisibility visibility, String... terms) {
         return search.findSimilarCases(new SimilarCasesQuery(List.of(terms), CompanyScope.of(company), visibility,
-                Optional.empty(), 5));
+                Optional.empty(), 5, Db.NOBODY));
     }
 
     private static List<String> caseTitles(SimilarCasesResult result) {
@@ -487,7 +489,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     }
 
     private List<String> titles(CompanyId company, ProjectVisibility visibility, Optional<ProjectId> project) {
-        return search.search(new SearchQuery(List.of("franquicia"), CompanyScope.of(company), visibility, project, 10))
+        return search.search(new SearchQuery(List.of("franquicia"), CompanyScope.of(company), visibility, project, 10, Db.NOBODY))
                 .hits().stream().map(SearchHit::title).toList();
     }
 
@@ -500,5 +502,113 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     private void cardIn(CompanyId company, ProjectId project, String title, String body) {
         cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.of(project), title, body,
                 Optional.empty(), newUser(company), NOW, CardStatus.APPROVED, Optional.empty()));
+    }
+
+    private void ownCard(CompanyId company, UserId author, Optional<ProjectId> project, CardStatus status,
+            String title, String body) {
+        cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), company, project, title, body, Optional.empty(),
+                author, NOW, status, Optional.empty()));
+    }
+
+    private List<SearchHit> findAs(UserId searcher, CompanyId company, ProjectVisibility visibility, String term) {
+        return search.search(new SearchQuery(List.of(term), CompanyScope.of(company), visibility, Optional.empty(), 5,
+                searcher)).hits();
+    }
+
+    private List<SimilarCase> casesAs(UserId searcher, CompanyId company, ProjectVisibility visibility, String term) {
+        return search.findSimilarCases(new SimilarCasesQuery(List.of(term), CompanyScope.of(company), visibility,
+                Optional.empty(), 5, searcher)).cases();
+    }
+
+    @Test
+    void authorSeesOwnPendingCardMarked() {
+        CompanyId c = newCompany();
+        UserId author = newUser(c);
+        ownCard(c, author, Optional.empty(), CardStatus.PENDING, "Mi pendiente", "filtración pendiente de revisar");
+        card(c, CardStatus.APPROVED, "Aprobada", "filtración aprobada");
+        page(c, "Documento", DocumentStatus.READY, "filtración en un documento");
+
+        List<SearchHit> hits = findAs(author, c, ProjectVisibility.all(), "filtración");
+
+        assertThat(hits).extracting(SearchHit::title).containsExactlyInAnyOrder("Mi pendiente", "Aprobada", "Documento");
+        assertThat(hits).filteredOn(h -> h.title().equals("Mi pendiente")).singleElement()
+                .extracting(SearchHit::reviewStatus).isEqualTo(Optional.of(ReviewStatus.PENDING));
+        assertThat(hits).filteredOn(h -> h.title().equals("Aprobada")).singleElement()
+                .extracting(SearchHit::reviewStatus).isEqualTo(Optional.of(ReviewStatus.APPROVED));
+        assertThat(hits).filteredOn(h -> h.title().equals("Documento")).singleElement()
+                .extracting(SearchHit::reviewStatus).isEqualTo(Optional.empty());
+    }
+
+    @Test
+    void colleagueDoesNotSeePendingCard() {
+        CompanyId c = newCompany();
+        ownCard(c, newUser(c), Optional.empty(), CardStatus.PENDING, "Título exacto pendiente", "filtración pendiente");
+
+        assertThat(findAs(newUser(c), c, ProjectVisibility.all(), "Título exacto pendiente")).isEmpty();
+        assertThat(findAs(newUser(c), c, ProjectVisibility.all(), "filtración")).isEmpty();
+    }
+
+    @Test
+    void rejectedCardIsNeverFound() {
+        CompanyId c = newCompany();
+        UserId author = newUser(c);
+        ownCard(c, author, Optional.empty(), CardStatus.REJECTED, "Rechazada", "filtración rechazada");
+        card(c, CardStatus.APPROVED, "Aprobada", "filtración aprobada");
+
+        assertThat(findAs(author, c, ProjectVisibility.all(), "filtración")).extracting(SearchHit::title)
+                .containsExactly("Aprobada");
+        assertThat(casesAs(author, c, ProjectVisibility.all(), "filtración")).extracting(SimilarCase::title)
+                .containsExactly("Aprobada");
+    }
+
+    @Test
+    void ownPendingCardInRestrictedProjectNoLongerVisibleIsHidden() {
+        CompanyId c = newCompany();
+        UserId author = newUser(c);
+        ProjectId closed = newProject(c, "Cerrado");
+        ownCard(c, author, Optional.of(closed), CardStatus.PENDING, "Pendiente del cerrado", "filtración pendiente");
+
+        assertThat(findAs(author, c, ProjectVisibility.of(Set.of()), "filtración")).isEmpty();
+        assertThat(casesAs(author, c, ProjectVisibility.of(Set.of()), "filtración")).isEmpty();
+        assertThat(findAs(author, c, ProjectVisibility.of(Set.of(closed)), "filtración")).hasSize(1);
+    }
+
+    @Test
+    void samePersonWithKeyOfOtherCompanySeesNoPendingCardOfTheFirst() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId author = newUser(a);
+        ownCard(a, author, Optional.empty(), CardStatus.PENDING, "Pendiente de A", "filtración pendiente");
+
+        assertThat(findAs(author, b, ProjectVisibility.all(), "filtración")).isEmpty();
+        assertThat(casesAs(author, b, ProjectVisibility.all(), "filtración")).isEmpty();
+    }
+
+    @Test
+    void authorSeesOwnPendingCardInSimilarCases() {
+        CompanyId c = newCompany();
+        UserId author = newUser(c);
+        ownCard(c, author, Optional.empty(), CardStatus.PENDING, "Mi pendiente", "la franquicia pendiente");
+        card(c, CardStatus.APPROVED, "Aprobada", "la franquicia aprobada");
+        caseDocument(c, "Caso", "la franquicia del caso");
+
+        List<SimilarCase> found = casesAs(author, c, ProjectVisibility.all(), "franquicia");
+
+        assertThat(found).extracting(SimilarCase::title).containsExactlyInAnyOrder("Mi pendiente", "Aprobada", "Caso");
+        assertThat(found).filteredOn(x -> x.title().equals("Mi pendiente")).singleElement()
+                .extracting(SimilarCase::reviewStatus).isEqualTo(Optional.of(ReviewStatus.PENDING));
+        assertThat(found).filteredOn(x -> x.title().equals("Aprobada")).singleElement()
+                .extracting(SimilarCase::reviewStatus).isEqualTo(Optional.of(ReviewStatus.APPROVED));
+        assertThat(found).filteredOn(x -> x.title().equals("Caso")).singleElement()
+                .extracting(SimilarCase::reviewStatus).isEqualTo(Optional.empty());
+    }
+
+    @Test
+    void colleagueDoesNotSeePendingCardInSimilarCases() {
+        CompanyId c = newCompany();
+        ownCard(c, newUser(c), Optional.empty(), CardStatus.PENDING, "Título exacto pendiente", "la franquicia");
+
+        assertThat(casesAs(newUser(c), c, ProjectVisibility.all(), "franquicia")).isEmpty();
+        assertThat(casesAs(newUser(c), c, ProjectVisibility.all(), "Título exacto pendiente")).isEmpty();
     }
 }

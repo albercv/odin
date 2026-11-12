@@ -57,6 +57,12 @@ final class SearchSql {
                 + " IS NULL)";
     }
 
+    /** Las fichas que puede ver quien busca (:searcher): las aprobadas y sus propias pendientes. Las rechazadas, nunca. */
+    static String visibleCards(String alias) {
+        return "(" + alias + ".status = 'APPROVED' OR (" + alias + ".status = 'PENDING' AND " + alias
+                + ".author_id = :searcher))";
+    }
+
     static StatementSpec bindTerms(StatementSpec spec, List<String> terms, List<String> exact) {
         StatementSpec bound = spec;
         for (int i = 0; i < terms.size(); i++) {

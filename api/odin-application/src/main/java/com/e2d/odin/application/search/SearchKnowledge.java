@@ -47,7 +47,7 @@ public class SearchKnowledge {
         }
         int limit = WorkerAccess.cap(request.limit(), DEFAULT_LIMIT, MAX_LIMIT);
         SearchResult result = search.search(new SearchQuery(terms, actor.scope(), access.content(),
-                request.projectId(), limit));
+                request.projectId(), limit, actor.userId()));
         questions.record(new QuestionRecord(ids.newId(), access.companyId(), actor.userId(), String.join(" | ", terms),
                 result.hits().size(), clock.instant(), QuestionKind.SEARCH));
         return result;
