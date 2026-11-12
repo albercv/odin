@@ -15,7 +15,7 @@
 
 ## Cuándo se ejecuta
 
-- Tras el cierre de la 2a, cuando lo diga el CEO. Va después de los bloques 1 y 2, porque toca `ListDocuments`, `DescribeMe` y el hilo de programación.
+- Tras el cierre de la 2a, cuando lo diga el CEO. Va justo después del bloque 1 y antes del bloque 2 (D-049), porque toca `ListDocuments`, `DescribeMe` y el hilo de programación. Los toma tal como los dejó la 2a, sin ningún cambio del bloque 2.
 - Antes de empezar, `feature/fase-2-conocimiento` se actualiza con la punta de `feature/identidad-pertenencias`.
 
 ## Restricciones globales
@@ -26,7 +26,7 @@
 - **Nombres:** identificadores en inglés, explicativos y en camelCase. Mensajes, documentación y commits en español.
 - **Aislamiento (D-014, spec 2a 6):**
   - cada caso de uso con actor lleva una prueba con un actor de otra empresa;
-  - lo que lee un trabajador lleva además una con un proyecto restringido ajeno;
+  - lo que lee un trabajador lleva además una con un proyecto cerrado del que no es miembro (D-047);
   - las tablas nuevas tienen seguridad por filas.
 - **Lo generado se marca:** todo tema de la IA sale con `source: AI`. Un tema que no está en la lista de la empresa no se guarda nunca (D-031, D-008).
 - **Instrucciones de etiquetado:** el texto del apartado «Instrucciones v1», literal. Cambiarlo obliga a volver a medir (tarea 6).
@@ -39,14 +39,15 @@
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V12__topics.sql`, o la siguiente libre.
+- **Migración:** `V12__topics.sql`, o la siguiente libre (en el orden de D-049, V11 es del bloque 1 y V13 del bloque 7).
+- **Visibilidad (D-047):** «proyectos visibles» son los de los que el trabajador es miembro, los abiertos a toda la empresa (`restricted = false`) y, además, lo que no tiene proyecto, que ve toda la empresa.
 - **Datos:** solo ficticios.
 
 ## Foco de revisión
 
 1. **El administrador corrige mientras la IA etiqueta:** su corrección sobrevive al guardado de la IA. Prueba en la tarea 3 (`adminDecisionDuringTaggingSurvives`).
 2. **Una lista de temas larga con un documento largo:** el tramo se parte hasta caber o el documento falla con el mensaje del spec. Nunca se guardan temas de un texto recortado. Prueba en la tarea 2 (`truncatedChunkIsSplitUntilItFits` y `chunkBelowMinimumFailsWithListTooLong`).
-3. **Un trabajador sin acceso a un proyecto restringido:** el recuento de pendientes no cuenta sus documentos y el filtro por tema no los devuelve. Prueba en la tarea 5 (`pendingCountIgnoresInvisibleProjects`).
+3. **Un trabajador que no es miembro de un proyecto cerrado:** el recuento de pendientes no cuenta sus documentos y el filtro por tema no los devuelve. Prueba en la tarea 5 (`pendingCountIgnoresInvisibleProjects`).
 4. **Un tema que contiene a otro**, como «agua» frente a «agua y humedades»: se rechaza al darlo de alta y al renombrar. Prueba en la tarea 1 (`nameContainingAnotherIsRejected` y `renameIntoContainingNameIsRejected`).
 5. **El modelo responde con un nombre que no está en la lista, o con nada:** no se guarda ningún tema y el documento queda `DONE`. Prueba en la tarea 4 (`unknownNamesAreIgnored`) y en la tarea 2 (`noTopicFromListLeavesDoneWithoutTopics`).
 
@@ -350,7 +351,8 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
   - `remove` deja `REMOVED`, con quién y cuándo;
   - `retag` llama a `TaggingRepository.retag`.
 - `ListDocuments` gana `Optional<TopicId> topicId`. Un tema de otra empresa o borrado da 404, «Tema no encontrado».
-- `DescribeMe`: `topics` y `tagging.pendingDocuments` con `pendingCount(company, visibility)`.
+- `DescribeMe`: `topics` y `tagging.pendingDocuments` con `pendingCount(company, visibility)`. `visibility` es la que `DescribeMe` ya calcula con `WorkerAccess.visibleProjects(actor, companyId, alive, projectMembers)` (2a); no hace falta ningún parámetro nuevo en el constructor.
+- `ListDocuments` ya recibe `ProjectMemberRepository projectMembers` y usa `WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)` (2a). El filtro por tema se suma sin tocar eso: el tema se valida contra la empresa del actor, el filtro de proyecto sigue con `requireProject(access.visibility(), projectId)` y la lista se lee con `access.content()`.
 - MCP `listDocuments`:
   - gana `topic`, un nombre; el MCP lo traduce con `me.topics`, y un nombre desconocido es un error de la herramienta que lista los temas válidos;
   - con tema, la respuesta añade `taggingPending`.
@@ -385,7 +387,7 @@ Rama `task/fase-2-conocimiento/temas-trabajador`. Spec 5.3, 5.4 y 6.
   - `ListDocumentsTest`:
     - `filtersByTopicWithActiveTopicsOnly`;
     - `foreignTopicIsNotFound`;
-    - `restrictedProjectOfOthersIsInvisible`.
+    - `restrictedProjectOfOthersIsInvisible`: un documento de un proyecto cerrado del que no es miembro no sale ni con el filtro por tema.
   - `DescribeMeTest`: `listsTopicsAndPendingCount` y `pendingCountIgnoresInvisibleProjects`.
   - Web: `WorkerApiTest.listDocumentsByTopic`, `AdminApiTest`, una prueba por ruta de temas de documento, e `IsolationTest.otherCompanyAdminCannotReviewForeignDocumentTopics`.
   - MCP:
@@ -426,7 +428,7 @@ Rama `task/fase-2-conocimiento/bateria-etiquetado`. Spec 8 y 9.
   - Se anota la máquina: modelo, chip, memoria y sistema.
 - [ ] **Paso 3 (CTO):** compara con T-010 con el mismo modelo.
   - Si una exhaustividad baja, se investiga primero el preámbulo generalizado: se repite con el preámbulo medido para aislar la causa.
-  - Las cifras van al informe del bloque y a T-017. Si siguen peor, se plantea al CEO.
+  - Las cifras van al informe del bloque y a su entrada en el registro técnico. Si siguen peor, se plantea al CEO.
   - Si la memoria o el tiempo superan lo que da un equipo modesto, también se plantea al CEO (D-030, D-043).
 - [ ] **Paso 4:** commit «test: batería de etiquetado con el modelo real».
 
@@ -438,7 +440,7 @@ Rama `task/fase-2-conocimiento/bateria-etiquetado`. Spec 8 y 9.
   - que no se guardan temas de texto recortado.
 - `make check` y `make demo` ejecutados por el CTO.
 - **Memoria de Docker Desktop** (spec 7): si se quiere usar el servicio `tagger` de Compose en este Mac, el CTO comprueba antes que la máquina virtual tiene memoria para `qwen3.5:9b`. Si no la tiene, se usa el Ollama del equipo.
-- Informe del bloque, T-017 en el registro técnico y copia del informe en la carpeta de notas para el CEO.
+- Informe del bloque, su entrada en el registro técnico (el siguiente número libre al escribirla) y copia del informe en la carpeta de notas para el CEO.
 
 ## Orden y paralelismo
 

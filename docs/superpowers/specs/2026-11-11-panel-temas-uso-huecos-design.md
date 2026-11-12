@@ -1,9 +1,9 @@
 # Odín · Fase 2, bloque 4: panel con temas, uso, volumen entregado y huecos
 
 - Fecha: 2026-11-11. Autor: CTO (segunda sesión). Encargo 11, apartado «Panel del administrador».
-- Decisiones de negocio que lo originan: D-005, D-030, D-031, D-036 y D-039.
+- Decisiones de negocio que lo originan: D-005, D-030, D-031, D-036 y D-039. Se aplican también D-047 y D-048.
 - Amplía `2026-11-09-api-central-design.md` («spec base») y se apoya en `2026-11-10-identidad-pertenencias-design.md` («spec 2a»), `2026-11-10-direccion-visual-design.md` («dirección visual») y `2026-11-11-etiquetado-temas-design.md` («bloque 3»).
-- Rama: `feature/fase-2-conocimiento`. Se ejecuta cuando cierre la fase 2a y después de los bloques 2 y 3.
+- Rama: `feature/fase-2-conocimiento`. Se ejecuta cuando cierre la fase 2a y es el último de la fase 2 (D-049), después de los bloques 1, 3, 6, 7, 2 y 5.
 
 ## 1. Por qué
 
@@ -100,12 +100,13 @@ Usa la API del bloque 3.
   - fichas aportadas, aprobadas, corregidas, rechazadas y pendientes;
   - documentos subidos, listos, que fallaron y que esperan al lector;
   - documentos etiquetados y pendientes, si hay temas.
-- **Por persona:** `people[]`, con `userId`, `displayName`, `questions` y `cardsSaved`, **ordenado por nombre**.
+- **Por persona:** `people[]`, con `userId`, `displayName` (nombre y apellidos, `User.displayName()`), `memberCode`, `questions` y `cardsSaved`, **ordenado por `displayName`**.
+  - **`memberCode`** es el código de la persona con el de la empresa, `personCode-companyCode` (por ejemplo `7F3K-E2D`), calculado como en `MemberView.of` (D-048). Sale solo en el panel: nunca en el MCP, ni en las citas, ni en las fichas.
   - **Quién sale:** las personas con pertenencia viva en esa empresa, aunque tengan cero, y las que tienen preguntas o fichas en esa empresa ese mes. No hace falta saber desde cuándo pertenece cada una, un dato que la 2a no guarda.
-  - **Personas borradas** (`app_user.deleted_at`): se suman en una sola fila, «Personas dadas de baja», sin `userId` ni nombre. Así no se distinguen entre ellas.
+  - **Personas borradas** (`app_user.deleted_at`): se suman en una sola fila, «Personas dadas de baja», sin `userId`, ni nombre, ni código. Así no se distinguen entre ellas.
   - `questions` cuenta las filas de `question_record` de la persona en esa empresa y mes, de los dos tipos. `cardsSaved` cuenta las de `knowledge_card` con ese `author_id`, que es obligatorio desde V2. Todas las fichas las aporta un trabajador: no hay fichas del sistema.
 - **En la pantalla:**
-  - tabla de la empresa y tabla por persona;
+  - tabla de la empresa y tabla por persona, con el nombre y el código de cada una (la fila de bajas no lleva código);
   - sin ordenar por columnas, sin destacar a nadie y sin totales por persona fuera de la tabla;
   - una nota fija: «Recuentos descriptivos. No sirven para valorar a nadie».
 
@@ -169,7 +170,8 @@ Aquí se dice qué se prueba. Los nombres exactos de las pruebas, y si cada una 
     - cada recuento;
     - el orden por nombre, también cuando las cantidades dirían otro;
     - que no hay recuentos por persona de fichas rechazadas, aprobadas ni corregidas;
-    - la persona dada de baja;
+    - el código de cada persona (`personCode-companyCode`), igual que el de `MemberView.of`;
+    - la persona dada de baja, sin código;
     - el mes;
     - el actor de otra empresa.
   - `ListGapsTest`. Cubre:
@@ -197,7 +199,7 @@ Aquí se dice qué se prueba. Los nombres exactos de las pruebas, y si cada una 
   3. ver el uso del mes con las preguntas de la demo;
   4. ver un hueco con la pregunta de la demo que da «no consta».
 - **Rendimiento:** con datos ficticios a escala (por ejemplo, 10.000 preguntas y 2.000 documentos en una empresa), las tres rutas se miden en la verificación del CTO. La cifra va al informe; no se promete ninguna antes.
-- **Regresión:** la batería de búsqueda mantiene 27 de 30.
+- **Regresión:** la batería de búsqueda mantiene 27 de 30 y `SearchScaleBatteryIT` mantiene su umbral. Este bloque no cambia lo que ve la IA, así que no hace falta medir la batería de respuestas.
 
 ## 8. Criterio de cierre
 
@@ -208,7 +210,7 @@ Aquí se dice qué se prueba. Los nombres exactos de las pruebas, y si cada una 
   - no hay listas de preguntas por persona;
   - los huecos van sin autor ni hora;
   - ningún texto cita decisiones internas.
-- Decisiones registradas en el registro técnico (T-018).
+- Decisiones registradas en el registro técnico (su entrada, con el siguiente número libre al escribirla).
 
 ## 9. Lo que queda al constructor
 
@@ -234,3 +236,12 @@ Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 6 preguntas
 - `author_id`, que es obligatorio (5.2);
 - qué rutas cuenta el filtro de bytes y cómo (5.3);
 - el periodo frente al plazo legal de conservación (2).
+
+## 12. Revisión tras la 2a y D-049 (2026-11-11)
+
+- **Orden (D-049):** este bloque es el último de la fase 2. La migración pasa de V13 a V15 (V11 es del bloque 1, V12 del 3, V13 del 7 y V14 del 2).
+- **D-048:** cada fila de la tabla por persona lleva `userId`, `displayName` y `memberCode` (`personCode-companyCode`, como `MemberView.of`). La tabla sigue ordenada por `displayName`. La fila «Personas dadas de baja» no lleva código. El código sale solo en el panel: nunca en el MCP, ni en las citas, ni en las fichas.
+- **D-047:** no cambia lo que ve el administrador. El volumen entregado y los huecos se miden por empresa, sin mirar proyectos.
+- **Bloque 6:** `listProjects` lee `GET /v1/me`, así que cuenta como «Perfil» en el volumen entregado y no añade ninguna fila. La regresión incluye `SearchScaleBatteryIT`.
+- **Bloque 7:** `GET /v1/documents` y las rutas de documentos ganan `superseded` y `replacement` o `supersededBy`; no cambian los recuentos de este bloque.
+- **Registro técnico:** sin número fijo; el siguiente libre al escribirlo.

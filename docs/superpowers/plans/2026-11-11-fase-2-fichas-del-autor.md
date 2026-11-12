@@ -14,7 +14,7 @@
 
 ## Cuándo se ejecuta
 
-- Tras el cierre de la 2a y **después del bloque 2**, cuando lo diga el CEO.
+- Tras el cierre de la 2a y **después del bloque 2**, cuando lo diga el CEO. En el orden de D-049 van antes los bloques 1, 3, 6, 7 y 2, y después el 4.
 - Las respuestas del CEO (D-040 y D-044) ya están aplicadas. La pantalla de revisión, que pide que la nota trate del contenido, va en el bloque 4.
 
 ## Restricciones globales
@@ -24,14 +24,14 @@
 - **Clean Code (D-029):** métodos de 30 líneas como máximo, sin lógica duplicada y con comentarios mínimos. El filtro de fichas existe una sola vez.
 - **Nombres:** identificadores en inglés, explicativos y en camelCase. Mensajes, documentación y commits en español.
 - **Aislamiento (D-014, spec 2a 6):**
-  - cada caso de uso lleva una prueba con un actor de otra empresa, otra con la misma persona actuando con la clave de otra empresa, y otra con un proyecto restringido del que ya no es miembro;
+  - cada caso de uso lleva una prueba con un actor de otra empresa, otra con la misma persona actuando con la clave de otra empresa, y otra con un proyecto cerrado del que ya no es miembro (D-047);
   - la seguridad por filas es la segunda barrera.
 - **D-036:**
   - una ficha pendiente solo la ve su autor;
   - una rechazada no sale en ninguna búsqueda;
   - el panel no gana nada.
 - **Contrato:** si cambia la API, en la misma tarea se regeneran `api/openapi.json` (`cd api && mvn -q verify -Dodin.updateOpenApi=true`) y los tipos (`npm run generate:types` en `panel/` y en `mcp/`).
-- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, y `SearchBatteryIT` mantiene 27 de 30.
+- **Cierre de cada tarea:** `make check` y `make demo` terminan con 0, y `SearchBatteryIT` mantiene 27 de 30 y `SearchScaleBatteryIT` su umbral.
 - **Dónde se trabaja:** en `.worktrees/fase-2`. No se ejecutan `make up` ni `make down`.
 - **Git:**
   - cada tarea en su rama `task/fase-2-conocimiento/<tarea>`;
@@ -109,7 +109,7 @@ Rama `task/fase-2-conocimiento/pendientes-del-autor`. Spec 4.1.
     - `authorSeesOwnPendingCardMarked`;
     - `colleagueDoesNotSeePendingCard`;
     - `rejectedCardIsNeverFound`, para el autor también;
-    - `ownPendingCardInRestrictedProjectNoLongerVisibleIsHidden`;
+    - `ownPendingCardInRestrictedProjectNoLongerVisibleIsHidden`: una ficha pendiente de un proyecto cerrado del que el autor ya no es miembro no sale;
     - `authorSeesOwnPendingCardInSimilarCases`;
     - `colleagueDoesNotSeePendingCardInSimilarCases`.
   - `SearchKnowledgeTest.passesSearcher` y `FindSimilarCasesTest.passesSearcher`;
@@ -135,15 +135,16 @@ Rama `task/fase-2-conocimiento/mis-fichas-y-preguntas`. Spec 4.2, 4.3, 5 y 6.
   - demostración: `mcp/scripts/demo-client.ts`;
   - contrato y tipos.
 
-**Interfaces que consume:** `QuestionKind` (bloque 2) y `ProjectVisibility` (2a).
+**Interfaces que consume:** `QuestionKind` (bloque 2), y de la 2a `WorkerAccess` (con `Granted(companyId, visibility, content)`), `ProjectMemberRepository` y `ProjectVisibility`.
 
 **Valores:**
 - `ListMyKnowledgeCards`:
-  - `WorkerAccess.require(actor, organizations, Capability.SAVE_KNOWLEDGE_CARD)`;
-  - la visibilidad de proyectos como en `SearchKnowledge`;
+  - recibe `ProjectMemberRepository projectMembers` en el constructor, como `SearchKnowledge` y `VerifyCitation`;
+  - `var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SAVE_KNOWLEDGE_CARD)`;
+  - lee con `access.content()` como visibilidad de proyectos, igual que `SearchKnowledge`;
   - límite 100, de la más reciente a la más antigua.
 - `ListMyQuestions`:
-  - `WorkerAccess.require(…, Capability.SEARCH_KNOWLEDGE)`;
+  - recibe `ProjectMemberRepository projectMembers` y llama a `WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)`;
   - `WorkerAccess.cap(limit, 50, 200)`;
   - solo la empresa de la clave, de la más reciente a la más antigua.
 - `MyCardView.review` es nulo si la ficha está `PENDING`. `originalBody` solo tiene valor si se corrigió.
@@ -169,7 +170,7 @@ Rama `task/fase-2-conocimiento/mis-fichas-y-preguntas`. Spec 4.2, 4.3, 5 y 6.
     - `rejectedCardShowsReviewNote`;
     - `capabilityDisabledIsForbidden`;
     - `sameUserWithKeyOfOtherCompanySeesNothingOfTheFirst`;
-    - `ownCardInRestrictedProjectNoLongerVisibleIsHidden`;
+    - `ownCardInRestrictedProjectNoLongerVisibleIsHidden`: una ficha de un proyecto cerrado del que ya no es miembro no sale;
     - `adminWhoAlsoWorksListsOwnCardsWithKey`.
   - `ListMyQuestionsTest`:
     - `listsOnlyOwnQuestionsOfKeyCompanyNewestFirst`;
@@ -186,7 +187,9 @@ Rama `task/fase-2-conocimiento/mis-fichas-y-preguntas`. Spec 4.2, 4.3, 5 y 6.
 
 - Revisión final de la rama con Opus. El foco es D-036: ninguna ficha pendiente o rechazada llega a quien no debe.
 - `make check` y `make demo` ejecutados por el CTO.
-- Informe del bloque, T-019 en el registro técnico y copia del informe en la carpeta de notas para el CEO.
+- Regresión: `SearchBatteryIT` en 27 de 30 y `SearchScaleBatteryIT` con su umbral.
+- Al cerrar el bloque se mide la batería de respuestas (diseño del bloque 6, 6.6), porque las dos herramientas MCP nuevas y sus instrucciones cambian lo que ve la IA.
+- Informe del bloque, su entrada en el registro técnico (el siguiente número libre al escribirla) y copia del informe en la carpeta de notas para el CEO.
 
 ## Orden y modelos
 

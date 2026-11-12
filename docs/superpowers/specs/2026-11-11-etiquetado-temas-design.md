@@ -143,8 +143,8 @@
 
 ### 5.4 Lo que ve el trabajador
 
-- **`DescribeMe`:** gana `topics` (`id`, `name`, `definition`) y `tagging`, con el número de documentos visibles `READY` que no están `DONE` con la versión actual. Los `FAILED` cuentan como pendientes, para que una lista nunca parezca completa sin serlo.
-  - El recuento solo cuenta documentos de sus proyectos visibles, para no revelar cuántos hay en un proyecto restringido.
+- **`DescribeMe`:** gana `topics` (`id`, `name`, `definition`) y `tagging`, con el número de documentos visibles `READY` (los de los proyectos de los que es miembro, los de proyectos abiertos a toda la empresa y los que no tienen proyecto, D-047) que no están `DONE` con la versión actual. Los `FAILED` cuentan como pendientes, para que una lista nunca parezca completa sin serlo.
+  - El recuento solo cuenta documentos de sus proyectos visibles, para no revelar cuántos hay en un proyecto cerrado del que no es miembro.
 - **`ListDocuments`:**
   - gana el filtro opcional `topicId`;
   - cada documento lleva `topics`, con `id`, `name` y `source` (`AI` o `ADMIN`), solo los `ACTIVE`.
@@ -203,7 +203,7 @@
     - los intentos.
   - `ManageTopicsTest`: unicidad, la regla de nombres contenidos, el borrado y la versión. Con su caso de otra empresa.
   - `ReviewDocumentTopicsTest`: añadir, quitar y volver a añadir. Con su caso de otra empresa.
-  - `ListDocumentsTest` y `DescribeMeTest`: el filtro y el recuento sin contar proyectos restringidos ajenos.
+  - `ListDocumentsTest` y `DescribeMeTest`: el filtro y el recuento sin contar proyectos cerrados de los que no es miembro.
 - **Adaptador:** `OllamaTopicTaggerTest` contra un `HttpServer` del JDK. Cubre:
   - el cuerpo enviado (modelo, `think false`, opciones y las instrucciones con las definiciones);
   - el cotejo de la respuesta;
@@ -232,7 +232,7 @@
   - la memoria de los dos modelos juntos, medida con el puente del lector OCR cargado, porque en una oficina corren en el mismo equipo.
   - Si hace falta más que un equipo modesto, vuelve al CEO como pregunta de negocio (D-030).
 - Si la exhaustividad de un tema sale peor que en T-010, se dice en el informe y se plantea al CEO.
-- Decisiones registradas en el registro técnico (T-017).
+- Decisiones registradas en el registro técnico (su entrada, con el siguiente número libre al escribirla).
 
 ## 10. Lo que queda al constructor
 
@@ -259,3 +259,11 @@ Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 7 preguntas
 - el plazo por documento según su número de tramos (5.2);
 - el bloqueo de fila contra la carrera con el administrador (5.2);
 - renombrar conserva el tema y sus decisiones (5.1).
+
+## 13. Revisión tras la 2a y D-049 (2026-11-11)
+
+- **Orden:** este bloque va justo después del bloque 1 y antes del bloque 2 (D-049). Toca `ListDocuments`, `DescribeMe` y `WorkerController` tal como los dejó la 2a; no depende de nada del bloque 2.
+- **Visibilidad (D-047):** «proyectos visibles» son los de los que el trabajador es miembro más los abiertos a toda la empresa (`restricted = false`); lo que no tiene proyecto lo ve toda la empresa. D-047 sustituye en este punto a la regla anterior de proyectos restringidos. El proyecto restringido «ajeno» pasa a ser «proyecto cerrado del que no es miembro».
+- **Código de la 2a:** `ListDocuments` y `DescribeMe` ya reciben `ProjectMemberRepository projectMembers` y llaman a `WorkerAccess.require(actor, organizations, projectMembers, Capability.X)`. `ListDocuments` valida un filtro de proyecto con `requireProject(visibility(), projectId)` y lee con `content()`.
+- **Migración:** `V12__topics` se queda en V12 (V11 es del bloque 1; V13 será del bloque 7).
+- **Registro técnico:** el número fijo desaparece; se usa el siguiente libre al escribir la entrada.
