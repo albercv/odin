@@ -404,7 +404,7 @@ def _composed(sess, item, runs):
     key = None if None in usable else _final_key(sess, item, usable)
     hit = None if key is None else sess.cache.get(key)
     if hit is not None:
-        return {**hit, "coste_usd": 0.0, "cached": True}
+        return {**hit, "cached": True}  # conserva su coste original: el gasto real lo excluye por «cached»
     record = _compose_paid(sess, item, runs)
     sess.ledger.charge(record.get("coste_usd"))
     _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
@@ -483,7 +483,7 @@ def _verdict_key(sess, index, spec, rubric, item, answer):
 def _cached_verdict(sess, index, spec, rubric, item, answer):
     """Veredicto guardado con esta misma configuración: sale a coste 0, así que no necesita presupuesto."""
     hit = sess.cache.get(_verdict_key(sess, index, spec, rubric, item, answer))
-    return None if hit is None else {**hit, "coste_usd": 0.0, "cached": True}
+    return None if hit is None else {**hit, "cached": True}
 
 
 def _call_judge(sess, index, spec, rubric, item, answer):

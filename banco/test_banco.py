@@ -467,9 +467,9 @@ class RelaunchCacheTest(Harness):
         self.assertEqual((compose_mock.call_count, claude.call_count, ollama.call_count, responder.call_count), (0, 0, 0, 0))
         folder = max((self.tmp / "resultados").iterdir())
         finals = self.read_jsonl(folder, "final.jsonl")
-        self.assertTrue(all(f["cached"] and f["coste_usd"] == 0.0 for f in finals))
+        self.assertTrue(all(f["cached"] for f in finals))  # conserva su coste original; el gasto real es 0
         verdicts = self.read_jsonl(folder, "veredictos.jsonl")
-        self.assertTrue(all(j["cached"] and j["coste_usd"] == 0.0 for v in verdicts for j in v["judges"]))
+        self.assertTrue(all(j["cached"] for v in verdicts for j in v["judges"]))
         summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
         self.assertEqual(summary["cost"]["notifiedUsd"], 0.0)
         self.assertEqual(summary["accuracy"]["total"], 3)
@@ -1041,6 +1041,55 @@ class BatchesTest(Harness):
         report = (folder / "informe.md").read_text(encoding="utf-8")
         self.assertIn("Se hizo en 2 tandas", report)
         self.assertIn("3 errores seguidos de claude", report)
+
+
+class CachedCostTest(Harness):
+    """Un acierto de caché conserva su coste original con cached: true; el gasto real (libro y registros de pago) no
+    lo cuenta, y el coste por respuesta sí. Se prueba tras reanudar, con una parada por cuota en el redactor o en un juez."""
+
+    OK = {"respuesta": {"respuesta": "Respuesta de prueba.", "no_lo_se": False,
+                        "citas": [{"documentId": "doc-1", "cardId": None, "pagina": 1, "fragmento": "prueba"}]},
+          "error": None, "coste_usd": 0.001, "tokens": None, "duracion_s": 1.0}
+    LIMIT = {"respuesta": None, "error": "Claude AI usage limit reached", "coste_usd": 0.0, "tokens": None, "duracion_s": 1.0}
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+
+    def test_composer_cache_hits_after_resume_keep_their_cost(self):
+        path = self.config(concurrency=1, kind="composer", combiner_model='model = "haiku"')
+        with mock.patch("banco.run.compose", side_effect=[self.OK, self.OK, self.LIMIT]):
+            code = banco.main(["run", "--sin-prueba", "--config", str(path)], layout=self.layout)
+        self.assertEqual(code, 2)
+        with mock.patch("banco.run.compose", return_value=self.OK) as compose, fake_env(FAKE_VEREDICTO="si"):
+            self.assertEqual(banco.main(["reanudar", "--config", str(path)], layout=self.layout), 0)
+        self.assertEqual(compose.call_count, 1)  # solo la respuesta que faltaba
+        folder = self.only_folder()
+        hits = [f for f in self.read_jsonl(folder, "final.jsonl") if f["cached"]]
+        self.assertEqual(len(hits), 2)
+        self.assertEqual([f["coste_usd"] for f in hits], [0.001, 0.001])
+        self.assertEqual(self._from_records_cost(folder), json.loads((folder / "resumen.json").read_text(encoding="utf-8"))["cost"]["notifiedUsdFromRecords"])
+
+    def test_judge_cache_hits_after_resume_keep_their_cost(self):
+        path = self.config(concurrency=1)
+        verdict = {"model": "haiku", "verdict": {"correcta": True}, "coste_usd": 0.0005, "tokens": None, "duracion_s": 1.0, "error": None}
+        limit = {"model": "haiku", "verdict": {"invalido": True, "motivo": "sin veredicto"}, "coste_usd": 0.0, "tokens": None,
+                 "duracion_s": 1.0, "error": "Claude AI usage limit reached"}
+        with mock.patch("banco.judge.run_claude_judge", side_effect=[verdict, verdict, limit]), fake_env(FAKE_VEREDICTO="si"):
+            self.assertEqual(banco.main(["run", "--sin-prueba", "--config", str(path)], layout=self.layout), 2)
+        with mock.patch("banco.judge.run_claude_judge", return_value=verdict) as judged, fake_env(FAKE_VEREDICTO="si"):
+            self.assertEqual(banco.main(["reanudar", "--config", str(path)], layout=self.layout), 0)
+        self.assertEqual(judged.call_count, 4)  # las preguntas 2 y 3, con sus dos jueces de Claude cada una
+        folder = self.only_folder()
+        first = self.read_jsonl(folder, "veredictos.jsonl")[0]
+        haiku = [j for j in first["judges"] if j["model"] == "haiku"]
+        self.assertEqual([j["cached"] for j in haiku], [True, True])
+        self.assertEqual([j["coste_usd"] for j in haiku], [0.0005, 0.0005])
+
+    def _from_records_cost(self, folder):
+        records = [*self.read_jsonl(folder, "buscadores.jsonl"), *self.read_jsonl(folder, "final.jsonl"),
+                   *(j for v in self.read_jsonl(folder, "veredictos.jsonl") for j in v["judges"])]
+        return round(sum((r.get("coste_usd") or 0) for r in records if not r.get("cached")), 4)
 
 
 if __name__ == "__main__":
