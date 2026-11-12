@@ -1,0 +1,21 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+
+DATOS DEL CASO
+Caso 2029-027
+Comunidad: Residencial Los Almendros
+Tipo de incidencia: avería en la ventilación del garaje
+Fecha de apertura: 25 de mayo de 2029
+Comunicante: conserje
+Estado: abierto
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El conserje comunicó que en el garaje hay olor a humo de los coches y los usuarios notan dolor de cabeza por las mañanas. Los extractores del garaje no se ponen en marcha aunque haya muchos vehículos en movimiento, y la central de detección de monóxido de carbono muestra una luz de fallo en varios detectores. La Comunidad no tiene en vigor ninguna revisión reciente del sistema.
+
+ACTUACIONES INICIALES
+1. Comprobación del estado de la central y de los extractores.
+2. Aviso a la empresa de mantenimiento eléctrico.
+3. Aviso a la presidencia y cartel a los usuarios del garaje.
+
+PENDIENTE
+Establecer qué componentes fallan, repararlos y comprobar que la ventilación vuelve a arrancar sola.

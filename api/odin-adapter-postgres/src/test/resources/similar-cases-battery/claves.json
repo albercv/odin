@@ -1,0 +1,93 @@
+[
+  {
+    "id": "N01",
+    "comunidad": "c1-olmo14",
+    "esperados": [
+      "c1-olmo14/caso-2024-017-filtracion-azotea.txt",
+      "c3-puerto3/caso-2025-004-filtracion-cubierta.txt"
+    ]
+  },
+  {
+    "id": "N02",
+    "comunidad": "c2-almendros",
+    "esperados": [
+      "c2-almendros/caso-2025-011-fuga-riego.txt"
+    ]
+  },
+  {
+    "id": "N03",
+    "comunidad": "c3-puerto3",
+    "esperados": [
+      "c1-olmo14/caso-2028-004-latiguillo-lavadora-3b.txt",
+      "c1-olmo14/caso-2028-029-sellado-plato-ducha.txt",
+      "c3-puerto3/caso-2028-035-par-galvanico-derivacion.txt"
+    ]
+  },
+  {
+    "id": "N04",
+    "comunidad": "c3-puerto3",
+    "esperados": [
+      "c1-olmo14/caso-2025-006-ruido-ascensor.txt"
+    ]
+  },
+  {
+    "id": "N05",
+    "comunidad": "c1-olmo14",
+    "esperados": [
+      "c1-olmo14/caso-2025-027-condensaciones-4a.txt"
+    ]
+  },
+  {
+    "id": "N06",
+    "comunidad": "c1-olmo14",
+    "esperados": [
+      "c3-puerto3/caso-2025-022-capilaridad-contadores.txt"
+    ]
+  },
+  {
+    "id": "N07",
+    "comunidad": "c2-almendros",
+    "esperados": [
+      "c1-olmo14/caso-2026-016-ventilacion-garaje-co.txt",
+      "c2-almendros/caso-2028-043-extraccion-garaje.txt"
+    ]
+  },
+  {
+    "id": "N08",
+    "comunidad": "c2-almendros",
+    "esperados": [
+      "c3-puerto3/caso-2026-020-fisura-asiento-cuarto-instalaciones.txt",
+      "c3-puerto3/caso-2028-027-vigas-garaje.txt"
+    ]
+  },
+  {
+    "id": "N09",
+    "comunidad": "c3-puerto3",
+    "esperados": [
+      "c3-puerto3/caso-2028-042-tuberia-techo-garaje.txt",
+      "c2-almendros/caso-2028-045-muro-rampa-garaje.txt"
+    ]
+  },
+  {
+    "id": "N10",
+    "comunidad": "c3-puerto3",
+    "esperados": [
+      "c3-puerto3/caso-2028-003-gas-rellano.txt"
+    ]
+  },
+  {
+    "id": "N11",
+    "comunidad": "c1-olmo14",
+    "esperados": [
+      "c1-olmo14/caso-2028-011-cornisa-acera.txt",
+      "c1-olmo14/caso-2028-036-peto-azotea.txt"
+    ]
+  },
+  {
+    "id": "N12",
+    "comunidad": "c3-puerto3",
+    "esperados": [
+      "c3-puerto3/caso-2028-037-sobretension-cuadro.txt"
+    ]
+  }
+]

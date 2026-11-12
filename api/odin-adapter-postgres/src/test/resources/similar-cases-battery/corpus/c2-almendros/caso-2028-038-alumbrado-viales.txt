@@ -1,0 +1,44 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2028-038
+Comunidad: Residencial Los Almendros
+Categoría: Alumbrado exterior de los viales interiores
+Fecha de apertura: 7 de agosto de 2028
+Comunicante: conserje del residencial
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 7 de agosto de 2028 el conserje del residencial comunicó al despacho que la noche anterior no se habían encendido las catorce farolas del vial norte y que, en el cuadro de servicios comunes situado junto a la conserjería, el interruptor diferencial del circuito de alumbrado exterior volvía a dispararse cada vez que lo rearmaba. El resto de los circuitos del cuadro funcionaba con normalidad. La tarde anterior el jardinero había estado desbrozando la franja de césped que bordea el vial norte, por donde discurre enterrada la línea de alimentación de las farolas, con arquetas de registro al pie de cada una.
+
+ACTUACIONES REALIZADAS
+- 7 de agosto de 2028: el administrador avisa al electricista de la Comunidad.
+- 8 de agosto de 2028: el electricista desconecta las farolas por tramos y mide el aislamiento de la línea entre arquetas de registro con un medidor de aislamiento. El tramo comprendido entre las arquetas 6 y 7 presenta un aislamiento prácticamente nulo respecto de tierra.
+- 8 de agosto de 2028: se abre la arqueta 7 y se observa que el conductor, en el punto en que asoma junto al pie de la farola sin tubo de protección, tiene la cubierta y el aislamiento cortados.
+- 8 de agosto de 2028: se aísla provisionalmente el tramo dañado y se recupera el encendido de trece farolas.
+- 9 de agosto de 2028: el electricista entrega presupuesto para sustituir el tramo y proteger las salidas de cable de todas las farolas del vial.
+
+DOCUMENTACIÓN ARCHIVADA
+- Aviso del conserje.
+- Parte del electricista con las mediciones de aislamiento por tramos.
+- Fotografías del conductor cortado en la arqueta 7.
+=== Página 2 ===
+RESOLUCIÓN
+El electricista atribuye la avería al corte del aislamiento del conductor por el hilo de la desbrozadora, en el tramo que quedaba al descubierto entre la arqueta y la base de la farola. El corte puso el conductor en contacto con la tierra del terreno y provocó el disparo del diferencial, que actuó correctamente. La presidencia aprobó el presupuesto y el 16 de agosto de 2028 el electricista sustituyó el tramo de línea entre las arquetas 6 y 7, ejecutó los empalmes con kit de resina y protegió las salidas de cable de las catorce farolas con tubo de acero y pletina hasta la base de cada una.
+El administrador remitió al jardinero una instrucción escrita para no desbrozar con hilo a menos de treinta centímetros de las farolas y utilizar en esa franja herramienta manual.
+
+SEGUIMIENTO
+El 16 de agosto de 2028, tras la reparación, el electricista midió de nuevo el aislamiento de toda la línea del vial norte, con valores correctos en todos los tramos, y comprobó el encendido de las catorce farolas y el ajuste del reloj astronómico. El conserje confirmó durante la semana siguiente que el alumbrado encendía cada noche y que el diferencial no había vuelto a dispararse.
+
+RESULTADO
+Cerrado el 25 de agosto de 2028. El alumbrado del vial norte funciona con normalidad.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Mediciones finales de aislamiento de la línea.
+- Parte de trabajo y factura del electricista.
+- Instrucción escrita al jardinero.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

@@ -1,0 +1,47 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2027-029
+Comunidad: Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: avería en instalación de protección contra incendios
+Fecha de apertura: 14 de junio de 2027
+Comunicante: vecina del 1º B
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 14 de junio de 2027 la vecina del 1º B comunicó al despacho que, al bajar al sótano a primera hora, había encontrado el suelo del pasillo de trasteros cubierto por una lámina líquida continua y que la boca de incendio equipada situada junto a la puerta del cuarto de bombas estaba abierta y descargando.
+
+El mantenedor de protección contra incendios determinó que la válvula de globo de la boca, de latón, se había abierto de forma accidental al romperse el vástago por fatiga del material, y que la manguera semirrígida había descargado el contenido de la red durante unas seis horas. La descarga solo se detuvo al cerrar la llave de seccionamiento.
+
+ACTUACIONES REALIZADAS
+- 14 de junio de 2027: el conserje corta la alimentación de la red, y el administrador solicita al mantenedor una visita urgente.
+- 14 de junio de 2027: el mantenedor sustituye la válvula averiada, repone la presión y deja operativa la boca, con la anotación en el libro de mantenimiento.
+- 15 de junio de 2027: una empresa de secado industrial coloca deshumidificadores y ventiladores en el pasillo de trasteros y mide el contenido higroscópico de las paredes.
+- 17 de junio de 2027: el administrador recopila las reclamaciones de los cuatro propietarios cuyos trasteros sufrieron daños en el suelo y en enseres almacenados.
+- 21 de junio de 2027: el mantenedor revisa las restantes bocas.
+
+DOCUMENTACIÓN ARCHIVADA
+- Aviso de la vecina del 1º B y fotografías del sótano.
+- Parte del mantenedor, de 14 de junio de 2027, con la válvula retirada.
+- Informe de la empresa de secado.
+=== Página 2 ===
+RESOLUCIÓN
+El mantenedor sustituyó por válvulas nuevas dos bocas más cuyo vástago presentaba un desgaste similar. La Comunidad abonó 680 euros por la sustitución de las tres válvulas y 540 euros por el secado del pasillo. Los daños en los enseres de los cuatro trasteros se tramitaron mediante la póliza de responsabilidad civil de la Comunidad, y la aseguradora indemnizó directamente a los propietarios afectados tras la valoración de un perito.
+
+La empresa de secado retiró los equipos el 23 de junio de 2027, una vez que las mediciones en paredes y solera quedaron en valores normales. El mantenedor emitió un certificado de la instalación revisada con la presión de la red, que se archivó junto a la documentación de la finca.
+
+SEGUIMIENTO
+El 5 de julio de 2027 el administrador recorrió el sótano con el conserje y comprobó que el pavimento estaba limpio y que las bocas estaban cerradas y con el precinto repuesto. El mantenedor realizó la revisión trimestral en septiembre y no halló ninguna anomalía de presión. Los cuatro propietarios confirmaron por escrito la recepción de sus indemnizaciones antes del 30 de julio de 2027. El administrador informó a la presidencia de la conveniencia de revisar el estado de las llaves de seccionamiento en cada inspección reglamentaria.
+
+RESULTADO
+Cerrado el 2 de agosto de 2027. La Comunidad costeó 1.220 euros entre válvulas y secado. Los daños de terceros fueron indemnizados por la aseguradora de la Comunidad.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Facturas del mantenedor y de la empresa de secado.
+- Certificado de la red revisada, de 21 de junio de 2027.
+- Escritos de conformidad de los cuatro propietarios.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.
