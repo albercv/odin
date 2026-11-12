@@ -4,6 +4,8 @@ export type Me = components['schemas']['Me'];
 export type WorkerDocumentView = components['schemas']['WorkerDocumentView'];
 export type Page = components['schemas']['Page'];
 export type SavedCard = components['schemas']['SavedCard'];
+export type SimilarCasesRequest = components['schemas']['SimilarCasesRequestBody'];
+export type SimilarCasesResponse = components['schemas']['SimilarCasesResponse'];
 export type Hit = components['schemas']['Hit'];
 export type SearchRequest = components['schemas']['SearchRequest'];
 export type SearchResponse = components['schemas']['SearchResponse'];
@@ -28,7 +30,9 @@ export interface ApiClient {
     offset: number,
     limit: number,
     topicId?: string,
+    caseDocument?: boolean,
   ): Promise<WorkerDocumentView[]>;
+  similarCases(body: SimilarCasesRequest): Promise<SimilarCasesResponse>;
   readPage(documentId: string, pageNumber: number): Promise<Page>;
   verifyCitation(body: VerifyCitationRequest): Promise<Verification>;
   saveCard(body: SaveCardRequest): Promise<SavedCard>;
@@ -45,12 +49,14 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
   return {
     me: () => call('GET', '/v1/me'),
     search: (body) => call('POST', '/v1/search', body),
-    listDocuments: (projectId, offset, limit, topicId) =>
+    listDocuments: (projectId, offset, limit, topicId, caseDocument) =>
       call(
         'GET',
         `/v1/documents?offset=${offset}&limit=${limit}${projectId ? `&projectId=${enc(projectId)}` : ''}` +
-          (topicId ? `&topicId=${enc(topicId)}` : ''),
+          (topicId ? `&topicId=${enc(topicId)}` : '') +
+          (caseDocument === undefined ? '' : `&caseDocument=${caseDocument}`),
       ),
+    similarCases: (body) => call('POST', '/v1/similar-cases', body),
     readPage: (documentId, pageNumber) => call('GET', `/v1/documents/${enc(documentId)}/pages/${pageNumber}`),
     verifyCitation: (body) => call('POST', '/v1/citations/verify', body),
     saveCard: (body) => call('POST', '/v1/cards', body),
