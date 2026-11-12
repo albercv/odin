@@ -131,6 +131,11 @@ Errores metidos con respuesta conocida, sobre documentos de las capas 3.1 y 3.2.
   - se cargan como páginas `unlimited-ocr-2` en una variante del archivo;
   - **medición por parejas:** las mismas preguntas con el texto limpio y con el escaneado.
   - Cifras: la pérdida por OCR, en puntos, y el CER del texto leído (`cer_wer`).
+- **Dependencia del repositorio OCR** (decisión del CTO):
+  - la preparación es un paso aparte, `make banco-escanear`, que se lanza una vez por variante;
+  - usa el checkout del repositorio OCR de la ruta `OCR_REPO` (por defecto, `../OCR`) con su propio entorno;
+  - arranca el puente solo durante ese paso y lo para al acabar;
+  - el puente y el jurado local de Ollama no se cargan a la vez. Juntos caben (unos 14 GB, D-058), pero el equipo ya estaba usando memoria de intercambio.
 - **Reales antiguos:** las páginas de la Gazeta (3.2). No tienen transcripción de referencia: un subagente transcribe las 30 páginas y otro revisa la transcripción. Las diferencias las decide una persona.
 - **Reales nuevos:** el propietario imprime unos 10 documentos ficticios y los escanea con un escáner y con el móvil.
 
@@ -182,6 +187,11 @@ Errores metidos con respuesta conocida, sobre documentos de las capas 3.1 y 3.2.
    - **el comprobador** (Haiku, con otra instrucción y sin ver la respuesta del redactor) responde solo con esa página;
    - si los dos coinciden, la pregunta entra;
    - si no coinciden, la decide una persona: la sesión del CEO en modo autónomo, y el propietario solo si es de negocio. Si nadie la decide, se descarta;
+   - **canal** (decisión del CTO):
+     - los desacuerdos se escriben en `banco/desacuerdos/<fecha>.jsonl`, con la pregunta, las dos respuestas y la página;
+     - el CTO le manda la ruta al CEO por mensaje;
+     - el CEO escribe sus decisiones en `<fecha>.decisiones.jsonl`;
+     - los desacuerdos de preguntas de la reserva van en `estado/reserva/`. Los decide el CEO, que no ajusta nada, y el CTO no los abre;
    - **el redactor no ve nunca la instrucción del MCP ni los fallos de la batería.**
 3. **Escritas por administradores reales,** en las entrevistas pendientes:
    - cada uno recibe 3 comunidades del archivo ficticio y escribe de 15 a 20 preguntas;
@@ -192,8 +202,11 @@ Errores metidos con respuesta conocida, sobre documentos de las capas 3.1 y 3.2.
 
 ### 4.3 Batería de reserva
 
-- **Qué es:**
-  - 150 preguntas: al menos 8 de cada tipo, viejo o nuevo, y al menos 15 de lista, de versión, de dato concreto y de vigencia;
+- **Qué es** (tamaño: decisión del CTO):
+  - unas 200 preguntas;
+  - al menos 15 de lista, de versión, de dato concreto y de vigencia;
+  - al menos 8 de cada uno de los otros tipos;
+  - 4 de casos parecidos y 4 de ficha;
   - sobre documentos que no usa la batería de desarrollo: comunidades nuevas de la capa 3.1 y documentos de la capa 3.2 que se separan para la reserva;
   - con la mitad de las preguntas de los administradores, cuando las haya.
 - **Cómo se protege:**
@@ -233,7 +246,7 @@ make banco-test                            # pruebas del banco con la IA simulad
 
 ### 5.2 Buscadores y enfoques
 
-- **Qué es un buscador:** un agente Haiku aislado, como el ejecutor de hoy, con las herramientas de lectura de Odín y la clave de API del actor de la pregunta.
+- **Qué es un buscador:** un agente Haiku aislado, como el ejecutor de hoy, con las herramientas de lectura de Odín y la clave de API de Odín del actor de la pregunta. Usa la suscripción, como el ejecutor de hoy, no una clave de pago de Anthropic.
 - A su mensaje se añade un **enfoque**, que es un fichero de texto en `banco/enfoques/`:
 
 | Enfoque (`approach`) | Qué hace |
@@ -281,7 +294,11 @@ make banco-test                            # pruebas del banco con la IA simulad
   - `unanimous`;
   - `atLeast:k` (al menos k jueces).
   - El orden del material se baraja en cada juez.
-- **Calibración contra el script.** En las preguntas con clave, el script es la referencia (D-050). De cada juez y de cada jurado se mide:
+- **Calibración contra el script.** En las preguntas con clave, el script es la referencia (D-050).
+  - **Se calibra por capa** (decisión del CTO), porque la inferencia con predicciones supone que las preguntas etiquetadas son de la misma población que las que se puntúan.
+  - En la capa pública, las etiquetadas son las preguntas que pasaron la validación cruzada.
+  - En un archivo sin ninguna clave, se etiquetan a mano entre 50 y 150 preguntas al azar. Hasta entonces, la cifra del jurado en ese archivo se da como «sin calibrar».
+- De cada juez y de cada jurado se mide:
   - el acuerdo con el script (kappa);
   - las **aceptaciones falsas:** el juez da por buena una respuesta que el script da por mala. Es lo más peligroso;
   - los rechazos falsos.
@@ -346,12 +363,19 @@ aggregation = "majority"
 - **Las réplicas de `main` dan gratis la variación entre ejecuciones del agente único.**
 - **El resultado** son curvas de acierto según el número de buscadores, la mezcla y el número de jueces, cada una con su coste. Ahí se busca el equilibrio.
 
-**Comparación justa.** Toda combinación se compara con:
+**Coste** (decisión del CTO):
 
-- `single` con `main`;
-- y `single` con el mismo gasto de tokens: un buscador al que se le deja buscar más.
+- **Qué se guarda:** de cada llamada, los tokens por clase (entrada, salida, caché leída y caché escrita) y el coste que notifica `claude -p`.
+- **El tope `budgetUsd`** se aplica sobre ese coste notificado.
+- **El coste en el producto** se calcula multiplicando los tokens por los precios de `banco/precios.toml`.
+  - Ese fichero se rellena con los precios oficiales de cada proveedor cuando el CEO lo pida.
+  - Hasta entonces, el coste se da en tokens y en coste notificado, sin inventar precios.
 
-La investigación avisa de que buena parte de la ganancia de varios agentes viene de gastar más tokens.
+**Comparación justa** (decisión del CTO):
+
+- `single` con `main` se ejecuta con varios topes de turnos (`--max-turns` 10, 20 y 40). Así sale una curva de acierto según los tokens medios por respuesta.
+- Una combinación gana con el mismo gasto si queda por encima de esa curva, con sus mismos tokens medios por respuesta, por más que la variación medida.
+- La investigación avisa de que buena parte de la ganancia de varios agentes viene de gastar más tokens.
 
 **Modo de cierre (`closing`):**
 
@@ -582,7 +606,7 @@ Los objetivos son propuestas para el CEO. Una vez cumplido, cada objetivo pasa a
 1. **Fase 0, ahora y sin choque con el CTO 2:**
    - esqueleto del banco con la IA simulada;
    - generador de las capas 3.1 y 3.3;
-   - lista de documentos públicos y lectura de sus licencias;
+   - lista de documentos públicos y lectura de sus licencias. Leer páginas web y consultar los listados de la API del BOE vale sin permiso, porque el propietario pidió buscar en internet; **descargar documentos sí lo necesita;**
    - generador de los tipos de pregunta nuevos.
 2. **Fase 1, primera prueba real del banco:**
    - **piloto de 5 preguntas** con 20 buscadores y el jurado más grande. Mide de verdad el coste de buscadores, redactores y jueces;
@@ -623,10 +647,10 @@ Los objetivos son propuestas para el CEO. Una vez cumplido, cada objetivo pasa a
 | Piloto de la fase 1 | 5 × 20 = 100 | unos 7 min | unos 0,6 USD |
 | Barrido de la fase 1 | 40 × 20 = 800 | unos 50 min | unos 4,8 USD |
 | Línea base de la fase 2 | 3 × unas 550 | unas 1 h 45 min | unos 10 USD |
-| Primera medición de la reserva | 3 × 150 | unos 30 min | unos 2,7 USD |
+| Primera medición de la reserva | 3 × 200 | unos 40 min | unos 3,6 USD |
 | Intermedias de la fase 3 (fallos más centinelas, 3 estrategias, 2 intentos) | unas 6 × 60 | unos 25 min | unos 2,2 USD |
 | Escaneados por parejas | 2 × 3 × 30 | unos 12 min | unos 1,1 USD |
-| Cierre con un buscador (desarrollo, reserva y la muestra de Sonnet) | 3 × unas 550, 3 × 150 y 30 de Sonnet | unas 2 h 20 min | unos 15 USD |
+| Cierre con un buscador (desarrollo, reserva y la muestra de Sonnet) | 3 × unas 550, 3 × 200 y 30 de Sonnet | unas 2 h 30 min | unos 16 USD |
 
 - **Si gana una estrategia de N buscadores,** el cierre cuesta unas N veces más. El tope `budgetUsd` de cada experimento impide pasarse.
 - **Sin cuota:**
