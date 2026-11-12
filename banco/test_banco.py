@@ -209,7 +209,32 @@ class RunTest(Harness):
         verdicts = self.read_jsonl(folder, "veredictos.jsonl")
         # sin presupuesto, los jueces de Claude no corren, pero el de Ollama (gratis) sí
         self.assertEqual([len(v["judges"]) for v in verdicts], [3, 1, 1])
+        self.assertIsNone(verdicts[0]["jury"])  # el segundo juez de pago agota el tope: la pregunta queda sin veredicto
+        self.assertEqual(verdicts[0]["motivo"], "parada")
         self.assertIsNone(verdicts[1]["jury"])
+
+    def test_quota_on_last_paid_judge_leaves_question_without_verdict(self):
+        real_judge = judge.run_claude_judge
+        calls = []
+
+        def second_hits_quota(*args, **kwargs):
+            calls.append(1)
+            if len(calls) == 2:  # el último juez de pago de la primera pregunta
+                return {"model": "haiku", "verdict": {"invalido": True, "motivo": "sin veredicto"}, "coste_usd": 0.0005,
+                        "tokens": None, "duracion_s": 1.0, "error": "Claude AI usage limit reached"}
+            return real_judge(*args, **kwargs)
+
+        with mock.patch("banco.judge.run_claude_judge", side_effect=second_hits_quota):
+            code = self.run_cli(self.config(concurrency=1))
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertIn("cuota o límite en el juez de Q001", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        first = self.read_jsonl(folder, "veredictos.jsonl")[0]
+        self.assertIsNone(first["jury"])  # hay veredictos parciales, pero la parada alcanza a la pregunta
+        self.assertEqual(first["motivo"], "parada")
+        self.assertEqual([j["verdict"].get("correcta") for j in first["judges"]][:1], [True])  # el primero terminó
+        self.assertIn("usage limit", first["judges"][1]["error"])
+        self.assertEqual(len(first["judges"]), 3)  # el de Ollama, gratis, también corrió
 
     def test_judge_quota_error_is_stop_reason(self):
         code = self.run_cli(self.config(), env={"FAKE_VEREDICTO": "limite"})

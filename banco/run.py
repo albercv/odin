@@ -27,6 +27,7 @@ DEFAULT_DRAWS = 20
 DEFAULT_SINGLE_TURNS = [10, 20, 40]
 BUDGET = "budget"  # motivo interno: el presupuesto se agotó antes de lanzar un juez de pago
 NO_CONSTA_MOTIVO = "no juzgable: no consta"
+STOP_MOTIVO = "parada"
 
 
 @dataclass(frozen=True)
@@ -212,8 +213,11 @@ def _budget_stop(sess, skipped):
 
 
 def _quota_stop(sess, error, where):
+    """Escribe la parada si el error es una cuota o límite. Devuelve True si lo fue."""
     if error and ejecutar.LIMITE.search(error):
         _stop(sess, f"cuota o límite en {where}: {error[:200]}")
+        return True
+    return False
 
 
 def _exit_code(sess):
@@ -365,27 +369,34 @@ def _judge_or_skip(sess, jobs, item, answer):
 
 def _judge_question(sess, jobs, item, answer):
     """Veredictos de los jueces de una pregunta. Devuelve (fila, motivo de parada o None, llamadas de pago sin lanzar).
-    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo; la pregunta queda sin veredicto.
-    Una cuota en un juez de Claude para el experimento, igual que en el redactor."""
-    records, skipped = [], 0
+    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo. Si la parada alcanza a la pregunta (cuota,
+    presupuesto o coste desconocido, también en su último juez de pago), no hay veredicto aunque haya parciales."""
+    records, skipped, stopped = [], 0, False
     try:
         for index, spec, rubric in jobs:
             if not _may_launch(sess, spec):
                 skipped += 1
                 continue
             record = _call_judge(sess, index, spec, rubric, item, answer)
-            if _is_paid(spec):
-                sess.ledger.charge(record.get("coste_usd"))
-                _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
             records.append(record)
+            stopped = _charge_judge(sess, spec, record, item) or stopped
     except ejecutar.Aislamiento as error:
         return _unjudged(item, records, str(error)), f"AISLAMIENTO ROTO en juez: {error}", skipped
     except Exception as error:  # un juez roto no pierde los veredictos de las demás preguntas
         return _unjudged(item, records, repr(error)), None, skipped
-    if skipped:
-        return _unjudged(item, records, "parada o presupuesto agotado"), BUDGET, skipped
+    if skipped or stopped:
+        return _unjudged(item, records, None, STOP_MOTIVO), BUDGET, skipped
     jury = judge.aggregate([r["verdict"] for r in records], sess.cfg.aggregation)
     return {"id": item["id"], "judges": records, "jury": jury, "error": None, "motivo": None}, None, 0
+
+
+def _charge_judge(sess, spec, record, item):
+    """Cobra un juez de pago nuevo. True si con él se para el experimento (cuota o presupuesto agotado)."""
+    if not _is_paid(spec):
+        return False
+    sess.ledger.charge(record.get("coste_usd"))
+    quota = _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
+    return quota or not sess.ledger.can_launch()
 
 
 def judge_stage(sess, finals, verdicts):
