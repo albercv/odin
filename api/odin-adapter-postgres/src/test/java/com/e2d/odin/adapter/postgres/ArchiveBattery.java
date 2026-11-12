@@ -36,7 +36,7 @@ final class ArchiveBattery {
     record Company(CompanyId id, ProjectVisibility visibility, Map<String, ProjectId> projectByName) {
     }
 
-    record Result(int hits, int total, int withoutProject, List<String> misses) {
+    record Result(int hits, int total, int withoutProject, List<String> misses, List<String> problems) {
     }
 
     private ArchiveBattery() {
@@ -50,19 +50,34 @@ final class ArchiveBattery {
         JsonNode manifest = JSON.readTree(Files.readString(DIR.resolve("manifiesto.json")));
         Map<String, Company> companyByKey = new LinkedHashMap<>();
         Map<String, Map<Integer, String>> pages = new LinkedHashMap<>();
+        ArchiveLoader loader = new ArchiveLoader(it);
+        Map<String, CompanyId> idByKey = new LinkedHashMap<>();
         for (JsonNode company : manifest.get("empresas")) {
             String key = company.get("clave").asString();
             Map<String, String> names = folderNames(manifest, key);
             CompanyId id = it.newCompany();
             UserId actor = it.newUser(id);
-            LoadedArchive loaded = new ArchiveLoader(it).load(id, actor, DIR.resolve("corpus"), names);
+            LoadedArchive loaded = loader.load(id, actor, DIR.resolve("corpus"), names);
+            idByKey.put(key, id);
             companyByKey.put(key, companyOf(it, id, actor, loaded, names));
             pages.putAll(loaded.pagesByDocument());
         }
+        Map<String, String> supersededBy = applySupersessions(loader, idByKey.values());
         Map<String, Company> byActor = new LinkedHashMap<>();
         manifest.get("trabajadores").forEach(w -> byActor.put(w.get("clave").asString(),
                 companyByKey.get(w.get("empresa").asString())));
-        return measure(it, JSON.readTree(Files.readString(DIR.resolve("bateria.json"))), byActor, pages);
+        return measure(it, JSON.readTree(Files.readString(DIR.resolve("bateria.json"))), byActor, pages,
+                supersededBy);
+    }
+
+    private static Map<String, String> applySupersessions(ArchiveLoader loader, Iterable<CompanyId> companies)
+            throws IOException {
+        Map<String, String> supersededBy = new LinkedHashMap<>();
+        for (CompanyId id : companies) {
+            supersededBy.putAll(loader.applySupersessions(id, DIR.resolve("claves.json")));
+        }
+        System.out.printf(Locale.ROOT, "ARCHIVO marcas de sustitución: %d%n", supersededBy.size());
+        return supersededBy;
     }
 
     /** Carpeta {@code empresa/proyecto} -> nombre, más la carpeta general (sin proyecto). */
@@ -88,9 +103,10 @@ final class ArchiveBattery {
     }
 
     static Result measure(AbstractPostgresIT it, JsonNode items, Map<String, Company> byActor,
-            Map<String, Map<Integer, String>> pagesByDocument) {
+            Map<String, Map<Integer, String>> pagesByDocument, Map<String, String> supersededBy) {
         PostgresKnowledgeSearch search = new PostgresKnowledgeSearch(it.tx);
         List<String> misses = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
         int total = 0;
         int withoutProject = 0;
         for (JsonNode item : items) {
@@ -104,11 +120,13 @@ final class ArchiveBattery {
                 continue;
             }
             total++;
-            if (!found(search, company, project.get(), item, pagesByDocument)) {
+            List<SearchHit> hits = hitsOf(search, company, project.get(), item);
+            if (!found(hits, item, pagesByDocument)) {
                 misses.add(item.get("id").asString());
             }
+            problems.addAll(SupersessionCheck.problems(item.get("id").asString(), hits, supersededBy));
         }
-        return new Result(total - misses.size(), total, withoutProject, misses);
+        return new Result(total - misses.size(), total, withoutProject, misses, problems);
     }
 
     /** Gana el nombre más largo: «Calle Abeto 1» está contenido en «Calle Abeto 16». */
@@ -117,11 +135,14 @@ final class ArchiveBattery {
                 .max(Comparator.comparingInt(e -> e.getKey().length())).map(Map.Entry::getValue);
     }
 
-    private static boolean found(PostgresKnowledgeSearch search, Company company, ProjectId project, JsonNode item,
-            Map<String, Map<Integer, String>> pagesByDocument) {
+    private static List<SearchHit> hitsOf(PostgresKnowledgeSearch search, Company company, ProjectId project,
+            JsonNode item) {
         SearchQuery query = new SearchQuery(List.of(item.get("pregunta").asString()), CompanyScope.of(company.id()),
                 company.visibility(), Optional.of(project), LIMIT);
-        List<SearchHit> hits = search.search(query).hits();
+        return search.search(query).hits();
+    }
+
+    private static boolean found(List<SearchHit> hits, JsonNode item, Map<String, Map<Integer, String>> pagesByDocument) {
         List<String> expected = expectedPages(item, pagesByDocument);
         return hits.stream().anyMatch(h -> expected.contains(h.title() + "#" + h.pageNumber().orElse(0)));
     }
@@ -149,5 +170,6 @@ final class ArchiveBattery {
         double threshold = Double.parseDouble(Files.readString(thresholdFile).trim());
         assertThat(percentage).as("aciertos %d/%d, fallos %s", result.hits(), result.total(), result.misses())
                 .isGreaterThanOrEqualTo(threshold);
+        assertThat(result.problems()).as("problemas de sustitución: %s", result.problems()).isEmpty();
     }
 }
