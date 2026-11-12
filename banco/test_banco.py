@@ -93,6 +93,19 @@ class Harness(unittest.TestCase):
         self.layout = Layout(banco=BANCO, exp=EXP, battery_file=battery_file, state_dir=self.state_dir,
                              results_dir=self.tmp / "resultados", cache=self.tmp / "cache", repo=BANCO.parent,
                              claude_bin=FAKE_CLAUDE, claude_judge_bin=FAKE_JUDGE, ollama_url=url, timeout=30)
+        real_responder = ejecutar.responder
+
+        def citing(item, *args, **kwargs):
+            """El claude falso responde «no consta» sin citas; aquí responde con una cita, para que haya material que juzgar."""
+            record = real_responder(item, *args, **kwargs)
+            if record.get("respuesta") is not None:
+                record["respuesta"] = {"respuesta": "Respuesta de prueba.", "no_lo_se": False,
+                                       "citas": [{"documentId": "doc-1", "cardId": None, "pagina": 1, "fragmento": "prueba"}]}
+            return record
+
+        patcher = mock.patch("banco.medir_path.ejecutar.responder", side_effect=citing)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def config(self, budget=5.0, kind="majorityVote", combiner_model="", sweep="", battery="desarrollo", mode="explore",
                concurrency=1):
@@ -215,6 +228,29 @@ class RunTest(Harness):
         self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
         self.assertFalse((folder / "curvas.json").exists())
         self.assertEqual(len(self.read_jsonl(folder, "turnos.jsonl")), 2)
+
+    def test_no_consta_answers_are_not_judged(self):
+        real = ejecutar.responder
+
+        def no_consta(item, *args, **kwargs):
+            record = real(item, *args, **kwargs)
+            record["respuesta"] = {"respuesta": "No consta.", "no_lo_se": True, "citas": []}
+            return record
+
+        with mock.patch("banco.medir_path.ejecutar.responder", side_effect=no_consta), \
+                mock.patch("banco.judge.run_claude_judge") as claude, mock.patch("banco.judge.run_ollama_judge") as ollama:
+            code = self.run_cli(self.config())
+        folder = self.only_folder()
+        self.assertEqual(code, 0)
+        claude.assert_not_called()
+        ollama.assert_not_called()
+        verdicts = self.read_jsonl(folder, "veredictos.jsonl")
+        self.assertEqual([v["motivo"] for v in verdicts], ["no juzgable: no consta"] * 3)
+        self.assertTrue(all(v["jury"] is None and v["judges"] == [] for v in verdicts))
+        summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["judges"]["notJudgedNoConsta"], 3)
+        self.assertEqual(summary["judges"]["manualReview"], [])  # las tres tienen clave: decide el script
+        self.assertIn("«No consta» sin juzgar: 3", (folder / "informe.md").read_text(encoding="utf-8"))
 
     def test_judge_exception_keeps_other_results(self):
         real_judge = judge.run_claude_judge

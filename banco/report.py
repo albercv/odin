@@ -125,6 +125,8 @@ def _judge_lines(summary):
                     f"- Aceptaciones falsas: {_pct(judges['falseAcceptRate'])}",
                     f"- Rechazos falsos: {_pct(judges['falseRejectRate'])}",
                     f"- Preguntas sin veredicto: {judges['undecided']}",
+                    f"- «No consta» sin juzgar: {judges['notJudgedNoConsta']}"
+                    + (f" (revisión manual, sin clave: {', '.join(judges['manualReview'])})" if judges["manualReview"] else ""),
                     f"- PPI: {ppi_text}", ""]
 
 

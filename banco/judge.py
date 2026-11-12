@@ -155,6 +155,11 @@ def judge_material(item, answer, page_text: Callable[[str, int], str], rng: rand
     return "\n\n".join(parts)
 
 
+def is_no_consta(answer: dict) -> bool:
+    """Abstención o respuesta sin citas: no hay material que juzgar, así que el jurado no la ve."""
+    return bool(answer.get("no_lo_se")) or not answer.get("citas")
+
+
 def aggregate(verdicts: list[dict], rule: str) -> bool | None:
     valid = [v["correcta"] for v in verdicts if _is_valid(v)]
     if not valid:

@@ -26,6 +26,7 @@ AI_KINDS = ("composer", "pageFusion")
 DEFAULT_DRAWS = 20
 DEFAULT_SINGLE_TURNS = [10, 20, 40]
 BUDGET = "budget"  # motivo interno: el presupuesto se agotó antes de lanzar un juez de pago
+NO_CONSTA_MOTIVO = "no juzgable: no consta"
 
 
 @dataclass(frozen=True)
@@ -346,13 +347,20 @@ def _call_judge(sess, index, spec, rubric, item, answer):
         raise
 
 
-def _unjudged(item, records, error):
-    return {"id": item["id"], "judges": records, "jury": None, "error": error}
+def _unjudged(item, records, error, motivo=None):
+    return {"id": item["id"], "judges": records, "jury": None, "error": error, "motivo": motivo}
 
 
 def _may_launch(sess, spec):
     """Un juez de pago arranca solo sin parada y con presupuesto; los de Ollama son gratis y siguen."""
     return not _is_paid(spec) or (not _stopped(sess) and sess.ledger.can_launch())
+
+
+def _judge_or_skip(sess, jobs, item, answer):
+    """Un «no consta» no llega al jurado: fila sin veredicto, con su motivo y sin gasto de jueces."""
+    if judge.is_no_consta(answer):
+        return _unjudged(item, [], None, NO_CONSTA_MOTIVO), None, 0
+    return _judge_question(sess, jobs, item, answer)
 
 
 def _judge_question(sess, jobs, item, answer):
@@ -377,7 +385,7 @@ def _judge_question(sess, jobs, item, answer):
     if skipped:
         return _unjudged(item, records, "parada o presupuesto agotado"), BUDGET, skipped
     jury = judge.aggregate([r["verdict"] for r in records], sess.cfg.aggregation)
-    return {"id": item["id"], "judges": records, "jury": jury, "error": None}, None, 0
+    return {"id": item["id"], "judges": records, "jury": jury, "error": None, "motivo": None}, None, 0
 
 
 def judge_stage(sess, finals, verdicts):
@@ -385,7 +393,7 @@ def judge_stage(sess, finals, verdicts):
     jobs = _judge_jobs(sess)
     answered = [f for f in finals if f["answer"] is not None]
     with ThreadPoolExecutor(max(1, sess.cfg.concurrency)) as pool:
-        results = list(pool.map(lambda f: _judge_question(sess, jobs, by_id[f["id"]], f["answer"]), answered))
+        results = list(pool.map(lambda f: _judge_or_skip(sess, jobs, by_id[f["id"]], f["answer"]), answered))
     skipped_total, budget_hit = 0, False
     for row, reason, skipped in results:
         verdicts.append(row)

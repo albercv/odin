@@ -3,7 +3,7 @@
 import statistics
 from collections import Counter
 
-from banco import scoring
+from banco import judge, scoring
 from banco.combine import answer_signature
 from banco.medir_path import puntuar
 from banco.stats import cohen_kappa, false_accept_rate, false_reject_rate, ppi_mean, wilson
@@ -101,14 +101,18 @@ def agreement_block(finals, runs):
 
 
 def judges_block(items, finals, verdicts):
-    """Kappa y tasas frente al script solo con preguntas con clave; las preguntas sin clave entran en el PPI."""
+    """Kappa y tasas frente al script solo con preguntas con clave que citan; las preguntas sin clave entran en el PPI.
+    Los «no consta» no los juzga el jurado: se cuentan aparte y las de sin clave van a revisión manual."""
     jury = {v["id"]: v["jury"] for v in verdicts}
-    judged = [f for f in finals if jury.get(f["id"]) is not None]
+    not_judged = [f for f in finals if judge.is_no_consta(f["answer"])]
+    judged = [f for f in finals if f not in not_judged and jury.get(f["id"]) is not None]
     keyed = [f for f in judged if _keyed(items[f["id"]])]
     judge_keyed = [jury[f["id"]] for f in keyed]
     truth = [bool(f["correcta_script"]) for f in keyed]
     block = {"kappa": None, "falseAcceptRate": None, "falseRejectRate": None,
-             "undecided": len(finals) - len(judged), "ppi": None}
+             "undecided": len(finals) - len(judged), "ppi": None,
+             "notJudgedNoConsta": len(not_judged),
+             "manualReview": [f["id"] for f in not_judged if not _keyed(items[f["id"]])]}
     if len(set(truth)) >= 2:
         block.update(kappa=_round(cohen_kappa(judge_keyed, truth)),
                      falseAcceptRate=_round(false_accept_rate(judge_keyed, truth)),
