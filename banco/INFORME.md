@@ -11,6 +11,7 @@ make banco CONFIG=banco/configs/piloto.toml          # run: buscadores, respuest
 make banco-barrido CONFIG=banco/configs/piloto.toml  # sweep: curvas de mezclas y de turnos (sin redactor ni jueces)
 make banco-informe RESULTADOS=banco/resultados/<carpeta>   # reescribe resumen.json e informe.md sin IA
 make banco-abajo                        # baja la pila sin tocar otros proyectos de Docker
+make banco-reanudar CONFIG=banco/configs/barrido-40.toml   # continúa la última tanda parada (ver «Parar y reanudar»)
 ```
 
 Equivalente sin make: `python3 banco/banco.py run|sweep --config X` y `python3 banco/banco.py report --results DIR`.
@@ -91,6 +92,17 @@ En `[[judges]]`, `think` (false por defecto) se envía a Ollama como `"think"` e
 - **Sin medir:** las preguntas sin respuesta final (parada o error) no son fallos. Quedan fuera de todos los denominadores de acierto, de tipo, de acuerdo y de jueces, y se cuentan aparte como «no medidas (parada o error)» (`notMeasured`).
 - **Latencia estimada (jueces en paralelo):** por respuesta, el buscador más lento, más el redactor, más el juez más lento, como si los jueces corrieran en paralelo como en el producto. Las ejecuciones de caché usan su duración guardada, igual que su coste. Percentiles 50 y 95 con `statistics.quantiles`.
 - **Barrido:** un tramo de `single` por cada tope de turnos (un buscador `main`, réplica 0). La variación es la mitad del intervalo de acierto de `single` con la configuración por defecto. Una mezcla con un solo buscador se resuelve con su única respuesta, sin IA.
+
+## Parar y reanudar
+
+Un experimento puede parar a mitad (límite de la suscripción, tres errores seguidos de `claude`, cuota, llamada de prueba fallida, presupuesto agotado) y continuar después en otra ventana, sin repetir ni volver a pagar lo ya hecho.
+
+- **Estado.** Al empezar cada tanda y al parar, se escribe `banco/estado/reanudar-<nombre>.json`: configuración, modo, carpeta de resultados, huella del código, `stack_digest`, motivo de la parada, hora de renovación (si el aviso la trae, p. ej. «resets 9:50pm (Europe/Madrid)») y lo hecho. Al terminar sin parada, se borra. Un corte de golpe deja el estado de la tanda abierta, y se puede reanudar igual.
+- **Tandas.** Cada orden (`run`, `sweep`, `reanudar`) es una tanda. La carpeta de resultados guarda `batches.json` con inicio, fin, motivo («completa» o la parada) y llamadas de pago de cada tanda; `resumen.json` las copia y el informe tiene la sección «Tandas». La parada de la tanda anterior se archiva como `PARADA-<fecha>.txt`.
+- **Cómo se reanuda.** `make banco-reanudar CONFIG=<config>` (o `python3 banco/banco.py reanudar --config <config>`). Vuelve a ejecutar el mismo modo en la misma carpeta: lo hecho sale de la caché a coste 0, solo se lanzan las llamadas que faltaban, la llamada de prueba se repite y el libro sigue con lo ya gastado.
+- **Se niega (código 2, con el motivo) si:** no hay estado guardado; la huella del código cambió desde la última tanda («el código cambió»); o la pila se recargó y los ids cambiaron («la pila se recargó»). En ese caso la caché no serviría: hay que volver a lanzar el experimento entero. Tampoco reanuda si el libro ya llegó al tope.
+- **Reglas entre tandas.** No cambiar el código ni hacer commits entre tandas del mismo experimento: cambia la huella y `reanudar` se niega. No bajar ni recargar la pila entre tandas (`make banco-abajo` solo cuando el experimento esté completo): cambian los ids y la caché no sirve.
+- **Qué no se guarda.** Ninguna respuesta con error entra en la caché, en las cifras, en el acuerdo, en las curvas ni en el jurado. La caché y el libro se escriben llamada a llamada; todo fichero de estado se escribe de forma atómica.
 
 ## Límites conocidos
 
