@@ -76,7 +76,7 @@ def _origin_lines(summary):
 def _accuracy_lines(summary):
     lines = ["## Acierto", ""]
     not_measured = summary.get("notMeasured")
-    note = [] if not_measured is None else [f"- No medidas por la parada: {not_measured} (no cuentan como fallo "
+    note = [] if not_measured is None else [f"- No medidas (parada o error): {not_measured} (no cuentan como fallo "
                                             "ni en ningún denominador)."]
     if "accuracy" not in summary:
         return lines + ["- Sin respuesta final medida: no se compuso ninguna respuesta."] + note + [""]
@@ -98,8 +98,8 @@ def _grave_lines(summary):
 
 
 def _approach_lines(summary):
-    lines = ["## Por enfoque", "", "| Enfoque | Recuperación | Acierto de sus ejecuciones |", "|---|---|---|"]
-    rows = [f"| {name} | {_pct(row['recall'])} | {_pct(row['accuracy'])} |"
+    lines = ["## Por enfoque", "", "| Enfoque | Recuperación | Acierto de sus ejecuciones | Errores |", "|---|---|---|---|"]
+    rows = [f"| {name} | {_pct(row['recall'])} | {_pct(row['accuracy'])} | {row.get('errors', 0)} |"
             for name, row in summary.get("byApproach", {}).items()]
     return lines + (rows or ["Sin ejecuciones de buscadores."]) + [""]
 

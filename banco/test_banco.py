@@ -184,7 +184,7 @@ class RunTest(Harness):
         summary = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
         self.assertEqual(summary["accuracy"]["total"], 1)  # las dos sin respuesta no son fallos
         self.assertEqual(summary["notMeasured"], 2)
-        self.assertIn("No medidas por la parada: 2", (folder / "informe.md").read_text(encoding="utf-8"))
+        self.assertIn("No medidas (parada o error): 2", (folder / "informe.md").read_text(encoding="utf-8"))
 
     def test_judge_spend_crossing_cap_stops_and_writes_stop_file(self):
         # buscadores 0,006 USD; los dos jueces de Haiku de la primera pregunta llegan a 0,007 USD (tope 0,0068)

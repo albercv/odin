@@ -57,24 +57,31 @@ def grave_block(items, finals, ctx):
             "supersededAsCurrent": len(scored["sustituidos_como_vigentes"])}
 
 
+def _recall(runs, expected):
+    """Recuperación del enfoque: entre las preguntas que midió con páginas esperadas, cuántas tienen alguna vista o citada."""
+    by_question = {}
+    for run in runs:
+        by_question.setdefault(run["id"], []).append(run)
+    measured = [q for q in expected if q in by_question]
+    hits = [q for q in measured if any(expected[q] & scoring.observed_pages(r) for r in by_question[q])]
+    return _round(len(hits) / len(measured)) if measured else None
+
+
 def approach_block(items, runs, ctx, id_by_ruta):
-    """Recuperación: preguntas con alguna página esperada vista o citada por el enfoque. Acierto: ejecuciones correctas."""
+    """Por enfoque. Recuperación sobre sus preguntas medidas con páginas esperadas. Acierto sobre sus ejecuciones
+    sin error, igual que el acierto global; las ejecuciones con error se cuentan aparte en `errors`."""
     expected = {}
     for item in items.values():
         pages = scoring.expected_pages(item, id_by_ruta)
         if pages:
             expected[item["id"]] = pages
-    by_key = {}
-    for run in runs:
-        by_key.setdefault((run["approach"], run["id"]), []).append(run)
     out = {}
     for approach in sorted({r["approach"] for r in runs}):
         own = [r for r in runs if r["approach"] == approach]
-        hits = [q for q, pages in expected.items()
-                if any(pages & scoring.observed_pages(r) for r in by_key.get((approach, q), []))]
-        correct = sum(scoring.is_correct(items[r["id"]], r.get("respuesta"), ctx) for r in own)
-        out[approach] = {"recall": _round(len(hits) / len(expected)) if expected else None,
-                         "accuracy": _round(correct / len(own))}
+        ok = [r for r in own if r.get("error") is None]
+        correct = sum(scoring.is_correct(items[r["id"]], r.get("respuesta"), ctx) for r in ok)
+        out[approach] = {"recall": _recall(ok, expected), "accuracy": _round(correct / len(ok)) if ok else None,
+                         "errors": len(own) - len(ok)}
     return out
 
 
@@ -124,12 +131,16 @@ def latency_block(runs, finals, verdicts):
     return {"p50": p50, "p95": p95}
 
 
-def cost_block(n, runs, finals, verdicts, ledger=None):
-    """Gasto notificado: solo ejecuciones nuevas, redactor y jueces. El resto son costes por respuesta (n preguntas)."""
+def cost_block(runs, finals, verdicts, ledger=None):
+    """Gasto notificado: solo ejecuciones nuevas, redactor y jueces. Por respuesta, los buscadores dividen entre las
+    preguntas ejecutadas y el redactor, los jueces y la estrategia entre las respuestas medidas (no entre la batería)."""
     judges = [j for v in verdicts for j in v["judges"]]
     usd = lambda records: sum(r.get("coste_usd") or 0 for r in records)
     tokens = lambda records: sum(_total_tokens(r.get("tokens")) for r in records)
-    per = lambda value: round(value / n, 4) if n else None
+    executed = len({r["id"] for r in runs})
+    measured = sum(f["answer"] is not None for f in finals)
+    per_executed = lambda value: round(value / executed, 4) if executed else None
+    per = lambda value: round(value / measured, 4) if measured else None
     fresh = [*(r for r in runs if not r.get("cached")), *finals, *judges]
     from_records = usd(fresh)
     unknown = sum(not isinstance(r.get("coste_usd"), (int, float)) for r in fresh)  # pago sin coste: no cuenta como 0
@@ -138,7 +149,7 @@ def cost_block(n, runs, finals, verdicts, ledger=None):
             "unknownCostRecords": unknown,
             "strategyUsdPerAnswer": per(usd(runs) + usd(finals)),
             "tokensPerAnswer": per(tokens(runs) + tokens(finals) + tokens(judges)),
-            "searchers": {"usdPerAnswer": per(usd(runs)), "tokensPerAnswer": per(tokens(runs))},
+            "searchers": {"usdPerAnswer": per_executed(usd(runs)), "tokensPerAnswer": per_executed(tokens(runs))},
             "combiner": {"usdPerAnswer": per(usd(finals)), "tokensPerAnswer": per(tokens(finals))},
             "judges": {"usdPerAnswer": per(usd(judges)), "tokensPerAnswer": per(tokens(judges))}}
 
@@ -148,7 +159,7 @@ def build_summary(items, ctx, runs, finals, verdicts, extra_runs=(), ledger=None
     by_id = {item["id"]: item for item in items}
     measured = [f for f in finals if f["answer"] is not None]
     summary = {"byApproach": approach_block(by_id, runs, ctx, scoring.ids_by_path(ctx.doc_ruta))}
-    summary["cost"] = cost_block(len(items), [*runs, *extra_runs], finals, verdicts, ledger)
+    summary["cost"] = cost_block([*runs, *extra_runs], finals, verdicts, ledger)
     if finals:
         summary["notMeasured"] = len(finals) - len(measured)
     if measured:

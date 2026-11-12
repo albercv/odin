@@ -64,12 +64,13 @@ singleMaxTurns = [10, 20, 40]                                 # por defecto 10, 
 
 - **Muestra:** estratos por `sample.strata`, en orden alfabético; cada estrato se baraja con `random.Random(seed)` y se reparte por turnos.
 - **Semilla de los jueces:** `sample.seed + índice del juez` (0 sin muestra). Cada juez baraja las fuentes con su propia semilla.
-- **Recuperación por enfoque:** de las preguntas con citas resueltas, las que tienen alguna página esperada vista o citada por algún buscador de ese enfoque. Las preguntas sin citas (abstenciones) no cuentan.
+- **Recuperación por enfoque:** de las preguntas que ese enfoque midió (con alguna ejecución sin error) y que tienen citas resueltas, las que tienen alguna página esperada vista o citada. Las preguntas sin citas (abstenciones) no cuentan. El denominador es ese conjunto, no toda la batería.
+- **Acierto por enfoque:** sobre las ejecuciones sin error, igual que el acierto global. Las ejecuciones con error se cuentan aparte (`errors`).
 - **Firma de mayoría:** `answer_signature` = (`no_lo_se`, cifras normalizadas, conjunto de páginas citadas `(documentId, pagina)`). Así, dos respuestas sin cifras que citan páginas distintas no coinciden; la redacción sigue sin contar.
 - **Acuerdo entre buscadores:** `k` = cuántos buscadores coinciden con la firma mayoritaria. El acierto de cada grupo es el de la respuesta final, no el del buscador.
 - **Jueces frente al script:** kappa y tasas solo con preguntas con clave o abstención. Con una sola clase en el script valen «no calculable». El PPI solo se calcula si hay preguntas sin clave; en la batería de desarrollo no hay ninguna.
-- **Coste:** «gasto notificado» es el total del libro (ver arriba). El coste de la estrategia por respuesta suma todos los buscadores (incluidos los de caché) más el redactor, dividido por el número de preguntas.
-- **Sin medir:** las preguntas sin respuesta final (parada o error) no son fallos. Quedan fuera de todos los denominadores de acierto, de tipo, de acuerdo y de jueces, y se cuentan aparte como «no medidas por la parada» (`notMeasured`).
+- **Coste:** «gasto notificado» es el total del libro (ver arriba). Por respuesta, los buscadores dividen entre las preguntas ejecutadas (con alguna ejecución); el redactor, los jueces, el coste de la estrategia (buscadores más redactor) y los tokens totales, entre las respuestas medidas. Así, una parada no diluye ni infla las cifras con preguntas que nunca se midieron.
+- **Sin medir:** las preguntas sin respuesta final (parada o error) no son fallos. Quedan fuera de todos los denominadores de acierto, de tipo, de acuerdo y de jueces, y se cuentan aparte como «no medidas (parada o error)» (`notMeasured`).
 - **Latencia estimada (jueces en paralelo):** por respuesta, el buscador más lento, más el redactor, más el juez más lento, como si los jueces corrieran en paralelo como en el producto. Las ejecuciones de caché usan su duración guardada, igual que su coste. Percentiles 50 y 95 con `statistics.quantiles`.
 - **Barrido:** un tramo de `single` por cada tope de turnos (un buscador `main`, réplica 0). La variación es la mitad del intervalo de acierto de `single` con la configuración por defecto. Una mezcla con un solo buscador se resuelve con su única respuesta, sin IA.
 
