@@ -206,6 +206,17 @@ describe('buildServer', () => {
     expect(search?.description).toContain('addedAt es la fecha en que entró en Odín, no la del documento.');
   });
 
+  it.each([
+    'Cada consulta, una idea, en 1 a 3 palabras específicas.',
+    'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena.',
+    'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas.',
+    'Si una ficha dice algo distinto que un documento, cita las dos.',
+  ])('searchDescriptionGuidesTheModel: %s', async (sentence) => {
+    const client = await connect(() => meWith(ALL));
+    const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');
+    expect(search?.description).toContain(sentence);
+  });
+
   it('instructionsKeepCardCitationRule', async () => {
     const client = await connect(() => meWith(ALL));
     const instructions = client.getInstructions() ?? '';
