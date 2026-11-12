@@ -59,7 +59,7 @@ class SearchBatteryIT extends AbstractPostgresIT {
                 : List.of(question);
         Optional<ProjectId> project = COMMUNITIES.entrySet().stream().filter(e -> question.contains(e.getKey()))
                 .findFirst().map(e -> projectByFolder.get(e.getValue()));
-        List<SearchHit> hits = search.search(new SearchQuery(terms, CompanyScope.of(company), ProjectVisibility.all(), project, 5)).hits();
+        List<SearchHit> hits = search.search(new SearchQuery(terms, CompanyScope.of(company), ProjectVisibility.all(), project, 5, Db.NOBODY)).hits();
         List<String> expected = expectedPages(item);
         return hits.stream().anyMatch(h -> expected.contains(h.title() + "#" + h.pageNumber().orElse(0)));
     }

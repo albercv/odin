@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { api, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
@@ -35,28 +35,36 @@ function Original({ text }: { text: string }) {
   );
 }
 
-function RejectPanel({ busy, onReject }: { busy: boolean; onReject: (note: string) => void }) {
+const NOTE_WARNING = 'El autor verá esta nota tal cual. Escribe sobre el contenido de la ficha, no sobre la persona.';
+
+function NotePanel({ label, action, variant, disabled, onSend }: { label: string; action: string; variant: 'danger' | 'primary'; disabled: (note: string) => boolean; onSend: (note: string) => void }) {
   const [note, setNote] = useState('');
+  const warningId = useId();
   return (
-    <div className={styles.reject}>
-      <Field label="Motivo del rechazo"><input autoFocus placeholder="Lo verá quien guardó la ficha" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
-      <div><Button variant="danger" disabled={!note.trim() || busy} onClick={() => onReject(note)}>Rechazar la ficha</Button></div>
+    <div className={variant === 'danger' ? styles.reject : `${styles.reject} ${styles.neutral}`}>
+      <p id={warningId} className={styles.warning}>{NOTE_WARNING}</p>
+      <Field label={label}><input autoFocus aria-describedby={warningId} value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+      <div><Button variant={variant} disabled={disabled(note)} onClick={() => onSend(note)}>{action}</Button></div>
     </div>
   );
 }
 
 type Send = (review: S['Review'], message: string) => void;
+type Panel = 'reject' | 'correct' | undefined;
 
 function Actions({ body, changed, busy, send }: { body: string; changed: boolean; busy: boolean; send: Send }) {
-  const [rejecting, setRejecting] = useState(false);
+  const [panel, setPanel] = useState<Panel>();
   return (
     <>
       <div className={styles.actions}>
         <Button variant="primary" disabled={busy} onClick={() => send({ decision: 'APPROVE' }, 'Ficha aprobada')}>Aprobar</Button>
-        <Button disabled={!changed || busy} onClick={() => send({ decision: 'CORRECT', correctedBody: body }, 'Ficha corregida y aprobada')}>Corregir y aprobar</Button>
-        <Button variant="danger" disabled={busy} aria-expanded={rejecting} onClick={() => setRejecting(true)}>Rechazar</Button>
+        <Button disabled={!changed || busy} aria-expanded={panel === 'correct'} onClick={() => setPanel('correct')}>Corregir y aprobar</Button>
+        <Button variant="danger" disabled={busy} aria-expanded={panel === 'reject'} onClick={() => setPanel('reject')}>Rechazar</Button>
       </div>
-      {rejecting && <RejectPanel busy={busy} onReject={(note) => send({ decision: 'REJECT', note }, 'Ficha rechazada')} />}
+      {panel === 'reject' && <NotePanel label="Motivo del rechazo" action="Rechazar la ficha" variant="danger" disabled={(note) => !note.trim() || busy}
+        onSend={(note) => send({ decision: 'REJECT', note }, 'Ficha rechazada')} />}
+      {panel === 'correct' && <NotePanel label="Nota para el autor (opcional)" action="Confirmar corrección" variant="primary" disabled={() => busy}
+        onSend={(note) => send({ decision: 'CORRECT', correctedBody: body, ...(note.trim() && { note }) }, 'Ficha corregida y aprobada')} />}
     </>
   );
 }

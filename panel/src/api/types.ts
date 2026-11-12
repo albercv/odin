@@ -196,6 +196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/group-admins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["add_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/documents/{documentId}/topics/retag": {
         parameters: {
             query?: never;
@@ -235,7 +251,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         post: operations["create"];
         delete?: never;
@@ -283,9 +299,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
-        post: operations["add_1"];
+        post: operations["add_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -315,7 +331,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         post: operations["upload"];
         delete?: never;
@@ -468,6 +484,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myQuestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -548,6 +596,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/usage-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["usageStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/tagging-status": {
         parameters: {
             query?: never;
@@ -571,7 +635,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -596,6 +660,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["gaps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/delivered-volume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["deliveredVolume"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/cards": {
         parameters: {
             query?: never;
@@ -603,7 +699,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -623,6 +719,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/group-admins/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -688,6 +800,7 @@ export interface components {
             name: string;
             code: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            codeReviewed: boolean;
         };
         SimilarCasesRequestBody: {
             queries?: string[];
@@ -725,6 +838,7 @@ export interface components {
             originLabel?: string;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SimilarCasesResponse: {
             cases: components["schemas"]["SimilarCaseView"][];
@@ -743,6 +857,8 @@ export interface components {
         };
         RecoverAdmin: {
             setupToken?: string;
+            /** @description Obligatorio si hay más de un administrador del grupo. */
+            email?: string;
             newPassword?: string;
         };
         SearchRequest: {
@@ -770,6 +886,7 @@ export interface components {
             rank: number;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
@@ -800,6 +917,29 @@ export interface components {
         Login: {
             email?: string;
             password?: string;
+        };
+        AddGroupAdmin: {
+            firstName?: string;
+            lastName?: string;
+            /** @description Obligatorio: es la puerta al panel. */
+            email?: string;
+            /** @description Solo hace falta si la persona no tiene ya contraseña. */
+            password?: string;
+        };
+        GroupAdminAdded: {
+            admin: components["schemas"]["GroupAdminView"];
+            alreadyExisted: boolean;
+            keptPassword: boolean;
+        };
+        GroupAdminView: {
+            /** Format: uuid */
+            userId: string;
+            firstName: string;
+            lastName?: string;
+            displayName: string;
+            email?: string;
+            personCode: string;
+            active: boolean;
         };
         NewCompany: {
             name?: string;
@@ -856,6 +996,7 @@ export interface components {
             email?: string;
             roles: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active: boolean;
+            personActive: boolean;
             hasPassword: boolean;
         };
         KeyLabel: {
@@ -968,6 +1109,33 @@ export interface components {
             /** Format: int32 */
             pendingDocuments: number;
         };
+        MyQuestionView: {
+            text: string;
+            kind: string;
+            /** Format: int32 */
+            hitCount: number;
+            /** Format: date-time */
+            askedAt: string;
+        };
+        MyCardView: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            body: string;
+            originalBody?: string;
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
+            review?: components["schemas"]["MyReviewView"];
+        };
+        MyReviewView: {
+            decision: string;
+            note?: string;
+            /** Format: date-time */
+            reviewedAt: string;
+        };
         Health: {
             status: string;
         };
@@ -1018,6 +1186,7 @@ export interface components {
             id: string;
             name: string;
             code: string;
+            codeReviewed: boolean;
         };
         DocumentTopicView: {
             /** Format: uuid */
@@ -1039,6 +1208,65 @@ export interface components {
             /** Format: int32 */
             topicListVersion: number;
             failureReason?: string;
+        };
+        CardCountsView: {
+            /** Format: int32 */
+            saved: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            approved?: number;
+            /** Format: int32 */
+            corrected?: number;
+            /** Format: int32 */
+            rejected?: number;
+            withheld: boolean;
+            reason?: string;
+        };
+        CompanyUsageView: {
+            questions: components["schemas"]["QuestionCountsView"];
+            /** Format: int32 */
+            questionsWithoutResults: number;
+            cards: components["schemas"]["CardCountsView"];
+            documents: components["schemas"]["DocumentCountsView"];
+            tagging?: components["schemas"]["TaggingCountsView"];
+        };
+        DocumentCountsView: {
+            /** Format: int32 */
+            uploaded: number;
+            /** Format: int32 */
+            ready: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            waitingForReader: number;
+        };
+        PersonUsageView: {
+            /** Format: uuid */
+            userId?: string;
+            displayName: string;
+            memberCode?: string;
+            /** Format: int32 */
+            questions: number;
+            /** Format: int32 */
+            cardsSaved: number;
+        };
+        QuestionCountsView: {
+            /** Format: int32 */
+            search: number;
+            /** Format: int32 */
+            similarCases: number;
+        };
+        TaggingCountsView: {
+            /** Format: int32 */
+            tagged: number;
+            /** Format: int32 */
+            pending: number;
+        };
+        UsageStatsView: {
+            month: string;
+            company: components["schemas"]["CompanyUsageView"];
+            people: components["schemas"]["PersonUsageView"][];
         };
         TaggingStatusView: {
             /** Format: int32 */
@@ -1067,6 +1295,30 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             revokedAt?: string;
+        };
+        GapView: {
+            text: string;
+            kind: string;
+            /** Format: int32 */
+            times: number;
+            /** Format: date */
+            lastAskedOn: string;
+        };
+        GapsView: {
+            withheld: boolean;
+            reason?: string;
+            gaps: components["schemas"]["GapView"][];
+        };
+        DeliveredVolumeView: {
+            month: string;
+            totals: components["schemas"]["DeliveryTotalView"][];
+        };
+        DeliveryTotalView: {
+            tool: string;
+            /** Format: int64 */
+            calls: number;
+            /** Format: int64 */
+            bytes: number;
         };
     };
     responses: never;
@@ -1445,6 +1697,50 @@ export interface operations {
             };
         };
     };
+    list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupAdminView"][];
+                };
+            };
+        };
+    };
+    add_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddGroupAdmin"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupAdminAdded"];
+                };
+            };
+        };
+    };
     retag: {
         parameters: {
             query?: never;
@@ -1487,7 +1783,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    list_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1627,7 +1923,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1649,7 +1945,7 @@ export interface operations {
             };
         };
     };
-    add_1: {
+    add_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1725,7 +2021,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query?: {
                 offset?: number;
@@ -2128,6 +2424,50 @@ export interface operations {
             };
         };
     };
+    myQuestions: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyQuestionView"][];
+                };
+            };
+        };
+    };
+    myCards: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "APPROVED" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCardView"][];
+                };
+            };
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -2239,6 +2579,30 @@ export interface operations {
             };
         };
     };
+    usageStats: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageStatsView"];
+                };
+            };
+        };
+    };
     taggingStatus: {
         parameters: {
             query?: never;
@@ -2261,7 +2625,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -2307,7 +2671,55 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    gaps: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GapsView"];
+                };
+            };
+        };
+    };
+    deliveredVolume: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveredVolumeView"];
+                };
+            };
+        };
+    };
+    list_5: {
         parameters: {
             query?: {
                 status?: "PENDING" | "APPROVED" | "REJECTED";
@@ -2337,6 +2749,26 @@ export interface operations {
             header?: never;
             path: {
                 keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
             };
             cookie?: never;
         };

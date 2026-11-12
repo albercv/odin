@@ -24,7 +24,10 @@ public class RevokeAccessKey {
     public void execute(Actor actor, AccessKeyId id) {
         AccessKey key = keys.findById(id).orElseThrow(() -> new NotFoundException("Clave no encontrada"));
         users.findById(key.userId()).orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
-        AccessPolicy.requireAdminOf(actor, key.companyId());
+        AccessPolicy.requireAdmin(actor);
+        if (!actor.administers(key.companyId())) {
+            throw new NotFoundException("Clave no encontrada");
+        }
         if (key.revokedAt().isEmpty()) {
             keys.save(key.revoked(clock.instant()));
         }

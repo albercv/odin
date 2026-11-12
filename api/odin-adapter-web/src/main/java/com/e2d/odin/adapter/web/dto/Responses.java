@@ -10,6 +10,18 @@ import com.e2d.odin.application.topic.DocumentTopicsReport;
 import com.e2d.odin.application.topic.TaggedDocument;
 import com.e2d.odin.application.topic.TaggingStatusReport;
 import com.e2d.odin.application.topic.TopicLabel;
+import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CompanyUsage;
+import com.e2d.odin.application.usage.DeliveredVolumeReport;
+import com.e2d.odin.application.usage.DeliveryTotal;
+import com.e2d.odin.application.usage.Disclosure;
+import com.e2d.odin.application.usage.DocumentCounts;
+import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.GapReport;
+import com.e2d.odin.application.usage.PersonUsage;
+import com.e2d.odin.application.usage.QuestionCounts;
+import com.e2d.odin.application.usage.TaggingCounts;
+import com.e2d.odin.application.usage.UsageReport;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentRef;
@@ -23,6 +35,7 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.organization.ProjectSummary;
+import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchResult;
 import com.e2d.odin.domain.search.SourceType;
@@ -34,6 +47,7 @@ import com.e2d.odin.domain.topic.Topic;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -55,9 +69,9 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record CompanyRef(UUID id, String name, String code) {
+    public record CompanyRef(UUID id, String name, String code, boolean codeReviewed) {
         public static CompanyRef from(Company c) {
-            return new CompanyRef(c.id().value(), c.name(), c.code());
+            return new CompanyRef(c.id().value(), c.name(), c.code(), c.codeReviewed());
         }
     }
 
@@ -73,9 +87,9 @@ public final class Responses {
         }
     }
 
-    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities) {
+    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities, boolean codeReviewed) {
         public static CompanyView from(Company c) {
-            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities());
+            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities(), c.codeReviewed());
         }
     }
 
@@ -134,10 +148,11 @@ public final class Responses {
 
     public record MemberView(UUID userId, String displayName, String firstName, @Nullable String lastName,
             String personCode, String memberCode, @Nullable String email, Set<Role> roles, boolean active,
-            boolean hasPassword) {
+            boolean personActive, boolean hasPassword) {
         public static MemberView from(com.e2d.odin.application.identity.MemberView m) {
             return new MemberView(m.userId().value(), m.displayName(), m.firstName(), m.lastName().orElse(null),
-                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.hasPassword());
+                    m.personCode(), m.memberCode(), m.email().orElse(null), m.roles(), m.active(), m.personActive(),
+                    m.hasPassword());
         }
     }
 
@@ -145,6 +160,21 @@ public final class Responses {
         public static MemberAdded from(com.e2d.odin.application.identity.MemberAdded added, Actor viewer) {
             return new MemberAdded(MemberView.from(com.e2d.odin.application.identity.MemberView.of(added.user(),
                     added.membership(), added.company().code(), viewer)), added.alreadyExisted(),
+                    added.keptPassword());
+        }
+    }
+
+    public record GroupAdminView(UUID userId, String firstName, @Nullable String lastName, String displayName,
+            @Nullable String email, String personCode, boolean active) {
+        public static GroupAdminView from(User u) {
+            return new GroupAdminView(u.id().value(), u.firstName(), u.lastName().orElse(null), u.displayName(),
+                    u.email().orElse(null), u.personCode(), u.active());
+        }
+    }
+
+    public record GroupAdminAdded(GroupAdminView admin, boolean alreadyExisted, boolean keptPassword) {
+        public static GroupAdminAdded from(com.e2d.odin.application.identity.GroupAdminAdded added) {
+            return new GroupAdminAdded(GroupAdminView.from(added.admin()), added.alreadyExisted(),
                     added.keptPassword());
         }
     }
@@ -237,6 +267,90 @@ public final class Responses {
         }
     }
 
+    public record QuestionCountsView(int search, int similarCases) {
+        static QuestionCountsView from(QuestionCounts c) {
+            return new QuestionCountsView(c.search(), c.similarCases());
+        }
+    }
+
+    /** Con {@code withheld}, el desglose va nulo: hubo pocos autores para enseñarlo sin deducir nada. */
+    public record CardCountsView(int saved, int pending, @Nullable Integer approved, @Nullable Integer corrected,
+            @Nullable Integer rejected, boolean withheld, @Nullable String reason) {
+        static CardCountsView from(CardCounts c) {
+            return new CardCountsView(c.saved(), c.pending(), c.decisions().map(d -> d.approved()).orElse(null),
+                    c.decisions().map(d -> d.corrected()).orElse(null),
+                    c.decisions().map(d -> d.rejected()).orElse(null), c.withheld(),
+                    c.withheld() ? Disclosure.WITHHELD_REASON : null);
+        }
+    }
+
+    public record DocumentCountsView(int uploaded, int ready, int failed, int waitingForReader) {
+        static DocumentCountsView from(DocumentCounts c) {
+            return new DocumentCountsView(c.uploaded(), c.ready(), c.failed(), c.waitingForReader());
+        }
+    }
+
+    public record TaggingCountsView(int tagged, int pending) {
+        static TaggingCountsView from(TaggingCounts c) {
+            return new TaggingCountsView(c.tagged(), c.pending());
+        }
+    }
+
+    /** {@code tagging} falta si la empresa no tiene temas. */
+    public record CompanyUsageView(QuestionCountsView questions, int questionsWithoutResults, CardCountsView cards,
+            DocumentCountsView documents, @Nullable TaggingCountsView tagging) {
+        static CompanyUsageView from(CompanyUsage u) {
+            return new CompanyUsageView(QuestionCountsView.from(u.questions()), u.questionsWithoutResults(),
+                    CardCountsView.from(u.cards()), DocumentCountsView.from(u.documents()),
+                    u.tagging().map(TaggingCountsView::from).orElse(null));
+        }
+    }
+
+    /** Solo dos recuentos por persona. La fila de bajas va sin {@code userId} ni {@code memberCode}. */
+    public record PersonUsageView(@Nullable UUID userId, String displayName, @Nullable String memberCode, int questions,
+            int cardsSaved) {
+        static PersonUsageView from(PersonUsage p) {
+            return new PersonUsageView(p.userId().map(id -> id.value()).orElse(null), p.displayName(),
+                    p.memberCode().orElse(null), p.questions(), p.cardsSaved());
+        }
+    }
+
+    public record UsageStatsView(String month, CompanyUsageView company, List<PersonUsageView> people) {
+        public static UsageStatsView from(UsageReport report) {
+            return new UsageStatsView(report.month().toString(), CompanyUsageView.from(report.company()),
+                    report.people().stream().map(PersonUsageView::from).toList());
+        }
+    }
+
+    /** Un hueco: sin autor y con el día, sin la hora. */
+    public record GapView(String text, String kind, int times, LocalDate lastAskedOn) {
+        public static GapView from(GapGroup g) {
+            return new GapView(g.text(), g.kind().name(), g.times(), g.lastAskedOn());
+        }
+    }
+
+    /** Con {@code withheld}, sin huecos: los preguntaron muy pocas personas. */
+    public record GapsView(boolean withheld, @Nullable String reason, List<GapView> gaps) {
+        public static GapsView from(GapReport report) {
+            return new GapsView(report.withheld(), report.withheld() ? Disclosure.WITHHELD_REASON : null,
+                    report.groups().stream().map(GapView::from).toList());
+        }
+    }
+
+    public record DeliveryTotalView(String tool, long calls, long bytes) {
+        static DeliveryTotalView from(DeliveryTotal t) {
+            return new DeliveryTotalView(t.tool().name(), t.calls(), t.bytes());
+        }
+    }
+
+    /** Volumen entregado a la IA del trabajador: por herramienta, nunca por persona. */
+    public record DeliveredVolumeView(String month, List<DeliveryTotalView> totals) {
+        public static DeliveredVolumeView from(DeliveredVolumeReport report) {
+            return new DeliveredVolumeView(report.month().toString(),
+                    report.totals().stream().map(DeliveryTotalView::from).toList());
+        }
+    }
+
     /** El vigente del final de la cadena, como lo ve el trabajador. */
     public record Replacement(UUID documentId, String title) {
         static Replacement from(DocumentRef ref) {
@@ -281,6 +395,38 @@ public final class Responses {
         }
     }
 
+    /** Lo que el autor ve de la revisión de su ficha: qué se decidió y por qué, sin decir quién revisó. */
+    public record MyReviewView(String decision, @Nullable String note, Instant reviewedAt) {
+        static MyReviewView from(CardReview r) {
+            return new MyReviewView(r.decision().name(), r.note().orElse(null), r.reviewedAt());
+        }
+    }
+
+    /** Una ficha propia: sin autor ni empresa, que son siempre los del que mira. */
+    public record MyCardView(UUID id, String title, String body, @Nullable String originalBody,
+            @Nullable UUID projectId, Instant createdAt, String status, @Nullable MyReviewView review) {
+        static MyCardView from(KnowledgeCard c) {
+            return new MyCardView(c.id().value(), c.title(), c.body(), c.originalBody().orElse(null),
+                    c.projectId().map(p -> p.value()).orElse(null), c.createdAt(), c.status().name(),
+                    c.review().map(MyReviewView::from).orElse(null));
+        }
+
+        public static List<MyCardView> from(List<KnowledgeCard> cards) {
+            return cards.stream().map(MyCardView::from).toList();
+        }
+    }
+
+    /** Una pregunta propia: sin autor (D-048). */
+    public record MyQuestionView(String text, String kind, int hitCount, Instant askedAt) {
+        static MyQuestionView from(QuestionRecord q) {
+            return new MyQuestionView(q.text(), q.kind().name(), q.hitCount(), q.askedAt());
+        }
+
+        public static List<MyQuestionView> from(List<QuestionRecord> questions) {
+            return questions.stream().map(MyQuestionView::from).toList();
+        }
+    }
+
     public record SavedCard(UUID id, String status, String message) {
         public static SavedCard from(KnowledgeCard c) {
             return new SavedCard(c.id().value(), c.status().name(), "Ficha guardada; queda pendiente de revisión.");
@@ -289,12 +435,13 @@ public final class Responses {
 
     public record Hit(String sourceType, UUID sourceId, String title, @Nullable Integer pageNumber, boolean paginated,
             @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank,
-            boolean superseded, @Nullable Replacement replacement) {
+            boolean superseded, @Nullable Replacement replacement, @Nullable String reviewStatus) {
         static Hit from(SearchHit h) {
             return new Hit(h.sourceType().name(), h.sourceId(), h.title(), h.pageNumber().orElse(null),
                     h.paginated(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),
                     h.excerpt(), h.rank(), h.superseded(),
-                    h.replacement().map(Replacement::from).orElse(null));
+                    h.replacement().map(Replacement::from).orElse(null),
+                    h.reviewStatus().map(Enum::name).orElse(null));
         }
     }
 
@@ -311,7 +458,7 @@ public final class Responses {
     public record SimilarCaseView(String sourceType, UUID sourceId, String title, @Nullable UUID projectId,
             Instant addedAt, int pageCount, List<CasePageView> pages, @Nullable String body, boolean truncated,
             String excerpt, String origin, @Nullable String originLabel, boolean superseded,
-            @Nullable Replacement replacement) {
+            @Nullable Replacement replacement, @Nullable String reviewStatus) {
         static final String CARD_LABEL = "Ficha aportada por un trabajador, redactada con IA";
 
         static SimilarCaseView from(SimilarCase c) {
@@ -321,7 +468,7 @@ public final class Responses {
                     c.pages().stream().map(p -> new CasePageView(p.number(), p.text())).toList(),
                     c.body().orElse(null), c.truncated(), c.excerpt(),
                     card ? "KNOWLEDGE_CARD" : "ORIGINAL_DOCUMENT", card ? CARD_LABEL : null, c.superseded(),
-                    c.replacement().map(Replacement::from).orElse(null));
+                    c.replacement().map(Replacement::from).orElse(null), c.reviewStatus().map(Enum::name).orElse(null));
         }
     }
 

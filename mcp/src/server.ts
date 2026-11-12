@@ -3,6 +3,8 @@ import type { ApiClient } from './api/client.js';
 import { createProjectNames } from './projects.js';
 import { registerFindSimilarCases } from './tools/findSimilarCases.js';
 import { registerListDocuments } from './tools/listDocuments.js';
+import { registerListMyKnowledgeCards } from './tools/listMyKnowledgeCards.js';
+import { registerListMyQuestions } from './tools/listMyQuestions.js';
 import { registerListProjects } from './tools/listProjects.js';
 import { registerReadPage } from './tools/readPage.js';
 import { registerSaveKnowledgeCard } from './tools/saveKnowledgeCard.js';
@@ -37,8 +39,12 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
     registerListDocuments(server, api, projects);
     registerListProjects(server, api);
     registerVerifyCitation(server, api);
+    registerListMyQuestions(server, api);
     if (capabilities.has('SIMILAR_CASES')) registerFindSimilarCases(server, api, projects);
   }
-  if (capabilities.has('SAVE_KNOWLEDGE_CARD')) registerSaveKnowledgeCard(server, api);
+  if (capabilities.has('SAVE_KNOWLEDGE_CARD')) {
+    registerSaveKnowledgeCard(server, api);
+    registerListMyKnowledgeCards(server, api, createProjectNames(me));
+  }
   return server;
 }

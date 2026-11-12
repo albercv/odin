@@ -39,7 +39,7 @@ public class PostgresTaggingRepository implements TaggingRepository {
     private static final String LIVE_TOPIC = """
             EXISTS (SELECT 1 FROM topic p WHERE p.company_id = d.company_id AND p.deleted_at IS NULL)""";
     /** Documento leído de una empresa con temas que no está {@code DONE} con la versión actual de su lista. */
-    private static final String PENDING = """
+    static final String PENDING = """
             FROM document d JOIN company c ON c.id = d.company_id
             LEFT JOIN document_tagging t ON t.document_id = d.id
             WHERE d.status = 'READY' AND %s AND %s AND %%s

@@ -49,7 +49,7 @@ test.beforeAll(async ({ browser }) => {
   await page.getByLabel('Correo').fill(state.admin.email);
   await page.getByLabel('Contraseña').fill(state.admin.password);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Empresas', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Grupo', exact: true })).toBeVisible();
   sessionCookies = await context.cookies();
   await seedReviewData(context.request);
   await context.close();
@@ -145,6 +145,35 @@ async function openRejectPanel(page: Page): Promise<void> {
   await expect(page.getByLabel('Motivo del rechazo')).toBeVisible();
 }
 
+async function openGroupAdmins(page: Page): Promise<void> {
+  await page.goto(PANEL);
+  await page.getByRole('link', { name: 'Administración del grupo' }).click();
+  await expect(page.getByRole('heading', { name: 'Administración del grupo', level: 1 })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Administrador/ }).first()).toBeVisible();
+}
+
+async function openTopics(page: Page, company: string): Promise<void> {
+  await openCompany(page, company);
+  await page.getByRole('link', { name: 'Temas', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Temas', level: 1 })).toBeVisible();
+}
+
+// «Empresa E» (demo-client, paso 11) ya tiene temas y un documento etiquetado.
+async function openDocumentTopics(page: Page): Promise<void> {
+  await openCompany(page, 'Empresa E');
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await page.getByRole('button', { name: 'Más acciones de Incidencia ficticia', exact: true }).click();
+  await page.getByRole('button', { name: 'Ver detalle de Incidencia ficticia', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Incidencia ficticia' }).getByRole('button', { name: 'Volver a etiquetar' })).toBeVisible();
+}
+
+async function openFromMenu(page: Page, company: string, link: string): Promise<void> {
+  await openCompany(page, company);
+  await page.getByRole('link', { name: link, exact: true }).click();
+  await expect(page.getByRole('heading', { name: link, level: 1 })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+}
+
 const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   login: async (page) => { await page.goto(PANEL); await expect(page.getByRole('heading', { name: 'Entra en el panel' })).toBeVisible(); },
   cover: async (page) => { await page.goto(`${PANEL}/#cover`); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); },
@@ -156,6 +185,15 @@ const SCREENS: Record<string, (page: Page) => Promise<void>> = {
   'project members': openProjectMembers,
   'documents upload dialog': openUploadDocument,
   'company switcher': openSwitcher,
+  'group switcher': openSwitcher,
+  'group admins': openGroupAdmins,
+  'topics empty': (page) => openTopics(page, EMPTY_COMPANY),
+  'topics list': async (page) => { await openTopics(page, 'Empresa E'); await expect(page.getByRole('row').filter({ hasText: 'agua y humedades' })).toBeVisible(); },
+  'document topics dialog': openDocumentTopics,
+  // «Empresa E2E» (admin.spec.ts) tiene tres personas con una pregunta sin resultado y fichas de una sola autora (su desglose se calla).
+  'usage with people': async (page) => { await openFromMenu(page, 'Empresa E2E', 'Uso'); await expect(page.getByRole('region', { name: 'Por persona' }).getByText('Uso Dos')).toBeVisible(); await expect(page.getByText('No se muestra para proteger a las personas (pocas en este periodo)')).toBeVisible(); },
+  'gaps with rows': async (page) => { await openFromMenu(page, 'Empresa E2E', 'Huecos'); await expect(page.getByRole('row').filter({ hasText: 'xqzvwk' })).toBeVisible(); },
+  'gaps empty': async (page) => { await openFromMenu(page, 'Empresa A', 'Huecos'); await expect(page.getByRole('heading', { name: 'Este mes no hay consultas sin resultados' })).toBeVisible(); },
   'review empty': (page) => openReview(page, EMPTY_COMPANY),
   'review with card': openReviewWithCard,
   'review reject panel': openRejectPanel,

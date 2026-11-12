@@ -7,6 +7,7 @@ import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.SetUpInstallation;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,7 +40,7 @@ public class SetupController {
         String ip = http.getRemoteAddr();
         limiter.check("setup", ip);
         try {
-            recoverGroupAdmin.execute(request.setupToken(), request.newPassword());
+            recoverGroupAdmin.execute(request.setupToken(), Optional.ofNullable(request.email()), request.newPassword());
         } catch (ForbiddenException e) {
             limiter.recordFailure("setup", ip);
             throw e;

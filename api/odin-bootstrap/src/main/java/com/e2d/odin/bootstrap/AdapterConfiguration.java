@@ -3,6 +3,7 @@ package com.e2d.odin.bootstrap;
 import com.e2d.odin.adapter.filestore.FileSystemOriginalFileStore;
 import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
 import com.e2d.odin.adapter.postgres.PostgresAdminSessionRepository;
+import com.e2d.odin.adapter.postgres.PostgresDeliveryMeter;
 import com.e2d.odin.adapter.postgres.PostgresDocumentRepository;
 import com.e2d.odin.adapter.postgres.PostgresKnowledgeCardRepository;
 import com.e2d.odin.adapter.postgres.PostgresKnowledgeSearch;
@@ -12,6 +13,7 @@ import com.e2d.odin.adapter.postgres.PostgresProjectMemberRepository;
 import com.e2d.odin.adapter.postgres.PostgresQuestionLog;
 import com.e2d.odin.adapter.postgres.PostgresTaggingRepository;
 import com.e2d.odin.adapter.postgres.PostgresTopicRepository;
+import com.e2d.odin.adapter.postgres.PostgresUsageStatistics;
 import com.e2d.odin.adapter.postgres.PostgresUserRepository;
 import com.e2d.odin.adapter.postgres.ScopedTransactions;
 import com.e2d.odin.adapter.readers.MagicBytesFormatDetector;
@@ -20,6 +22,7 @@ import com.e2d.odin.adapter.readers.PlainTextReader;
 import com.e2d.odin.adapter.readers.PoiDocxTextReader;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
+import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
@@ -37,8 +40,10 @@ import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.TaggingRepository;
 import com.e2d.odin.application.port.TokenGenerator;
 import com.e2d.odin.application.port.TopicRepository;
+import com.e2d.odin.application.port.UsageStatistics;
 import com.e2d.odin.application.port.UserRepository;
 import java.nio.file.Path;
+import java.time.ZoneId;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
@@ -113,6 +118,16 @@ public class AdapterConfiguration {
     @Bean
     TaggingRepository taggingRepository(ScopedTransactions tx) {
         return new PostgresTaggingRepository(tx);
+    }
+
+    @Bean
+    UsageStatistics usageStatistics(ScopedTransactions tx) {
+        return new PostgresUsageStatistics(tx);
+    }
+
+    @Bean
+    DeliveryMeter deliveryMeter(ScopedTransactions tx, @Value("${odin.timezone:Europe/Madrid}") ZoneId zone) {
+        return new PostgresDeliveryMeter(tx, zone);
     }
 
     @Bean

@@ -16,7 +16,8 @@ const DESCRIPTION =
   'Una ficha aportada es una ficha redactada con IA por un trabajador: preséntala como ficha, no como caso resuelto, y no le atribuyas un resultado que su texto no diga. ' +
   'addedAt es cuándo entró el documento en Odín, no la fecha del caso; esa fecha está en el texto. ' +
   'Si un caso no tiene resolución o resultado escritos, dilo; si es el mismo caso nuevo que te han dado, descártalo. ' +
-  'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes ver cuál).';
+  'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes ver cuál). ' +
+  'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.';
 
 export function registerFindSimilarCases(server: McpServer, api: ApiClient, projects: ProjectNames): void {
   server.registerTool(

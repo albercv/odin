@@ -21,7 +21,7 @@ public class UpdateCompany {
         Company company = organizations.findCompany(id).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         Company named = changes.name().map(n -> company.withName(Validation.requireText(n, "el nombre")))
                 .orElse(company);
-        Company updated = changes.code().map(named::withCode).orElse(named);
+        Company updated = changes.code().map(named::withCode).orElse(named).withCodeReviewed(true);
         CompanyCodes.requireFree(organizations, updated.code(), id);
         organizations.saveCompany(updated);
         return updated;

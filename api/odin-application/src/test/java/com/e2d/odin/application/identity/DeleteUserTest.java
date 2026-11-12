@@ -19,6 +19,7 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
@@ -97,6 +98,28 @@ class DeleteUserTest {
         assertThatThrownBy(() -> delete.execute(Actors.companyAdmin(company), groupAdminId))
                 .isInstanceOf(ForbiddenException.class);
         assertThat(users.findById(groupAdminId)).isPresent();
+    }
+
+    @Test
+    void cannotDeleteTheLastActiveGroupAdmin() {
+        UserId gemaId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gemaId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+
+        assertThatThrownBy(() -> delete.execute(Actors.groupAdmin(), gemaId)).isInstanceOf(ConflictException.class)
+                .hasMessage("Tiene que quedar al menos un administrador del grupo activo");
+        assertThat(users.findById(gemaId)).isPresent();
+    }
+
+    @Test
+    void deletesAGroupAdminWhenAnotherIsActive() {
+        UserId gemaId = new UserId(UUID.randomUUID());
+        People.groupAdmin(users, gemaId, "Gema", Optional.of("g@demo.test"), true, Optional.of("pw:x"));
+        People.groupAdmin(users, new UserId(UUID.randomUUID()), "Gael", Optional.of("gael@demo.test"), true,
+                Optional.of("pw:x"));
+
+        delete.execute(Actors.groupAdmin(), gemaId);
+
+        assertThat(users.findById(gemaId)).isEmpty();
     }
 
     @Test
