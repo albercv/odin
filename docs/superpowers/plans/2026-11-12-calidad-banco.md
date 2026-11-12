@@ -67,7 +67,7 @@
 
 ---
 
-### Task T00: Acuerdo con el CTO 2
+### Task 0 (T00): Acuerdo con el CTO 2
 
 **Ficheros:** ninguno. Es un mensaje del CTO 3 al CTO 2 (`local_abe41379-e70a-4580-bc31-61f3f460f182`).
 
@@ -82,7 +82,7 @@
   3. `leer_consultas` añade a cada consulta `vistos`, una lista de `{"documentId", "pagina"}` o `{"cardId"}` sacada del resultado de `searchKnowledge`, `listDocuments` y `readPage`.
 - [ ] **Paso 2.** Apuntar aquí su respuesta. Si prefiere hacerlo él, T01 y T02 pasan a ser suyas y el banco las espera. Si se niega, el banco usa sus propios envoltorios y lo apunta en el registro técnico.
 
-### Task T01: Pila parametrizada
+### Task 1 (T01): Pila parametrizada
 
 **Ficheros:**
 - Modificar: `experimentos/2026-11-12-archivo-ficticio/pila/pila.sh`, `experimentos/2026-11-12-archivo-ficticio/pila/cargar.py`
@@ -98,7 +98,7 @@
 - [ ] **Paso 5.** Volver a ejecutar las pruebas: todas en verde, las de hoy incluidas.
 - [ ] **Paso 6.** Commit: `feat: pila del experimento con proyecto, puertos y estado configurables`.
 
-### Task T02: Ejecutor con enfoque, tope de turnos y resultados vistos
+### Task 2 (T02): Ejecutor con enfoque, tope de turnos y resultados vistos
 
 **Ficheros:**
 - Modificar: `experimentos/2026-11-12-archivo-ficticio/medir/ejecutar.py`
@@ -119,7 +119,7 @@
 - [ ] **Paso 4.** Ejecutar `python3 -m unittest`: todas en verde, también las 51 de hoy.
 - [ ] **Paso 5.** Commit: `feat: el ejecutor admite enfoque y tope de turnos, y guarda los resultados vistos`.
 
-### Task T03: Configuración del banco
+### Task 3 (T03): Configuración del banco
 
 **Ficheros:**
 - Crear: `banco/config.py`, `banco/test_config.py`
@@ -164,7 +164,7 @@ def load_config(path: Path, base_dir: Path) -> ExperimentConfig
 - [ ] **Paso 4.** Ejecutar las pruebas: en verde.
 - [ ] **Paso 5.** Commit: `feat(banco): configuración TOML validada, enfoques y rúbricas`.
 
-### Task T04: Grupo de buscadores con caché y tope de gasto
+### Task 4 (T04): Grupo de buscadores con caché y tope de gasto
 
 **Ficheros:**
 - Crear: `banco/cache.py`, `banco/pool.py`, `banco/test_pool.py`
@@ -201,7 +201,7 @@ def run_pool(items: list[dict], specs: tuple[SearcherSpec, ...], carga: dict, ca
 - [ ] **Paso 4.** Ejecutar las pruebas: en verde.
 - [ ] **Paso 5.** Commit: `feat(banco): grupo de buscadores con caché y tope de gasto`.
 
-### Task T05: Combinadores sin IA y fusión de páginas
+### Task 5 (T05): Combinadores sin IA y fusión de páginas
 
 **Ficheros:**
 - Crear: `banco/combine.py`, `banco/test_combine.py`
@@ -231,7 +231,7 @@ def rrf_pages(runs: list[dict], k: int = 60, top: int = 5) -> list[tuple[str, in
 - [ ] **Paso 4.** Ejecutar las pruebas: en verde.
 - [ ] **Paso 5.** Commit: `feat(banco): combinadores por voto y fusión de páginas`.
 
-### Task T06: Redactor y jueces
+### Task 6 (T06): Redactor y jueces
 
 **Ficheros:**
 - Crear: `banco/compose.py`, `banco/judge.py`, `banco/test_compose.py`, `banco/test_judge.py`
@@ -270,7 +270,7 @@ def aggregate(verdicts: list[dict], rule: str) -> bool | None    # None = sin ve
 - [ ] **Paso 4.** Ejecutar las pruebas: en verde.
 - [ ] **Paso 5.** Commit: `feat(banco): redactor y jueces de Haiku y de Ollama`.
 
-### Task T07: Estadística
+### Task 7 (T07): Estadística
 
 **Ficheros:**
 - Crear: `banco/stats.py`, `banco/test_stats.py`
@@ -300,7 +300,7 @@ def ppi_mean(judge_unlabeled: list[bool], judge_labeled: list[bool], truth_label
 - [ ] **Paso 4.** Ejecutar las pruebas: en verde.
 - [ ] **Paso 5.** Commit: `feat(banco): intervalos, acuerdo entre jueces y PPI`.
 
-### Task T08: Submuestreo, curvas y comparación justa
+### Task 8 (T08): Submuestreo, curvas y comparación justa
 
 **Ficheros:**
 - Crear: `banco/subsample.py`, `banco/test_subsample.py`
@@ -332,7 +332,7 @@ def beats_single_frontier(row: dict, single_rows: list[dict], variation: float) 
 - [ ] **Paso 4.** Ejecutar las pruebas: en verde.
 - [ ] **Paso 5.** Commit: `feat(banco): curvas por submuestreo y comparación con un solo buscador`.
 
-### Task T09: Orden de entrada, informe y `make`
+### Task 9 (T09): Orden de entrada, informe y `make`
 
 **Ficheros:**
 - Crear: `banco/banco.py`, `banco/report.py`, `banco/test_banco.py`, `banco/INFORME.md` (cómo se usa, siguiendo el estilo de `medir/INFORME.md`)
@@ -366,7 +366,7 @@ def beats_single_frontier(row: dict, single_rows: list[dict], variation: float) 
 - [ ] **Paso 6.** Ejecutar `make banco-arriba && make banco-cargar ARCHIVOS=ficticio && make banco-abajo`: la pila sube en 48080 y baja sin tocar `odin-medicion` (`docker compose ls`). Es solo Docker local, sin IA.
 - [ ] **Paso 7.** Commit: `feat(banco): orden de entrada, informe y objetivos de make`.
 
-### Task T10: Revisión del banco
+### Task 10 (T10): Revisión del banco
 
 - [ ] **Paso 1.** Un subagente que no haya escrito nada del banco revisa la rama contra este plan y el diseño. Mira sobre todo:
   - los cinco puntos del principio;
@@ -376,7 +376,7 @@ def beats_single_frontier(row: dict, single_rows: list[dict], variation: float) 
 - [ ] **Paso 2.** Resolver los hallazgos, cada uno con su prueba.
 - [ ] **Paso 3.** Mezclar en `feature/calidad-recuperacion` con `--no-ff`. Registro técnico: entrada con la arquitectura del banco y las alternativas descartadas (un banco dentro de `medir/`; LangChain y RAGAS, descartados porque añaden dependencias).
 
-### Task T11: Piloto (solo con la cuota autorizada)
+### Task 11 (T11): Piloto (solo con la cuota autorizada)
 
 - [ ] **Paso 1.** Confirmar que el CEO ha transmitido la autorización de cuota del propietario.
 - [ ] **Paso 2.** `banco/configs/piloto.toml`:
@@ -392,7 +392,7 @@ def beats_single_frontier(row: dict, single_rows: list[dict], variation: float) 
   - que ningún inicio rompió el aislamiento.
 - [ ] **Paso 5.** Informe corto al CEO con el coste medido y lo que costaría el barrido de 40 preguntas.
 
-### Task T12: Barrido de 40 preguntas (con el visto bueno del CEO al coste)
+### Task 12 (T12): Barrido de 40 preguntas (con el visto bueno del CEO al coste)
 
 - [ ] **Paso 1.** `banco/configs/barrido-40.toml`:
   - la misma mezcla que el piloto, con 40 preguntas;
