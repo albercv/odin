@@ -9,7 +9,8 @@ CREATE TABLE delivery_usage (
     PRIMARY KEY (company_id, month, tool)
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON delivery_usage TO odin_app;
+-- Solo suma: la aplicación no borra ni cambia empresa, mes ni herramienta.
+GRANT SELECT, INSERT, UPDATE (calls, bytes) ON delivery_usage TO odin_app;
 
 ALTER TABLE delivery_usage ENABLE ROW LEVEL SECURITY;
 CREATE POLICY delivery_usage_scope ON delivery_usage

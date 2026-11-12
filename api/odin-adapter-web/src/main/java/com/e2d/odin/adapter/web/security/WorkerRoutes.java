@@ -13,8 +13,6 @@ public final class WorkerRoutes {
     private record Route(String method, PathPattern pattern, WorkerTool tool) {
     }
 
-    private static final List<String> PREFIXES = List.of("/v1/me", "/v1/search", "/v1/cards", "/v1/documents",
-            "/v1/citations", "/v1/similar-cases");
     private static final PathPatternParser PARSER = new PathPatternParser();
     private static final List<Route> ROUTES = List.of(
             route("GET", "/v1/me", WorkerTool.DESCRIBE_ME),
@@ -27,6 +25,11 @@ public final class WorkerRoutes {
             route("GET", "/v1/me/cards", WorkerTool.MY_CARDS),
             route("GET", "/v1/me/questions", WorkerTool.MY_QUESTIONS));
 
+    /** Los dos primeros segmentos de cada ruta: una sola lista, así prefijos y rutas no pueden divergir. */
+    private static final List<String> PREFIXES = ROUTES.stream()
+            .map(r -> r.pattern().getPatternString().split("/")).map(parts -> "/" + parts[1] + "/" + parts[2])
+            .distinct().toList();
+
     private WorkerRoutes() {
     }
 
@@ -35,7 +38,7 @@ public final class WorkerRoutes {
     }
 
     public static boolean isWorkerPath(String path) {
-        return PREFIXES.stream().anyMatch(path::startsWith);
+        return PREFIXES.stream().anyMatch(p -> path.equals(p) || path.startsWith(p + "/"));
     }
 
     public static Optional<WorkerTool> toolFor(String method, String path) {

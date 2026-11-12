@@ -78,6 +78,17 @@ class DeliveryMeteringFilterTest extends WebTestSupport {
     }
 
     @Test
+    void pathsThatOnlyLookLikeWorkerRoutesAreNotWorkerPaths() {
+        for (String path : new String[] {"/v1/membersX", "/v1/metrics", "/v1/searching", "/v1/cardsX", "/v1/documentsX"}) {
+            assertThat(WorkerRoutes.isWorkerPath(path)).as(path).isFalse();
+            assertThat(WorkerRoutes.toolFor("GET", path)).as(path).isEmpty();
+        }
+        assertThat(WorkerRoutes.isWorkerPath("/v1/me")).isTrue();
+        assertThat(WorkerRoutes.isWorkerPath("/v1/me/cards")).isTrue();
+        assertThat(WorkerRoutes.isWorkerPath("/v1/citations/verify")).isTrue();
+    }
+
+    @Test
     void onlySuccessfulWorkerResponsesAreMetered() throws Exception {
         String key = workerKey(newCompany());
 

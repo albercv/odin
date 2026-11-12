@@ -423,6 +423,13 @@ class IsolationTest extends WebTestSupport {
         mvc.perform(get("/v1/admin/companies/" + b.value() + "/usage-stats").cookie(group))
                 .andExpect(jsonPath("$.company.questions.search").value(1));
         mvc.perform(get("/v1/admin/companies/" + b.value() + "/gaps").cookie(group)).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(get(gaps).cookie(ownerOfA)).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].text").value("secreto de A"));
+        mvc.perform(get(gaps).cookie(group)).andExpect(jsonPath("$", hasSize(1)));
+        for (String route : new String[] {"usage-stats", "gaps", "delivered-volume"}) {
+            mvc.perform(get("/v1/admin/companies/" + a.value() + "/" + route).header("Authorization", workerKey(a)))
+                    .andExpect(status().isUnauthorized());
+        }
     }
     @Test
     void otherCompanyAdminCannotReadDeliveredVolume() throws Exception {

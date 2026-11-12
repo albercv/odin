@@ -274,4 +274,29 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         assertThat(ownerDocs.list(CompanyScope.of(a), ProjectVisibility.all(), Optional.empty(),
                 Optional.of(water.id()), Optional.empty(), 0, 10)).hasSize(1);
     }
+
+    @Test
+    void scopeOfBCountsNothingOfAUsageGapsOrDeliveredVolumeThroughAConnectionThatBypassesRls() {
+        var month = java.time.YearMonth.of(2026, 11);
+        var zone = java.time.ZoneId.of("Europe/Madrid");
+        var ownerUsage = new PostgresUsageStatistics(ownerTx);
+        var ownerMeter = new PostgresDeliveryMeter(ownerTx, zone);
+        new PostgresQuestionLog(tx).record(new QuestionRecord(UUID.randomUUID(), a, pendingAuthor, "hueco secreto", 0,
+                NOW, QuestionKind.SEARCH));
+        ownerMeter.record(a, com.e2d.odin.application.usage.WorkerTool.SEARCH, 500, NOW);
+
+        var usageOfB = ownerUsage.companyUsage(b, month, zone);
+        assertThat(usageOfB.questions().search()).isZero();
+        assertThat(usageOfB.questionsWithoutResults()).isZero();
+        assertThat(usageOfB.cards().saved()).isZero();
+        assertThat(usageOfB.documents().uploaded()).isZero();
+        assertThat(ownerUsage.peopleUsage(b, month, zone)).isEmpty();
+        assertThat(ownerUsage.gaps(b, month, zone, 200)).isEmpty();
+        assertThat(ownerMeter.totals(b, month)).isEmpty();
+
+        assertThat(ownerUsage.companyUsage(a, month, zone).questionsWithoutResults()).isEqualTo(1);
+        assertThat(ownerUsage.peopleUsage(a, month, zone)).isNotEmpty();
+        assertThat(ownerUsage.gaps(a, month, zone, 200)).extracting(g -> g.text()).containsExactly("hueco secreto");
+        assertThat(ownerMeter.totals(a, month)).hasSize(1);
+    }
 }
