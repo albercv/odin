@@ -142,8 +142,8 @@ def beats_single_frontier(row, single_rows, variation):
     """Solo filas válidas: una mezcla no válida no tiene veredicto y las filas no válidas no definen la frontera."""
     if not single_rows:
         raise ValueError("hacen falta filas de un solo buscador para la frontera")
-    valid_singles = [r for r in single_rows if r["valid"]]
-    if not row["valid"] or not valid_singles:
+    valid_singles = [r for r in single_rows if r["valid"] and r["accuracy_mean"] is not None]
+    if variation is None or not row["valid"] or row["accuracy_mean"] is None or not valid_singles:
         return None
     points = sorted((r["tokens_mean"], r["accuracy_mean"]) for r in valid_singles)
     return row["accuracy_mean"] > _frontier_at(points, row["tokens_mean"]) + variation

@@ -263,5 +263,22 @@ class MeasuredOnlyCostTest(unittest.TestCase):
         self.assertIsNone(row["latency_p50"])
 
 
+class NoiseBandTest(unittest.TestCase):
+    """Sin una fila por defecto válida con acierto no hay banda de ruido: no hay veredicto de frontera, y no se rompe."""
+
+    def test_no_noise_band_without_a_valid_default_row(self):
+        from banco.run import _noise_band
+        self.assertIsNone(_noise_band({"valid": False, "accuracy_min": 0.5, "accuracy_max": 0.9}))
+        self.assertIsNone(_noise_band({"valid": True, "accuracy_min": None, "accuracy_max": None}))
+        self.assertAlmostEqual(_noise_band({"valid": True, "accuracy_min": 0.5, "accuracy_max": 0.7}), 0.1)
+
+    def test_frontier_has_no_verdict_without_variation_or_accuracy(self):
+        singles = [{"tokens_mean": 100.0, "accuracy_mean": 0.6, "valid": True}]
+        row = {"tokens_mean": 150.0, "accuracy_mean": 0.9, "valid": True}
+        self.assertIsNone(beats_single_frontier(row, singles, variation=None))
+        self.assertIsNone(beats_single_frontier({**row, "accuracy_mean": None}, singles, variation=0.0))
+        self.assertIsNone(beats_single_frontier(row, [{"tokens_mean": 100.0, "accuracy_mean": None, "valid": True}], 0.0))
+
+
 if __name__ == "__main__":
     unittest.main()

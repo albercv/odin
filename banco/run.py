@@ -652,6 +652,13 @@ def _turn_runs(sess, sink):
             break
 
 
+def _noise_band(default):
+    """Mitad del intervalo de acierto de single por defecto; None si esa fila no es válida o no tiene acierto."""
+    if not default["valid"] or default["accuracy_min"] is None or default["accuracy_max"] is None:
+        return None
+    return (default["accuracy_max"] - default["accuracy_min"]) / 2
+
+
 def _curves(sess, runs, turn_runs):
     score = lambda item, answer: scoring.is_correct(item, answer, sess.ctx)
     draws, seed, items = sess.sweep.draws, sess.seed, sess.items
@@ -666,7 +673,7 @@ def _curves(sess, runs, turn_runs):
         turn_rows.append({**curve(by_question, items, score, combine.single, [{"main": 1}], 1, seed)[0],
                           "max_turns": turns})
     default = curve(main, items, score, _single_run, [{"main": 1}], draws, seed)[0]
-    variation = (default["accuracy_max"] - default["accuracy_min"]) / 2
+    variation = _noise_band(default)
     mix_rows = [{**row, "supera_single": beats_single_frontier(row, turn_rows, variation)} for row in multi_rows]
     mix_rows += [{**row, "supera_single": None} for row in single_mix_rows]
     return {"variacion": variation, "mezclas": mix_rows, "single": turn_rows, "single_por_defecto": default}
