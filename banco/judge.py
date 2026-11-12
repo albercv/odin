@@ -117,7 +117,12 @@ def run_ollama_judge(material, rubric_text, model, url, timeout):
         return _record(model, _invalid(f"respuesta de Ollama no válida: {error}"), 0.0, None, t0)
     tokens = {"entrada": data.get("prompt_eval_count"), "salida": data.get("eval_count")}
     return {"model": model, "verdict": verdict, "coste_usd": 0.0, "tokens": tokens,
-            "duracion_s": round((data.get("total_duration") or 0) / 1e9, 1)}
+            "duracion_s": _seconds(data.get("total_duration"))}
+
+
+def _seconds(nanoseconds):
+    """Duración de Ollama en segundos; cualquier valor que no sea numérico cuenta como 0."""
+    return round(nanoseconds / 1e9, 1) if isinstance(nanoseconds, (int, float)) else 0.0
 
 
 def _references(answer):

@@ -133,6 +133,13 @@ class OllamaJudgeTest(unittest.TestCase):
         self.assertEqual(record["duracion_s"], 0.0)
         self.assertEqual(record["tokens"], {"entrada": None, "salida": None})
 
+    def test_non_numeric_duration_counts_as_zero(self):
+        url, stop = start_fake_ollama("duracion_texto")
+        self.addCleanup(stop)
+        record = run_ollama_judge("material", RUBRIC, "qwen", url, 30)
+        self.assertEqual(record["verdict"], VALID_YES)
+        self.assertEqual(record["duracion_s"], 0.0)
+
     def test_refuses_non_local_host_before_any_request(self):
         for url in ("http://ejemplo.com:11434", "http://127.0.0.1@ejemplo.com:11434"):
             with self.subTest(url=url), mock.patch("banco.judge.urllib.request.urlopen") as urlopen:

@@ -1,4 +1,4 @@
-"""Pruebas del redactor: textos de los approach_texts composer y pageFusion, y la llamada al ejecutor con un claude falso."""
+"""Pruebas del redactor: texts de los enfoques composer y pageFusion, y la llamada al ejecutor con un claude falso."""
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -26,21 +26,21 @@ RUNS = [_run("main", 0, "Cuesta 10 €", "d1", 2), _run("topic", 0, "Cuesta 12 �
 
 class ComposerTextTest(unittest.TestCase):
     def test_composer_prompt_contains_all_answers_and_rule(self):
-        texto = composer_text(RUNS)
-        self.assertIn("Cuesta 10 €", texto)
-        self.assertIn("Cuesta 12 €", texto)
-        self.assertNotIn("Cuesta 99", texto)  # las respuestas con error no cuentan
-        self.assertIn("verifyCitation", texto)
-        self.assertIn("«no consta»", texto)
+        text = composer_text(RUNS)
+        self.assertIn("Cuesta 10 €", text)
+        self.assertIn("Cuesta 12 €", text)
+        self.assertNotIn("Cuesta 99", text)  # las respuestas con error no cuentan
+        self.assertIn("verifyCitation", text)
+        self.assertIn("«no consta»", text)
 
 
 class PageFusionTextTest(unittest.TestCase):
     def test_page_fusion_prompt_contains_rrf_pages_only(self):
-        texto = page_fusion_text([("d1", 2), ("d2", 5)])
-        self.assertIn("documentId d1, página 2", texto)
-        self.assertIn("documentId d2, página 5", texto)
-        self.assertIn("readPage", texto)
-        self.assertNotIn("Cuesta", texto)
+        text = page_fusion_text([("d1", 2), ("d2", 5)])
+        self.assertIn("documentId d1, página 2", text)
+        self.assertIn("documentId d2, página 5", text)
+        self.assertIn("readPage", text)
+        self.assertNotIn("Cuesta", text)
 
 
 class ComposeTest(unittest.TestCase):

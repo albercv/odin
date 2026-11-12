@@ -9,20 +9,20 @@ from banco.combine import rrf_pages
 from banco.medir_path import ejecutar
 
 KINDS = ("composer", "pageFusion")
-REGLA_COMPOSER = ("Escribe una única respuesta final. Cita solo fragmentos que hayas comprobado con verifyCitation. "
+COMPOSER_RULE = ("Escribe una única respuesta final. Cita solo fragmentos que hayas comprobado con verifyCitation. "
                   "Si las respuestas discrepan y no puedes comprobarlas, di «no consta».")
-REGLA_FUSION = "Lee esas páginas con readPage y responde solo a partir de ellas."
+FUSION_RULE = "Lee esas páginas con readPage y responde solo a partir de ellas."
 
 
 def composer_text(runs: list[dict]) -> str:
     usable = [r for r in runs if r.get("error") is None and r.get("respuesta") is not None]
     blocks = [f"Respuesta {n}:\n{json.dumps(r['respuesta'], ensure_ascii=False)}" for n, r in enumerate(usable, start=1)]
-    return "Respuestas de otros buscadores:\n\n" + "\n\n".join(blocks) + "\n\n" + REGLA_COMPOSER
+    return "Respuestas de otros buscadores:\n\n" + "\n\n".join(blocks) + "\n\n" + COMPOSER_RULE
 
 
 def page_fusion_text(pages: list[tuple[str, int]]) -> str:
     lines = "\n".join(f"- documentId {document_id}, página {page}" for document_id, page in pages)
-    return f"Páginas seleccionadas:\n{lines}\n\n{REGLA_FUSION}"
+    return f"Páginas seleccionadas:\n{lines}\n\n{FUSION_RULE}"
 
 
 def compose(item: dict, runs: list[dict], carga: dict, settings, kind: str, model: str,
