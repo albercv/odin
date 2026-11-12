@@ -265,5 +265,5 @@ Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 7 preguntas
 - **Orden:** este bloque va justo después del bloque 1 y antes del bloque 2 (D-049). Toca `ListDocuments`, `DescribeMe` y `WorkerController` tal como los dejó la 2a; no depende de nada del bloque 2.
 - **Visibilidad (D-047):** «proyectos visibles» son los de los que el trabajador es miembro más los abiertos a toda la empresa (`restricted = false`); lo que no tiene proyecto lo ve toda la empresa. D-047 sustituye en este punto a la regla anterior de proyectos restringidos. El proyecto restringido «ajeno» pasa a ser «proyecto cerrado del que no es miembro».
 - **Código de la 2a:** `ListDocuments` y `DescribeMe` ya reciben `ProjectMemberRepository projectMembers` y llaman a `WorkerAccess.require(actor, organizations, projectMembers, Capability.X)`. `ListDocuments` valida un filtro de proyecto con `requireProject(visibility(), projectId)` y lee con `content()`.
-- **Migración:** `V12__topics` se queda en V12 (V11 es del bloque 1; V13 será del bloque 7).
+- **Migración:** `V13__topics` (orden de D-052: V11 es del bloque 7 y V12 del bloque 1).
 - **Registro técnico:** el número fijo desaparece; se usa el siguiente libre al escribir la entrada.

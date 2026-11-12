@@ -39,7 +39,7 @@
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V12__topics.sql`, o la siguiente libre (en el orden de D-049, V11 es del bloque 1 y V13 del bloque 7).
+- **Migración:** `V13__topics.sql`, o la siguiente libre (en el orden de D-052, V11 es del bloque 7 y V12 del bloque 1).
 - **Visibilidad (D-047):** «proyectos visibles» son los de los que el trabajador es miembro, los abiertos a toda la empresa (`restricted = false`) y, además, lo que no tiene proyecto, que ve toda la empresa.
 - **Datos:** solo ficticios.
 
@@ -150,12 +150,12 @@ Rama `task/fase-2-conocimiento/temas`. Spec 4 y 5.1.
 - **Crear:**
   - dominio: `domain/topic/`, con `TopicId`, `Topic`, `TopicNames`, `TopicSource`, `TopicState`, `DocumentTopic`, `TaggingStatus` y `DocumentTagging`, más sus pruebas;
   - aplicación: `application/port/TopicRepository.java`; `application/topic/CreateTopic.java`, `UpdateTopic.java`, `DeleteTopic.java` y `ListTopics.java`, con `ManageTopicsTest`;
-  - PostgreSQL: `PostgresTopicRepository` con su IT, y `V12__topics.sql`;
+  - PostgreSQL: `PostgresTopicRepository` con su IT, y `V13__topics.sql`;
   - pruebas y web: el doble `InMemoryTopicRepository` y `TopicController`.
 - **Modificar:** `Company` o `PostgresOrganizationRepository`, para la versión de la lista; `UseCaseConfiguration`, `AdapterConfiguration`, `TestWiring`, `Requests`, `Responses`, el contrato y los tipos.
 
 **Valores:**
-- `V12` crea las cuatro piezas del spec 4:
+- `V13` crea las cuatro piezas del spec 4:
   - `topic (id, company_id, name, definition, deleted_at)`, con un índice único `(company_id, lower(unaccent(name))) WHERE deleted_at IS NULL`;
   - `document_topic (document_id, topic_id, company_id, source, state, tagger_version, decided_by, decided_at)`, con clave primaria `(document_id, topic_id)`;
   - `document_tagging (document_id PK, company_id, topic_list_version, status, attempt_count, deadline_at, failure_reason, tagger_version, seq)`;
@@ -189,7 +189,7 @@ Rama `task/fase-2-conocimiento/temas`. Spec 4 y 5.1.
   - `deleteKeepsListVersion`;
   - `sameEditTwiceRaisesOnce`;
   - `rowLevelSecurityHidesOtherCompanyTopics`.
-  - Escribe `V12`.
+  - Escribe `V13`.
 - [ ] **Paso 4:** web y contrato: `AdminApiTest`, una prueba por ruta de temas, e `IsolationTest.otherCompanyAdminCannotManageTopics`.
 - [ ] **Paso 5:** regenera el contrato y los tipos. `make check` y `make demo` terminan con 0.
 - [ ] **Paso 6:** commit «feat: lista de temas de cada empresa».

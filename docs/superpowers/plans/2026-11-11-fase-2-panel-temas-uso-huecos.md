@@ -61,7 +61,7 @@ Se aplican D-047 y D-048. Quien ejecute una tarea lee el spec, el de la direcci�
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V15__delivered_volume.sql`, solo en la tarea 2, o la siguiente libre (V15 en el orden de D-049).
+- **Migración:** `V15__delivered_volume.sql`, solo en la tarea 2, o la siguiente libre (V15 en el orden de D-052).
 - **Datos:** solo ficticios.
 
 ## Foco de revisión

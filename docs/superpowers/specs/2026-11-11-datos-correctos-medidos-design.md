@@ -294,3 +294,33 @@ Un subagente leyó el diseño como si tuviera que planificarlo. Hizo 5 preguntas
 
 - **El mínimo, ¿por modelo?** Recomendación del CTO: que pase del 90 % cada modelo (Sonnet y Haiku) en cada corpus, porque el trabajador puede usar cualquiera. En el estudio, Haiku dio 35 de 36 y 31 de 32 con sus propias herramientas.
 
+
+## 14. Revisión tras la prueba grande (D-052, 2026-11-12)
+
+La medición de partida ya está hecha: es la prueba grande del encargo 12 (informe `docs/informes/2026-11-12-medicion-archivo-ficticio.md`, rama `feature/medicion-archivo`, ca94774). Haiku dio 146 de 216 (67,6 %), y 48 de los 74 fallos vinieron de que la IA no podía filtrar por proyecto. D-052 valida estos cambios, que **mandan sobre los apartados 2 a 10** donde no cuadren con ellos:
+
+- **La batería de respuestas es el archivo del encargo 12:** 1.236 documentos, 300 fichas, 242 contradicciones y 216 preguntas de 10 tipos, con su generador, su pila, su ejecutor y su puntuador en `experimentos/2026-11-12-archivo-ficticio/`.
+  - Sustituye a los juegos pequeño, de escala y contrafactual del apartado 6.1, y al puntuador en TypeScript del 6.3.
+  - El puntuador es el de Python del experimento, validado con las cifras del estudio. Se queda en Python: es una herramienta de medición, no código del producto.
+  - Se trae a la rama con un merge de `feature/medicion-archivo`.
+- **El mínimo del 90 % (D-049, D-050)** se mide en ese archivo con Haiku, el modelo que más falla. La medición completa con Haiku se puede repetir (unos 14 minutos). Sonnet, solo en muestra hasta el cierre; al cierre, completa.
+- **Batería de búsqueda determinista en `make check`:** sobre el mismo archivo, en lugar de `SearchScaleBatteryIT` con el corpus de 899.
+  - Usa las páginas esperadas de las preguntas que llevan cita, con el filtro del proyecto de la pregunta.
+  - La primera medición fija el umbral, como en el apartado 5.3.
+  - El cargador de Java es el mismo que el de `SearchBatteryIT`, compartido.
+- **Cambios en el MCP, en este orden (D-052):**
+  1. **`listProjects`** (apartado 7), con la instrucción de filtrar por proyecto.
+  2. **El nombre del proyecto en cada resultado** (`projectName`) de `searchKnowledge`, `readPage` y `listDocuments`.
+     - El MCP lo saca de los proyectos de `GET /v1/me`, sin cambiar la API.
+     - Un proyecto borrado que el trabajador aún ve en su contenido sale como «Proyecto borrado».
+  3. **`addedAt` en lugar de `date`** en lo que el MCP da a la IA, descrito como «fecha en que entró en Odín, no la del documento».
+  4. **Reglas de cita literal** en la instrucción:
+     - «Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.»
+     - «De una ficha, cita solo su texto, sin el título, el autor ni la fecha.»
+  5. **La instrucción de fuente parcial** (apartado 7).
+- **El ejecutor guarda las consultas:** cada llamada a una herramienta, con sus argumentos y el número de resultados. Hace falta para separar los fallos de búsqueda de los de lectura.
+- **Fallos graves, aparte en cada medición** (D-052): los «no consta» que sí constaban y los documentos sustituidos presentados como vigentes. Son los que más daño hacen al cliente.
+- **Mediciones del bloque:**
+  - una completa con Haiku después de los cambios 1 a 3, otra después del 4 y el 5;
+  - la muestra de Sonnet, al cerrar el bloque.
+- **Sin cambios:** el aislamiento de la IA, la regla de 2 de 3, el criterio de cierre de la recuperación (apartado 6.6) y que el bloque 6 no la cierra.

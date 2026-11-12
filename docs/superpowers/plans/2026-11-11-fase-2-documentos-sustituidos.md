@@ -49,7 +49,7 @@
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V13__superseded_documents.sql`, o la siguiente libre si el orden cambió. V11 es del bloque 1 y V12 del bloque 3.
+- **Migración:** `V11__superseded_documents.sql`, o la siguiente libre si el orden cambió (en el orden de D-052, este bloque va antes de los bloques 1 y 3).
 - **Panel:** con los componentes y las reglas de la dirección visual (D-039): `FormDialog`, `Field`, `StatusPill`, `RowActions`, `Notice` y `Button`.
 - **Datos:** solo ficticios.
 
@@ -184,7 +184,7 @@ Rama `task/fase-2-conocimiento/marca-sustituido`. Spec 2, 4 y 5.2.
 
 **Ficheros:**
 - **Crear:**
-  - `api/odin-adapter-postgres/src/main/resources/db/migration/V13__superseded_documents.sql`;
+  - `api/odin-adapter-postgres/src/main/resources/db/migration/V11__superseded_documents.sql`;
   - `domain/document/DocumentRef.java` y `domain/document/DocumentEntry.java`;
   - `adapter/postgres/SupersessionSql.java`.
 - **Modificar:**
@@ -208,7 +208,7 @@ final class SupersessionSql {   // adapter/postgres
 ```
 
 **Valores:**
-- `V13`, o la siguiente libre:
+- `V11`, o la siguiente libre:
   - `ALTER TABLE document ADD COLUMN superseded_by uuid NULL REFERENCES document(id)`;
   - `ALTER TABLE document ADD COLUMN superseded_at timestamptz NULL`;
   - `CHECK (superseded_by <> id)` y `CHECK ((superseded_by IS NULL) = (superseded_at IS NULL))`, cada una con nombre;
@@ -243,8 +243,8 @@ final class SupersessionSql {   // adapter/postgres
     - `listCarriesEntries`;
     - `tableRejectsSelfMarkAndHalfMarks`, con un `UPDATE` directo.
   - `RowLevelSecurityIT.replacementInHiddenProjectIsNullEvenWithoutTheExplicitFilter`: una consulta con `SupersessionSql.joins` se lanza en un `tx.inScope` sin el proyecto del sustituto, pero con los parámetros del filtro explícito de `ProjectVisibility.all()`. El vigente sale nulo.
-  - Prueba de migración, `existingDocumentsAreNotSuperseded`: un documento insertado antes de `V13` sale sin marca.
-- [ ] **Paso 4:** escribe `V13`, `SupersessionSql` y el repositorio.
+  - Prueba de migración, `existingDocumentsAreNotSuperseded`: un documento insertado antes de `V11` sale sin marca.
+- [ ] **Paso 4:** escribe `V11`, `SupersessionSql` y el repositorio.
 - [ ] **Paso 5:** `make check` y `make demo` terminan con 0; `SearchBatteryIT` da 27 de 30 y `SearchScaleBatteryIT` cumple su umbral.
 - [ ] **Paso 6:** commit «feat: marca de documento sustituido en el modelo y el repositorio».
 

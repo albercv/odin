@@ -59,7 +59,7 @@ El CEO aceptó el motivo (D-041). Leer esas páginas queda como primera mejora p
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V11__reader_lane.sql`. La 2a llega hasta V10. Si cerró con otra numeración, la siguiente libre.
+- **Migración:** `V12__reader_lane.sql`, o la siguiente libre (en el orden de D-052, V11 es del bloque 7).
 - **Datos:** solo ficticios. Las muestras del repositorio OCR (`samples/`) son sintéticas.
 
 ## Foco de revisión
@@ -274,13 +274,13 @@ Rama `task/fase-2-conocimiento/carril-lector` (Odín). Spec 5.1 a 5.3.
 Rama `task/fase-2-conocimiento/carril-lector-postgres` (Odín). Spec 5.1 y 5.2.
 
 **Ficheros:**
-- **Crear:** `V11__reader_lane.sql`.
+- **Crear:** `V12__reader_lane.sql`.
 - **Modificar:** `PostgresDocumentRepository`, `PostgresDocumentRepositoryIT` y `MigrationFromPhaseOneIT`, o la prueba de migración que exista tras la 2a.
 
 **Interfaces que consume:** `DocumentRepository.claimNextForReader` y `Document.startReading` de la tarea 4.
 
 **Valores:**
-- `V11`:
+- `V12`:
   - `UPDATE document SET attempt_count = 0 WHERE status = 'PENDING_READER'`. La columna `status` es texto sin restricción, así que no hace falta nada para el estado nuevo;
   - `ALTER TABLE document ADD COLUMN pages_without_text integer[] NOT NULL DEFAULT '{}'`;
   - la rellena para los documentos `READY` y paginados con los números de sus páginas cuyo `btrim(text)` es vacío.
@@ -299,7 +299,7 @@ Rama `task/fase-2-conocimiento/carril-lector-postgres` (Odín). Spec 5.1 y 5.2.
   - `migrationResetsAttemptsOfDocumentsWaitingForReader`: aplica hasta la migración anterior, inserta un `PENDING_READER` con 3 intentos, migra y comprueba que tiene 0.
   - `migrationFillsPagesWithoutTextOfExistingDocuments`: un `READY` con las páginas 1 y 3 en blanco queda con `[1, 3]`.
   - `PostgresDocumentRepositoryIT.storesPagesWithoutText`.
-- [ ] **Paso 2:** escribe `V11` y `claimNextForReader`.
+- [ ] **Paso 2:** escribe `V12` y `claimNextForReader`.
 - [ ] **Paso 3:** `make check` y `make demo` terminan con 0. `SearchBatteryIT` mantiene 27 de 30.
 - [ ] **Paso 4:** commit «feat: toma del carril del lector en PostgreSQL».
 
