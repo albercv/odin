@@ -3,7 +3,7 @@ import { Icon, type IconName } from '../ui/Icon';
 import { BrandMark } from './BrandMark';
 import styles from './Sidebar.module.css';
 
-export type Page = 'companies' | 'company' | 'documents' | 'review' | 'account';
+export type Page = 'companies' | 'company' | 'documents' | 'review' | 'groupAdmins' | 'account';
 
 type Props = {
   isGroup: boolean; name: string; companyName?: string; switcher?: SwitcherProps; page: Page; pending: number;
@@ -15,16 +15,21 @@ function CompanySlot({ switcher, companyName }: { switcher?: SwitcherProps; comp
   return companyName ? <p className={styles.company}>{companyName}</p> : null;
 }
 
+function PendingCount({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <>
+      <span className={styles.count} aria-hidden="true">{count}</span>
+      <span className="visually-hidden">, {count} {count === 1 ? 'ficha pendiente' : 'fichas pendientes'}</span>
+    </>
+  );
+}
+
 export function Sidebar({ isGroup, name, companyName, switcher, page, pending, setPage, onLogout }: Props) {
   const link = (target: Page, text: string, icon: IconName, count = 0) => (
     <a href="#" aria-current={page === target ? 'page' : undefined} onClick={(e) => { e.preventDefault(); setPage(target); }}>
       <Icon name={icon} />{text}
-      {count > 0 && (
-        <>
-          <span className={styles.count} aria-hidden="true">{count}</span>
-          <span className="visually-hidden">, {count} {count === 1 ? 'ficha pendiente' : 'fichas pendientes'}</span>
-        </>
-      )}
+      <PendingCount count={count} />
     </a>
   );
   return (
@@ -39,6 +44,7 @@ export function Sidebar({ isGroup, name, companyName, switcher, page, pending, s
       </nav>
       <div className={`${styles.nav} ${styles.foot}`}>
         <p className={styles.who}>{name}</p>
+        {isGroup && link('groupAdmins', 'Administración del grupo', 'lock')}
         {link('account', 'Mi cuenta', 'user')}
         <button type="button" onClick={onLogout}><Icon name="logout" />Salir</button>
       </div>
