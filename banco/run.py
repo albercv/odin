@@ -119,7 +119,19 @@ def _load_stack(layout):
     return carga_mod.leer(path)
 
 
-def draw_sample(items, strata, size, seed):
+def draw_sample(items, strata, size, seed, include=()):
+    """Las preguntas de `include` siempre están y cuentan en su estrato; el resto del tamaño sale del reparto
+    estratificado de siempre, con la misma semilla. Sin `include`, es exactamente la muestra de siempre."""
+    by_id = {item["id"]: item for item in items}
+    missing = [q for q in include if q not in by_id]
+    if missing:
+        raise ConfigError(f"«include» pide preguntas que no existen en la batería: {', '.join(missing)}")
+    forced = [by_id[q] for q in include]
+    rest = [item for item in items if item["id"] not in set(include)]
+    return forced + _round_robin(rest, strata, size - len(forced), seed)
+
+
+def _round_robin(items, strata, size, seed):
     """Estratos por el campo `strata`, en orden alfabético; cada estrato se baraja y se reparte por turnos."""
     rng = random.Random(seed)
     groups = {}
@@ -136,7 +148,7 @@ def _select_items(layout, cfg):
     items = json.loads(layout.battery_file.read_text(encoding="utf-8"))
     if cfg.sample is None:
         return items
-    return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed)
+    return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed, cfg.sample.include)
 
 
 CODE_PATHS = ("banco", "experimentos/2026-11-12-archivo-ficticio/medir")

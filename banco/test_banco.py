@@ -1176,5 +1176,54 @@ class CorruptStateTest(Harness):
         self.assertIn("estado de reanudación está dañado", message)
 
 
+GOLDEN_SAMPLE_40_SEED_7 = ["Q192", "Q087", "Q141", "Q080", "Q162", "Q006", "Q112", "Q213", "Q113", "Q093", "Q191", "Q055", "Q145", "Q139", "Q171", "Q091", "Q097", "Q208", "Q123", "Q077", "Q202", "Q020", "Q186", "Q001", "Q176", "Q063", "Q041", "Q038", "Q012", "Q075", "Q203", "Q086", "Q180", "Q015", "Q165", "Q062", "Q096", "Q206", "Q127", "Q076"]
+FORCED = ("Q138", "Q147", "Q153")
+
+
+class ForcedSampleTest(unittest.TestCase):
+    """Preguntas obligatorias en la muestra: sin «include» la muestra es la de siempre; con él, las obligatorias
+    siempre están, el tamaño no cambia y las dos configuraciones del barrido eligen las mismas 40 preguntas."""
+
+    @staticmethod
+    def _battery():
+        return json.loads((EXP / "datos" / "bateria.json").read_text(encoding="utf-8"))
+
+    def test_without_include_the_sample_is_unchanged(self):
+        ids = [i["id"] for i in draw_sample(self._battery(), "tipo", 40, 7)]
+        self.assertEqual(ids, GOLDEN_SAMPLE_40_SEED_7)
+
+    def test_included_questions_are_always_in_the_sample(self):
+        ids = [i["id"] for i in draw_sample(self._battery(), "tipo", 40, 7, include=FORCED)]
+        self.assertEqual(len(ids), 40)
+        self.assertEqual(len(set(ids)), 40)
+        self.assertTrue(set(FORCED) <= set(ids))
+
+    def test_forced_selection_is_deterministic(self):
+        first = draw_sample(self._battery(), "tipo", 40, 7, include=FORCED)
+        self.assertEqual(first, draw_sample(self._battery(), "tipo", 40, 7, include=FORCED))
+
+    def test_unknown_included_id_is_a_clear_error(self):
+        with self.assertRaisesRegex(ConfigError, "no existen en la batería"):
+            draw_sample(self._battery(), "tipo", 40, 7, include=("Q999",))
+
+    def test_more_included_than_size_is_a_clear_error(self):
+        from banco.config import _sample
+        raw = {"sample": {"size": 2, "strata": "tipo", "seed": 7, "include": list(FORCED)}}
+        with self.assertRaisesRegex(ConfigError, "más que «size»"):
+            _sample(raw, "explore")
+
+    def test_both_barrido_configs_select_the_same_forty(self):
+        from banco.config import load_config
+        selections = []
+        for name in ("barrido-40", "barrido-40-jurado"):
+            cfg = load_config(BANCO / "configs" / f"{name}.toml", BANCO)
+            sample = cfg.sample
+            ids = [i["id"] for i in draw_sample(self._battery(), sample.strata, sample.size, sample.seed, sample.include)]
+            selections.append(ids)
+        self.assertEqual(len(selections[0]), 40)
+        self.assertEqual(selections[0], selections[1])
+        self.assertTrue(set(FORCED) <= set(selections[0]))
+
+
 if __name__ == "__main__":
     unittest.main()
