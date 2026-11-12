@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
@@ -30,7 +31,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
     private static final String COLUMNS = """
             d.id, d.company_id, d.project_id, d.title, d.filename, d.format, d.sha256, d.status, d.failure_reason,
             d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
-            d.superseded_at""";
+            d.superseded_at, d.pages_without_text""";
     private final ScopedTransactions tx;
 
     public PostgresDocumentRepository(ScopedTransactions tx) {
@@ -145,38 +146,48 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> claimNextForProcessing(Instant now, Duration staleAfter) {
-        return tx.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS + """
-                 FROM document d WHERE d.status = 'RECEIVED' OR (d.status = 'PROCESSING'
+        return claim("RECEIVED", "PROCESSING", now, staleAfter, d -> d.startProcessing(now));
+    }
+
+    @Override
+    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter) {
+        return claim("PENDING_READER", "READER_PROCESSING", now, staleAfter, d -> d.startReading(now));
+    }
+
+    /** Toma el primer documento en espera o con el trabajo caducado, bloqueado sin esperar a los que otro ya tiene. */
+    private Optional<Document> claim(String waiting, String running, Instant now, Duration staleAfter,
+            UnaryOperator<Document> start) {
+        String sql = "SELECT " + COLUMNS + """
+                 FROM document d WHERE d.status = '%s' OR (d.status = '%s'
                     AND (d.processing_started_at IS NULL OR d.processing_started_at <= :threshold))
-                ORDER BY d.seq LIMIT 1 FOR UPDATE SKIP LOCKED""")
+                ORDER BY d.seq LIMIT 1 FOR UPDATE SKIP LOCKED""".formatted(waiting, running);
+        return tx.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql(sql)
                 .param("threshold", Sql.ts(now.minus(staleAfter))).query((rs, n) -> document(rs)).optional()
-                .map(d -> d.startProcessing(now)).map(claimed -> {
+                .map(start).map(claimed -> {
                     upsert(jdbc, claimed);
                     return claimed;
                 }));
     }
 
-    @Override
-    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter) {
-        throw new UnsupportedOperationException("Pendiente de la tarea 5");
-    }
-
     private static void upsert(JdbcClient jdbc, Document d) {
         jdbc.sql("""
                 INSERT INTO document (id, company_id, project_id, title, filename, format, sha256, status,
-                    failure_reason, paginated, uploaded_by, uploaded_at, processing_started_at, attempt_count)
+                    failure_reason, paginated, uploaded_by, uploaded_at, processing_started_at, attempt_count,
+                    pages_without_text)
                 VALUES (:id, :company, :project, :title, :filename, :format, :sha, :status, :reason, :paginated,
-                    :uploader, :uploaded, :started, :attempts)
+                    :uploader, :uploaded, :started, :attempts, :blankPages)
                 ON CONFLICT (id) DO UPDATE SET project_id = :project, title = :title, filename = :filename,
                     format = :format, status = :status, failure_reason = :reason, paginated = :paginated,
-                    processing_started_at = :started, attempt_count = :attempts""")
+                    processing_started_at = :started, attempt_count = :attempts,
+                    pages_without_text = :blankPages""")
                 .param("id", d.id().value()).param("company", d.companyId().value())
                 .param("project", d.projectId().map(ProjectId::value).orElse(null)).param("title", d.title())
                 .param("filename", d.filename()).param("format", d.format().name()).param("sha", d.sha256())
                 .param("status", d.status().name()).param("reason", d.failureReason().orElse(null))
                 .param("paginated", d.paginated()).param("uploader", d.uploadedBy().value())
                 .param("uploaded", Sql.ts(d.uploadedAt())).param("started", Sql.ts(d.processingStartedAt()))
-                .param("attempts", d.attemptCount()).update();
+                .param("attempts", d.attemptCount())
+                .param("blankPages", d.pagesWithoutText().toArray(Integer[]::new)).update();
     }
 
     private static DocumentEntry entry(ResultSet rs) throws SQLException {
@@ -191,6 +202,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 rs.getBoolean("paginated"), new UserId(Sql.uuid(rs, "uploaded_by")), Sql.instant(rs, "uploaded_at"),
                 Sql.optionalInstant(rs, "processing_started_at"), rs.getInt("attempt_count"),
                 Optional.ofNullable(Sql.uuid(rs, "superseded_by")).map(DocumentId::new),
-                Sql.optionalInstant(rs, "superseded_at"));
+                Sql.optionalInstant(rs, "superseded_at"),
+                List.of((Integer[]) rs.getArray("pages_without_text").getArray()));
     }
 }

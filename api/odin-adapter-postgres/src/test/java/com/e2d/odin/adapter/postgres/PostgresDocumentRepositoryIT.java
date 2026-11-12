@@ -140,12 +140,70 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
-    void claimIgnoresFailedAndPendingReader() {
+    void localClaimNeverTakesReaderStates() {
         CompanyId a = newCompany();
         UserId ua = newUser(a);
         newDocument(a, ua, "Fallido", DocumentStatus.FAILED);
         newDocument(a, ua, "Pendiente", DocumentStatus.PENDING_READER);
+        newDocument(a, ua, "Leyendo", DocumentStatus.READER_PROCESSING);
         assertThat(docs.claimNextForProcessing(NOW.plus(Duration.ofDays(1)), STALE)).isEmpty();
+    }
+
+    @Test
+    void claimNextForReaderTakesPendingReaderOnly() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        newDocument(a, ua, "Recibido", DocumentStatus.RECEIVED);
+        newDocument(a, ua, "Procesando", DocumentStatus.PROCESSING);
+        newDocument(a, ua, "Listo", DocumentStatus.READY);
+        newDocument(a, ua, "Fallido", DocumentStatus.FAILED);
+        Document waiting = newDocument(a, ua, "Escaneo", DocumentStatus.PENDING_READER);
+        Document claimed = docs.claimNextForReader(NOW, STALE).orElseThrow();
+        assertThat(claimed).isEqualTo(waiting.startReading(NOW));
+        assertThat(reread(waiting)).isEqualTo(claimed);
+        assertThat(docs.claimNextForReader(NOW, STALE)).isEmpty();
+    }
+
+    @Test
+    void claimNextForReaderSkipsLockedRows() throws Exception {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        Document first = newDocument(a, ua, "Uno", DocumentStatus.PENDING_READER);
+        Document second = newDocument(a, ua, "Dos", DocumentStatus.PENDING_READER);
+        try (java.sql.Connection c = Db.owner().getConnection()) {
+            c.setAutoCommit(false);
+            try (java.sql.PreparedStatement lock = c.prepareStatement("SELECT id FROM document WHERE id = ? FOR UPDATE")) {
+                lock.setObject(1, first.id().value());
+                lock.executeQuery();
+            }
+            assertThat(docs.claimNextForReader(NOW, STALE).orElseThrow().id()).isEqualTo(second.id());
+            assertThat(docs.claimNextForReader(NOW, STALE)).isEmpty();
+            c.rollback();
+        }
+    }
+
+    @Test
+    void claimNextForReaderRetakesStaleReaderProcessing() {
+        CompanyId a = newCompany();
+        Document d = newDocument(a, newUser(a), "Colgado", DocumentStatus.PENDING_READER);
+        docs.claimNextForReader(NOW, STALE);
+        assertThat(docs.claimNextForReader(NOW.plus(STALE).minusSeconds(1), STALE)).isEmpty();
+        Document again = docs.claimNextForReader(NOW.plus(STALE), STALE).orElseThrow();
+        assertThat(again.id()).isEqualTo(d.id());
+        assertThat(again.status()).isEqualTo(DocumentStatus.READER_PROCESSING);
+        assertThat(again.attemptCount()).isEqualTo(2);
+    }
+
+    @Test
+    void storesPagesWithoutText() {
+        CompanyId a = newCompany();
+        Document d = newDocument(a, newUser(a), "Mixto", DocumentStatus.PROCESSING);
+        Document ready = d.markReady(true, List.of(1, 3));
+        docs.save(ready);
+        assertThat(reread(d).pagesWithoutText()).containsExactly(1, 3);
+        assertThat(entry(a, ProjectVisibility.all(), d).document()).isEqualTo(ready);
+        docs.save(ready.markReady(true, List.of()));
+        assertThat(reread(d).pagesWithoutText()).isEmpty();
     }
 
     private List<Document> listed(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> project,
