@@ -75,16 +75,19 @@ class NoConstaTest(unittest.TestCase):
 
 class AgreementTest(unittest.TestCase):
     def test_groups_questions_by_agreeing_searchers(self):
+        # la firma son los documentos citados: Q1 coincide en dos de tres; Q2, en los tres (sin citas)
+        def cited(text, document):
+            return {"respuesta": text, "no_lo_se": False, "citas": [{"documentId": document, "pagina": 1}]}
         runs = [
-            {"id": "Q1", "approach": "main", "replica": r, "respuesta": _answer(t), "error": None}
-            for r, t in enumerate(["Cuesta 10 €.", "Cuesta 10 €.", "Cuesta 20 €."])
+            {"id": "Q1", "approach": "main", "replica": r, "respuesta": cited(t, d), "error": None}
+            for r, (t, d) in enumerate([("Cuesta 10 €.", "d1"), ("Cuesta 10 €.", "d1"), ("Cuesta 20 €.", "d2")])
         ] + [
             {"id": "Q2", "approach": "main", "replica": r, "respuesta": _answer(t), "error": None}
             for r, t in enumerate(["Son 1.", "Son 2.", "Son 3."])
         ]
         finals = [_final("Q1", True, _answer("a")), _final("Q2", False, _answer("b"))]
         self.assertEqual(metrics.agreement_block(finals, runs),
-                         {"2": {"questions": 1, "accuracy": 1.0}, "1": {"questions": 1, "accuracy": 0.0}})
+                         {"3": {"questions": 1, "accuracy": 0.0}, "2": {"questions": 1, "accuracy": 1.0}})
 
 
 class CostTest(unittest.TestCase):

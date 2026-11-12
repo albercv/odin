@@ -2,7 +2,6 @@
 
 from fractions import Fraction
 
-from banco.medir_path import puntuar
 
 NO_CONSENSUS_ANSWER = "No consta: los buscadores no coincidieron."
 
@@ -11,11 +10,11 @@ def _usable(runs: list[dict]) -> list[dict]:
     return [r for r in runs if r.get("error") is None and r.get("respuesta") is not None]
 
 
-def answer_signature(answer: dict) -> tuple[bool, frozenset[str], frozenset[tuple]]:
-    """Firma de una respuesta: abstención, cifras normalizadas y páginas citadas (documentId, página)."""
-    figures = frozenset(puntuar.TOKEN_NUM.findall(puntuar.normalise(answer["respuesta"])))
-    pages = frozenset((c.get("documentId"), c.get("pagina")) for c in answer["citas"])
-    return (bool(answer["no_lo_se"]), figures, pages)
+def answer_signature(answer: dict) -> tuple[bool, frozenset[str]]:
+    """Firma de una respuesta: abstención y conjunto de documentos o fichas citados. Sin cifras ni páginas: es la
+    que mejor separa en lo medido (D-067)."""
+    sources = frozenset(c.get("documentId") or c.get("cardId") for c in answer["citas"])
+    return (bool(answer["no_lo_se"]), sources)
 
 
 def single(runs: list[dict]) -> dict:

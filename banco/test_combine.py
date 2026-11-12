@@ -38,17 +38,22 @@ class SignatureTest(unittest.TestCase):
         b = _answer("300 euros de franquicia", citas=[_cita("d1", 1)])
         self.assertEqual(answer_signature(a), answer_signature(b))
 
-    def test_signature_differs_on_cited_pages_even_without_figures(self):
-        self.assertNotEqual(
-            answer_signature(_answer("no consta", citas=[_cita("d1", 1)])),
-            answer_signature(_answer("no consta", citas=[_cita("d1", 2)])),
+    def test_signature_ignores_cited_pages_and_numbers(self):
+        self.assertEqual(
+            answer_signature(_answer("300 €", citas=[_cita("d1", 1)])),
+            answer_signature(_answer("500 €", citas=[_cita("d1", 2)])),
         )
 
-    def test_signature_differs_on_numbers(self):
+    def test_signature_differs_on_cited_documents(self):
         self.assertNotEqual(
-            answer_signature(_answer("300 €")),
-            answer_signature(_answer("500 €")),
+            answer_signature(_answer("no consta", citas=[_cita("d1", 1)])),
+            answer_signature(_answer("no consta", citas=[_cita("d2", 1)])),
         )
+
+    def test_signature_uses_cited_cards_too(self):
+        card = {"documentId": None, "cardId": "c1", "pagina": None, "fragmento": ""}
+        self.assertEqual(answer_signature(_answer("x", citas=[card])), answer_signature(_answer("y", citas=[dict(card)])))
+        self.assertNotEqual(answer_signature(_answer("x", citas=[card])), answer_signature(_answer("x")))
 
     def test_signature_includes_no_lo_se(self):
         self.assertNotEqual(
@@ -77,9 +82,9 @@ class SingleTest(unittest.TestCase):
 class MajorityVoteTest(unittest.TestCase):
     def test_majority_picks_largest_group(self):
         runs = [
-            _run("a", 0, _answer("300 €")),
-            _run("b", 0, _answer("500 €")),
-            _run("c", 0, _answer("euros: 300")),
+            _run("a", 0, _answer("300 €", citas=[_cita("d1", 1)])),
+            _run("b", 0, _answer("500 €", citas=[_cita("d2", 1)])),
+            _run("c", 0, _answer("euros: 300", citas=[_cita("d1", 3)])),
         ]
         self.assertEqual(majority_vote(runs)["respuesta"], "300 €")
 
@@ -91,13 +96,13 @@ class MajorityVoteTest(unittest.TestCase):
         ]
         self.assertEqual(len(majority_vote(runs)["citas"]), 2)
 
-    def test_majority_splits_figureless_answers_by_cited_pages(self):
+    def test_majority_splits_answers_by_cited_documents_not_pages(self):
         runs = [
             _run("a", 0, _answer("no consta", citas=[_cita("d1", 1)])),
-            _run("b", 0, _answer("no consta", citas=[_cita("d1", 2)])),
-            _run("c", 0, _answer("no consta", citas=[_cita("d1", 2)])),
+            _run("b", 0, _answer("no consta", citas=[_cita("d2", 1)])),
+            _run("c", 0, _answer("no consta", citas=[_cita("d2", 9)])),
         ]
-        self.assertEqual(majority_vote(runs)["citas"][0]["pagina"], 2)
+        self.assertEqual(majority_vote(runs)["citas"][0]["documentId"], "d2")
 
     def test_tie_returns_no_consta_with_trace(self):
         runs = [
