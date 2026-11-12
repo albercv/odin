@@ -1,4 +1,6 @@
+import ast
 import unittest
+from pathlib import Path
 
 from banco.combine import answer_signature, majority_vote, rrf_pages, single
 
@@ -153,6 +155,25 @@ class RrfPagesTest(unittest.TestCase):
             _run("b", 0, _answer("y", citas=[_cita("d1", 1)])),
         ]
         self.assertEqual(rrf_pages(runs), [("d2", 2), ("d1", 1)])
+
+
+class EnglishIdentifiersTest(unittest.TestCase):
+    """Identificadores en inglés en los dos módulos de combinación y puntuación (las claves JSON se quedan como están)."""
+    SPANISH = {"cifras", "citas", "pares", "paginas", "vistos", "consulta", "ficha", "ruta", "pagina", "consta", "empate"}
+
+    def test_no_spanish_identifiers_in_combine_and_scoring(self):
+        for name in ("combine.py", "scoring.py"):
+            tree = ast.parse((Path(__file__).resolve().parent / name).read_text(encoding="utf-8"))
+            found = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Name):
+                    found.add(node.id)
+                elif isinstance(node, ast.arg):
+                    found.add(node.arg)
+                elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                    found.add(node.name)
+            flagged = sorted(n for n in found if set(n.lower().split("_")) & self.SPANISH)
+            self.assertEqual(flagged, [], name)
 
 
 if __name__ == "__main__":
