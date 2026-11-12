@@ -37,7 +37,7 @@ test('switchingLoadsTheOtherCompany', async () => {
 });
 
 test('choosingACompanyOpensIt', async () => {
-  const me = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', role: 'GROUP_ADMIN' as const, companies: [acme, beta] };
+  const me = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', role: 'GROUP_ADMIN' as const, companies: [acme, beta], scannedDocumentsSupported: false };
   const calls = mockFetch({
     'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
     'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],

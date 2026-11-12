@@ -7,7 +7,7 @@ import { renderWithProviders } from '../ui/renderWithProviders';
 type Me = Parameters<typeof GroupAdmins>[0]['me'];
 
 const list = 'GET /v1/admin/group-admins';
-const me: Me = { userId: 'g1', displayName: 'Ada Rey', firstName: 'Ada', lastName: 'Rey', personCode: 'ADAA', role: 'GROUP_ADMIN', companies: [] };
+const me: Me = { userId: 'g1', displayName: 'Ada Rey', firstName: 'Ada', lastName: 'Rey', personCode: 'ADAA', role: 'GROUP_ADMIN', companies: [], scannedDocumentsSupported: false };
 const ada = { userId: 'g1', firstName: 'Ada', lastName: 'Rey', displayName: 'Ada Rey', email: 'ada@demo.test', personCode: 'ADAA', active: true };
 const gael = { userId: 'g2', firstName: 'Gael', lastName: 'Ruiz', displayName: 'Gael Ruiz', email: 'gael@demo.test', personCode: 'GAEL', active: true };
 const gus = { ...gael, userId: 'g3', displayName: 'Gus Paz', firstName: 'Gus', lastName: 'Paz', email: 'gus@demo.test', personCode: 'GUSS', active: false };
