@@ -6,136 +6,147 @@ import random
 import subprocess
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from collections.abc import Callable
 
 from banco.medir_path import ejecutar
 
-CAMPOS = {"correcta": bool, "respaldada": bool, "datosSinRespaldo": list, "motivo": str}
+FIELDS = {"correcta": bool, "respaldada": bool, "datosSinRespaldo": list, "motivo": str}
 VERDICT_SCHEMA = {
-    "type": "object", "required": list(CAMPOS), "additionalProperties": False,
+    "type": "object", "required": list(FIELDS), "additionalProperties": False,
     "properties": {
         "correcta": {"type": "boolean"}, "respaldada": {"type": "boolean"},
         "datosSinRespaldo": {"type": "array", "items": {"type": "string"}}, "motivo": {"type": "string"},
     },
 }
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+OLLAMA_PREFIX = "ollama:"
 
 
-def _invalido(motivo):
-    return {"invalido": True, "motivo": motivo}
+def _invalid(reason):
+    return {"invalido": True, "motivo": reason}
 
 
-def _valido(datos):
+def _is_valid(data):
     """Un veredicto con exactamente los campos del esquema y sus tipos."""
-    if not isinstance(datos, dict) or set(datos) != set(CAMPOS):
+    if not isinstance(data, dict) or set(data) != set(FIELDS):
         return False
-    sin_respaldo = datos["datosSinRespaldo"]
-    return (isinstance(datos["correcta"], bool) and isinstance(datos["respaldada"], bool) and isinstance(sin_respaldo, list)
-            and all(isinstance(x, str) for x in sin_respaldo) and isinstance(datos["motivo"], str))
+    unsupported = data["datosSinRespaldo"]
+    return (isinstance(data["correcta"], bool) and isinstance(data["respaldada"], bool) and isinstance(unsupported, list)
+            and all(isinstance(x, str) for x in unsupported) and isinstance(data["motivo"], str))
 
 
-def _veredicto(datos):
-    return datos if _valido(datos) else _invalido("veredicto con campos ausentes o de tipo incorrecto")
+def _verdict_or_invalid(data):
+    return data if _is_valid(data) else _invalid("veredicto con campos ausentes o de tipo incorrecto")
 
 
-def _registro(model, verdict, coste, tokens, t0):
-    return {"model": model, "verdict": verdict, "coste_usd": coste, "tokens": tokens,
+def _record(model, verdict, cost, tokens, t0):
+    return {"model": model, "verdict": verdict, "coste_usd": cost, "tokens": tokens,
             "duracion_s": round(time.monotonic() - t0, 1)}
 
 
 def check_judge_init(init):
-    """El juez solo puede tener StructuredOutput, ningún servidor MCP y plugins integrados."""
-    herramientas = [t for t in init.get("tools", []) if t != "StructuredOutput"]
-    plugins = [p.get("name") for p in init.get("plugins", []) if not str(p.get("source", "")).endswith("@builtin")]
-    if herramientas or init.get("mcp_servers") or plugins:
-        raise ejecutar.Aislamiento(f"juez no aislado: herramientas={herramientas} mcp={init.get('mcp_servers')} plugins={plugins}")
+    """Exige los tres campos del inicio: solo StructuredOutput, ningún servidor MCP y plugins integrados."""
+    for field in ("tools", "mcp_servers", "plugins"):
+        if not isinstance(init.get(field), list):
+            raise ejecutar.Aislamiento(f"juez no aislado: falta el campo {field} en el evento de inicio")
+    tools = [t for t in init["tools"] if t != "StructuredOutput"]
+    foreign_plugins = [p for p in init["plugins"]
+                       if not (isinstance(p, dict) and str(p.get("source", "")).endswith("@builtin"))]
+    if tools or init["mcp_servers"] or foreign_plugins:
+        raise ejecutar.Aislamiento(f"juez no aislado: herramientas={tools} mcp={init['mcp_servers']} plugins={foreign_plugins}")
 
 
-def _eventos(salida):
-    eventos = []
-    for linea in salida.splitlines():
+def _events(output):
+    events = []
+    for line in output.splitlines():
         try:
-            evento = json.loads(linea)
+            event = json.loads(line)
         except ValueError:
             continue
-        if isinstance(evento, dict):
-            eventos.append(evento)
-    return eventos
+        if isinstance(event, dict):
+            events.append(event)
+    return events
 
 
-def _desde_resultado(resultado):
-    if resultado is None or resultado.get("is_error"):
-        return _invalido("sin resultado del juez")
-    return _veredicto(resultado.get("structured_output"))
+def _from_result(result):
+    if result is None or result.get("is_error"):
+        return _invalid("sin resultado del juez")
+    return _verdict_or_invalid(result.get("structured_output"))
 
 
 def run_claude_judge(material, rubric_text, model, claude_bin, timeout):
     t0 = time.monotonic()
-    orden = [claude_bin, "-p", "--model", model, "--output-format", "stream-json", "--verbose",
-             "--mcp-config", '{"mcpServers":{}}', *ejecutar.OPCIONES_AISLAMIENTO, "--json-schema", json.dumps(VERDICT_SCHEMA)]
-    with tempfile.TemporaryDirectory(prefix="odin-juez-") as vacia:
+    command = [claude_bin, "-p", "--model", model, "--output-format", "stream-json", "--verbose",
+               "--mcp-config", '{"mcpServers":{}}', *ejecutar.OPCIONES_AISLAMIENTO, "--json-schema", json.dumps(VERDICT_SCHEMA)]
+    with tempfile.TemporaryDirectory(prefix="odin-juez-") as empty_dir:
         try:
-            p = subprocess.run(orden, input=rubric_text + "\n\n" + material, cwd=vacia, text=True, capture_output=True,
-                               timeout=timeout, env={**os.environ, **ejecutar.ENTORNO_AISLADO})
+            proc = subprocess.run(command, input=rubric_text + "\n\n" + material, cwd=empty_dir, text=True,
+                                  capture_output=True, timeout=timeout, env={**os.environ, **ejecutar.ENTORNO_AISLADO})
         except subprocess.TimeoutExpired:
-            return _registro(model, _invalido(f"tiempo agotado ({timeout} s)"), 0.0, None, t0)
-    eventos = _eventos(p.stdout)
-    init = next((e for e in eventos if e.get("type") == "system" and e.get("subtype") == "init"), None)
+            return _record(model, _invalid(f"tiempo agotado ({timeout} s)"), 0.0, None, t0)
+    events = _events(proc.stdout)
+    init = next((e for e in events if e.get("type") == "system" and e.get("subtype") == "init"), None)
     if init is None:
-        return _registro(model, _invalido(f"sin evento de inicio (código {p.returncode})"), 0.0, None, t0)
+        return _record(model, _invalid(f"sin evento de inicio (código {proc.returncode})"), 0.0, None, t0)
     check_judge_init(init)
-    resultado = next((e for e in reversed(eventos) if e.get("type") == "result"), None)
-    uso = (resultado or {}).get("usage") or {}
-    tokens = {"entrada": uso.get("input_tokens"), "salida": uso.get("output_tokens"),
-              "cache_lectura": uso.get("cache_read_input_tokens"), "cache_creacion": uso.get("cache_creation_input_tokens")}
-    coste = (resultado or {}).get("total_cost_usd") or 0.0
-    return _registro(model, _desde_resultado(resultado), coste, tokens, t0)
+    result = next((e for e in reversed(events) if e.get("type") == "result"), None)
+    usage = (result or {}).get("usage") or {}
+    tokens = {"entrada": usage.get("input_tokens"), "salida": usage.get("output_tokens"),
+              "cache_lectura": usage.get("cache_read_input_tokens"), "cache_creacion": usage.get("cache_creation_input_tokens")}
+    cost = (result or {}).get("total_cost_usd") or 0.0
+    return _record(model, _from_result(result), cost, tokens, t0)
 
 
 def run_ollama_judge(material, rubric_text, model, url, timeout):
+    host = urllib.parse.urlsplit(url).hostname
+    if host not in LOCAL_HOSTS:
+        raise ValueError(f"el juez de Ollama solo admite hosts locales (127.0.0.1, localhost, ::1), no {host}")
     t0 = time.monotonic()
-    cuerpo = {"model": model, "messages": [{"role": "system", "content": rubric_text}, {"role": "user", "content": material}],
-              "stream": False, "format": VERDICT_SCHEMA, "options": {"temperature": 0}}
-    peticion = urllib.request.Request(f"{url}/api/chat", data=json.dumps(cuerpo).encode("utf-8"), method="POST",
-                                      headers={"Content-Type": "application/json"})
+    model = model.removeprefix(OLLAMA_PREFIX)
+    body = {"model": model, "messages": [{"role": "system", "content": rubric_text}, {"role": "user", "content": material}],
+            "stream": False, "format": VERDICT_SCHEMA, "options": {"temperature": 0}}
+    request = urllib.request.Request(f"{url}/api/chat", data=json.dumps(body).encode("utf-8"), method="POST",
+                                     headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(peticion, timeout=timeout) as respuesta:
-            datos = json.loads(respuesta.read().decode("utf-8"))
-        veredicto = _veredicto(json.loads(datos["message"]["content"]))
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        verdict = _verdict_or_invalid(json.loads(data["message"]["content"]))
     except (OSError, ValueError, KeyError, TypeError) as error:
-        return _registro(model, _invalido(f"respuesta de Ollama no válida: {error}"), 0.0, None, t0)
-    tokens = {"entrada": datos.get("prompt_eval_count"), "salida": datos.get("eval_count")}
-    return {"model": model, "verdict": veredicto, "coste_usd": 0.0, "tokens": tokens,
-            "duracion_s": round(datos.get("total_duration", 0) / 1e9, 1)}
+        return _record(model, _invalid(f"respuesta de Ollama no válida: {error}"), 0.0, None, t0)
+    tokens = {"entrada": data.get("prompt_eval_count"), "salida": data.get("eval_count")}
+    return {"model": model, "verdict": verdict, "coste_usd": 0.0, "tokens": tokens,
+            "duracion_s": round((data.get("total_duration") or 0) / 1e9, 1)}
 
 
-def _referencias(answer):
+def _references(answer):
     """Documentos o fichas citados, sin repetir, en el orden de las citas."""
-    pares = [(c.get("documentId") or c.get("cardId"), c.get("pagina")) for c in answer["citas"]]
-    return list(dict.fromkeys(p for p in pares if p[0] is not None))
+    pairs = [(c.get("documentId") or c.get("cardId"), c.get("pagina")) for c in answer["citas"]]
+    return list(dict.fromkeys(p for p in pairs if p[0] is not None))
 
 
 def judge_material(item, answer, page_text: Callable[[str, int], str], rng: random.Random) -> str:
-    referencias = _referencias(answer)
-    rng.shuffle(referencias)
-    fuentes = []
-    for n, (ident, pagina) in enumerate(referencias, start=1):
-        cabecera = f"[Fuente {n}] {ident}" + ("" if pagina is None else f", página {pagina}")
-        fuentes.append(f"{cabecera}\n{page_text(ident, pagina)}")
-    partes = [f"Pregunta: {item['pregunta']}", f"Respuesta a evaluar:\n{answer['respuesta']}",
-              "Texto literal de las páginas y fichas citadas:", *fuentes]
-    return "\n\n".join(partes)
+    refs = _references(answer)
+    rng.shuffle(refs)
+    sources = []
+    for n, (ident, page) in enumerate(refs, start=1):
+        header = f"[Fuente {n}] {ident}" + ("" if page is None else f", página {page}")
+        sources.append(f"{header}\n{page_text(ident, page)}")
+    parts = [f"Pregunta: {item['pregunta']}", f"Respuesta a evaluar:\n{answer['respuesta']}",
+             "Texto literal de las páginas y fichas citadas:", *sources]
+    return "\n\n".join(parts)
 
 
 def aggregate(verdicts: list[dict], rule: str) -> bool | None:
-    correctas = [v["correcta"] for v in verdicts if _valido(v)]
-    if not correctas:
+    valid = [v["correcta"] for v in verdicts if _is_valid(v)]
+    if not valid:
         return None
-    si = sum(correctas)
+    yes = sum(valid)
     if rule == "majority":
-        return 2 * si > len(correctas)
+        return 2 * yes > len(valid)
     if rule == "unanimous":
-        return si == len(correctas)
+        return yes == len(valid)
     if rule.startswith("atLeast:"):
-        return si >= int(rule.split(":", 1)[1])
+        return yes >= int(rule.split(":", 1)[1])
     raise ValueError(f"regla de agregación desconocida: {rule}")

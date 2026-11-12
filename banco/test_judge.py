@@ -17,14 +17,14 @@ ANSWER = {"respuesta": "Cuesta 10 €.", "no_lo_se": False, "citas": [
     {"documentId": "d2", "cardId": None, "pagina": 5, "fragmento": "mantenimiento"},
     {"documentId": "d3", "cardId": None, "pagina": 7, "fragmento": "otro"},
     {"documentId": None, "cardId": "c1", "pagina": None, "fragmento": "ficha"}]}
-SI = {"correcta": True, "respaldada": True, "datosSinRespaldo": [], "motivo": "La respuesta coincide con las páginas."}
-NO = {"correcta": False, "respaldada": False, "datosSinRespaldo": ["12 €"], "motivo": "La cifra no aparece en las páginas."}
-INVALIDO = {"invalido": True, "motivo": "sin veredicto"}
-RUBRICA = "Eres un juez."
+VALID_YES = {"correcta": True, "respaldada": True, "datosSinRespaldo": [], "motivo": "La respuesta coincide con las páginas."}
+VALID_NO = {"correcta": False, "respaldada": False, "datosSinRespaldo": ["12 €"], "motivo": "La cifra no aparece en las páginas."}
+INVALID = {"invalido": True, "motivo": "sin veredicto"}
+RUBRIC = "Eres un juez."
 
 
-def page_text(ident, pagina):
-    return f"Texto de {ident} {pagina}"
+def page_text(ident, page):
+    return f"Texto de {ident} {page}"
 
 
 @contextlib.contextmanager
@@ -45,74 +45,123 @@ class JudgeMaterialTest(unittest.TestCase):
         self.assertEqual(a, c)
 
     def test_judge_material_has_no_key_and_no_config_name(self):
-        texto = judge_material(ITEM, ANSWER, page_text, random.Random(1))
-        for prohibido in ("claves", "ancla", "archivo-ficticio", "archivo ficticio", "Q001", "t01"):
-            self.assertNotIn(prohibido, texto)
-        self.assertIn("Texto de c1", texto)
+        text = judge_material(ITEM, ANSWER, page_text, random.Random(1))
+        for forbidden in ("claves", "ancla", "archivo-ficticio", "archivo ficticio", "Q001", "t01"):
+            self.assertNotIn(forbidden, text)
+        self.assertIn("Texto de c1", text)
 
 
 class ClaudeJudgeTest(unittest.TestCase):
-    def test_isolation_rejects_extra_tool(self):
+    def _judge(self, timeout=30):
+        return run_claude_judge("material", RUBRIC, "haiku", FAKE_JUDGE, timeout)
+
+    def test_claude_judge_isolation(self):
         with fake_env(FAKE_VEREDICTO="tools_extra"):
             with self.assertRaises(ejecutar.Aislamiento):
-                run_claude_judge("material", RUBRICA, "haiku", FAKE_JUDGE, 30)
+                self._judge()
 
-    def test_check_init_rejects_mcp_and_non_builtin_plugins(self):
-        with self.assertRaises(ejecutar.Aislamiento):
-            check_judge_init({"tools": ["StructuredOutput"], "mcp_servers": [{"name": "x"}], "plugins": []})
-        with self.assertRaises(ejecutar.Aislamiento):
-            check_judge_init({"tools": ["StructuredOutput"], "mcp_servers": [], "plugins": [{"name": "s", "source": "s@mercado"}]})
+    def test_missing_init_field_is_isolation_error(self):
+        for mode in ("sin_tools", "sin_mcp", "sin_plugins"):
+            with self.subTest(mode=mode), fake_env(FAKE_VEREDICTO=mode):
+                with self.assertRaises(ejecutar.Aislamiento):
+                    self._judge()
+
+    def test_check_init_requires_all_fields_and_rejects_foreign_ones(self):
+        builtin = {"name": "b", "source": "b@builtin"}
+        bad_inits = [
+            {"mcp_servers": [], "plugins": []},
+            {"tools": ["StructuredOutput"], "plugins": []},
+            {"tools": ["StructuredOutput"], "mcp_servers": []},
+            {"tools": "StructuredOutput", "mcp_servers": [], "plugins": []},
+            {"tools": ["StructuredOutput"], "mcp_servers": [{"name": "x"}], "plugins": []},
+            {"tools": ["StructuredOutput"], "mcp_servers": [], "plugins": [{"name": "s", "source": "s@mercado"}]},
+            {"tools": ["StructuredOutput", "Bash"], "mcp_servers": [], "plugins": [builtin]},
+        ]
+        for init in bad_inits:
+            with self.subTest(init=init), self.assertRaises(ejecutar.Aislamiento):
+                check_judge_init(init)
+        check_judge_init({"tools": ["StructuredOutput"], "mcp_servers": [], "plugins": [builtin]})
 
     def test_ok_returns_verdict_cost_and_tokens(self):
         with fake_env(FAKE_VEREDICTO="si"):
-            registro = run_claude_judge("material", RUBRICA, "haiku", FAKE_JUDGE, 30)
-        self.assertEqual(registro["verdict"], SI)
-        self.assertEqual(registro["model"], "haiku")
-        self.assertEqual(registro["coste_usd"], 0.0005)
-        self.assertEqual(registro["tokens"]["entrada"], 120)
+            record = self._judge()
+        self.assertEqual(record["verdict"], VALID_YES)
+        self.assertEqual(record["model"], "haiku")
+        self.assertEqual(record["coste_usd"], 0.0005)
+        self.assertEqual(record["tokens"]["entrada"], 120)
 
     def test_invalid_structured_output_is_marked_invalid(self):
         with fake_env(FAKE_VEREDICTO="invalido"):
-            registro = run_claude_judge("material", RUBRICA, "haiku", FAKE_JUDGE, 30)
-        self.assertTrue(registro["verdict"]["invalido"])
+            self.assertTrue(self._judge()["verdict"]["invalido"])
+
+    def test_result_without_structured_output_is_invalid(self):
+        with fake_env(FAKE_VEREDICTO="sin_salida"):
+            self.assertTrue(self._judge()["verdict"]["invalido"])
+
+    def test_missing_init_event_is_invalid(self):
+        with fake_env(FAKE_VEREDICTO="sin_init"):
+            self.assertTrue(self._judge()["verdict"]["invalido"])
 
     def test_timeout_is_invalid_verdict(self):
         with fake_env(FAKE_VEREDICTO="si", FAKE_SLEEP="5"):
-            registro = run_claude_judge("material", RUBRICA, "haiku", FAKE_JUDGE, 1)
-        self.assertTrue(registro["verdict"]["invalido"])
+            self.assertTrue(self._judge(timeout=1)["verdict"]["invalido"])
 
 
 class OllamaJudgeTest(unittest.TestCase):
     def test_ollama_judge_ok_is_free_and_returns_verdict(self):
         url, stop = start_fake_ollama("ok")
         self.addCleanup(stop)
-        registro = run_ollama_judge("material", RUBRICA, "qwen", url, 30)
-        self.assertEqual(registro["verdict"], SI)
-        self.assertEqual(registro["coste_usd"], 0)
-        self.assertEqual(registro["tokens"], {"entrada": 11, "salida": 7})
+        record = run_ollama_judge("material", RUBRIC, "qwen", url, 30)
+        self.assertEqual(record["verdict"], VALID_YES)
+        self.assertEqual(record["coste_usd"], 0)
+        self.assertEqual(record["tokens"], {"entrada": 11, "salida": 7})
+        self.assertEqual(record["duracion_s"], 2.0)
 
     def test_ollama_judge_no_json_and_missing_fields_are_invalid(self):
-        for modo in ("no_json", "sin_campos"):
-            with self.subTest(modo=modo):
-                url, stop = start_fake_ollama(modo)
+        for mode in ("no_json", "sin_campos"):
+            with self.subTest(mode=mode):
+                url, stop = start_fake_ollama(mode)
                 self.addCleanup(stop)
-                registro = run_ollama_judge("material", RUBRICA, "qwen", url, 30)
-                self.assertTrue(registro["verdict"]["invalido"])
+                record = run_ollama_judge("material", RUBRIC, "qwen", url, 30)
+                self.assertTrue(record["verdict"]["invalido"])
+
+    def test_null_or_missing_metrics_do_not_raise(self):
+        url, stop = start_fake_ollama("sin_metricas")
+        self.addCleanup(stop)
+        record = run_ollama_judge("material", RUBRIC, "qwen", url, 30)
+        self.assertEqual(record["verdict"], VALID_YES)
+        self.assertEqual(record["duracion_s"], 0.0)
+        self.assertEqual(record["tokens"], {"entrada": None, "salida": None})
+
+    def test_refuses_non_local_host_before_any_request(self):
+        for url in ("http://ejemplo.com:11434", "http://127.0.0.1@ejemplo.com:11434"):
+            with self.subTest(url=url), mock.patch("banco.judge.urllib.request.urlopen") as urlopen:
+                with self.assertRaises(ValueError):
+                    run_ollama_judge("material", RUBRIC, "qwen", url, 30)
+                urlopen.assert_not_called()
+
+    def test_ollama_prefix_is_stripped_before_request(self):
+        received = []
+        url, stop = start_fake_ollama("ok", received)
+        self.addCleanup(stop)
+        record = run_ollama_judge("material", RUBRIC, "ollama:qwen", url, 30)
+        self.assertEqual(received[0]["model"], "qwen")
+        self.assertEqual(record["model"], "qwen")
 
 
 class AggregateTest(unittest.TestCase):
     def test_invalid_verdicts_excluded_and_none_left_is_undecided(self):
-        self.assertIsNone(aggregate([INVALIDO, INVALIDO], "majority"))
-        self.assertTrue(aggregate([INVALIDO, SI], "unanimous"))
+        self.assertIsNone(aggregate([INVALID, INVALID], "majority"))
+        self.assertTrue(aggregate([INVALID, VALID_YES], "unanimous"))
 
     def test_aggregate_rules(self):
-        self.assertTrue(aggregate([SI, SI, SI, NO, NO], "majority"))
-        self.assertFalse(aggregate([SI, SI, NO, NO], "majority"))  # empate es False
-        self.assertFalse(aggregate([SI, SI, SI, NO], "unanimous"))
-        self.assertFalse(aggregate([SI, SI, SI, NO, NO], "atLeast:4"))
-        self.assertTrue(aggregate([SI, SI, SI, SI, NO], "atLeast:4"))
+        self.assertTrue(aggregate([VALID_YES, VALID_YES, VALID_YES, VALID_NO, VALID_NO], "majority"))
+        self.assertFalse(aggregate([VALID_YES, VALID_YES, VALID_NO, VALID_NO], "majority"))  # empate es False
+        self.assertFalse(aggregate([VALID_YES, VALID_YES, VALID_YES, VALID_NO], "unanimous"))
+        self.assertFalse(aggregate([VALID_YES, VALID_YES, VALID_YES, VALID_NO, VALID_NO], "atLeast:4"))
+        self.assertTrue(aggregate([VALID_YES, VALID_YES, VALID_YES, VALID_YES, VALID_NO], "atLeast:4"))
         with self.assertRaises(ValueError):
-            aggregate([SI], "otra")
+            aggregate([VALID_YES], "otra")
 
 
 if __name__ == "__main__":
