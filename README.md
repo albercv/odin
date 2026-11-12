@@ -32,6 +32,7 @@ Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplo
 | `make down` | La para |
 | `make check` | Pruebas, Checkstyle, ArchUnit, ESLint y tipos de los tres proyectos |
 | `make demo` | Demostración de cierre y prueba de extremo a extremo de la administración del panel, en una pila desechable aparte |
+| `make answer-battery MODELO=haiku\|sonnet [MUESTRA=N]` | Mide si Odín da datos correctos con el archivo ficticio: levanta una pila desechable (`odin-medicion`), carga, deja responder a `claude -p`, puntúa en `experimentos/2026-11-12-archivo-ficticio/resultados/` y baja la pila. Gasta cuota de Claude; no entra en `make check` |
 
 ## Primer arranque
 

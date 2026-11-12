@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo
+.PHONY: setup test check up down demo answer-battery
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -26,3 +26,7 @@ down:
 
 demo:
 	@deploy/demo/run-demo.sh
+
+# Batería de respuestas (experimento del encargo 12): usa la cuenta de Claude, no entra en check ni en demo.
+answer-battery:
+	@MODELO="$(MODELO)" MUESTRA="$(MUESTRA)" experimentos/2026-11-12-archivo-ficticio/medir/medir.sh
