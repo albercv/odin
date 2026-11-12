@@ -27,13 +27,17 @@ public final class WorkerAccess {
     private WorkerAccess() {
     }
 
+    /** Exige la capacidad y, además, las otras que se pidan (los casos parecidos necesitan también la búsqueda). */
     public static Granted require(Actor actor, OrganizationRepository organizations,
-            ProjectMemberRepository projectMembers, Capability capability) {
+            ProjectMemberRepository projectMembers, Capability capability, Capability... alsoRequired) {
         AccessPolicy.requireWorker(actor);
         CompanyId companyId = actor.requireCompany();
         var company = organizations.findCompany(companyId)
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         AccessPolicy.requireCapability(company, capability);
+        for (Capability other : alsoRequired) {
+            AccessPolicy.requireCapability(company, other);
+        }
         ProjectVisibility visibility = visibleProjects(actor, companyId, organizations.listProjects(companyId),
                 projectMembers);
         return new Granted(companyId, visibility, withDeleted(visibility, actor, companyId, organizations,
@@ -48,7 +52,7 @@ public final class WorkerAccess {
         return ProjectVisibility.of(visible);
     }
 
-    private static ProjectVisibility withDeleted(ProjectVisibility alive, Actor actor, CompanyId companyId,
+    public static ProjectVisibility withDeleted(ProjectVisibility alive, Actor actor, CompanyId companyId,
             OrganizationRepository organizations, ProjectMemberRepository projectMembers) {
         Set<ProjectId> content = new HashSet<>(alive.projects());
         content.addAll(projectMembers.deletedProjectsOf(companyId, actor.userId()));

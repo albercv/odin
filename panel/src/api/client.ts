@@ -84,14 +84,19 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
-  upload: (id: string, file: File, title: string, projectId: string) => {
+  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false) => {
     const q = new URLSearchParams();
     if (title) q.set('title', title);
     if (projectId) q.set('projectId', projectId);
+    if (caseDocument) q.set('caseDocument', 'true');
     const form = new FormData();
     form.append('file', file);
     return request<S['Upload']>('POST', `${co(id)}/documents?${q}`, form);
   },
+  markCase: (documentId: string, caseDocument: boolean) =>
+    request<S['DocumentView']>('PATCH', `${a}/documents/${documentId}`, { caseDocument }),
+  markCases: (id: string, documentIds: string[], caseDocument: boolean) =>
+    request<S['CaseMarksResult']>('POST', `${co(id)}/documents/case-marks`, { documentIds, caseDocument }),
   retry: (documentId: string) => request<S['DocumentView']>('POST', `${a}/documents/${documentId}/retry`),
   supersede: (documentId: string, replacementId: string) =>
     request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/superseded-by`, { replacementId }),

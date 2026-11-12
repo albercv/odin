@@ -180,9 +180,16 @@ Cada empresa tiene su lista de temas (con una definición de cada uno) y un mode
 
 El equipo tiene que estar encendido durante la ventana del etiquetado (por defecto de 22:00 a 07:00, hora de `ODIN_TIMEZONE`), o hay que cambiar `ODIN_TAGGER_WINDOW`. Sin eso los documentos se pueden buscar, pero no tienen temas.
 
+## Casos parecidos
+
+Un caso es un documento que el administrador marca como «Caso» (una ficha de incidencia resuelta, por ejemplo). Con la capacidad «Casos parecidos» activada en la empresa, la IA del trabajador tiene la herramienta `findSimilarCases`: le pasa los términos del problema y recibe los casos resueltos parecidos con su texto literal y sus páginas, sin nombres de autores. Solo ve casos de sus proyectos y de lo que no tiene proyecto.
+
+- **Marcar:** en «Subir documento» se pueden elegir varios ficheros a la vez y marcar la casilla «Son fichas de caso». En la lista, «Marcar como caso» y «Quitar marca de caso» actúan sobre un documento o, con la casilla de cada fila, sobre los seleccionados (hasta 500).
+- **Listar:** `listDocuments` acepta `caseDocument` para ver solo los casos, o solo lo que no lo es.
+
 ## Fuera de la fase 1
 
-- Lo demás de la fase 2: casos parecidos, compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
+- Lo demás de la fase 2: compartir entre empresas del grupo, estadísticas descriptivas en el panel y motor de IA propio.
 - Fuera de alcance: acceso desde internet, TLS y SSO.
 
 ## Datos

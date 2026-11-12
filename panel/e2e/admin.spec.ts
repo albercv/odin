@@ -360,7 +360,30 @@ async function groupAdminHandover(browser: Browser): Promise<void> {
   await toggleGroupAdmin(page, FIRST_GROUP_ADMIN, 'Activar', `¿Activar a ${FIRST_GROUP_ADMIN}? Vuelve a entrar en el panel y sus claves vuelven a valer.`);
   await expect(row(groupAdminsSection(page), FIRST_GROUP_ADMIN)).toContainText('Activo');
   await second.close();
-  console.log('✓ Admin 17: relevo del administrador del grupo: el segundo entra, desactiva al primero (que ya no entra) y lo reactiva');
+  console.log('✓ Admin 18: relevo del administrador del grupo: el segundo entra, desactiva al primero (que ya no entra) y lo reactiva');
+}
+
+const CASE_FILES = ['caso-e2e-1', 'caso-e2e-2'];
+
+async function uploadCaseFilesAndMarkSelection(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await page.getByRole('button', { name: 'Subir documento', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Subir documento' });
+  await dialog.getByLabel('Fichero').setInputFiles(CASE_FILES.map((name) => ({ name: `${name}.txt`, mimeType: 'text/plain', buffer: Buffer.from(`Ficha de caso ficticia ${name}: filtración en la azotea, resuelta con una lámina nueva.`) })));
+  await dialog.getByLabel('Son fichas de caso').check();
+  await dialog.getByRole('button', { name: 'Subir', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Se subieron 2 documentos.');
+  const caseLabel = (name: string) => page.getByRole('row').filter({ hasText: name }).getByText('Caso', { exact: true });
+  for (const name of CASE_FILES) await expect(caseLabel(name)).toBeVisible();
+  for (const name of CASE_FILES) await page.getByRole('checkbox', { name: `Seleccionar ${name}`, exact: true }).check();
+  await page.getByRole('button', { name: 'Quitar marca de caso', exact: true }).click();
+  for (const name of CASE_FILES) await expect(caseLabel(name)).toHaveCount(0);
+  await page.getByRole('checkbox', { name: `Seleccionar ${CASE_FILES[1]}`, exact: true }).check();
+  await page.getByRole('button', { name: 'Marcar como caso', exact: true }).click();
+  await expect(caseLabel(CASE_FILES[1] ?? '')).toBeVisible();
+  await expect(caseLabel(CASE_FILES[0] ?? '')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 17: dos ficheros subidos a la vez como fichas de caso; la selección se desmarca y se vuelve a marcar por lotes');
 }
 
 // El login admite 5 intentos por minuto y por IP; entre prepare, demo.spec, este fichero y confirm ya hay varios.
@@ -383,6 +406,7 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await removeFromProjectAndSeeAccesses(page);
   await promoteWorkerWithoutPassword(page, browser);
   await deleteProjectMember(page);
+  await uploadCaseFilesAndMarkSelection(page);
   await resetCompanyAdminPasswordAndEnter(page);
   await changeOwnPassword(page);
   await groupAdminHandover(browser);

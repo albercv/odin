@@ -1,0 +1,43 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2028-027
+Comunidad: Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: fisuras en vigas del forjado del techo del garaje
+Fecha de apertura: 23 de mayo de 2028
+Comunicante: arquitecto encargado de la inspección técnica del edificio
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 23 de mayo de 2028 el arquitecto encargado de la inspección técnica del edificio comunicó al despacho que, durante su visita al garaje, había observado fisuras en tres vigas de canto del forjado del techo, en la zona de los trasteros. Eran fisuras verticales en el centro del vano, con aberturas de entre dos y cuatro décimas de milímetro, y de una fisura inclinada junto al apoyo de una de las vigas en un pilar. No había desprendimientos de hormigón ni armaduras vistas. Sobre esa zona del garaje se encuentran el portal y el vestíbulo del edificio. El arquitecto recomendó un estudio antes de completar el informe de la inspección.
+
+ACTUACIONES REALIZADAS
+- 25 de mayo de 2028: el administrador traslada la recomendación a la presidenta de la Comunidad y encarga el estudio a un técnico especialista en patología del hormigón.
+- 1 de junio de 2028: el técnico coloca testigos de yeso y fisurómetros en las cuatro fisuras y fotografía su estado inicial.
+- 8 de junio de 2028: ensayos con esclerómetro en las tres vigas y extracción de dos probetas testigo de hormigón para su rotura en laboratorio.
+- 8 de junio de 2028: revisión de los planos originales del edificio y de las cargas actuales sobre el portal y el vestíbulo.
+- 26 de junio de 2028: el laboratorio entrega los resultados de las probetas.
+
+DOCUMENTACIÓN ARCHIVADA
+- Nota del arquitecto de la inspección técnica del edificio.
+- Resultados del laboratorio, de 26 de junio de 2028.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico concluye que las fisuras verticales del centro del vano se deben a la retracción del hormigón y a la flecha diferida propias de la edad del edificio, y que la fisura inclinada junto al apoyo es antigua y no ha progresado. La resistencia del hormigón obtenida en el laboratorio supera la de proyecto y las cargas actuales sobre el portal y el vestíbulo no han aumentado respecto de las previstas. Las vigas mantienen su capacidad portante y las fisuras no comprometen el uso normal del garaje. Recomienda sellar las fisuras mediante inyección de resina epoxi, para proteger las armaduras, y mantener los testigos durante tres meses.
+La presidenta aprobó la propuesta y la inyección se ejecutó el 10 de julio de 2028, después de comprobar que los testigos no se habían roto.
+
+SEGUIMIENTO
+El técnico revisó los testigos y los fisurómetros el 11 de agosto y el 12 de octubre de 2028, sin movimiento apreciable en ninguno de ellos. El arquitecto de la inspección técnica incorporó el estudio a su informe, que calificó favorablemente el estado del forjado del techo del garaje.
+
+RESULTADO
+Cerrado el 20 de octubre de 2028. Las fisuras quedaron selladas y estabilizadas, y el estudio forma parte del informe de la inspección técnica del edificio.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Informe del técnico especialista en patología del hormigón.
+- Parte de la inyección de resina de 10 de julio de 2028.
+- Fotografías de las revisiones de los testigos.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

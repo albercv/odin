@@ -149,7 +149,7 @@ Rama `task/fase-2-conocimiento/marca-de-caso`. Spec 4 y 5.1.
   - `ALTER TABLE question_record ADD COLUMN kind text NOT NULL DEFAULT 'SEARCH'`;
   - `INSERT INTO company_capability (company_id, capability) SELECT id, 'SIMILAR_CASES' FROM company ON CONFLICT DO NOTHING`.
 - `CreateCompany` ya usa `EnumSet.allOf(Capability.class)`: una empresa nueva nace con `SIMILAR_CASES` sin tocarlo.
-- `UpdateDocument`: `AccessPolicy.requireAdminOf`, con el orden 404 y luego 403 de siempre.
+- `UpdateDocument`: `AccessPolicy.requireAdmin`, búsqueda con `actor.scope()` (404 también si es de otra empresa) y `requireAdminOf` después.
 - `MarkCaseDocuments`:
   - `AccessPolicy.requireAdminOf(actor, companyId)`;
   - de 1 a 500 identificadores, o 400 «Elige entre 1 y 500 documentos»;

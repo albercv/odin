@@ -19,7 +19,7 @@ public class ActorResolutionFilter extends GuardFilter {
     public static final String SESSION_COOKIE = "odin_session";
     private static final String BEARER = "Bearer ";
     private static final List<String> WORKER_PREFIXES = List.of("/v1/me", "/v1/search", "/v1/cards",
-            "/v1/documents", "/v1/citations");
+            "/v1/documents", "/v1/citations", "/v1/similar-cases");
 
     private final ResolveActor resolveActor;
 

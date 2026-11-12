@@ -1,29 +1,32 @@
 package com.e2d.odin.adapter.postgres;
 
 import com.e2d.odin.application.port.KnowledgeSearch;
-import com.e2d.odin.domain.search.QuoteMatcher;
+import com.e2d.odin.domain.document.DocumentRef;
+import com.e2d.odin.domain.search.CasePage;
+import com.e2d.odin.domain.search.CasePageSelection;
 import com.e2d.odin.domain.search.SearchHit;
 import com.e2d.odin.domain.search.SearchQuery;
 import com.e2d.odin.domain.search.SearchResult;
+import com.e2d.odin.domain.search.SimilarCase;
+import com.e2d.odin.domain.search.SimilarCasesQuery;
+import com.e2d.odin.domain.search.SimilarCasesResult;
 import com.e2d.odin.domain.search.SourceType;
 import com.e2d.odin.domain.shared.ProjectId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 
 public class PostgresKnowledgeSearch implements KnowledgeSearch {
 
-    private static final int EXCERPT_CONTEXT = 150;
-    private static final Pattern IDENTIFIER = Pattern.compile("(?=.*\\d)(?=.*[\\p{L}\\-/.]).{5,}");
-    private static final Pattern EDGE_PUNCTUATION = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
-    private static final int MAX_IDENTIFIERS = 10;
     private static final String CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
                    d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
@@ -31,15 +34,36 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
                  q
             WHERE d.status = 'READY'
-              AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project OR d.project_id IS NULL) AND %5$s AND %7$s
+              AND %9$s AND %5$s AND %7$s
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
                    %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
             WHERE c.status = 'APPROVED'
-              AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project OR c.project_id IS NULL) AND %6$s AND %8$s
+              AND %10$s AND %6$s AND %8$s
               AND (c.tsv @@ q.q OR %4$s)""";
+    /** Un candidato por página de documento marcado como caso y por ficha aprobada; sin autor a propósito (D-040). */
+    private static final String CASE_CANDIDATES = """
+            SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.project_id,
+                   d.uploaded_at AS date, p.text AS body,
+                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id
+            FROM document_page p JOIN document d ON d.id = p.document_id, q
+            WHERE d.status = 'READY' AND d.case_document
+              AND %5$s AND %6$s AND %7$s
+              AND (p.tsv @@ q.q OR %2$s)
+            UNION ALL
+            SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, c.project_id, c.created_at, c.body,
+                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id
+            FROM knowledge_card c, q
+            WHERE c.status = 'APPROVED'
+              AND %8$s AND %9$s AND %10$s
+              AND (c.tsv @@ q.q OR %4$s)""";
+    private static final String PAGES_OF_CASES = """
+            SELECT p.document_id, p.number, p.text
+            FROM document_page p JOIN document d ON d.id = p.document_id
+            WHERE p.document_id = ANY (CAST(string_to_array(:ids, ',') AS uuid[])) AND %s AND %s
+            ORDER BY p.document_id, p.number""";
     private final ScopedTransactions tx;
 
     public PostgresKnowledgeSearch(ScopedTransactions tx) {
@@ -48,68 +72,115 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
 
     @Override
     public SearchResult search(SearchQuery query) {
-        List<String> terms = query.terms().stream().filter(t -> t != null && !t.isBlank()).toList();
+        List<String> terms = SearchSql.usableTerms(query.terms());
         if (terms.isEmpty()) {
             return SearchResult.noSource();
         }
-        List<String> exact = exactTokens(terms);
+        List<String> exact = SearchSql.exactTokens(terms);
         List<SearchHit> hits = tx.inScope(query.scope(), query.visibility(), jdbc -> rows(jdbc, terms, exact, query));
         return new SearchResult(hits);
     }
 
-    private List<SearchHit> rows(JdbcClient jdbc, List<String> terms, List<String> exact, SearchQuery query) {
-        String sql = "WITH q AS (SELECT " + tsquery(terms.size()) + " AS q) SELECT t.*, " + SupersessionSql.COLUMNS
-                + " FROM (SELECT id, source, title, page, paginated, project_id, author, date, body, rank,"
-                + " superseded_by, company_id, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
-                + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
-                + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit) t "
-                + SupersessionSql.joins("t.superseded_by", "t.company_id")
-                + " ORDER BY t.superseded_by IS NOT NULL, t.rank DESC, t.title, t.page NULLS FIRST, t.id";
+    @Override
+    public SimilarCasesResult findSimilarCases(SimilarCasesQuery query) {
+        List<String> terms = SearchSql.usableTerms(query.terms());
+        if (terms.isEmpty()) {
+            return new SimilarCasesResult(List.of());
+        }
+        List<String> exact = SearchSql.exactTokens(terms);
+        return tx.inScope(query.scope(), query.visibility(), jdbc -> {
+            List<CaseRow> rows = caseRows(jdbc, terms, exact, query);
+            Map<UUID, List<CasePage>> pages = pagesOf(jdbc, rows, query);
+            return new SimilarCasesResult(rows.stream().map(row -> row.toCase(pages, terms)).toList());
+        });
+    }
+
+    private record CaseRow(SourceType type, UUID id, String title, Optional<ProjectId> projectId, Instant addedAt,
+            Optional<Integer> bestPage, String body, String headline, boolean superseded,
+            Optional<DocumentRef> replacement) {
+
+        SimilarCase toCase(Map<UUID, List<CasePage>> pages, List<String> terms) {
+            String excerpt = SearchSql.excerpt(headline, body, terms);
+            if (type == SourceType.KNOWLEDGE_CARD) {
+                return new SimilarCase(type, id, title, projectId, addedAt, 0, List.of(), Optional.of(body), false,
+                        excerpt, superseded, replacement);
+            }
+            List<CasePage> all = pages.getOrDefault(id, List.of());
+            var selection = CasePageSelection.select(all, bestPage.orElse(1));
+            return new SimilarCase(type, id, title, projectId, addedAt, all.size(), selection.pages(), Optional.empty(),
+                    selection.truncated(), excerpt, superseded, replacement);
+        }
+    }
+
+    private List<CaseRow> caseRows(JdbcClient jdbc, List<String> terms, List<String> exact, SimilarCasesQuery query) {
+        String inner = "SELECT id, source, title, page, project_id, date, body, rank, superseded_by, company_id,"
+                + " ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\", MaxFragments=1') AS headline"
+                + " FROM best, q ORDER BY rank DESC, title, id LIMIT :limit";
+        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q), cand AS ("
+                + caseCandidates(exact.size()) + "), best AS (SELECT DISTINCT ON (id) * FROM cand"
+                + " ORDER BY id, rank DESC, page NULLS FIRST) " + SearchSql.withSupersession(inner, "t.id");
         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
                 .param("limit", query.limit());
-        for (int i = 0; i < terms.size(); i++) {
-            spec = spec.param("t" + i, terms.get(i));
-        }
-        for (int i = 0; i < exact.size(); i++) {
-            spec = spec.param("x" + i, "%" + exact.get(i).replace("\\", "\\\\").replace("%", "\\%")
-                    .replace("_", "\\_") + "%");
-        }
-        return spec.query((rs, n) -> hit(rs, terms)).list();
+        return SearchSql.bindTerms(spec, terms, exact).query(PostgresKnowledgeSearch::caseRow).list();
     }
 
-    private static String candidates(int exactCount) {
-        String bodyMatch = anyMatch("p.text", exactCount);
-        String cardMatch = anyMatch("c.body", exactCount);
-        return CANDIDATES.formatted(boost("p.text", exactCount), bodyMatch, boost("c.body", exactCount), cardMatch,
-                Sql.inScope("d.company_id"), Sql.inScope("c.company_id"), Sql.inVisibleProjects("d.project_id"),
+    private static String caseCandidates(int exactCount) {
+        return CASE_CANDIDATES.formatted(SearchSql.boost("p.text", exactCount),
+                SearchSql.anyMatch("p.text", exactCount), SearchSql.boost("c.body", exactCount),
+                SearchSql.anyMatch("c.body", exactCount), SearchSql.inProject("d.project_id"),
+                Sql.inScope("d.company_id"), Sql.inVisibleProjects("d.project_id"),
+                SearchSql.inProject("c.project_id"), Sql.inScope("c.company_id"),
                 Sql.inVisibleProjects("c.project_id"));
     }
 
-    private static String tsquery(int termCount) {
-        List<String> parts = new ArrayList<>();
-        for (int i = 0; i < termCount; i++) {
-            parts.add("replace(plainto_tsquery('odin_spanish', :t" + i + ")::text, '&', '|')::tsquery");
+    private static CaseRow caseRow(ResultSet rs, int n) throws SQLException {
+        int page = rs.getInt("page");
+        return new CaseRow(SourceType.valueOf(rs.getString("source")), Sql.uuid(rs, "id"), rs.getString("title"),
+                Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), Sql.instant(rs, "date"),
+                rs.wasNull() ? Optional.empty() : Optional.of(page), rs.getString("body"), rs.getString("headline"),
+                Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs));
+    }
+
+    /** Las páginas de los documentos elegidos, con el mismo filtro de empresa y de proyectos que la consulta. */
+    private Map<UUID, List<CasePage>> pagesOf(JdbcClient jdbc, List<CaseRow> rows, SimilarCasesQuery query) {
+        String ids = rows.stream().filter(r -> r.type() == SourceType.ORIGINAL_DOCUMENT).map(r -> r.id().toString())
+                .collect(Collectors.joining(","));
+        if (ids.isEmpty()) {
+            return Map.of();
         }
-        return String.join(" || ", parts);
+        String sql = PAGES_OF_CASES.formatted(Sql.inScope("p.company_id"), Sql.inVisibleProjects("d.project_id"));
+        Map<UUID, List<CasePage>> pages = new HashMap<>();
+        Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility()).param("ids", ids)
+                .query((rs, n) -> {
+                    pages.computeIfAbsent(Sql.uuid(rs, "document_id"), k -> new ArrayList<>())
+                            .add(new CasePage(rs.getInt("number"), rs.getString("text")));
+                    return n;
+                }).list();
+        return pages;
     }
 
-    private static String anyMatch(String column, int exactCount) {
-        List<String> parts = new ArrayList<>(List.of("false"));
-        for (int i = 0; i < exactCount; i++) {
-            parts.add(column + " ILIKE :x" + i);
-        }
-        return String.join(" OR ", parts);
+    private List<SearchHit> rows(JdbcClient jdbc, List<String> terms, List<String> exact, SearchQuery query) {
+        String inner = "SELECT id, source, title, page, paginated, project_id, author, date, body, rank,"
+                + " superseded_by, company_id, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
+                + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
+                + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
+        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q) "
+                + SearchSql.withSupersession(inner, "t.page NULLS FIRST, t.id");
+        StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
+                .param("project", query.projectId().map(ProjectId::value).orElse(null))
+                .param("limit", query.limit());
+        return SearchSql.bindTerms(spec, terms, exact).query((rs, n) -> hit(rs, terms)).list();
     }
 
-    private static String boost(String column, int exactCount) {
-        return "(CASE WHEN " + anyMatch(column, exactCount) + " THEN 100 ELSE 0 END)";
-    }
-
-    private static List<String> exactTokens(List<String> terms) {
-        return terms.stream().flatMap(t -> Arrays.stream(t.trim().split("\\s+")))
-                .map(token -> EDGE_PUNCTUATION.matcher(token).replaceAll(""))
-                .filter(token -> IDENTIFIER.matcher(token).matches()).distinct().limit(MAX_IDENTIFIERS).toList();
+    private static String candidates(int exactCount) {
+        String bodyMatch = SearchSql.anyMatch("p.text", exactCount);
+        String cardMatch = SearchSql.anyMatch("c.body", exactCount);
+        return CANDIDATES.formatted(SearchSql.boost("p.text", exactCount), bodyMatch,
+                SearchSql.boost("c.body", exactCount), cardMatch, Sql.inScope("d.company_id"),
+                Sql.inScope("c.company_id"), Sql.inVisibleProjects("d.project_id"),
+                Sql.inVisibleProjects("c.project_id"), SearchSql.inProject("d.project_id"),
+                SearchSql.inProject("c.project_id"));
     }
 
     private static SearchHit hit(ResultSet rs, List<String> terms) throws SQLException {
@@ -119,18 +190,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
         return new SearchHit(SourceType.valueOf(rs.getString("source")), Sql.uuid(rs, "id"), rs.getString("title"),
                 pageNumber, rs.getBoolean("paginated"),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), rs.getString("author"),
-                Sql.instant(rs, "date"), excerpt(rs.getString("headline"), body, terms), rs.getDouble("rank"),
-                Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs));
-    }
-
-    private static String excerpt(String headline, String body, List<String> terms) {
-        if (QuoteMatcher.containsLiteral(body, headline)) {
-            return headline;
-        }
-        String lower = body.toLowerCase(Locale.ROOT);
-        int first = terms.stream().flatMap(t -> Arrays.stream(t.toLowerCase(Locale.ROOT).split("\\s+")))
-                .filter(w -> w.length() >= 3).mapToInt(lower::indexOf).filter(i -> i >= 0).min().orElse(0);
-        int start = Math.max(0, first - EXCERPT_CONTEXT);
-        return body.substring(start, Math.min(body.length(), start + 2 * EXCERPT_CONTEXT)).strip();
+                Sql.instant(rs, "date"), SearchSql.excerpt(rs.getString("headline"), body, terms),
+                rs.getDouble("rank"), Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs));
     }
 }

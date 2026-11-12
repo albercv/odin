@@ -1,0 +1,42 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2028-043
+Comunidad: Residencial Los Almendros
+Categoría: Ventilación forzada del garaje común
+Fecha de apertura: 25 de septiembre de 2028
+Comunicante: conserje del residencial
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 25 de septiembre de 2028 el conserje comunicó al despacho que varios usuarios del garaje común se habían quejado de un ambiente cargado de gases de los motores, con una neblina grisácea al fondo del garaje, picor de ojos y sensación de mareo leve, sobre todo a primera hora de la mañana, cuando salen muchos vehículos a la vez. El conserje comprobó que los extractores no arrancaban y que la central de detección de monóxido de carbono mostraba una alarma de avería en dos detectores. La instalación de ventilación consta de dos extractores helicoidales en la cubierta de la rampa, conductos de chapa con rejillas, seis detectores de monóxido de carbono y una central que pone en marcha los extractores al superar el umbral programado.
+
+ACTUACIONES REALIZADAS
+- 25 de septiembre de 2028: el administrador indica al conserje que deje abierta la puerta del garaje en las horas punta y coloque un aviso para no mantener los motores en marcha dentro del garaje.
+- 26 de septiembre de 2028: visita de la empresa de mantenimiento de ventilación y protección contra incendios. Se comprueba que el contactor del cuadro de los extractores está quemado y que dos detectores han superado su vida útil.
+- 26 de septiembre de 2028: arranque manual de los extractores mediante un puente provisional en el cuadro.
+- 28 de septiembre de 2028: la empresa entrega presupuesto para sustituir el contactor y los dos detectores y revisar la central.
+
+DOCUMENTACIÓN ARCHIVADA
+- Fotografías de la central de detección.
+- Parte técnico de la visita de 26 de septiembre de 2028.
+- Presupuesto de la empresa de mantenimiento.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico atribuye la acumulación de gases de combustión en el fondo del garaje a la parada de los extractores por el fallo del contactor, unida a que los dos detectores averiados eran precisamente los de esa zona, por lo que la central no registraba la concentración real de monóxido de carbono. La presidencia aprobó el presupuesto y el 4 de octubre de 2028 la empresa sustituyó el contactor y el relé térmico del cuadro de los extractores, cambió los dos detectores y calibró los cuatro restantes con gas patrón. Se comprobó el arranque automático de los extractores al superar el umbral programado y la señal de avería en la central.
+
+SEGUIMIENTO
+El 11 de octubre de 2028 el conserje confirmó que los extractores arrancaban todas las mañanas a la hora de salida de los vehículos y que los usuarios no habían vuelto a notar neblina, picor ni mareo. El administrador incluyó en el contrato de mantenimiento la revisión semestral del cuadro de los extractores y la sustitución programada de los detectores según su fecha de caducidad. Se retiró el aviso de la puerta del garaje.
+
+RESULTADO
+Cerrado el 18 de octubre de 2028. La ventilación forzada del garaje funciona en automático y la central de detección no registra averías.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Parte de trabajo y factura de la empresa de mantenimiento.
+- Certificado de calibración de los detectores de monóxido de carbono.
+- Anexo al contrato de mantenimiento.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

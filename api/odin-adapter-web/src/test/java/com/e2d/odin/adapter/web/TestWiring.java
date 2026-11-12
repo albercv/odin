@@ -3,7 +3,9 @@ package com.e2d.odin.adapter.web;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
@@ -62,6 +64,7 @@ import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.application.organization.UpdateCompany;
 import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
@@ -261,6 +264,14 @@ public class TestWiring {
         return new RetryDocument(docs);
     }
 
+    @Bean UpdateDocument updateDocument() {
+        return new UpdateDocument(docs);
+    }
+
+    @Bean MarkCaseDocuments markCaseDocuments() {
+        return new MarkCaseDocuments(docs);
+    }
+
     @Bean SupersedeDocument supersedeDocument() {
         return new SupersedeDocument(docs, clock);
     }
@@ -283,6 +294,10 @@ public class TestWiring {
 
     @Bean SearchKnowledge searchKnowledge() {
         return new SearchKnowledge(orgs, projectMembers, search, new InMemoryQuestionLog(), ids, clock);
+    }
+
+    @Bean FindSimilarCases findSimilarCases() {
+        return new FindSimilarCases(orgs, projectMembers, search, new InMemoryQuestionLog(), ids, clock);
     }
 
     @Bean ListDocuments listDocuments() {

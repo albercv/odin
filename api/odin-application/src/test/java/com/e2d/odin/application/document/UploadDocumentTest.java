@@ -41,7 +41,11 @@ class UploadDocumentTest {
     private final Actor adminA = Actors.companyAdmin(companyA);
 
     private UploadOutcome send(Actor actor, CompanyId company, byte[] content) {
-        return upload.execute(actor, company, Optional.empty(), "Manual", "manual.pdf", content);
+        return upload.execute(actor, company, Optional.empty(), "Manual", "manual.pdf", content, false);
+    }
+
+    private UploadOutcome sendAsCase(byte[] content, boolean caseDocument) {
+        return upload.execute(adminA, companyA, Optional.empty(), "Manual", "manual.pdf", content, caseDocument);
     }
 
     @Test
@@ -90,6 +94,30 @@ class UploadDocumentTest {
     }
 
     @Test
+    void uploadStoresCaseDocument() {
+        UploadOutcome marked = sendAsCase(CONTENT, true);
+        UploadOutcome plain = sendAsCase("otro".getBytes(), false);
+
+        assertThat(marked.document().caseDocument()).isTrue();
+        assertThat(docs.get(marked.document().id()).orElseThrow().caseDocument()).isTrue();
+        assertThat(plain.document().caseDocument()).isFalse();
+    }
+
+    @Test
+    void duplicateUploadKeepsCaseDocument() {
+        UploadOutcome first = sendAsCase(CONTENT, true);
+        UploadOutcome again = sendAsCase(CONTENT, false);
+        UploadOutcome unmarked = sendAsCase("otro".getBytes(), false);
+        UploadOutcome unmarkedAgain = sendAsCase("otro".getBytes(), true);
+
+        assertThat(again.duplicate()).isTrue();
+        assertThat(again.document().caseDocument()).isTrue();
+        assertThat(docs.get(first.document().id()).orElseThrow().caseDocument()).isTrue();
+        assertThat(unmarkedAgain.duplicate()).isTrue();
+        assertThat(docs.get(unmarked.document().id()).orElseThrow().caseDocument()).isFalse();
+    }
+
+    @Test
     void failedDuplicateIsRequeued() {
         UploadOutcome first = send(adminA, companyA, CONTENT);
         docs.save(first.document().markFailed("roto"));
@@ -122,7 +150,7 @@ class UploadDocumentTest {
     void rejectsProjectOfOtherCompany() {
         var projectOfB = Fixtures.project(orgs, companyB);
 
-        assertThatThrownBy(() -> upload.execute(adminA, companyA, Optional.of(projectOfB), "M", "m.pdf", CONTENT))
+        assertThatThrownBy(() -> upload.execute(adminA, companyA, Optional.of(projectOfB), "M", "m.pdf", CONTENT, false))
                 .isInstanceOf(NotFoundException.class);
     }
 

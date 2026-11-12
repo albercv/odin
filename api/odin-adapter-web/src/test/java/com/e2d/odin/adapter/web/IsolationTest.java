@@ -58,6 +58,58 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void otherCompanyAdminCannotMarkForeignDocument() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document ofA = Fixtures.readyDocument(w.docs, a, "caso de A");
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+
+        mvc.perform(patch("/v1/admin/documents/" + ofA.id().value()).cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"caseDocument\":true}"))
+                .andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(ofA.id()).orElseThrow().caseDocument()).isFalse();
+    }
+
+    @Test
+    void otherCompanyAdminCannotMarkForeignBatch() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document ofA = Fixtures.readyDocument(w.docs, a, "caso de A");
+        Document ofB = Fixtures.readyDocument(w.docs, b, "caso de B");
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        String body = "{\"documentIds\":[\"" + ofA.id().value() + "\"],\"caseDocument\":true}";
+
+        // por la ruta de la empresa ajena: 403
+        mvc.perform(post("/v1/admin/companies/" + a.value() + "/documents/case-marks").cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        // por la propia empresa pero con un documento ajeno en el lote: 404 y no cambia ninguno
+        String mixed = "{\"documentIds\":[\"" + ofA.id().value() + "\",\"" + ofB.id().value()
+                + "\"],\"caseDocument\":true}";
+        mvc.perform(post("/v1/admin/companies/" + b.value() + "/documents/case-marks").cookie(other)
+                .contentType(MediaType.APPLICATION_JSON).content(mixed)).andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(ofA.id()).orElseThrow().caseDocument()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(ofB.id()).orElseThrow().caseDocument()).isFalse();
+    }
+
+    @Test
+    void workerOfBNeverGetsCasesOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        var closedOfA = Fixtures.project(w.orgs, a);
+        var key = workerKey(b);
+
+        mvc.perform(post("/v1/similar-cases").header("Authorization", key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"filtración\"]}")).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(w.search.lastSimilarCasesQuery().scope())
+                .isEqualTo(com.e2d.odin.domain.shared.CompanyScope.of(b));
+        org.assertj.core.api.Assertions.assertThat(w.search.lastSimilarCasesQuery().visibility().includes(closedOfA))
+                .isFalse();
+        mvc.perform(post("/v1/similar-cases").header("Authorization", key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"filtración\"],\"projectId\":\"" + closedOfA.value() + "\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void companyAdminCannotUseAReplacementOfAnotherCompany() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();
@@ -291,5 +343,49 @@ class IsolationTest extends WebTestSupport {
         org.assertj.core.api.Assertions.assertThat(w.users.findById(groupAdmin).orElseThrow())
                 .satisfies(u -> org.assertj.core.api.Assertions.assertThat(u.groupAdmin() && u.active()).isTrue());
         org.assertj.core.api.Assertions.assertThat(w.users.findByEmail("gael-iso@e.test")).isEmpty();
+    }
+
+    private String createTopic(jakarta.servlet.http.Cookie admin, CompanyId company, String name) throws Exception {
+        var created = mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + name + "\",\"definition\":\"x\"}"))
+                .andReturn();
+        return com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void workerOfBGets404ListingDocumentsByATopicOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String topicOfA = createTopic(adminCookie(Role.COMPANY_ADMIN, Optional.of(a)), a, "Agua");
+        Fixtures.readyDocument(w.docs, a, "secreto de A");
+
+        mvc.perform(get("/v1/documents?topicId=" + topicOfA).header("Authorization", workerKey(b)))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("Tema no encontrado"));
+    }
+
+    @Test
+    void meOfWorkerOfBCarriesNeitherTopicsNorPendingCountOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        createTopic(adminCookie(Role.COMPANY_ADMIN, Optional.of(a)), a, "Agua");
+        Fixtures.readyDocument(w.docs, a, "secreto de A");
+        Fixtures.readyDocument(w.docs, a, "otro de A");
+
+        mvc.perform(get("/v1/me").header("Authorization", workerKey(b))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.topics.length()").value(0))
+                .andExpect(jsonPath("$.tagging.pendingDocuments").value(0));
+    }
+
+    @Test
+    void adminOfACannotAssignATopicOfBToADocumentOfA() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        var adminOfA = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        String topicOfB = createTopic(adminCookie(Role.COMPANY_ADMIN, Optional.of(b)), b, "Seguros");
+        Document own = Fixtures.readyDocument(w.docs, a, "de A");
+        String base = "/v1/admin/documents/" + own.id().value() + "/topics";
+
+        mvc.perform(put(base + "/" + topicOfB).cookie(adminOfA)).andExpect(status().isNotFound());
+        mvc.perform(get(base).cookie(adminOfA)).andExpect(jsonPath("$.topics.length()").value(0));
     }
 }

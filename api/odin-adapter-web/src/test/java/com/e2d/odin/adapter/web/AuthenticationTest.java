@@ -36,6 +36,8 @@ class AuthenticationTest extends WebTestSupport {
     void missingCredentialsIs401() throws Exception {
         mvc.perform(get("/v1/me")).andExpect(status().isUnauthorized());
         mvc.perform(get("/v1/admin/companies")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/v1/similar-cases").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"x\"]}")).andExpect(status().isUnauthorized());
         mvc.perform(get("/v1/me").header(HttpHeaders.AUTHORIZATION, "Bearer odin_xxxxxxxx_nope"))
                 .andExpect(status().isUnauthorized());
     }

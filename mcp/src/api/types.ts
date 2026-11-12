@@ -84,6 +84,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/similar-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["similarCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/setup": {
         parameters: {
             query?: never;
@@ -324,6 +340,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/documents/case-marks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/cards/{cardId}/review": {
         parameters: {
             query?: never;
@@ -356,6 +388,22 @@ export interface paths {
         patch: operations["update"];
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_1"];
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}": {
         parameters: {
             query?: never;
@@ -369,7 +417,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_1"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}/topics/{topicId}": {
@@ -417,7 +465,7 @@ export interface paths {
         delete: operations["remove_1"];
         options?: never;
         head?: never;
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/v1/me": {
@@ -492,22 +540,6 @@ export interface paths {
             cookie?: never;
         };
         get: operations["me_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/documents/{documentId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -671,6 +703,7 @@ export interface components {
             pagesWithoutText: number[];
             taggingStatus?: string;
             topics: components["schemas"]["TopicLabelView"][];
+            caseDocument: boolean;
         };
         TopicLabelView: {
             /** Format: uuid */
@@ -679,15 +712,56 @@ export interface components {
             source: string;
         };
         Capabilities: {
-            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
+            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
         };
         CompanyView: {
             /** Format: uuid */
             id: string;
             name: string;
             code: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
             codeReviewed: boolean;
+        };
+        SimilarCasesRequestBody: {
+            queries?: string[];
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: int32 */
+            limit?: number;
+        };
+        CasePageView: {
+            /** Format: int32 */
+            number: number;
+            text: string;
+        };
+        Replacement: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+        };
+        SimilarCaseView: {
+            sourceType: string;
+            /** Format: uuid */
+            sourceId: string;
+            title: string;
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: date-time */
+            addedAt: string;
+            /** Format: int32 */
+            pageCount: number;
+            pages: components["schemas"]["CasePageView"][];
+            body?: string;
+            truncated: boolean;
+            excerpt: string;
+            origin: string;
+            originLabel?: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+        };
+        SimilarCasesResponse: {
+            cases: components["schemas"]["SimilarCaseView"][];
+            noSource: boolean;
         };
         Setup: {
             setupToken?: string;
@@ -731,11 +805,6 @@ export interface components {
             rank: number;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
-        };
-        Replacement: {
-            /** Format: uuid */
-            documentId: string;
-            title: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
@@ -861,6 +930,16 @@ export interface components {
             document: components["schemas"]["DocumentView"];
             duplicate: boolean;
         };
+        CaseMarksRequest: {
+            /** @description De 1 a 500 documentos de la empresa. */
+            documentIds: string[];
+            /** @description Verdadero para marcarlos como casos, falso para quitar la marca. */
+            caseDocument: boolean;
+        };
+        CaseMarksResult: {
+            /** Format: int32 */
+            updated: number;
+        };
         Review: {
             /** @enum {string} */
             decision?: "APPROVE" | "CORRECT" | "REJECT";
@@ -899,6 +978,10 @@ export interface components {
             email?: string;
             active?: boolean;
         };
+        UpdateDocumentRequest: {
+            /** @description Si el documento es la ficha de un caso resuelto. */
+            caseDocument: boolean;
+        };
         UpdateCompany: {
             name?: string;
             /** @description Solo lo cambia el administrador del grupo. */
@@ -933,7 +1016,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
         };
         MeProject: {
             /** Format: uuid */
@@ -961,6 +1044,7 @@ export interface components {
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
             topics: components["schemas"]["TopicLabelView"][];
+            caseDocument: boolean;
         };
         Page: {
             /** Format: uuid */
@@ -1231,6 +1315,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyView"];
+                };
+            };
+        };
+    };
+    similarCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimilarCasesRequestBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimilarCasesResponse"];
                 };
             };
         };
@@ -1751,6 +1859,7 @@ export interface operations {
             query?: {
                 title?: string;
                 projectId?: string;
+                caseDocument?: boolean;
             };
             header?: never;
             path: {
@@ -1783,6 +1892,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Upload"];
+                };
+            };
+        };
+    };
+    markCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseMarksRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseMarksResult"];
                 };
             };
         };
@@ -1859,7 +1994,55 @@ export interface operations {
             };
         };
     };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+        };
+    };
     update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+        };
+    };
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -2002,7 +2185,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -2074,6 +2257,7 @@ export interface operations {
             query?: {
                 projectId?: string;
                 topicId?: string;
+                caseDocument?: boolean;
                 offset?: number;
                 limit?: number;
             };
@@ -2133,28 +2317,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminMe"];
-                };
-            };
-        };
-    };
-    get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                documentId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentView"];
                 };
             };
         };

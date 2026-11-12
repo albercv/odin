@@ -61,7 +61,7 @@ Se aplican D-047 y D-048. Quien ejecute una tarea lee el spec, el de la direcci�
   - commits en español, sin atribución a Claude ni `Co-Authored-By`;
   - sin push;
   - el merge `--no-ff` lo hace el CTO.
-- **Migración:** `V15__delivered_volume.sql`, solo en la tarea 2, o la siguiente libre (V15 en el orden de D-052).
+- **Migración:** `V23__delivered_volume.sql`, solo en la tarea 2, o la siguiente libre (V23: por encima de la V20 del CTO, T-021).
 - **Datos:** solo ficticios.
 
 ## Foco de revisión
@@ -192,12 +192,12 @@ Rama `task/fase-2-conocimiento/volumen-entregado`. Spec 5.3.
 **Ficheros:**
 - **Crear:**
   - aplicación: `application/port/DeliveryMeter.java` y, en `application/usage/`, `WorkerTool`, `DeliveryTotal`, `GetDeliveredVolume` y `DeliveredVolumeReport`, con sus pruebas;
-  - PostgreSQL: `PostgresDeliveryMeter`, con su IT, y `V15__delivered_volume.sql`;
+  - PostgreSQL: `PostgresDeliveryMeter`, con su IT, y `V23__delivered_volume.sql`;
   - web: `adapter/web/security/DeliveryMeteringFilter.java`, con su prueba.
 - **Modificar:** `UsageController`, `WebConfig` (orden de filtros), el cableado, el contrato y los tipos.
 
 **Valores:**
-- `V15`: `delivery_usage (company_id, month date, tool text, calls bigint, bytes bigint, PRIMARY KEY (company_id, month, tool))`, con seguridad por filas por empresa y los permisos de `odin_app` que tiene sobre `question_record`.
+- `V23`: `delivery_usage (company_id, month date, tool text, calls bigint, bytes bigint, PRIMARY KEY (company_id, month, tool))`, con seguridad por filas por empresa y los permisos de `odin_app` que tiene sobre `question_record`.
 - `DeliveryMeteringFilter`:
   - va después de `ActorResolutionFilter` y actúa sobre todas las rutas del trabajador del spec 5.3, cada una con su `WorkerTool`;
   - una ruta del trabajador sin `WorkerTool` hace fallar una prueba (`everyWorkerRouteHasATool`), para que un bloque futuro no se quede fuera sin que nadie lo vea;
@@ -219,7 +219,7 @@ Rama `task/fase-2-conocimiento/volumen-entregado`. Spec 5.3.
     - `adminRoutesAreNotMetered`;
     - `meterFailureDoesNotBreakResponse`.
   - `PostgresDeliveryMeterIT`: `upsertSumsCallsAndBytes`, `monthUsesInstallationZone` y `rowLevelSecurityHidesOtherCompany`.
-- [ ] **Paso 2:** implementa y escribe `V15`.
+- [ ] **Paso 2:** implementa y escribe `V23`.
 - [ ] **Paso 3:** web y contrato: `AdminApiTest.deliveredVolumeRoute` e `IsolationTest.otherCompanyAdminCannotReadDeliveredVolume`.
 - [ ] **Paso 4:** regenera el contrato y los tipos. `make check` y `make demo` terminan con 0.
 - [ ] **Paso 5:** commit «feat: volumen entregado a la IA del trabajador».

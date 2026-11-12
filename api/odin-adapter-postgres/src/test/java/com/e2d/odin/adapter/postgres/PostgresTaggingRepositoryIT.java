@@ -513,4 +513,79 @@ class PostgresTaggingRepositoryIT extends AbstractPostgresIT {
     private long rawCount(String table, CompanyScope scope, ProjectVisibility visibility) {
         return tx.inScope(scope, visibility, jdbc -> jdbc.sql("SELECT count(*) FROM " + table).query(Long.class).single());
     }
+
+    @Test
+    void claimNextGivesTheDocumentOfBOnlyTheTopicsOfB() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        topic(a, "Agua");
+        topic(b, "Seguros");
+        Document inB = readyDocument(b, "De B");
+
+        TaggingJob job = claim(NOW);
+
+        assertThat(job.document().id()).isEqualTo(inB.id());
+        assertThat(job.topics()).extracting(Topic::name).containsExactly("Seguros");
+    }
+
+    @Test
+    void saveResultWithATopicOfAInsertsNothingForTheDocumentOfB() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Topic ofA = topic(a, "Agua");
+        topic(b, "Seguros");
+        Document inB = readyDocument(b, "De B");
+        claim(NOW);
+
+        tagging.saveResult(inB.id(), Set.of(ofA.id()), V1, NOW);
+
+        assertThat(topicsOf(inB)).isEmpty();
+        assertThat(statusOf(inB)).isEqualTo("DONE");
+    }
+
+    @Test
+    void decideWithTheScopeOfAOverTheDocumentOfBWritesNothingEvenWithABaseThatBypassesRls() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Topic ofA = topic(a, "Agua");
+        Topic otherOfA = topic(a, "Incendios");
+        Document inB = readyDocument(b, "De B");
+        topic(b, "Seguros");
+        claim(NOW);
+        PostgresTaggingRepository viaOwner = new PostgresTaggingRepository(new ScopedTransactions(Db.owner()));
+
+        viaOwner.decide(CompanyScope.of(a), inB.id(), ofA.id(), TopicState.ACTIVE, newUser(a), NOW);
+        viaOwner.decide(CompanyScope.of(a), inB.id(), otherOfA.id(), TopicState.REMOVED, newUser(a), NOW);
+
+        assertThat(topicsOf(inB)).isEmpty();
+        assertThat(rows("document_topic", inB)).isZero();
+    }
+
+    private long rows(String table, Document d) {
+        return owner.sql("SELECT count(*) FROM " + table + " WHERE document_id = :id").param("id", d.id().value())
+                .query(Long.class).single();
+    }
+
+    @Test
+    void databaseRejectsATopicOfBOnADocumentOfAAndTheOtherWayRound() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Topic ofB = topic(b, "Seguros");
+        Document inA = readyDocument(a, "De A");
+        String insert = """
+                INSERT INTO document_topic (document_id, topic_id, company_id, source, state)
+                VALUES (:doc, :topic, :company, 'ADMIN', 'ACTIVE')""";
+
+        for (UUID company : new UUID[] {a.value(), b.value()}) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> owner.sql(insert).param("doc", inA.id().value())
+                    .param("topic", ofB.id().value()).param("company", company).update())
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        }
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> owner.sql("""
+                INSERT INTO document_tagging (document_id, company_id, topic_list_version, status, attempt_count)
+                VALUES (:doc, :company, 1, 'PENDING', 0)""").param("doc", inA.id().value())
+                .param("company", b.value()).update())
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(rows("document_topic", inA)).isZero();
+    }
 }

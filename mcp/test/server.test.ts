@@ -181,7 +181,7 @@ describe('buildServer', () => {
     const parsed = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['truco'] } })));
     expect(parsed.hits[0]).toEqual({ sourceType: 'KNOWLEDGE_CARD', cardId: 'k1', title: 'Truco', authorName: 'Ana',
       addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: null, excerpt: 'se hace así',
-      origin: 'Ficha aportada por Ana; resumen hecho por IA' });
+      origin: 'Ficha aportada por Ana, redactada con IA' });
   });
 
   it('searchDescriptionExplainsAddedAt', async () => {

@@ -13,9 +13,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import tools.jackson.databind.JsonNode;
@@ -39,6 +41,12 @@ final class ArchiveLoader {
     /** Un nombre de proyecto {@code null} carga la carpeta sin proyecto (documentos de toda la empresa). */
     LoadedArchive load(CompanyId company, UserId uploader, Path corpusDir, Map<String, String> projectNamesByFolder)
             throws IOException {
+        return load(company, uploader, corpusDir, projectNamesByFolder, key -> false);
+    }
+
+    /** {@code isCaseDocument} recibe la clave {@code carpeta/fichero} y dice si el documento se carga con la marca de caso. */
+    LoadedArchive load(CompanyId company, UserId uploader, Path corpusDir, Map<String, String> projectNamesByFolder,
+            Predicate<String> isCaseDocument) throws IOException {
         Map<String, ProjectId> projectByFolder = new LinkedHashMap<>();
         Map<String, Map<Integer, String>> pagesByDocument = new LinkedHashMap<>();
         for (Map.Entry<String, String> folder : projectNamesByFolder.entrySet()) {
@@ -47,7 +55,8 @@ final class ArchiveLoader {
             try (var files = Files.list(corpusDir.resolve(folder.getKey()))) {
                 for (Path file : files.sorted().toList()) {
                     String key = folder.getKey() + "/" + file.getFileName();
-                    pagesByDocument.put(key, loadDocument(company, uploader, project, key, file));
+                    pagesByDocument.put(key, loadDocument(company, uploader, project, key, file,
+                            isCaseDocument.test(key)));
                 }
             }
         }
@@ -107,10 +116,10 @@ final class ArchiveLoader {
     }
 
     private Map<Integer, String> loadDocument(CompanyId company, UserId uploader, Optional<ProjectId> project,
-            String key, Path file) throws IOException {
+            String key, Path file, boolean caseDocument) throws IOException {
         Document d = new Document(new DocumentId(UUID.randomUUID()), company, project, key,
                 file.getFileName().toString(), DocumentFormat.PLAIN_TEXT, UUID.randomUUID().toString(),
-                DocumentStatus.READY, Optional.empty(), true, uploader, AbstractPostgresIT.NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
+                DocumentStatus.READY, Optional.empty(), true, uploader, AbstractPostgresIT.NOW, Optional.empty(), 0, Optional.empty(), Optional.empty(), List.of(), caseDocument);
         it.docs.save(d);
         documents.put(key, new LoadedDocument(d.id(), company, project));
         Map<Integer, String> pages = splitPages(Files.readString(file));
