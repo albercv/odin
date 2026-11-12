@@ -3,6 +3,10 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 2
   datasource:
     url: ${ODIN_DB_URL}
     username: ${ODIN_DB_APP_USER}
@@ -23,6 +27,11 @@ odin:
   panel-origin: ${ODIN_PANEL_ORIGIN:}
   originals-dir: ${ODIN_ORIGINALS_DIR}
   upload-max-bytes: ${ODIN_UPLOAD_MAX_BYTES:52428800}
+  reader:
+    url: ${ODIN_READER_URL:}
+    timeout: ${ODIN_READER_TIMEOUT:PT30M}
+    connect-timeout: ${ODIN_READER_CONNECT_TIMEOUT:PT5S}
+    token: ${ODIN_READER_TOKEN:}
 
 springdoc:
   default-produces-media-type: application/json

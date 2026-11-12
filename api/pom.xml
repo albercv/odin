@@ -14,6 +14,7 @@
     <module>odin-adapter-postgres</module>
     <module>odin-adapter-filestore</module>
     <module>odin-adapter-readers</module>
+    <module>odin-adapter-reader-service</module>
     <module>odin-adapter-web</module>
     <module>odin-bootstrap</module>
     <module>odin-architecture-tests</module>
