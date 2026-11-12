@@ -1,0 +1,42 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2028-035
+Comunidad: Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: daños en falso techo de zona común por conducción privativa
+Fecha de apertura: 12 de julio de 2028
+Comunicante: propietaria del 2º A
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 12 de julio de 2028 la propietaria del 2º A comunicó al despacho, con fotografías, el abombamiento de varias placas del falso techo de escayola del rellano de la segunda planta, un cerco ocre que se extendía hacia la puerta del 2º C y la caída de una de las placas sobre el pavimento, que apareció con restos de líquido. Por ese falso techo discurre la derivación individual de suministro del 2º C, desde el patinillo de la escalera hasta la entrada de la vivienda. La derivación es de acero galvanizado original, aunque el 2º C reformó su vivienda hace unos años.
+
+ACTUACIONES REALIZADAS
+- 12 de julio de 2028: el administrador avisa al fontanero de la Comunidad y pide al propietario del 2º C que cierre su llave de corte, con lo que cesa la caída de líquido.
+- 13 de julio de 2028: el fontanero retira las placas dañadas y localiza una picadura en el tubo de acero galvanizado de la derivación del 2º C, justo antes de su unión con un tramo de cobre.
+- 13 de julio de 2028: se comprueba que el tramo de cobre se colocó en la reforma del 2º C, unido directamente al galvanizado mediante un racor de latón, sin manguito dieléctrico.
+- 14 de julio de 2028: reparación provisional con abrazadera de reparación y reapertura de la llave del 2º C.
+
+DOCUMENTACIÓN ARCHIVADA
+- Fotografías del rellano de la segunda planta.
+- Parte del fontanero con fotografías de la picadura y de la unión.
+=== Página 2 ===
+RESOLUCIÓN
+El fontanero concluye que la picadura se debe a la corrosión galvánica del acero galvanizado en contacto con el cobre: al unir ambos metales sin separación eléctrica, el galvanizado actúa como ánodo y se corroe de forma acelerada en las proximidades de la unión. Recomienda sustituir todo el tramo de acero galvanizado de la derivación del 2º C por tubo multicapa y colocar un manguito dieléctrico en cualquier unión que quede entre metales distintos.
+La derivación individual es privativa del 2º C, por lo que su propietario asumió la sustitución del tramo, que el fontanero ejecutó el 26 de julio de 2028, y la reposición de las placas de escayola y de la pintura del rellano de la segunda planta, terminada el 4 de agosto de 2028. El administrador recomendó por circular a los propietarios que hubieran reformado sus viviendas revisar si existían uniones de cobre con galvanizado sin manguito dieléctrico.
+
+SEGUIMIENTO
+El 18 de agosto de 2028 el administrador revisó el rellano de la segunda planta y comprobó que el falso techo nuevo no presentaba cercos ni abombamientos. El fontanero realizó una prueba de presión de la derivación sustituida, que mantuvo el valor durante el tiempo de ensayo.
+
+RESULTADO
+Cerrado el 25 de agosto de 2028. La reparación quedó a cargo del propietario del 2º C y no se han registrado nuevas incidencias en el rellano.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Informe del fontanero y acta de la prueba de presión.
+- Facturas de la sustitución del tramo y de la reposición del falso techo.
+- Circular a los propietarios sobre las uniones entre metales.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

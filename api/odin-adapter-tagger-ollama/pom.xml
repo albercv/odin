@@ -8,6 +8,10 @@
     <version>0.1.0-SNAPSHOT</version>
   </parent>
   <artifactId>odin-adapter-tagger-ollama</artifactId>
+  <properties>
+    <!-- la batería con el modelo real no entra en make check; make tagging-battery lo anula con -DexcludedGroups= -->
+    <excludedGroups>model</excludedGroups>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>com.e2d.odin</groupId>

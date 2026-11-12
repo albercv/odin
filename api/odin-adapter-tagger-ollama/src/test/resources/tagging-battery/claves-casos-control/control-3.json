@@ -1,0 +1,298 @@
+[
+  {
+    "doc": "c1-olmo14/caso-2028-004-latiguillo-lavadora-3b.txt",
+    "caso": "Caso 2028-004",
+    "temas": [
+      "agua y humedades",
+      "seguros y siniestros"
+    ],
+    "aceptables": [
+      "instalaciones"
+    ],
+    "motivo": "Rotura del latiguillo de la lavadora de la vivienda superior con daños en el techo del 2º B, gestionada con peritos e indemnización de las aseguradoras."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-029-sellado-plato-ducha.txt",
+    "caso": "Caso 2028-029",
+    "temas": [
+      "agua y humedades",
+      "convivencia"
+    ],
+    "aceptables": [],
+    "motivo": "Pérdida de estanqueidad del sellado del plato de ducha con daños en la vivienda inferior y negativa de la vecina a dar acceso, resuelta con burofax y reunión."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-011-cornisa-acera.txt",
+    "caso": "Caso 2028-011",
+    "temas": [
+      "estructura y fachada"
+    ],
+    "aceptables": [],
+    "motivo": "Desprendimiento de fragmentos de la cornisa de la fachada principal a la acera y reconstrucción del remate."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-033-aparato-climatizacion.txt",
+    "caso": "Caso 2028-033",
+    "temas": [
+      "convivencia"
+    ],
+    "aceptables": [
+      "estructura y fachada",
+      "instalaciones"
+    ],
+    "motivo": "Incumplimiento de los estatutos por colocar un aparato de aire acondicionado en la fachada sin acuerdo de la Junta, resuelto con su traslado; la fachada y el aparato podrían llevar a otros temas."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-008-antena-azotea.txt",
+    "caso": "Caso 2028-008",
+    "temas": [
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Avería del sistema colectivo de recepción de televisión por el viento sobre el mástil de la azotea."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-019-golpes-nocturnos-2a.txt",
+    "caso": "Caso 2028-019",
+    "temas": [
+      "ruido",
+      "convivencia"
+    ],
+    "aceptables": [],
+    "motivo": "Golpes y arrastres nocturnos de los inquilinos del piso superior, resueltos con una reunión y compromisos entre vecinos."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-002-estufa-pellets-patio.txt",
+    "caso": "Caso 2028-002",
+    "temas": [
+      "olores y humos"
+    ],
+    "aceptables": [
+      "convivencia",
+      "instalaciones"
+    ],
+    "motivo": "Gases de combustión y hollín de una estufa de pellets con salida al patio de luces; intervienen una vecina y un aparato de calefacción, sin que eso sea lo central."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-024-certificado-deuda.txt",
+    "caso": "Caso 2028-024",
+    "temas": [
+      "otros"
+    ],
+    "aceptables": [],
+    "motivo": "Certificado del estado de pagos para una compraventa, trámite administrativo sin relación con los demás temas."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-036-peto-azotea.txt",
+    "caso": "Caso 2028-036",
+    "temas": [
+      "estructura y fachada"
+    ],
+    "aceptables": [],
+    "motivo": "Fisuras y desplome del peto de la azotea por empuje del solado dilatado."
+  },
+  {
+    "doc": "c1-olmo14/caso-2028-040-desinsectacion.txt",
+    "caso": "Caso 2028-040",
+    "temas": [
+      "otros"
+    ],
+    "aceptables": [],
+    "motivo": "Plaga de cucarachas en zonas comunes tratada por una empresa de control de plagas."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-014-bateria-contadores.txt",
+    "caso": "Caso 2028-014",
+    "temas": [
+      "agua y humedades",
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Salida de caudal por una junta partida de la batería común de contadores divisionarios."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-021-jardineras-forjado-garaje.txt",
+    "caso": "Caso 2028-021",
+    "temas": [
+      "agua y humedades",
+      "estructura y fachada"
+    ],
+    "aceptables": [],
+    "motivo": "Paso de las jardineras al forjado del garaje por fallo de la lámina, con corrosión de armaduras y refuerzo de viguetas."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-006-puerta-garaje.txt",
+    "caso": "Caso 2028-006",
+    "temas": [
+      "ruido",
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Chirridos y golpe de cierre de la puerta motorizada del garaje que despiertan a los vecinos contiguos, resueltos con su reparación."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-043-extraccion-garaje.txt",
+    "caso": "Caso 2028-043",
+    "temas": [
+      "olores y humos",
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Acumulación de gases de los motores en el garaje por avería de los extractores y de los detectores de monóxido."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-031-barbacoas.txt",
+    "caso": "Caso 2028-031",
+    "temas": [
+      "olores y humos",
+      "convivencia"
+    ],
+    "aceptables": [],
+    "motivo": "Humo y olor de barbacoas de vecinos que entran en una vivienda, resuelto con una nueva norma aprobada en junta."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-017-perros-jardines.txt",
+    "caso": "Caso 2028-017",
+    "temas": [
+      "convivencia"
+    ],
+    "aceptables": [],
+    "motivo": "Perros sueltos y excrementos sin recoger en los jardines comunes, resuelto con carteles y una zona acotada."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-038-alumbrado-viales.txt",
+    "caso": "Caso 2028-038",
+    "temas": [
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Avería del alumbrado exterior por un conductor cortado con la desbrozadora."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-010-rama-pino-vehiculo.txt",
+    "caso": "Caso 2028-010",
+    "temas": [
+      "seguros y siniestros"
+    ],
+    "aceptables": [],
+    "motivo": "Rama de un pino común caída sobre un coche, con parte de daños, perito e indemnización por responsabilidad civil."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-026-cuotas-pendientes.txt",
+    "caso": "Caso 2028-026",
+    "temas": [
+      "otros"
+    ],
+    "aceptables": [],
+    "motivo": "Recibos devueltos de una vivienda y calendario de pago, gestión económica sin relación con los demás temas."
+  },
+  {
+    "doc": "c2-almendros/caso-2028-045-muro-rampa-garaje.txt",
+    "caso": "Caso 2028-045",
+    "temas": [
+      "estructura y fachada",
+      "seguros y siniestros"
+    ],
+    "aceptables": [],
+    "motivo": "Muro de la rampa dañado por una furgoneta, reconstruido tras peritación y pagado por la compañía del vehículo."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-035-par-galvanico-derivacion.txt",
+    "caso": "Caso 2028-035",
+    "temas": [
+      "agua y humedades"
+    ],
+    "aceptables": [
+      "instalaciones"
+    ],
+    "motivo": "Picadura por corrosión galvánica en la derivación privativa de una vivienda con daños en el falso techo del rellano; la tubería es privativa, por eso las instalaciones solo son aceptables."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-042-tuberia-techo-garaje.txt",
+    "caso": "Caso 2028-042",
+    "temas": [
+      "agua y humedades",
+      "instalaciones"
+    ],
+    "aceptables": [
+      "seguros y siniestros"
+    ],
+    "motivo": "Rotura de la tubería común de distribución del garaje por el golpe de una furgoneta; la compañía del vehículo pagó la reparación urgente."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-013-parada-cabina.txt",
+    "caso": "Caso 2028-013",
+    "temas": [
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Parada del ascensor con una persona dentro por un contacto de puerta desajustado."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-003-gas-rellano.txt",
+    "caso": "Caso 2028-003",
+    "temas": [
+      "olores y humos",
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Olor a gas en el rellano por una pérdida en la llave de corte de la instalación común de gas."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-027-vigas-garaje.txt",
+    "caso": "Caso 2028-027",
+    "temas": [
+      "estructura y fachada"
+    ],
+    "aceptables": [],
+    "motivo": "Fisuras en vigas del forjado del garaje estudiadas con testigos, probetas e inyección de resina."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-016-obras-reforma-4b.txt",
+    "caso": "Caso 2028-016",
+    "temas": [
+      "ruido"
+    ],
+    "aceptables": [
+      "convivencia"
+    ],
+    "motivo": "Ruido de obras de reforma fuera del horario permitido; la relación con los vecinos afectados es secundaria."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-039-bicicletas-portal.txt",
+    "caso": "Caso 2028-039",
+    "temas": [
+      "convivencia"
+    ],
+    "aceptables": [],
+    "motivo": "Bicicletas y carritos que ocupan el vestíbulo del portal en contra de las normas de convivencia."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-037-sobretension-cuadro.txt",
+    "caso": "Caso 2028-037",
+    "temas": [
+      "seguros y siniestros",
+      "instalaciones"
+    ],
+    "aceptables": [],
+    "motivo": "Daños por sobretensión de una descarga atmosférica en los equipos comunes, cubiertos por el seguro de daños eléctricos."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-023-ocupacion-cubierta.txt",
+    "caso": "Caso 2028-023",
+    "temas": [
+      "convivencia"
+    ],
+    "aceptables": [],
+    "motivo": "Un vecino ocupa la cubierta común con mobiliario y un candado, resuelto en una reunión."
+  },
+  {
+    "doc": "c3-puerto3/caso-2028-047-consulta-justificantes.txt",
+    "caso": "Caso 2028-047",
+    "temas": [
+      "otros"
+    ],
+    "aceptables": [],
+    "motivo": "Consulta de facturas y extractos por un propietario, trámite administrativo sin relación con los demás temas."
+  }
+]
