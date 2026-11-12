@@ -137,6 +137,28 @@ class ConfigTest(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ConfigError):
                 load_text(variant("budgetUsd = 1.5", f"budgetUsd = {value}"))
 
+    def test_judge_think_and_timeout_defaults_for_ollama(self):
+        ollama = load_text(VALID).judges[1]
+        self.assertFalse(ollama.think)
+        self.assertEqual(ollama.timeout_s, 600)
+
+    def test_judge_think_and_timeout_are_read_for_ollama(self):
+        text = variant('model = "ollama:qwen3.5:9b"', 'model = "ollama:qwen3.5:9b"\nthink = true\ntimeoutS = 90')
+        ollama = load_text(text).judges[1]
+        self.assertTrue(ollama.think)
+        self.assertEqual(ollama.timeout_s, 90)
+
+    def test_think_and_timeout_only_apply_to_ollama_judges(self):
+        for extra in ("think = false", "timeoutS = 90"):
+            with self.subTest(extra=extra), self.assertRaisesRegex(ConfigError, "solo.*ollama"):
+                load_text(variant('count = 3\nmodel = "haiku"', f'count = 3\nmodel = "haiku"\n{extra}'))
+
+    def test_think_and_timeout_are_validated(self):
+        with self.assertRaises(ConfigError):
+            load_text(variant('model = "ollama:qwen3.5:9b"', 'model = "ollama:qwen3.5:9b"\nthink = "no"'))
+        with self.assertRaises(ConfigError):
+            load_text(variant('model = "ollama:qwen3.5:9b"', 'model = "ollama:qwen3.5:9b"\ntimeoutS = 0'))
+
     def test_ai_combiner_needs_model_and_single_does_not(self):
         with self.assertRaises(ConfigError):
             load_text(variant('kind = "composer"\nmodel = "haiku"', 'kind = "composer"'))

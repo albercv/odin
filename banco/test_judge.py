@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest import mock
 
 from banco.fakes.fake_ollama import start_fake_ollama
-from banco.judge import aggregate, check_judge_init, judge_material, run_claude_judge, run_ollama_judge
+from banco.judge import aggregate, check_judge_init, is_no_consta, judge_material, run_claude_judge, run_ollama_judge
 from banco.medir_path import ejecutar
 
 FAKE_JUDGE = str(Path(__file__).resolve().parent / "fakes" / "fake_judge.py")
@@ -165,6 +165,20 @@ class OllamaJudgeTest(unittest.TestCase):
             record = run_ollama_judge("material", RUBRIC, "ollama:qwen3.5:9b", url, 30)
         self.assertEqual(record["verdict"], VALID_YES)
 
+    def test_request_sends_think_false_by_default(self):
+        received = []
+        url, stop = start_fake_ollama("ok", received)
+        self.addCleanup(stop)
+        run_ollama_judge("material", RUBRIC, "ollama:qwen", url, 30)
+        self.assertIs(received[0]["think"], False)
+
+    def test_request_sends_think_true_when_configured(self):
+        received = []
+        url, stop = start_fake_ollama("ok", received)
+        self.addCleanup(stop)
+        run_ollama_judge("material", RUBRIC, "ollama:qwen", url, 30, think=True)
+        self.assertIs(received[0]["think"], True)
+
     def test_ollama_prefix_is_stripped_before_request(self):
         received = []
         url, stop = start_fake_ollama("ok", received)
@@ -172,6 +186,13 @@ class OllamaJudgeTest(unittest.TestCase):
         record = run_ollama_judge("material", RUBRIC, "ollama:qwen", url, 30)
         self.assertEqual(received[0]["model"], "qwen")
         self.assertEqual(record["model"], "qwen")
+
+
+class NoConstaTest(unittest.TestCase):
+    def test_abstention_or_no_citations_is_no_consta(self):
+        self.assertTrue(is_no_consta({"respuesta": "No consta.", "no_lo_se": True, "citas": []}))
+        self.assertTrue(is_no_consta({"respuesta": "Cuesta 10 €.", "no_lo_se": False, "citas": []}))
+        self.assertFalse(is_no_consta({"respuesta": "Cuesta 10 €.", "no_lo_se": False, "citas": [{"documentId": "d1"}]}))
 
 
 class AggregateTest(unittest.TestCase):

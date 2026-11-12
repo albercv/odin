@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from banco import combine, judge, report, scoring
-from banco.cache import RunCache
+from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
 from banco.layout import Layout
@@ -26,6 +26,8 @@ AI_KINDS = ("composer", "pageFusion")
 DEFAULT_DRAWS = 20
 DEFAULT_SINGLE_TURNS = [10, 20, 40]
 BUDGET = "budget"  # motivo interno: el presupuesto se agotó antes de lanzar un juez de pago
+NO_CONSTA_MOTIVO = "no juzgable: no consta"
+STOP_MOTIVO = "parada"
 
 
 @dataclass(frozen=True)
@@ -211,8 +213,11 @@ def _budget_stop(sess, skipped):
 
 
 def _quota_stop(sess, error, where):
+    """Escribe la parada si el error es una cuota o límite. Devuelve True si lo fue."""
     if error and ejecutar.LIMITE.search(error):
         _stop(sess, f"cuota o límite en {where}: {error[:200]}")
+        return True
+    return False
 
 
 def _exit_code(sess):
@@ -225,7 +230,8 @@ def _from_cache(cache, jobs, before):
     for job in jobs:
         record = cache.get(job.key)
         if record is not None:
-            out.append({**record, "approach": job.spec.approach, "replica": job.replica, "cached": job.key in before})
+            out.append({**record, "approach": job.spec.approach, "replica": job.replica, "cached": job.key in before,
+                        "clave": job.key})
     return out
 
 
@@ -276,17 +282,36 @@ def _compose_paid(sess, item, runs):
         raise
 
 
+def _final_key(sess, item, keys):
+    cfg, settings = sess.cfg.combiner, sess.settings
+    return final_key(item["id"], item["pregunta"], cfg.kind, cfg.model, keys, settings.odin_commit, settings.stack_digest)
+
+
+def _composed(sess, item, runs):
+    """Respuesta del redactor: si está en la caché, sale de ella a coste 0; si no, es una llamada de pago que se cobra
+    y se guarda. Si alguna ejecución de entrada no tiene clave, no hay caché segura: se compone sin guardar."""
+    usable = [r.get("clave") for r in runs if r.get("error") is None and r.get("respuesta") is not None]
+    key = None if None in usable else _final_key(sess, item, usable)
+    hit = None if key is None else sess.cache.get(key)
+    if hit is not None:
+        return {**hit, "coste_usd": 0.0, "cached": True}
+    record = _compose_paid(sess, item, runs)
+    sess.ledger.charge(record.get("coste_usd"))
+    _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
+    if key is not None:
+        sess.cache.put(key, record)
+    return {**record, "cached": False}
+
+
 def _final_row(sess, item, runs):
     kind = sess.cfg.combiner.kind
     if kind in ANSWER_RULES:
         answer = ANSWER_RULES[kind](runs)
-        extra = {"coste_usd": 0.0, "tokens": None, "duracion_s": 0.0, "error": None}
+        extra = {"coste_usd": 0.0, "tokens": None, "duracion_s": 0.0, "error": None, "cached": False}
     else:
-        record = _compose_paid(sess, item, runs)
-        sess.ledger.charge(record.get("coste_usd"))
-        _quota_stop(sess, record.get("error"), f"el redactor de {item['id']}")
+        record = _composed(sess, item, runs)
         answer = record["respuesta"]
-        extra = {key: record.get(key) for key in ("coste_usd", "tokens", "duracion_s", "error")}
+        extra = {key: record.get(key) for key in ("coste_usd", "tokens", "duracion_s", "error", "cached")}
     return {"id": item["id"], "answer": answer, "correcta_script": scoring.is_correct(item, answer, sess.ctx),
             "approach": kind, **extra}
 
@@ -332,22 +357,40 @@ def _one_judge(sess, index, spec, rubric, item, answer):
     rng = random.Random(sess.seed + index)
     material = judge.judge_material(item, answer, lambda ident, pagina: scoring.page_text(ident, pagina, sess.ctx), rng)
     if not _is_paid(spec):
-        return judge.run_ollama_judge(material, rubric, spec.model, sess.layout.ollama_url, sess.layout.timeout)
+        return judge.run_ollama_judge(material, rubric, spec.model, sess.layout.ollama_url, spec.timeout_s,
+                                      think=spec.think)
     return judge.run_claude_judge(material, rubric, spec.model, sess.layout.claude_judge_bin, sess.layout.timeout)
 
 
+def _verdict_key(sess, index, spec, rubric, item, answer):
+    """Todo lo que decide el veredicto: el juez, sus opciones, la semilla, el código y la pila."""
+    settings = sess.settings
+    return verdict_key(item["id"], item["pregunta"], answer, rubric, spec.model, index, sess.seed, spec.think,
+                       spec.timeout_s, settings.odin_commit, settings.stack_digest)
+
+
+def _cached_verdict(sess, index, spec, rubric, item, answer):
+    """Veredicto guardado con esta misma configuración: sale a coste 0, así que no necesita presupuesto."""
+    hit = sess.cache.get(_verdict_key(sess, index, spec, rubric, item, answer))
+    return None if hit is None else {**hit, "coste_usd": 0.0, "cached": True}
+
+
 def _call_judge(sess, index, spec, rubric, item, answer):
-    """Un juez de pago que falla después de llamar a claude deja su coste desconocido."""
+    """Un juez que falla después de llamar a claude deja su coste desconocido. Un veredicto inválido no se guarda:
+    se vuelve a juzgar en el siguiente relanzamiento."""
     try:
-        return _one_judge(sess, index, spec, rubric, item, answer)
+        record = _one_judge(sess, index, spec, rubric, item, answer)
     except Exception:
         if _is_paid(spec):
             sess.ledger.charge(None)
         raise
+    if not record["verdict"].get("invalido"):
+        sess.cache.put(_verdict_key(sess, index, spec, rubric, item, answer), record)
+    return {**record, "cached": False}
 
 
-def _unjudged(item, records, error):
-    return {"id": item["id"], "judges": records, "jury": None, "error": error}
+def _unjudged(item, records, error, motivo=None):
+    return {"id": item["id"], "judges": records, "jury": None, "error": error, "motivo": motivo}
 
 
 def _may_launch(sess, spec):
@@ -355,29 +398,45 @@ def _may_launch(sess, spec):
     return not _is_paid(spec) or (not _stopped(sess) and sess.ledger.can_launch())
 
 
-def _judge_question(sess, jobs, item, answer):
+def _judge_or_skip(sess, jobs, item, answer, cache_only):
+    """Un «no consta» no llega al jurado: fila sin veredicto, con su motivo y sin gasto de jueces."""
+    if judge.is_no_consta(answer):
+        return _unjudged(item, [], None, NO_CONSTA_MOTIVO), None, 0
+    return _judge_question(sess, jobs, item, answer, cache_only)
+
+
+def _judge_question(sess, jobs, item, answer, cache_only=False):
     """Veredictos de los jueces de una pregunta. Devuelve (fila, motivo de parada o None, llamadas de pago sin lanzar).
-    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo; la pregunta queda sin veredicto.
-    Una cuota en un juez de Claude para el experimento, igual que en el redactor."""
-    records, skipped = [], 0
+    Sin presupuesto, los jueces de Ollama (gratis) siguen corriendo. Si la parada alcanza a la pregunta (cuota,
+    presupuesto o coste desconocido, también en su último juez de pago), no hay veredicto aunque haya parciales."""
+    records, skipped, stopped = [], 0, False
     try:
         for index, spec, rubric in jobs:
-            if not _may_launch(sess, spec):
-                skipped += 1
-                continue
-            record = _call_judge(sess, index, spec, rubric, item, answer)
-            if _is_paid(spec):
-                sess.ledger.charge(record.get("coste_usd"))
-                _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
+            record = _cached_verdict(sess, index, spec, rubric, item, answer)
+            if record is None:
+                if cache_only or not _may_launch(sess, spec):
+                    skipped += 1
+                    continue
+                record = _call_judge(sess, index, spec, rubric, item, answer)
             records.append(record)
+            stopped = _charge_judge(sess, spec, record, item) or stopped
     except ejecutar.Aislamiento as error:
         return _unjudged(item, records, str(error)), f"AISLAMIENTO ROTO en juez: {error}", skipped
     except Exception as error:  # un juez roto no pierde los veredictos de las demás preguntas
         return _unjudged(item, records, repr(error)), None, skipped
-    if skipped:
-        return _unjudged(item, records, "parada o presupuesto agotado"), BUDGET, skipped
+    if skipped or stopped:
+        return _unjudged(item, records, None, STOP_MOTIVO), BUDGET, skipped
     jury = judge.aggregate([r["verdict"] for r in records], sess.cfg.aggregation)
-    return {"id": item["id"], "judges": records, "jury": jury, "error": None}, None, 0
+    return {"id": item["id"], "judges": records, "jury": jury, "error": None, "motivo": None}, None, 0
+
+
+def _charge_judge(sess, spec, record, item):
+    """Cobra un juez de pago nuevo. True si con él se para el experimento (cuota o presupuesto agotado)."""
+    if not _is_paid(spec) or record.get("cached"):
+        return False
+    sess.ledger.charge(record.get("coste_usd"))
+    quota = _quota_stop(sess, record.get("error"), f"el juez de {item['id']}")
+    return quota or not sess.ledger.can_launch()
 
 
 def judge_stage(sess, finals, verdicts):
@@ -385,7 +444,8 @@ def judge_stage(sess, finals, verdicts):
     jobs = _judge_jobs(sess)
     answered = [f for f in finals if f["answer"] is not None]
     with ThreadPoolExecutor(max(1, sess.cfg.concurrency)) as pool:
-        results = list(pool.map(lambda f: _judge_question(sess, jobs, by_id[f["id"]], f["answer"]), answered))
+        cache_only = _stopped(sess)  # parada: solo se sirven veredictos guardados, sin lanzar ningún juez
+        results = list(pool.map(lambda f: _judge_or_skip(sess, jobs, by_id[f["id"]], f["answer"], cache_only), answered))
     skipped_total, budget_hit = 0, False
     for row, reason, skipped in results:
         verdicts.append(row)
@@ -422,7 +482,7 @@ def run_experiment(config_path, layout, reset_budget=False):
         _pool(sess, sess.cfg.searchers, sess.settings, runs)
         if not _stopped(sess):
             answer_stage(sess, runs, finals)
-        if finals and not _stopped(sess):
+        if finals:  # también con parada: los veredictos guardados no cuestan nada y se sirven igual
             judge_stage(sess, finals, verdicts)
     finally:
         _write_outputs(sess, runs, finals, verdicts)

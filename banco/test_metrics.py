@@ -16,7 +16,11 @@ def _verdict(item_id, jury, duracion=0.0):
 
 
 def _answer(text):
-    return {"respuesta": text, "no_lo_se": False, "citas": []}
+    return {"respuesta": text, "no_lo_se": False, "citas": [{"documentId": "d1", "cardId": None, "pagina": 1, "fragmento": text}]}
+
+
+def _no_consta():
+    return {"respuesta": "No consta.", "no_lo_se": True, "citas": []}
 
 
 class JudgesTest(unittest.TestCase):
@@ -46,6 +50,27 @@ class JudgesTest(unittest.TestCase):
         finals = [_final("Q1", True, _answer("a")), _final("Q2", False, _answer("b"))]
         block = metrics.judges_block(self.items, finals, [_verdict("Q1", True)])
         self.assertEqual(block["undecided"], 1)
+
+
+class NoConstaTest(unittest.TestCase):
+    def setUp(self):
+        self.items = {"Q1": {"id": "Q1", "tipo": "t", "claves": [["x"]]}, "Q2": {"id": "Q2", "tipo": "t", "claves": []},
+                      "Q3": {"id": "Q3", "tipo": "t", "claves": []}}
+
+    def test_no_consta_is_counted_and_unkeyed_ones_go_to_manual_review(self):
+        finals = [_final("Q1", True, _answer("a")), _final("Q2", False, _no_consta()), _final("Q3", False, _no_consta())]
+        block = metrics.judges_block(self.items, finals, [_verdict("Q1", True)])
+        self.assertEqual(block["notJudgedNoConsta"], 2)
+        self.assertEqual(block["manualReview"], ["Q2", "Q3"])
+        self.assertEqual(block["undecided"], 2)
+
+    def test_calibration_uses_only_answers_that_cite(self):
+        items = {n: {"id": n, "tipo": "t", "claves": [["x"]]} for n in ("Q1", "Q2", "Q3")}
+        finals = [_final("Q1", True, _answer("a")), _final("Q2", False, _answer("b")), _final("Q3", False, _no_consta())]
+        verdicts = [_verdict("Q1", True), _verdict("Q2", False), _verdict("Q3", True)]  # un «no consta» nunca tiene jurado
+        block = metrics.judges_block(items, finals, verdicts)
+        self.assertEqual(block["falseAcceptRate"], 0.0)
+        self.assertEqual(block["kappa"], 1.0)
 
 
 class AgreementTest(unittest.TestCase):
