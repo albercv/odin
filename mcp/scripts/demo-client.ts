@@ -1,6 +1,8 @@
-// Demostración de cierre de la fase 1 (spec 3.1). Fases: `prepare` (pasos 1-7c) y `confirm` (paso 9).
-// El paso 8 (panel) lo hace Playwright en panel/e2e/demo.spec.ts entre ambas fases.
-import { readFileSync, writeFileSync } from 'node:fs';
+// Demostración de cierre de la fase 1 (spec 3.1). Fases: `prepare` (pasos 1-7d) y `confirm` (pasos 9 y 10).
+// Los pasos 8 y 8b (panel) los hace Playwright en panel/e2e/demo.spec.ts entre ambas fases.
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -9,8 +11,12 @@ const API = process.env.DEMO_API_URL ?? 'http://127.0.0.1:18080';
 const SETUP_TOKEN = need('DEMO_SETUP_TOKEN');
 const STATE = need('DEMO_STATE');
 const PDF = need('DEMO_PDF');
+const RENEWED = need('DEMO_RENEWED');
+const SCAN = need('DEMO_SCAN');
 const ADMIN = { email: 'admin@demo.invalid', password: 'demo-clave-ficticia-1234' };
 const QUERY = 'franquicia daños por agua ATL-4417-2024';
+const TITLE = 'Póliza ficticia';
+const RENEWED_TITLE = 'Póliza ficticia renovada';
 const NO_SOURCE = 'No consta en los documentos de tu empresa.';
 const CARD = { title: 'Franquicia por daños de agua', body: 'La póliza ATL-4417-2024 aplica una franquicia de 150 euros por siniestro de daños por agua.' };
 
@@ -24,6 +30,7 @@ function check(ok: boolean, text: string): void {
   if (!ok) throw new Error(`falló: ${text}`);
 }
 
+const MIME: Record<string, string> = { '.pdf': 'application/pdf', '.png': 'image/png' };
 let cookie = '';
 async function http(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Response> {
   const isRaw = body instanceof FormData;
@@ -50,11 +57,11 @@ async function createWorker(companyId: string, firstName: string, lastName: stri
   const k = await json<{ key: string }>(await http('POST', `/v1/admin/companies/${companyId}/members/${userId}/keys`, { label: 'demo' }), 201);
   return { id: userId, key: k.key };
 }
-async function uploadPdf(companyId: string, projectId?: string): Promise<string> {
+async function uploadFile(companyId: string, path: string, title: string, projectId?: string): Promise<string> {
   const form = new FormData();
-  form.append('file', new Blob([readFileSync(PDF)], { type: 'application/pdf' }), 'poliza-ficticia.pdf');
+  form.append('file', new Blob([readFileSync(path)], { type: MIME[path.slice(path.lastIndexOf('.'))] ?? 'text/plain' }), basename(path));
   const scope = projectId ? `&projectId=${projectId}` : '';
-  const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent('Póliza ficticia')}${scope}`, form);
+  const r = await http('POST', `/v1/admin/companies/${companyId}/documents?title=${encodeURIComponent(title)}${scope}`, form);
   return (await json<{ document: Id }>(r, 201)).document.id;
 }
 async function waitReady(companyId: string, docId: string): Promise<void> {
@@ -105,12 +112,70 @@ async function closedProjectStep(): Promise<void> {
   const project = await json<Id>(await http('POST', `/v1/admin/companies/${c}/projects`, { name: 'Proyecto cerrado' }), 201);
   const assign = await http('PUT', `/v1/admin/companies/${c}/projects/${project.id}/members/${assigned.id}`);
   if (assign.status !== 204) throw new Error(`HTTP ${assign.status} al asignar el proyecto: ${await assign.text()}`);
-  const docId = await uploadPdf(c, project.id);
+  const docId = await uploadFile(c, PDF, TITLE, project.id);
   await waitReady(c, docId);
   const found = await searchAsA(assigned.key, docId);
   check(found.verified, 'Paso 7b: el trabajador asignado al proyecto cerrado encuentra su documento y la cita se verifica');
   const outBlind = await withMcp(outsider.key, (call) => call('searchKnowledge', { queries: [QUERY] }));
   check(outBlind === NO_SOURCE, 'Paso 7c: el trabajador no asignado recibe «No consta en los documentos de tu empresa.»');
+}
+
+async function scannedStep(): Promise<void> {
+  const companyId = await createCompany('Empresa D', 'ED');
+  const { key } = await createWorker(companyId, 'Trabajadora', 'Escaneos', 'escaneos@demo.invalid');
+  const scanId = await uploadFile(companyId, SCAN, 'Acta ficticia escaneada');
+  await waitReady(companyId, scanId);
+  const found = await withMcp(key, async (call) => {
+    const { hits } = JSON.parse(await call('searchKnowledge', { queries: ['bajante del patio'] })) as { hits: Hit[] };
+    const hit = hits.find((h) => h.documentId === scanId && h.pageNumber === 1);
+    const page = hit && (JSON.parse(await call('readPage', { documentId: scanId, pageNumber: 1 })) as { readerName?: string });
+    return { hit, readerName: page?.readerName };
+  });
+  check(!!found.hit, 'Paso 7e: el escaneado ficticio se lee con el lector de prueba y searchKnowledge lo encuentra en la página 1');
+  check(found.readerName === 'reader-stub', 'Paso 7f: readPage devuelve readerName «reader-stub»');
+}
+
+type TaggedDoc = { id: string; topics: { name: string; source: string }[] };
+type DocTopics = { topics: { topicId: string; state: string }[]; tagging: { status: string } | null };
+
+async function createTopic(companyId: string, name: string, definition: string): Promise<string> {
+  return (await json<Id>(await http('POST', `/v1/admin/companies/${companyId}/topics`, { name, definition }), 201)).id;
+}
+async function waitTagged(companyId: string, docId: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    const docs = await json<{ id: string; taggingStatus: string | null }[]>(await http('GET', `/v1/admin/companies/${companyId}/documents`), 200);
+    const status = docs.find((d) => d.id === docId)?.taggingStatus;
+    if (status === 'DONE') return;
+    if (status === 'FAILED') throw new Error('el etiquetado ha fallado');
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error('el documento no llegó a DONE en 60 s');
+}
+async function listedByTopic(key: string, docId: string): Promise<TaggedDoc | undefined> {
+  const { documents } = await withMcp(key, async (call) => JSON.parse(await call('listDocuments', { topic: 'agua y humedades' })) as { documents: TaggedDoc[] });
+  return documents.find((d) => d.id === docId);
+}
+
+// El etiquetador de prueba responde «agua y humedades» si el texto lleva «filtración» o «fuga»: prueba el camino de Odín, no el modelo.
+async function taggingStep(): Promise<void> {
+  const companyId = await createCompany('Empresa E', 'EE');
+  const { key } = await createWorker(companyId, 'Trabajadora', 'Temas', 'temas@demo.invalid');
+  const water = await createTopic(companyId, 'agua y humedades', 'Problemas de agua en el edificio');
+  await createTopic(companyId, 'otros', 'Todo lo demás');
+  const file = join(mkdtempSync(join(tmpdir(), 'odin-demo-')), 'incidencia-ficticia.txt');
+  writeFileSync(file, 'Incidencia ficticia: se detectó una filtración en la bajante del patio.');
+  const docId = await uploadFile(companyId, file, 'Incidencia ficticia');
+  await waitTagged(companyId, docId);
+  const found = await listedByTopic(key, docId);
+  check(found?.topics.some((t) => t.name === 'agua y humedades' && t.source === 'AI') === true,
+    'Paso 11: el documento con «filtración» llega a DONE y listDocuments(topic: "agua y humedades") lo devuelve con source AI');
+  const base = `/v1/admin/documents/${docId}/topics`;
+  check((await http('DELETE', `${base}/${water}`)).status === 204 && (await http('POST', `${base}/retag`)).status === 202,
+    'Paso 11b: el administrador quita el tema y pide volver a etiquetar');
+  await waitTagged(companyId, docId);
+  const after = await json<DocTopics>(await http('GET', base), 200);
+  check(after.topics.find((t) => t.topicId === water)?.state === 'REMOVED' && (await listedByTopic(key, docId)) === undefined,
+    'Paso 11c: al terminar de etiquetar, el tema sigue quitado');
 }
 
 async function prepare(): Promise<void> {
@@ -124,7 +189,7 @@ async function prepare(): Promise<void> {
   const wa = await createWorker(a, 'Trabajadora', 'A', 'a@demo.invalid');
   const wb = await createWorker(b, 'Trabajador', 'B', 'b@demo.invalid');
   check(!!wa.key && !!wb.key, 'Paso 3: empresas A y B, un trabajador cada una y sus claves personales');
-  const docId = await uploadPdf(a);
+  const docId = await uploadFile(a, PDF, TITLE);
   await waitReady(a, docId);
   check(true, 'Paso 4: PDF ficticio subido a la empresa A y procesado (READY)');
   const found = await searchAsA(wa.key, docId);
@@ -141,7 +206,12 @@ async function prepare(): Promise<void> {
   const saved = await withMcp(wa.key, (call) => call('saveKnowledgeCard', CARD));
   check(saved.includes('PENDING') && saved.includes('Ficha guardada; queda pendiente de revisión.'), 'Paso 7: MCP de A guarda la ficha, queda PENDING');
   await closedProjectStep();
-  writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie }));
+  const renewedId = await uploadFile(a, RENEWED, RENEWED_TITLE);
+  await waitReady(a, renewedId);
+  check(true, 'Paso 7d: póliza ficticia renovada subida a la empresa A y procesada (READY)');
+  await scannedStep();
+  await taggingStep();
+  writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie, workerKey: wa.key, oldId: docId, renewedId }));
 }
 
 async function confirm(): Promise<void> {
@@ -149,6 +219,20 @@ async function confirm(): Promise<void> {
   cookie = (await http('POST', '/v1/admin/session', ADMIN).then((r) => r.headers.get('set-cookie') ?? '')).split(';')[0] ?? '';
   const cards = await json<{ title: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/cards?status=APPROVED`), 200);
   check(cards.some((c) => c.title === CARD.title), 'Paso 9: la API confirma que la ficha está APPROVED');
+  await confirmSuperseded(JSON.parse(readFileSync(STATE, 'utf8')) as State);
+}
+
+type State = { workerKey: string; oldId: string; renewedId: string };
+type DocHit = { documentId: string; superseded?: boolean; replacement?: { documentId: string; title: string } | null };
+
+async function confirmSuperseded({ workerKey, oldId, renewedId }: State): Promise<void> {
+  const { hits } = await withMcp(workerKey, async (call) => JSON.parse(await call('searchKnowledge', { queries: [QUERY] })) as { hits: DocHit[] });
+  const firstSuperseded = hits.findIndex((h) => h.superseded);
+  const lastCurrent = hits.map((h) => !h.superseded).lastIndexOf(true);
+  const oldHits = hits.filter((h) => h.documentId === oldId);
+  check(hits.some((h) => h.documentId === renewedId) && firstSuperseded > lastCurrent, 'Paso 10: la renovada sale y ningún sustituido sale delante de un vigente');
+  check(oldHits.length > 0 && oldHits.every((h) => h.superseded === true && h.replacement?.documentId === renewedId && h.replacement.title === RENEWED_TITLE),
+    'Paso 10b: cada resultado de la póliza antigua sale marcado como sustituido y con la renovada como sustituto');
 }
 
 const phase = process.argv[2];

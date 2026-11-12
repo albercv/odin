@@ -52,6 +52,10 @@ class MigrationFromPhaseOneIT {
     private static final UUID PROJECT = UUID.randomUUID();
     private static final UUID DELETED_PROJECT = UUID.randomUUID();
     private static final UUID DOCUMENT_IN_DELETED_PROJECT = UUID.randomUUID();
+    private static final UUID WAITING_FOR_READER = UUID.randomUUID();
+    private static final UUID PROCESSING_LOCALLY = UUID.randomUUID();
+    private static final UUID MIXED_PDF = UUID.randomUUID();
+    private static final UUID FLAT_TEXT = UUID.randomUUID();
     private static final UUID KEY = UUID.randomUUID();
     private static final UUID DELETED_WORKER_KEY = UUID.randomUUID();
     private static final String DELETED_AT = "2026-10-01T10:00:00Z";
@@ -93,8 +97,42 @@ class MigrationFromPhaseOneIT {
                 VALUES (:id, :company, :project, 'Plano viejo', 'f.pdf', 'PDF', 'abc', 'READY', true, :user, now(), 0)""")
                 .param("id", DOCUMENT_IN_DELETED_PROJECT).param("company", COMPANY).param("project", DELETED_PROJECT)
                 .param("user", ACTIVE_WORKER).update();
+        insertReaderLaneDocuments();
         insertKey(KEY, ACTIVE_WORKER, "abcd1234", "h:secreto");
         insertKey(DELETED_WORKER_KEY, DELETED_WORKER, "wxyz5678", "h:otro");
+    }
+
+    private static void insertReaderLaneDocuments() {
+        insertDocument(WAITING_FOR_READER, "PENDING_READER", true, 3);
+        insertDocument(PROCESSING_LOCALLY, "PROCESSING", true, 2);
+        insertDocument(MIXED_PDF, "READY", true, 1);
+        insertPage(MIXED_PDF, 1, " ");
+        insertPage(MIXED_PDF, 2, "con texto");
+        insertPage(MIXED_PDF, 3, "\n");
+        insertDocument(FLAT_TEXT, "READY", false, 1);
+        insertPage(FLAT_TEXT, 1, "");
+    }
+
+    private static void insertDocument(UUID id, String status, boolean paginated, int attempts) {
+        jdbc.sql("""
+                INSERT INTO document (id, company_id, title, filename, format, sha256, status, paginated,
+                    uploaded_by, uploaded_at, attempt_count)
+                VALUES (:id, :company, 'Escaneo', 'f.pdf', 'PDF', :id::text, :status, :paginated, :user, now(),
+                    :attempts)""")
+                .param("id", id).param("company", COMPANY).param("status", status).param("paginated", paginated)
+                .param("user", ACTIVE_WORKER).param("attempts", attempts).update();
+    }
+
+    private static void insertPage(UUID document, int number, String text) {
+        jdbc.sql("""
+                INSERT INTO document_page (document_id, company_id, number, text, reader_name, reader_version)
+                VALUES (:id, :company, :number, :text, 'pdfbox', '3')""")
+                .param("id", document).param("company", COMPANY).param("number", number).param("text", text).update();
+    }
+
+    private static List<Integer> pagesWithoutText(UUID document) {
+        return List.of((Integer[]) jdbc.sql("SELECT pages_without_text FROM document WHERE id = :id")
+                .param("id", document).query((rs, n) -> rs.getArray(1).getArray()).single());
     }
 
     private static void insertCompany(String name) {
@@ -238,13 +276,21 @@ class MigrationFromPhaseOneIT {
     void migratedWorkerStillFindsTheDocumentOfAProjectDeletedBeforeMigratingButNotItsFilter() {
         ScopedTransactions tx = new ScopedTransactions(database);
         ListDocuments list = new ListDocuments(new PostgresOrganizationRepository(tx),
-                new PostgresProjectMemberRepository(tx), new PostgresDocumentRepository(tx));
+                new PostgresProjectMemberRepository(tx), new PostgresDocumentRepository(tx), new PostgresTopicRepository(tx),
+                new PostgresTaggingRepository(tx));
         Actor worker = new Actor(new UserId(ACTIVE_WORKER), "Persona", Role.WORKER, Set.of(new CompanyId(COMPANY)));
 
-        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty())).extracting(d -> d.id().value())
-                .containsExactly(DOCUMENT_IN_DELETED_PROJECT);
-        assertThatThrownBy(() -> list.execute(worker, Optional.of(new ProjectId(DELETED_PROJECT)), 0,
-                Optional.empty())).isInstanceOf(NotFoundException.class);
+        assertThat(list.execute(worker, Optional.empty(), Optional.empty(), 0, Optional.empty()))
+                .extracting(e -> e.entry().document().id().value())
+                .contains(DOCUMENT_IN_DELETED_PROJECT);
+        assertThatThrownBy(() -> list.execute(worker, Optional.of(new ProjectId(DELETED_PROJECT)),
+                Optional.empty(), 0, Optional.empty())).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void existingDocumentsAreNotSuperseded() {
+        assertThat(jdbc.sql("SELECT superseded_by IS NULL AND superseded_at IS NULL FROM document WHERE id = :id")
+                .param("id", DOCUMENT_IN_DELETED_PROJECT).query(Boolean.class).single()).isTrue();
     }
 
     @Test
@@ -252,5 +298,20 @@ class MigrationFromPhaseOneIT {
         ScopedTransactions tx = new ScopedTransactions(database);
         assertThat(new PostgresProjectMemberRepository(tx).projectsOf(new CompanyId(COMPANY),
                 new UserId(INACTIVE_WORKER))).containsExactly(new ProjectId(PROJECT));
+    }
+
+    @Test
+    void migrationResetsAttemptsOfDocumentsWaitingForReader() {
+        assertThat(jdbc.sql("SELECT attempt_count FROM document WHERE id = :id").param("id", WAITING_FOR_READER)
+                .query(Integer.class).single()).isZero();
+        assertThat(jdbc.sql("SELECT attempt_count FROM document WHERE id = :id").param("id", PROCESSING_LOCALLY)
+                .query(Integer.class).single()).isEqualTo(2);
+    }
+
+    @Test
+    void migrationFillsPagesWithoutTextOfExistingDocuments() {
+        assertThat(pagesWithoutText(MIXED_PDF)).containsExactly(1, 3);
+        assertThat(pagesWithoutText(FLAT_TEXT)).isEmpty();
+        assertThat(pagesWithoutText(DOCUMENT_IN_DELETED_PROJECT)).isEmpty();
     }
 }

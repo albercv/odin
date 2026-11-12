@@ -65,22 +65,38 @@ class ProcessPendingDocumentsTest {
     }
 
     @Test
-    void pdfWithoutTextBecomesPendingReader() {
+    void pdfWithoutTextAwaitsReaderWithZeroAttempts() {
         Document d = upload(DocumentFormat.PDF);
 
         processor(pdfReader(" ", "")).processNext();
 
-        assertThat(docs.get(d.id()).orElseThrow().status()).isEqualTo(DocumentStatus.PENDING_READER);
+        Document after = docs.get(d.id()).orElseThrow();
+        assertThat(after.status()).isEqualTo(DocumentStatus.PENDING_READER);
+        assertThat(after.attemptCount()).isZero();
         assertThat(docs.pagesOf(d.id())).isEmpty();
     }
 
     @Test
-    void imageBecomesPendingReader() {
+    void mixedPdfIsReadyWithItsPagesWithoutText() {
+        Document d = upload(DocumentFormat.PDF);
+
+        processor(pdfReader("uno", " ", "tres", "")).processNext();
+
+        Document after = docs.get(d.id()).orElseThrow();
+        assertThat(after.status()).isEqualTo(DocumentStatus.READY);
+        assertThat(after.pagesWithoutText()).containsExactly(2, 4);
+        assertThat(docs.pagesOf(d.id())).hasSize(4);
+    }
+
+    @Test
+    void imageWithoutLocalReaderAwaitsReaderWithZeroAttempts() {
         Document d = upload(DocumentFormat.IMAGE);
 
         processor(pdfReader("uno")).processNext();
 
-        assertThat(docs.get(d.id()).orElseThrow().status()).isEqualTo(DocumentStatus.PENDING_READER);
+        Document after = docs.get(d.id()).orElseThrow();
+        assertThat(after.status()).isEqualTo(DocumentStatus.PENDING_READER);
+        assertThat(after.attemptCount()).isZero();
     }
 
     private Document failWith(RuntimeException error) {

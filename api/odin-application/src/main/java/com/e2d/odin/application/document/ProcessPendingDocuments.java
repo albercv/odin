@@ -11,7 +11,6 @@ import com.e2d.odin.domain.shared.UnsupportedFormatException;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
 
 public class ProcessPendingDocuments {
 
@@ -48,7 +47,7 @@ public class ProcessPendingDocuments {
         }
         Optional<DocumentTextReader> reader = readers.stream().filter(r -> r.supports(document.format())).findFirst();
         if (reader.isEmpty()) {
-            documents.save(document.markPendingReader());
+            documents.save(document.awaitReader());
             return;
         }
         try {
@@ -62,16 +61,13 @@ public class ProcessPendingDocuments {
     }
 
     private void store(Document document, ReadResult result) {
-        List<String> texts = result.paginated() ? result.pageTexts() : List.of(String.join("\n", result.pageTexts()));
-        if (texts.stream().allMatch(String::isBlank)) {
-            documents.save(document.markPendingReader());
+        List<DocumentPage> pages = DocumentPages.from(document, result);
+        List<Integer> blank = DocumentPages.withoutText(pages);
+        if (blank.size() == pages.size()) {
+            documents.save(document.awaitReader());
             return;
         }
-        List<DocumentPage> pages = IntStream.range(0, texts.size())
-                .mapToObj(i -> new DocumentPage(document.id(), i + 1, texts.get(i), result.readerName(),
-                        result.readerVersion()))
-                .toList();
         documents.replacePages(document.id(), pages);
-        documents.save(document.markReady(result.paginated()));
+        documents.save(document.markReady(result.paginated(), blank));
     }
 }

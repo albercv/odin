@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentPage;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
@@ -174,9 +175,165 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
                 .containsExactlyInAnyOrder("Libre", "Del visible", "Ficha visible");
         assertThat(titles(c, ProjectVisibility.of(Set.of()), Optional.empty())).containsExactly("Libre");
         assertThat(titles(c, ProjectVisibility.all(), Optional.empty())).hasSize(5);
-        assertThat(titles(c, ProjectVisibility.of(Set.of(visible)), Optional.of(hidden))).isEmpty();
-        assertThat(titles(c, ProjectVisibility.of(Set.of(visible)), Optional.of(visible)))
-                .containsExactlyInAnyOrder("Del visible", "Ficha visible");
+        assertThat(titles(c, ProjectVisibility.of(Set.of(visible)), Optional.of(hidden))).containsExactly("Libre");
+    }
+
+    @Test
+    void projectFilterIncludesCompanyWideDocuments() {
+        CompanyId c = newCompany();
+        ProjectId project = newProject(c, "Comunidad Sol");
+        page(c, "Norma interna", DocumentStatus.READY, "la franquicia del seguro");
+        inProject(page(c, "Del proyecto", DocumentStatus.READY, "la franquicia del seguro"), project);
+        assertThat(titles(c, ProjectVisibility.of(Set.of(project)), Optional.of(project)))
+                .containsExactlyInAnyOrder("Norma interna", "Del proyecto");
+    }
+
+    @Test
+    void projectFilterIncludesCompanyWideCards() {
+        CompanyId c = newCompany();
+        ProjectId project = newProject(c, "Comunidad Sol");
+        card(c, CardStatus.APPROVED, "Ficha general", "la franquicia del seguro");
+        cardIn(c, project, "Ficha del proyecto", "la franquicia del seguro");
+        assertThat(titles(c, ProjectVisibility.of(Set.of(project)), Optional.of(project)))
+                .containsExactlyInAnyOrder("Ficha general", "Ficha del proyecto");
+    }
+
+    @Test
+    void projectFilterNeverReturnsAnotherProject() {
+        CompanyId c = newCompany();
+        ProjectId wanted = newProject(c, "Pedido");
+        ProjectId other = newProject(c, "Otro");
+        inProject(page(c, "Del pedido", DocumentStatus.READY, "la franquicia del seguro"), wanted);
+        inProject(page(c, "Del otro", DocumentStatus.READY, "la franquicia del seguro"), other);
+        cardIn(c, other, "Ficha del otro", "la franquicia del seguro");
+        assertThat(titles(c, ProjectVisibility.all(), Optional.of(wanted))).containsExactly("Del pedido");
+    }
+
+    private List<SearchHit> findIn(CompanyId company, int limit, String... terms) {
+        return search.search(new SearchQuery(List.of(terms), CompanyScope.of(company), ProjectVisibility.all(),
+                Optional.empty(), limit)).hits();
+    }
+
+    private void supersede(CompanyId company, Document old, Document current) {
+        docs.markSuperseded(company, old.id(), current.id(), NOW);
+    }
+
+    @Test
+    void supersededHitGoesBehindCurrentOnesEvenWithBetterRank() {
+        CompanyId c = newCompany();
+        Document old = page(c, "Póliza 2022", DocumentStatus.READY, "póliza ATL-4417-2024 franquicia");
+        Document current = page(c, "Póliza 2024", DocumentStatus.READY, "la póliza vigente");
+        supersede(c, old, current);
+        List<SearchHit> hits = findIn(c, 5, "ATL-4417-2024", "póliza");
+        assertThat(hits).extracting(SearchHit::title).containsExactly("Póliza 2024", "Póliza 2022");
+        assertThat(hits.get(1).rank()).isGreaterThanOrEqualTo(100);
+        assertThat(hits.get(1).superseded()).isTrue();
+        assertThat(hits.get(1).replacement()).contains(DocumentRef.of(current));
+        assertThat(hits.get(0).superseded()).isFalse();
+        assertThat(hits.get(0).replacement()).isEmpty();
+    }
+
+    @Test
+    void topFiveAreTheSameWithAndWithoutMarks() {
+        CompanyId c = newCompany();
+        List<Document> candidates = java.util.stream.IntStream.range(0, 7).mapToObj(i -> page(c, "Doc " + i,
+                DocumentStatus.READY, "franquicia ".repeat(7 - i) + "texto de relleno largo para variar")).toList();
+        Document current = page(c, "Vigente", DocumentStatus.READY, "otra cosa");
+        Set<String> before = findIn(c, 5, "franquicia").stream().map(h -> h.sourceId().toString())
+                .collect(java.util.stream.Collectors.toSet());
+        supersede(c, candidates.get(0), current);
+        supersede(c, candidates.get(2), current);
+        List<SearchHit> after = findIn(c, 5, "franquicia");
+        assertThat(after).hasSize(5);
+        assertThat(after.stream().map(h -> h.sourceId().toString()).collect(java.util.stream.Collectors.toSet()))
+                .isEqualTo(before);
+    }
+
+    @Test
+    void supersededAndCurrentKeepTheirRelativeOrder() {
+        CompanyId c = newCompany();
+        Document a = page(c, "A", DocumentStatus.READY, "la franquicia");
+        page(c, "B", DocumentStatus.READY, "la franquicia");
+        Document cc = page(c, "C", DocumentStatus.READY, "la franquicia");
+        page(c, "D", DocumentStatus.READY, "la franquicia");
+        Document current = page(c, "Vigente", DocumentStatus.READY, "otra cosa");
+        supersede(c, a, current);
+        supersede(c, cc, current);
+        assertThat(findIn(c, 5, "franquicia")).extracting(SearchHit::title).containsExactly("B", "D", "A", "C");
+    }
+
+    @Test
+    void replacementIsTheEndOfTheChain() {
+        CompanyId c = newCompany();
+        Document a = page(c, "A 2022", DocumentStatus.READY, "zafiro");
+        Document b = page(c, "B 2023", DocumentStatus.READY, "otra cosa");
+        Document last = page(c, "C 2024", DocumentStatus.READY, "algo distinto");
+        supersede(c, a, b);
+        supersede(c, b, last);
+        List<SearchHit> hits = findIn(c, 5, "zafiro");
+        assertThat(hits).hasSize(1);
+        assertThat(hits.get(0).superseded()).isTrue();
+        assertThat(hits.get(0).replacement()).contains(DocumentRef.of(last));
+    }
+
+    @Test
+    void replacementIsNullWhenTheWorkerCannotSeeIt() {
+        CompanyId c = newCompany();
+        ProjectId closed = newProject(c, "Cerrado");
+        Document old = page(c, "Viejo", DocumentStatus.READY, "zafiro");
+        Document current = page(c, "Nuevo", DocumentStatus.READY, "otra cosa");
+        inProject(current, closed);
+        forceMark(old, current);
+        SearchQuery blind = new SearchQuery(List.of("zafiro"), CompanyScope.of(c), ProjectVisibility.of(Set.of()),
+                Optional.empty(), 5);
+        List<SearchHit> hits = search.search(blind).hits();
+        assertThat(hits).hasSize(1);
+        assertThat(hits.get(0).superseded()).isTrue();
+        assertThat(hits.get(0).replacement()).isEmpty();
+        SearchQuery member = new SearchQuery(List.of("zafiro"), CompanyScope.of(c),
+                ProjectVisibility.of(Set.of(closed)), Optional.empty(), 5);
+        assertThat(search.search(member).hits().get(0).replacement()).contains(DocumentRef.of(current));
+    }
+
+    @Test
+    void replacementOfAnotherCompanyIsNeverReturned() {
+        CompanyId c = newCompany();
+        Document old = page(c, "Viejo", DocumentStatus.READY, "zafiro");
+        Document foreign = page(newCompany(), "Ajeno", DocumentStatus.READY, "otra cosa");
+        forceMarkAcrossCompanies(old, foreign);
+        for (CompanyScope scope : List.of(CompanyScope.of(c), CompanyScope.all())) {
+            List<SearchHit> hits = find(scope, "zafiro");
+            assertThat(hits).hasSize(1);
+            assertThat(hits.get(0).replacement()).isEmpty();
+        }
+    }
+
+    @Test
+    void restrictedProjectDocumentsStayInvisibleMarkedOrNot() {
+        CompanyId c = newCompany();
+        ProjectId closed = newProject(c, "Cerrado");
+        Document hiddenOld = page(c, "Oculto viejo", DocumentStatus.READY, "la franquicia");
+        Document hiddenNew = page(c, "Oculto nuevo", DocumentStatus.READY, "la franquicia");
+        inProject(hiddenOld, closed);
+        inProject(hiddenNew, closed);
+        page(c, "Libre", DocumentStatus.READY, "la franquicia");
+        supersede(c, hiddenOld, hiddenNew);
+        assertThat(titles(c, ProjectVisibility.of(Set.of()), Optional.empty())).containsExactly("Libre");
+        assertThat(titles(c, ProjectVisibility.of(Set.of(closed)), Optional.empty())).hasSize(3);
+    }
+
+    @Test
+    void cardsAreNeverSupersededAndStayAmongCurrent() {
+        CompanyId c = newCompany();
+        Document old = page(c, "Viejo", DocumentStatus.READY, "póliza ATL-4417-2024");
+        Document current = page(c, "Nuevo", DocumentStatus.READY, "otra cosa");
+        card(c, CardStatus.APPROVED, "Ficha", "la póliza en general");
+        supersede(c, old, current);
+        List<SearchHit> hits = findIn(c, 5, "ATL-4417-2024", "póliza");
+        assertThat(hits).extracting(SearchHit::title).containsExactly("Ficha", "Viejo");
+        assertThat(hits.get(0).sourceType()).isEqualTo(SourceType.KNOWLEDGE_CARD);
+        assertThat(hits.get(0).superseded()).isFalse();
+        assertThat(hits.get(0).replacement()).isEmpty();
     }
 
     private List<String> titles(CompanyId company, ProjectVisibility visibility, Optional<ProjectId> project) {
@@ -187,7 +344,7 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     private void inProject(Document d, ProjectId project) {
         docs.save(new Document(d.id(), d.companyId(), Optional.of(project), d.title(), d.filename(), d.format(),
                 d.sha256(), d.status(), d.failureReason(), d.paginated(), d.uploadedBy(), d.uploadedAt(),
-                d.processingStartedAt(), 0));
+                d.processingStartedAt(), 0, Optional.empty(), Optional.empty()));
     }
 
     private void cardIn(CompanyId company, ProjectId project, String title, String body) {

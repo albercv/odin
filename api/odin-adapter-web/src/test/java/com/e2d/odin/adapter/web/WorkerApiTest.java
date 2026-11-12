@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.search.SearchHit;
@@ -35,7 +36,7 @@ class WorkerApiTest extends WebTestSupport {
     void searchReturnsHitsAndNoSource() throws Exception {
         String key = workerKey(newCompany());
         w.search.returns(new SearchResult(List.of(new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(),
-                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5))));
+                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty()))));
         mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"queries\":[\"vacaciones\"]}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.noSource").value(false))
@@ -97,6 +98,14 @@ class WorkerApiTest extends WebTestSupport {
     }
 
     @Test
+    void readPageIncludesReaderName() throws Exception {
+        CompanyId company = newCompany();
+        Document doc = Fixtures.readyDocument(w.docs, company, "Acta escaneada");
+        mvc.perform(get("/v1/documents/" + doc.id().value() + "/pages/1").header(AUTH, workerKey(company)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.readerName").value("stub"));
+    }
+
+    @Test
     void readsPagesAndVerifiesCitations() throws Exception {
         CompanyId company = newCompany();
         String key = workerKey(company);
@@ -111,6 +120,52 @@ class WorkerApiTest extends WebTestSupport {
                 .content(quote.formatted("vacaciones  SON 22"))).andExpect(jsonPath("$.verified").value(true));
         mvc.perform(post("/v1/citations/verify").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content(quote.formatted("vacaciones son 23"))).andExpect(jsonPath("$.verified").value(false));
+    }
+
+    @Test
+    void searchHitCarriesSupersededAndReplacement() throws Exception {
+        String key = workerKey(newCompany());
+        Document current = Fixtures.readyDocument(w.docs, newCompany(), "vigente");
+        w.search.returns(new SearchResult(List.of(
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Viejo", Optional.of(1), true,
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, true, Optional.of(DocumentRef.of(current))),
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Sin ver", Optional.of(1), true,
+                        Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.4, true, Optional.empty()))));
+        mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"x\"]}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.hits[0].superseded").value(true))
+                .andExpect(jsonPath("$.hits[0].replacement.documentId").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.hits[0].replacement.title").value(current.title()))
+                .andExpect(jsonPath("$.hits[1].superseded").value(true))
+                .andExpect(jsonPath("$.hits[1].replacement").doesNotExist());
+    }
+
+    @Test
+    void pageCarriesSupersededAndReplacement() throws Exception {
+        CompanyId company = newCompany();
+        String key = workerKey(company);
+        Document old = Fixtures.readyDocument(w.docs, company, "viejo");
+        Document current = Fixtures.readyDocument(w.docs, company, "vigente");
+        w.docs.markSuperseded(company, old.id(), current.id(), Fixtures.NOW);
+        mvc.perform(get("/v1/documents/" + old.id().value() + "/pages/1").header(AUTH, key))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.superseded").value(true))
+                .andExpect(jsonPath("$.replacement.documentId").value(current.id().value().toString()))
+                .andExpect(jsonPath("$.replacement.title").value(current.title()));
+        mvc.perform(get("/v1/documents/" + current.id().value() + "/pages/1").header(AUTH, key))
+                .andExpect(jsonPath("$.superseded").value(false)).andExpect(jsonPath("$.replacement").doesNotExist());
+    }
+
+    @Test
+    void workerListingCarriesSupersededAndReplacement() throws Exception {
+        CompanyId company = newCompany();
+        Document old = Fixtures.readyDocument(w.docs, company, "viejo");
+        Document current = Fixtures.readyDocument(w.docs, company, "vigente");
+        w.docs.markSuperseded(company, old.id(), current.id(), Fixtures.NOW);
+        mvc.perform(get("/v1/documents").header(AUTH, workerKey(company))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='" + old.id().value() + "')].superseded").value(true))
+                .andExpect(jsonPath("$[?(@.id=='" + old.id().value() + "')].replacement.documentId")
+                        .value(current.id().value().toString()))
+                .andExpect(jsonPath("$[?(@.id=='" + current.id().value() + "')].superseded").value(false));
     }
 
     @Test
@@ -149,5 +204,30 @@ class WorkerApiTest extends WebTestSupport {
         mvc.perform(get("/v1/documents?projectId=" + project.value()).header(AUTH, key))
                 .andExpect(status().isOk());
         mvc.perform(get("/v1/me").header(AUTH, key)).andExpect(jsonPath("$.projects", hasSize(1)));
+    }
+
+    @Test
+    void listDocumentsByTopic() throws Exception {
+        CompanyId company = newCompany();
+        var water = new com.e2d.odin.domain.topic.Topic(new com.e2d.odin.domain.topic.TopicId(UUID.randomUUID()),
+                company, "Agua", "Fugas");
+        w.topics.save(water);
+        Document tagged = Fixtures.readyDocument(w.docs, company, "uno");
+        Fixtures.readyDocument(w.docs, company, "dos");
+        w.tagging.seed(tagged.id(), water.id(), com.e2d.odin.domain.topic.TopicSource.AI,
+                com.e2d.odin.domain.topic.TopicState.ACTIVE);
+        String key = workerKey(company);
+
+        mvc.perform(get("/v1/documents?topicId=" + water.id().value()).header(AUTH, key)).andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].id").value(tagged.id().value().toString()))
+                .andExpect(jsonPath("$[0].topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$[0].topics[0].source").value("AI"));
+        mvc.perform(get("/v1/documents").header(AUTH, key)).andExpect(jsonPath("$", hasSize(2)));
+        mvc.perform(get("/v1/documents?topicId=" + UUID.randomUUID()).header(AUTH, key))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("Tema no encontrado"));
+        mvc.perform(get("/v1/me").header(AUTH, key)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$.topics[0].definition").value("Fugas"))
+                .andExpect(jsonPath("$.tagging.pendingDocuments").value(2));
     }
 }

@@ -22,6 +22,9 @@ public final class Requests {
     public record Name(String name) {
     }
 
+    public record SupersedeRequest(@Schema(description = "El documento que lo sustituye entero.") UUID replacementId) {
+    }
+
     public record Capabilities(Set<Capability> capabilities) {
     }
 
@@ -40,6 +43,12 @@ public final class Requests {
     public record UpdateProject(String name,
             @Schema(description = "Verdadero: solo lo ven sus miembros. Falso: visible para toda la empresa.")
             Boolean restricted) {
+    }
+
+    public record TopicRequest(String name, String definition) {
+    }
+
+    public record TopicPatch(String name, String definition) {
     }
 
     public record UpdateMember(Set<Role> roles, Boolean active, String password) {

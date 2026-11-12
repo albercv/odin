@@ -1,0 +1,15 @@
+# Solo lo usa deploy/demo/run-demo.sh: añade el etiquetador de prueba a la pila de la demostración.
+services:
+  tagger-stub:
+    image: node:24
+    command: ["node", "/app/tagger-stub.mjs"]
+    volumes:
+      - ./demo/tagger-stub.mjs:/app/tagger-stub.mjs:ro
+  api:
+    depends_on:
+      - tagger-stub
+    environment:
+      ODIN_TAGGER_URL: http://tagger-stub:11434
+      ODIN_TAGGER_MODEL: stub
+      ODIN_TAGGER_WINDOW: always
+      ODIN_TAGGER_POLL_INTERVAL: PT2S

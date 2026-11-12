@@ -14,6 +14,7 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
+import com.e2d.odin.domain.topic.TopicId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -65,10 +66,11 @@ public class WorkerController {
 
     @GetMapping("/v1/documents")
     public List<Responses.WorkerDocumentView> documents(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @RequestParam(required = false) UUID projectId, @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(required = false) Integer limit) {
-        return listDocuments.execute(actor, Optional.ofNullable(projectId).map(ProjectId::new), offset,
-                Optional.ofNullable(limit)).stream().map(Responses.WorkerDocumentView::from).toList();
+            @RequestParam(required = false) UUID projectId, @RequestParam(required = false) UUID topicId,
+            @RequestParam(defaultValue = "0") int offset, @RequestParam(required = false) Integer limit) {
+        return listDocuments.execute(actor, Optional.ofNullable(projectId).map(ProjectId::new),
+                Optional.ofNullable(topicId).map(TopicId::new), offset, Optional.ofNullable(limit)).stream()
+                .map(Responses.WorkerDocumentView::from).toList();
     }
 
     @GetMapping("/v1/documents/{documentId}/pages/{pageNumber}")

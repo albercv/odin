@@ -1,0 +1,50 @@
+[
+ {
+  "doc": "c1-olmo14/caso-2026-003-montante-fontaneria.txt",
+  "caso": "Caso 2026-003",
+  "agua": true,
+  "motivo": "Rotura de un montante de fontanería en el patinillo, con pérdida de caudal de suministro."
+ },
+ {
+  "doc": "c1-olmo14/caso-2026-011-pluviales-terraza.txt",
+  "caso": "Caso 2026-011",
+  "agua": true,
+  "motivo": "Red de pluviales de una terraza con sumidero sifónico colmatado y rebose sobre el pavimento."
+ },
+ {
+  "doc": "c1-olmo14/caso-2026-016-ventilacion-garaje-co.txt",
+  "caso": "Caso 2026-016",
+  "agua": false,
+  "motivo": "Fallo del sistema de ventilación y detección de CO del garaje; sin relación con instalaciones hidráulicas."
+ },
+ {
+  "doc": "c2-almendros/caso-2026-008-grupo-presion.txt",
+  "caso": "Caso 2026-008",
+  "agua": true,
+  "motivo": "Avería del grupo de presión del suministro: bomba, presostato y depósito hidroneumático."
+ },
+ {
+  "doc": "c2-almendros/caso-2026-013-depuradora-electrica.txt",
+  "caso": "Caso 2026-013",
+  "agua": false,
+  "motivo": "Avería eléctrica del cuadro de la depuradora de la piscina; el fallo es de motor y protecciones, sin pérdida de líquido."
+ },
+ {
+  "doc": "c3-puerto3/caso-2026-005-acumulador-acs.txt",
+  "caso": "Caso 2026-005",
+  "agua": true,
+  "motivo": "Perforación por corrosión del depósito de acumulación de ACS en el cuarto de calderas, con vertido sobre el pavimento."
+ },
+ {
+  "doc": "c3-puerto3/caso-2026-012-bomba-achique-sotano.txt",
+  "caso": "Caso 2026-012",
+  "agua": true,
+  "motivo": "Fallo de la bomba de achique del foso de bombeo del sótano por bloqueo del flotador, con ascenso del nivel freático."
+ },
+ {
+  "doc": "c3-puerto3/caso-2026-020-fisura-asiento-cuarto-instalaciones.txt",
+  "caso": "Caso 2026-020",
+  "agua": false,
+  "motivo": "Fisura por asiento diferencial en el muro del cuarto de instalaciones; se descarta expresamente la entrada de líquido."
+ }
+]

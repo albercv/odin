@@ -41,7 +41,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         {page === 'companies' && <Companies onOpen={open} />}
         {needsCompany && !companyId && <p>Elige primero una empresa en «Empresas».</p>}
         {needsCompany && companyId && page === 'company' && <Company key={companyId} companyId={companyId} me={me} />}
-        {needsCompany && companyId && page === 'documents' && <Documents key={companyId} companyId={companyId} />}
+        {needsCompany && companyId && page === 'documents' && <Documents key={companyId} companyId={companyId} scannedDocumentsSupported={me.scannedDocumentsSupported} />}
         {needsCompany && companyId && page === 'review' && <Review key={companyId} companyId={companyId} onPendingChanged={setPending} />}
       </main>
     </div>

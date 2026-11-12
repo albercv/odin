@@ -10,6 +10,8 @@ import com.e2d.odin.adapter.postgres.PostgresMembershipRepository;
 import com.e2d.odin.adapter.postgres.PostgresOrganizationRepository;
 import com.e2d.odin.adapter.postgres.PostgresProjectMemberRepository;
 import com.e2d.odin.adapter.postgres.PostgresQuestionLog;
+import com.e2d.odin.adapter.postgres.PostgresTaggingRepository;
+import com.e2d.odin.adapter.postgres.PostgresTopicRepository;
 import com.e2d.odin.adapter.postgres.PostgresUserRepository;
 import com.e2d.odin.adapter.postgres.ScopedTransactions;
 import com.e2d.odin.adapter.readers.MagicBytesFormatDetector;
@@ -32,7 +34,9 @@ import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
+import com.e2d.odin.application.port.TaggingRepository;
 import com.e2d.odin.application.port.TokenGenerator;
+import com.e2d.odin.application.port.TopicRepository;
 import com.e2d.odin.application.port.UserRepository;
 import java.nio.file.Path;
 import javax.sql.DataSource;
@@ -99,6 +103,16 @@ public class AdapterConfiguration {
     @Bean
     QuestionLog questionLog(ScopedTransactions tx) {
         return new PostgresQuestionLog(tx);
+    }
+
+    @Bean
+    TopicRepository topicRepository(ScopedTransactions tx) {
+        return new PostgresTopicRepository(tx);
+    }
+
+    @Bean
+    TaggingRepository taggingRepository(ScopedTransactions tx) {
+        return new PostgresTaggingRepository(tx);
     }
 
     @Bean

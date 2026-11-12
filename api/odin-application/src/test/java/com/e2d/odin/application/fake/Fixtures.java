@@ -28,6 +28,14 @@ public final class Fixtures {
     private Fixtures() {
     }
 
+    /** El caso de uso con repositorios de temas vacíos, para quien no los mira. */
+    public static com.e2d.odin.application.organization.DescribeMe describeMe(InMemoryOrganizationRepository orgs,
+            InMemoryProjectMemberRepository members) {
+        InMemoryTopicRepository topics = new InMemoryTopicRepository();
+        return new com.e2d.odin.application.organization.DescribeMe(orgs, members, topics,
+                new InMemoryTaggingRepository(orgs, new InMemoryDocumentRepository(), topics));
+    }
+
     public static CompanyId company(InMemoryOrganizationRepository orgs) {
         return companyWith(orgs, EnumSet.allOf(Capability.class));
     }
@@ -63,7 +71,7 @@ public final class Fixtures {
         Document d = readyDocument(docs, company, pageText);
         Document inProject = new Document(d.id(), company, Optional.of(project), d.title(), d.filename(), d.format(),
                 d.sha256(), d.status(), d.failureReason(), d.paginated(), d.uploadedBy(), d.uploadedAt(),
-                d.processingStartedAt(), d.attemptCount());
+                d.processingStartedAt(), d.attemptCount(), Optional.empty(), Optional.empty());
         docs.save(inProject);
         return inProject;
     }
@@ -79,7 +87,7 @@ public final class Fixtures {
     public static Document document(InMemoryDocumentRepository docs, CompanyId company, DocumentStatus status) {
         Document d = new Document(new DocumentId(UUID.randomUUID()), company, Optional.empty(), "Manual", "manual.pdf",
                 DocumentFormat.PDF, UUID.randomUUID().toString(), status, Optional.empty(), true,
-                new UserId(UUID.randomUUID()), NOW, Optional.empty(), 0);
+                new UserId(UUID.randomUUID()), NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
         docs.save(d);
         return d;
     }

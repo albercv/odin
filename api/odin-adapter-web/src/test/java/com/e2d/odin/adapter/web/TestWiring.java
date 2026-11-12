@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.web;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
@@ -15,6 +16,8 @@ import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.InMemoryQuestionLog;
+import com.e2d.odin.application.fake.InMemoryTaggingRepository;
+import com.e2d.odin.application.fake.InMemoryTopicRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.ScriptedKnowledgeSearch;
@@ -60,11 +63,21 @@ import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
+import com.e2d.odin.application.topic.CreateTopic;
+import com.e2d.odin.application.topic.DeleteTopic;
+import com.e2d.odin.application.topic.GetTaggingStatus;
+import com.e2d.odin.application.topic.ListDocumentTopics;
+import com.e2d.odin.application.topic.ListTopics;
+import com.e2d.odin.application.topic.ReviewDocumentTopics;
+import com.e2d.odin.application.shared.TaggingWindow;
+import com.e2d.odin.application.topic.UpdateTopic;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.document.DocumentFormat;
 import java.time.Clock;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
@@ -81,6 +94,8 @@ public class TestWiring {
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
+    final InMemoryTopicRepository topics = new InMemoryTopicRepository();
+    final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
     final ScriptedKnowledgeSearch search = new ScriptedKnowledgeSearch();
     final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     final MutableClock clock = new MutableClock();
@@ -90,6 +105,10 @@ public class TestWiring {
     final FakeSecretHasher secrets = new FakeSecretHasher();
     final FakePasswordHasher passwords = new FakePasswordHasher();
     final InMemoryOriginalFileStore files = new InMemoryOriginalFileStore();
+
+    @Bean InstallationSettings installationSettings() {
+        return new InstallationSettings("setup-secret", true);
+    }
 
     @Bean Clock clock() {
         return clock;
@@ -216,7 +235,7 @@ public class TestWiring {
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {
-        return new ListCompanyDocuments(docs);
+        return new ListCompanyDocuments(docs, topics, tagging);
     }
 
     @Bean GetDocument getDocument() {
@@ -225,6 +244,10 @@ public class TestWiring {
 
     @Bean RetryDocument retryDocument() {
         return new RetryDocument(docs);
+    }
+
+    @Bean SupersedeDocument supersedeDocument() {
+        return new SupersedeDocument(docs, clock);
     }
 
     @Bean ListCardsForReview listCardsForReview() {
@@ -240,7 +263,7 @@ public class TestWiring {
     }
 
     @Bean DescribeMe describeMe() {
-        return new DescribeMe(orgs, projectMembers);
+        return new DescribeMe(orgs, projectMembers, topics, tagging);
     }
 
     @Bean SearchKnowledge searchKnowledge() {
@@ -248,7 +271,7 @@ public class TestWiring {
     }
 
     @Bean ListDocuments listDocuments() {
-        return new ListDocuments(orgs, projectMembers, docs);
+        return new ListDocuments(orgs, projectMembers, docs, topics, tagging);
     }
 
     @Bean ReadPage readPage() {
@@ -257,5 +280,37 @@ public class TestWiring {
 
     @Bean VerifyCitation verifyCitation() {
         return new VerifyCitation(orgs, projectMembers, docs);
+    }
+
+    @Bean CreateTopic createTopic() {
+        return new CreateTopic(orgs, topics, ids);
+    }
+
+    @Bean UpdateTopic updateTopic() {
+        return new UpdateTopic(topics);
+    }
+
+    @Bean DeleteTopic deleteTopic() {
+        return new DeleteTopic(topics, clock);
+    }
+
+    @Bean ListTopics listTopics() {
+        return new ListTopics(topics);
+    }
+
+    @Bean ReviewDocumentTopics reviewDocumentTopics() {
+        return new ReviewDocumentTopics(docs, topics, tagging, clock);
+    }
+
+    @Bean ListDocumentTopics listDocumentTopics() {
+        return new ListDocumentTopics(docs, topics, tagging, users);
+    }
+
+    @Bean TaggingWindow taggingWindow() {
+        return TaggingWindow.between(LocalTime.of(22, 0), LocalTime.of(7, 0), ZoneId.of("Europe/Madrid"));
+    }
+
+    @Bean GetTaggingStatus getTaggingStatus() {
+        return new GetTaggingStatus(tagging, taggingWindow());
     }
 }

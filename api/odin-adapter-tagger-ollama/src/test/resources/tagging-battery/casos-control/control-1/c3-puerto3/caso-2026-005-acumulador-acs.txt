@@ -1,0 +1,42 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS AVENIDA DEL PUERTO 3
+
+DATOS DEL CASO
+Número de caso: Caso 2026-005
+Comunidad: Comunidad de Propietarios Avenida del Puerto 3, Puerto Albar
+Tipo de incidencia: avería en instalación común de producción de ACS
+Fecha de apertura: 19 de enero de 2026
+Comunicante: presidenta de la Comunidad
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 19 de enero de 2026 la presidenta de la Comunidad comunicó al despacho, por correo electrónico acompañado de fotografías, que en el cuarto de calderas del sótano se observaba un vertido continuo bajo el depósito de acumulación de ACS, con pérdida de temperatura del suministro caliente en las viviendas por las mañanas. El acumulador es de acero vitrificado de 1.500 litros, con serpentín interior, ánodo de magnesio y aislamiento de espuma de poliuretano con forro de chapa. La empresa de mantenimiento de calderas describió el daño como una perforación por corrosión en la parte inferior de la virola, junto a la soldadura del fondo, con el ánodo de sacrificio agotado.
+
+ACTUACIONES REALIZADAS
+- 20 de enero de 2026: el administrador registra la incidencia y avisa a la empresa de mantenimiento de calderas.
+- 21 de enero de 2026: visita al cuarto de calderas. Se cierran las válvulas de entrada y salida del acumulador y se retira parte del forro para localizar el punto del vertido.
+- 22 de enero de 2026: se comprueba que el ánodo estaba consumido por completo y que el vitrificado presentaba desprendimientos en el fondo.
+- 26 de enero de 2026: la empresa entrega presupuesto para la sustitución del acumulador por otro de la misma capacidad, con ánodo de corriente impresa, y para la renovación del vaso de expansión.
+
+DOCUMENTACIÓN ARCHIVADA
+- Correo electrónico de la presidenta con las fotografías del cuarto de calderas.
+- Informe de la empresa de mantenimiento con fotografías de la perforación.
+- Presupuesto de la empresa, de 26 de enero de 2026.
+=== Página 2 ===
+RESOLUCIÓN
+La empresa retiró el acumulador dañado, que tuvo que trocearse en el cuarto por no pasar por la puerta, e instaló uno nuevo de acero vitrificado de 1.500 litros con ánodo de corriente impresa, válvula de seguridad tarada a diez bares, vaso de expansión nuevo y aislamiento de espuma. Se reconectaron el serpentín primario y el circuito de recirculación. La Comunidad abonó 4.280 euros por los trabajos, con cargo al fondo de reserva. Se ejecutaron entre el 2 y el 5 de febrero de 2026, con un corte del suministro caliente de tres días. La empresa emitió el parte de trabajo, el certificado de la prueba de presión y la factura.
+
+SEGUIMIENTO
+El 9 de febrero de 2026 el técnico comprobó la temperatura de acumulación y la de retorno de la recirculación, con valores de diseño, y verificó que el pavimento del cuarto permanecía seco tras cuarenta y ocho horas. La presidenta confirmó que había vuelto el suministro caliente por las mañanas. El administrador comunicó por escrito el cierre y propuso incluir la inspección anual del ánodo en el contrato de mantenimiento de calderas.
+
+RESULTADO
+Cerrado el 12 de febrero de 2026. La reparación quedó a cargo de la Comunidad por tratarse de un elemento común. El nuevo acumulador funciona con temperaturas de diseño.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Parte de trabajo, certificado de la prueba de presión y factura de la empresa.
+- Fotografías del cuarto de calderas tras la sustitución.
+- Registro de temperaturas del 9 de febrero de 2026.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

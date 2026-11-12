@@ -1,0 +1,16 @@
+{
+  "pages": [
+    {
+      "number": 1,
+      "text": "Texto de ejemplo de la primera página."
+    },
+    {
+      "number": 2,
+      "text": ""
+    }
+  ],
+  "reader": {
+    "name": "unlimited-ocr-2",
+    "version": "mlx-community/Unlimited-OCR-2-8bit; uocr 0.1.0"
+  }
+}

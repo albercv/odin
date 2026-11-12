@@ -1,0 +1,4 @@
+{
+  "error": "bad_request",
+  "detail": "Falta el campo file o el cuerpo no es multipart/form-data."
+}

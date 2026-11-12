@@ -1,0 +1,43 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS ALMENDROS
+
+DATOS DEL CASO
+Número de caso: Caso 2026-008
+Comunidad: Residencial Los Almendros
+Tipo de incidencia: avería en instalación común de abastecimiento
+Fecha de apertura: 23 de enero de 2026
+Comunicante: vocal de la junta, encargado de las instalaciones
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 23 de enero de 2026 el vocal encargado de las instalaciones comunicó al despacho, por teléfono y después por escrito, que varias viviendas de la parte alta de la urbanización sufrían caídas de presión en el suministro por las mañanas, y que desde el cuarto de bombas se oía un arranque y parada muy frecuentes de la bomba principal. El grupo de presión consta de dos bombas centrífugas multicelulares en paralelo, un depósito hidroneumático de 500 litros, un presostato y un cuadro de maniobra con alternancia. El técnico describió el defecto como una pérdida de precarga de la membrana del depósito hidroneumático, junto con un presostato descalibrado, lo que provocaba ciclos cortos de arranque.
+
+ACTUACIONES REALIZADAS
+- 24 de enero de 2026: el administrador registra la incidencia y pide visita a la empresa de mantenimiento de instalaciones de la urbanización.
+- 27 de enero de 2026: primera visita del técnico, que mide la presión de precarga del depósito con el circuito vacío y obtiene un valor muy inferior al de diseño.
+- 29 de enero de 2026: el técnico comprueba que la bomba de reserva no arrancaba por un térmico disparado en el cuadro de maniobra y registra los tiempos de ciclo de la bomba principal.
+- 2 de febrero de 2026: se entrega presupuesto para sustituir el depósito hidroneumático, el presostato y el térmico de la bomba de reserva.
+
+DOCUMENTACIÓN ARCHIVADA
+- Comunicación escrita del vocal encargado de las instalaciones.
+- Informe del técnico con los valores de precarga y los tiempos de ciclo.
+- Presupuesto del técnico, de 2 de febrero de 2026.
+- Aviso a los vecinos sobre el corte del suministro.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico sustituyó el depósito hidroneumático de membrana por otro de 500 litros con precarga de dos con ocho bares, instaló un presostato nuevo y rearmó y ajustó el relé térmico de la bomba de reserva. Se reprogramó la alternancia de las bombas y se fijaron las presiones de arranque y parada. La Comunidad abonó 2.350 euros por los trabajos, con cargo al fondo de reserva. Se ejecutaron el 9 y el 10 de febrero de 2026, con un corte de suministro de cuatro horas en horario de mañana. La empresa emitió el parte de trabajo, la prueba de funcionamiento y la factura.
+
+SEGUIMIENTO
+El 16 de febrero de 2026 el técnico registró durante una jornada los arranques de ambas bombas y comprobó que el número de ciclos por hora era el de diseño y que la presión en la vivienda más alta se mantenía constante. El vocal encargado de las instalaciones verificó la lectura del manómetro en persona. El 23 de febrero de 2026 los vecinos de la parte alta confirmaron que habían desaparecido las caídas de presión. El administrador informó a la junta por escrito de la resolución.
+
+RESULTADO
+Cerrado el 25 de febrero de 2026. La reparación quedó a cargo de la Comunidad por tratarse de un elemento común. El grupo de presión funciona con alternancia de bombas y sin avisos.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Parte de trabajo, prueba de funcionamiento y factura del técnico.
+- Registro de ciclos de las bombas del 16 de febrero de 2026.
+- Manual del fabricante del nuevo depósito.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

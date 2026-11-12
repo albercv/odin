@@ -35,6 +35,115 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/topics/{topicId}" : {
+      "put" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "addTopic",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "removeTopic",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/documents/{documentId}/superseded-by" : {
+      "put" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "supersede",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SupersedeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "unsupersede",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/projects/{projectId}/members/{userId}" : {
       "put" : {
         "tags" : [ "project-member-controller" ],
@@ -320,6 +429,26 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/topics/retag" : {
+      "post" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "retag",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
+          }
+        }
+      }
+    },
     "/v1/admin/documents/{documentId}/retry" : {
       "post" : {
         "tags" : [ "admin-document-controller" ],
@@ -387,6 +516,71 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CompanyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/topics" : {
+      "get" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "listTopics",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TopicView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "createTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TopicRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopicView"
                 }
               }
             }
@@ -848,6 +1042,77 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/topics/{topicId}" : {
+      "delete" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "deleteTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "topic-controller" ],
+        "operationId" : "updateTopic",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topicId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TopicPatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopicView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/projects/{projectId}" : {
       "delete" : {
         "tags" : [ "company-controller" ],
@@ -1039,6 +1304,14 @@
             "format" : "uuid"
           }
         }, {
+          "name" : "topicId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
           "name" : "offset",
           "in" : "query",
           "required" : false,
@@ -1146,6 +1419,60 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/documents/{documentId}/topics" : {
+      "get" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "documentTopics",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentTopicsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/tagging-status" : {
+      "get" : {
+        "tags" : [ "document-topic-controller" ],
+        "operationId" : "taggingStatus",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TaggingStatusView"
                 }
               }
             }
@@ -1302,6 +1629,112 @@
           }
         }
       },
+      "SupersedeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "replacementId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "El documento que lo sustituye entero."
+          }
+        }
+      },
+      "DocumentLink" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "title" ]
+      },
+      "DocumentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "companyId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "format" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "paginated" : {
+            "type" : "boolean"
+          },
+          "uploadedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "attemptCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "supersededBy" : {
+            "$ref" : "#/components/schemas/DocumentLink"
+          },
+          "supersededAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "pagesWithoutText" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
+          },
+          "taggingStatus" : {
+            "type" : "string"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicLabelView"
+            }
+          }
+        },
+        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
+      },
+      "TopicLabelView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name", "source" ]
+      },
       "Capabilities" : {
         "type" : "object",
         "properties" : {
@@ -1436,9 +1869,28 @@
           "rank" : {
             "type" : "number",
             "format" : "double"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
           }
         },
-        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "title" ]
+        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
+      },
+      "Replacement" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "title" ]
       },
       "SearchResponse" : {
         "type" : "object",
@@ -1522,50 +1974,6 @@
           }
         }
       },
-      "DocumentView" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "companyId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "projectId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "title" : {
-            "type" : "string"
-          },
-          "filename" : {
-            "type" : "string"
-          },
-          "format" : {
-            "type" : "string"
-          },
-          "status" : {
-            "type" : "string"
-          },
-          "failureReason" : {
-            "type" : "string"
-          },
-          "paginated" : {
-            "type" : "boolean"
-          },
-          "uploadedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "attemptCount" : {
-            "type" : "integer",
-            "format" : "int32"
-          }
-        },
-        "required" : [ "attemptCount", "companyId", "filename", "format", "id", "paginated", "status", "title", "uploadedAt" ]
-      },
       "NewCompany" : {
         "type" : "object",
         "properties" : {
@@ -1577,6 +1985,33 @@
             "description" : "De 2 a 6 letras mayúsculas o cifras; único en el grupo."
           }
         }
+      },
+      "TopicRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
+          }
+        }
+      },
+      "TopicView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "definition", "id", "name" ]
       },
       "Name" : {
         "type" : "object",
@@ -1843,6 +2278,17 @@
           }
         }
       },
+      "TopicPatch" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "definition" : {
+            "type" : "string"
+          }
+        }
+      },
       "UpdateProject" : {
         "type" : "object",
         "properties" : {
@@ -1896,9 +2342,18 @@
             "items" : {
               "$ref" : "#/components/schemas/MeProject"
             }
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicView"
+            }
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/MeTagging"
           }
         },
-        "required" : [ "company", "displayName", "projects", "role", "userId" ]
+        "required" : [ "company", "displayName", "projects", "role", "tagging", "topics", "userId" ]
       },
       "MeCompany" : {
         "type" : "object",
@@ -1933,6 +2388,16 @@
           }
         },
         "required" : [ "id", "name" ]
+      },
+      "MeTagging" : {
+        "type" : "object",
+        "properties" : {
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "pendingDocuments" ]
       },
       "Health" : {
         "type" : "object",
@@ -1969,9 +2434,21 @@
           "uploadedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopicLabelView"
+            }
           }
         },
-        "required" : [ "filename", "format", "id", "paginated", "title", "uploadedAt" ]
+        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -1992,9 +2469,18 @@
           },
           "text" : {
             "type" : "string"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "readerName" : {
+            "type" : "string"
           }
         },
-        "required" : [ "documentId", "pageNumber", "paginated", "text", "title" ]
+        "required" : [ "documentId", "pageNumber", "paginated", "readerName", "superseded", "text", "title" ]
       },
       "AdminMe" : {
         "type" : "object",
@@ -2028,9 +2514,12 @@
             "items" : {
               "$ref" : "#/components/schemas/CompanyRef"
             }
+          },
+          "scannedDocumentsSupported" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "userId" ]
+        "required" : [ "companies", "displayName", "firstName", "personCode", "role", "scannedDocumentsSupported", "userId" ]
       },
       "CompanyRef" : {
         "type" : "object",
@@ -2047,6 +2536,101 @@
           }
         },
         "required" : [ "code", "id", "name" ]
+      },
+      "DocumentTopicView" : {
+        "type" : "object",
+        "properties" : {
+          "topicId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "taggerVersion" : {
+            "type" : "string"
+          },
+          "decidedByName" : {
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "name", "source", "state", "topicId" ]
+      },
+      "DocumentTopicsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DocumentTopicView"
+            }
+          },
+          "tagging" : {
+            "$ref" : "#/components/schemas/TaggingInfo"
+          }
+        },
+        "required" : [ "topics" ]
+      },
+      "TaggingInfo" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "topicListVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "failureReason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "status", "topicListVersion" ]
+      },
+      "TaggingStatusView" : {
+        "type" : "object",
+        "properties" : {
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "oldestPendingSince" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "window" : {
+            "$ref" : "#/components/schemas/TaggingWindowView"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "pendingDocuments", "timezone", "window" ]
+      },
+      "TaggingWindowView" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "always" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "always" ]
       },
       "ProjectMemberView" : {
         "type" : "object",
