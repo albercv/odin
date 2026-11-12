@@ -56,10 +56,10 @@ banco-abajo:
 	$(BANCO_ENV) $(EXP)/pila/pila.sh down
 
 banco:
-	$(BANCO_ENV) python3 banco/banco.py run --config $(CONFIG)
+	$(BANCO_ENV) python3 banco/banco.py run --config $(CONFIG) $(if $(REINICIAR),--reiniciar-presupuesto)
 
 banco-barrido:
-	$(BANCO_ENV) python3 banco/banco.py sweep --config $(CONFIG)
+	$(BANCO_ENV) python3 banco/banco.py sweep --config $(CONFIG) $(if $(REINICIAR),--reiniciar-presupuesto)
 
 banco-informe:
 	@test -n "$(RESULTADOS)" || { echo "Falta RESULTADOS=<carpeta de banco/resultados>"; exit 1; }

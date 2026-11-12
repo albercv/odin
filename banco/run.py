@@ -15,7 +15,7 @@ from banco.cache import RunCache
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
 from banco.layout import Layout
-from banco.ledger import Ledger
+from banco.ledger import Ledger, open_ledger
 from banco.medir_path import carga_mod, ejecutar
 from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, _build_jobs, run_pool
 from banco.subsample import beats_single_frontier, curve
@@ -156,8 +156,9 @@ def _write_start(sess, branch, commit):
     (sess.folder / "ids.json").write_text(json.dumps(ids, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-def prepare(config_path, layout, sweep=False):
-    """Valida todo lo que puede fallar antes de crear la carpeta de resultados."""
+def prepare(config_path, layout, sweep=False, reset_budget=False):
+    """Valida todo lo que puede fallar antes de crear la carpeta de resultados. El libro del experimento se abre
+    antes de crearla: si ya se gastó el tope, no queda carpeta a medias."""
     cfg = load_config(Path(config_path), layout.banco)
     _check_supported(cfg)
     _check_main(cfg, sweep)
@@ -168,9 +169,10 @@ def prepare(config_path, layout, sweep=False):
     commit, branch = _git(layout.repo)
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
                             budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit)
+    ledger = open_ledger(layout.state_dir / f"libro-{cfg.name}.json", cfg.budget_usd, reset_budget)
     folder = _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,
-                   cache=RunCache(layout.cache), ledger=Ledger(cfg.budget_usd), sweep=spec)
+                   cache=RunCache(layout.cache), ledger=ledger, sweep=spec)
     _write_start(sess, branch, commit)
     return sess
 
@@ -381,8 +383,8 @@ def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
     report.rebuild(sess.folder, sess.layout)
 
 
-def run_experiment(config_path, layout):
-    sess = prepare(config_path, layout)
+def run_experiment(config_path, layout, reset_budget=False):
+    sess = prepare(config_path, layout, reset_budget=reset_budget)
     runs, finals, verdicts = [], [], []
     try:
         _pool(sess, sess.cfg.searchers, sess.settings, runs)
@@ -443,8 +445,8 @@ def _curves(sess, runs, turn_runs):
     return {"variacion": variation, "mezclas": mix_rows, "single": turn_rows, "single_por_defecto": default}
 
 
-def sweep_experiment(config_path, layout):
-    sess = prepare(config_path, layout, sweep=True)
+def sweep_experiment(config_path, layout, reset_budget=False):
+    sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget)
     runs, turn_runs = [], []
     try:
         _pool(sess, sess.cfg.searchers, sess.settings, runs)

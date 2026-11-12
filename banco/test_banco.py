@@ -338,6 +338,32 @@ class PaidPathsTest(Harness):
         self.assertAlmostEqual(json.loads((folder / "libro.json").read_text(encoding="utf-8"))["spent"], 0.001)
 
 
+class BudgetPersistenceTest(Harness):
+    """El tope es del experimento: relanzar tras una parada no vuelve a gastar; la opción reinicia el libro."""
+
+    def test_relaunch_after_budget_stop_does_not_spend(self):
+        self.assertEqual(self.run_cli(self.config(budget=0.0015)), 2)
+        with mock.patch("banco.medir_path.ejecutar.responder", wraps=ejecutar.responder) as responder, contextlib.redirect_stderr(io.StringIO()) as errors:
+            code = banco.main(["run", "--config", str(self.config(budget=0.0015))], layout=self.layout)
+        self.assertEqual(code, 2)
+        self.assertEqual(responder.call_count, 0)
+        self.assertIn("ya gastó", errors.getvalue())
+        self.assertEqual(len(list((self.tmp / "resultados").iterdir())), 1)  # no se crea carpeta nueva
+
+    def test_reiniciar_presupuesto_starts_the_book_again(self):
+        self.assertEqual(self.run_cli(self.config(budget=0.0015)), 2)
+        with fake_env(FAKE_VEREDICTO="si"):
+            code = banco.main(["run", "--config", str(self.config(budget=0.0015)), "--reiniciar-presupuesto"],
+                              layout=self.layout)
+        folders = list((self.tmp / "resultados").iterdir())
+        self.assertEqual(len(folders), 2)
+        self.assertEqual(code, 2)  # el tope de 0,0015 USD vuelve a cortar la nueva orden, pero ya no se niega al arrancar
+        records = self.read_jsonl(max(folders), "buscadores.jsonl")
+        self.assertEqual(sum(not r["cached"] for r in records), 2)  # las dos de la primera orden salen de la caché
+        self.assertIn("Tope de gasto", (max(folders) / "PARADA.txt").read_text(encoding="utf-8"))
+        self.assertEqual(len(list((self.state_dir).glob("libro-prueba.*.json"))), 1)
+
+
 class SweepTest(Harness):
     def test_sweep_writes_curves(self):
         code = banco.main(["sweep", "--config", str(self.config(sweep=SWEEP))], layout=self.layout)
