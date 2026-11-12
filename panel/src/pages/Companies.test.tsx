@@ -1,5 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 import { Companies } from './Companies';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
@@ -18,6 +19,23 @@ test('newCompanyAsksForNameAndCodeAndSendsBoth', async () => {
   await userEvent.type(screen.getByLabelText('Código'), 'acm');
   await userEvent.click(screen.getByRole('button', { name: 'Crear empresa' }));
   await waitFor(() => expect(calls.find((c) => c.key === create)?.body).toEqual({ name: 'Acme', code: 'ACM' }));
+});
+
+test('pageTitleIsGrupo', async () => {
+  mockFetch({ [list]: () => [] });
+  renderWithProviders(<Companies onOpen={() => {}} />);
+  expect(await screen.findByRole('heading', { name: 'Grupo' })).toBeInTheDocument();
+});
+
+test('announcesCreatedCompanies', async () => {
+  const onChanged = vi.fn();
+  mockFetch({ [list]: () => [], [create]: () => ({ status: 201, body: { id: 'c9', name: 'Acme', code: 'ACM', capabilities: [] } }) });
+  renderWithProviders(<Companies onOpen={() => {}} onChanged={onChanged} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Nueva empresa' }));
+  await userEvent.type(screen.getByLabelText('Nombre de la empresa'), 'Acme');
+  await userEvent.type(screen.getByLabelText('Código'), 'acm');
+  await userEvent.click(screen.getByRole('button', { name: 'Crear empresa' }));
+  await waitFor(() => expect(onChanged).toHaveBeenCalled());
 });
 
 const acme = { id: 'c1', name: 'Acme', code: 'ACM', capabilities: [], codeReviewed: true };

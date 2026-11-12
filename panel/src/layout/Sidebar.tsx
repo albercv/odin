@@ -10,8 +10,8 @@ type Props = {
   setPage: (page: Page) => void; onLogout: () => void;
 };
 
-function CompanySlot({ switcher, companyName }: { switcher?: SwitcherProps; companyName?: string }) {
-  if (switcher && switcher.companies.length > 1) return <CompanySwitcher {...switcher} />;
+function CompanySlot({ isGroup, switcher, companyName }: { isGroup: boolean; switcher?: SwitcherProps; companyName?: string }) {
+  if (switcher && (isGroup || switcher.companies.length > 1)) return <CompanySwitcher {...switcher} />;
   return companyName ? <p className={styles.company}>{companyName}</p> : null;
 }
 
@@ -35,9 +35,9 @@ export function Sidebar({ isGroup, name, companyName, switcher, page, pending, s
   return (
     <aside className={styles.side}>
       <div className={styles.brand}><BrandMark /></div>
-      <CompanySlot switcher={switcher} companyName={companyName} />
+      <CompanySlot isGroup={isGroup} switcher={switcher} companyName={companyName} />
       <nav aria-label="Principal" className={styles.nav}>
-        {isGroup && link('companies', 'Empresas', 'buildings')}
+        {isGroup && link('companies', 'Grupo', 'buildings')}
         {link('company', 'Empresa', 'building')}
         {link('documents', 'Documentos', 'file')}
         {link('review', 'Revisión', 'review', pending)}

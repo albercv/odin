@@ -81,7 +81,7 @@ test('groupAdminSeesCompaniesAndCapabilities', async () => {
     'GET /v1/admin/companies': () => [company],
   });
   render(<App />);
-  expect(await screen.findByText('Acme')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Abrir Acme' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Nueva empresa' })).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Buscar conocimiento' })).toBeChecked();
   expect(screen.getByRole('switch', { name: 'Guardar fichas' })).not.toBeChecked();
@@ -99,7 +99,7 @@ test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
   expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Nueva empresa' })).toBeNull();
   expect(screen.queryByLabelText('Buscar conocimiento')).toBeNull();
-  expect(screen.queryByRole('link', { name: 'Empresas' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Grupo' })).toBeNull();
 });
 
 test('failedIssueKeepsTheLabel', async () => {

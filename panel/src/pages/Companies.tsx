@@ -59,20 +59,23 @@ function CompanyRow({ c, onOpen, onDone }: RowProps) {
   );
 }
 
-export function Companies({ onOpen }: { onOpen: (id: string, name: string) => void }) {
+type Props = { onOpen: (id: string) => void; onChanged?: () => void };
+
+export function Companies({ onOpen, onChanged }: Props) {
   const list = useLoad(api.companies, []);
   const [adding, setAdding] = useState(false);
+  const changed = () => { list.reload(); onChanged?.(); };
   return (
     <div>
-      <PageHeader title="Empresas" actions={<Button variant="primary" icon="plus" onClick={() => setAdding(true)}>Nueva empresa</Button>} />
+      <PageHeader title="Grupo" actions={<Button variant="primary" icon="plus" onClick={() => setAdding(true)}>Nueva empresa</Button>} />
       <Notice message={list.error} />
       <Section title="Empresas del grupo">
         <Table columns={['Empresa', 'Capacidades']}>
-          {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id, c.name)} onDone={list.reload} />)}
+          {list.data?.map((c) => <CompanyRow key={c.id} c={c} onOpen={() => onOpen(c.id)} onDone={changed} />)}
         </Table>
       </Section>
       <NameDialog title="Nueva empresa" label="Nombre de la empresa" submitLabel="Crear empresa" codeLabel="Código" open={adding}
-        onSubmit={api.createCompany} onClose={() => setAdding(false)} onDone={list.reload} />
+        onSubmit={api.createCompany} onClose={() => setAdding(false)} onDone={changed} />
     </div>
   );
 }
