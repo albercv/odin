@@ -33,6 +33,7 @@ Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplo
 | `make check` | Pruebas, Checkstyle, ArchUnit, ESLint y tipos de los tres proyectos |
 | `make demo` | Demostración de cierre y prueba de extremo a extremo de la administración del panel, en una pila desechable aparte |
 | `make answer-battery MODELO=haiku\|sonnet [MUESTRA=N]` | Mide si Odín da datos correctos con el archivo ficticio: levanta una pila desechable (`odin-medicion`), carga, deja responder a `claude -p`, puntúa en `experimentos/2026-11-12-archivo-ficticio/resultados/` y baja la pila. Gasta cuota de Claude; no entra en `make check` |
+| `make instalacion-reiniciar`, `make datos-prueba-cargar`, `make mcp-claude-desktop` y `make instalacion-restaurar` | Vaciar la instalación con copia, cargar datos de prueba, registrar el conector de Claude Desktop y volver a una copia: apartado «Datos de prueba y conector» |
 
 El lector de prueba (`reader-stub`) solo sirve para las pruebas automáticas de `make demo`. Una demostración ante una persona usa siempre el puente real con Unlimited-OCR 2.
 
@@ -112,6 +113,55 @@ Registrarlo en un equipo es configuración fuera del repositorio: hazlo solo con
 ## MCP por HTTP
 
 `make up` también arranca el MCP por Streamable HTTP en `http://127.0.0.1:8090/mcp`. Cada petición lleva la clave personal en `Authorization: Bearer odin_...`; una sesión abierta con una clave no acepta otra.
+
+## Datos de prueba y conector
+
+Para probar Odín desde Claude Desktop con datos ficticios. Las órdenes actúan sobre la instalación de `deploy/.env` (la de `make up`); lánzalas desde la copia del repositorio que la ejecuta. Llevan cerrojo (`data/instalacion.lock`): nunca van dos a la vez.
+
+| Orden | Qué hace |
+|---|---|
+| `make instalacion-reiniciar CONFIRMAR=BORRAR` | Copia la base y los originales en `data/copias/`, borra todos los datos y deja la instalación lista para el primer arranque. Dice qué había y en qué copia queda. Sin `CONFIRMAR=BORRAR` no hace nada: explica qué haría |
+| `make datos-prueba-cargar` | Hace el primer arranque y carga los datos de prueba por la API. Solo en una instalación vacía: si ya tiene datos, para sin tocarlos. Si falla a medias, la vuelve a dejar vacía |
+| `make mcp-claude-desktop [TRABAJADOR=marta\|javier\|ignacio]` | Compila `mcp/` y añade o actualiza solo la entrada `odin` de `~/Library/Application Support/Claude/claude_desktop_config.json`, con copia previa en `data/copias/`. Usa la clave de ese trabajador sin mostrarla (por defecto, `marta`). Después hay que reiniciar Claude Desktop |
+| `make instalacion-restaurar COPIA=data/copias/odin-….sql CONFIRMAR=BORRAR` | Vuelve a una copia, con sus originales. Antes copia lo que hay |
+
+Orden habitual: reiniciar, cargar y registrar. Para probar el aislamiento, vuelve a registrar con otro trabajador y reinicia Claude Desktop.
+
+**Qué se carga** (sale del archivo ficticio de `experimentos/2026-11-12-archivo-ficticio/`):
+
+- 2 empresas: Administraciones Ribera (`RIB`) y Gestión Albar (`ALB`).
+- 10 comunidades, 8 de Ribera y 2 de Albar, todas cerradas. Además, en Ribera, el proyecto abierto «Procedimientos generales».
+- Unos 160 documentos: casos con su resolución y resultado, actas, pólizas vieja y nueva con la marca de sustituida, anexos, contratos, presupuestos, avisos y normas sin proyecto.
+  - Los `.txt` se guardan como una sola página.
+  - Hay un escaneo para ver el lector OCR: sin lector, se queda esperando.
+- La lista de temas de fincas en cada empresa.
+  - Sin etiquetador, los casos llevan temas puestos por el administrador de prueba según su tipo.
+  - Con etiquetador, la IA añade los suyos.
+- 37 fichas: aprobadas, pendientes y rechazadas.
+- Personas:
+  - el administrador del grupo, que entra en el panel;
+  - Marta Olivares Ríos (`marta`, Ribera, todas sus comunidades);
+  - Javier Bermúdez Lara (`javier`, Ribera, solo Calle Pino 26 y Calle Roble 46);
+  - Ignacio Salas Ferrer (`ignacio`, Albar).
+  - Cada trabajador tiene su clave.
+- Las credenciales van a `data/datos-prueba/credenciales.local.md` (y `.json`), con permisos 600. Nunca salen en pantalla ni van a git.
+
+**Preguntas de ejemplo** para Claude Desktop con el conector:
+
+| # | Quién | Pregunta | Qué debe salir |
+|---|---|---|---|
+| 1 | Marta | ¿De cuánto fue la derrama para la fachada de Calle Olmo 14 y en cuántas cuotas se paga? | 48.000 euros en 12 cuotas mensuales, con la cita del acta extraordinaria de 2025 |
+| 2 | Marta | ¿Qué franquicia por daños por agua tiene ahora mismo la póliza de Los Almendros? | 150 euros, de la póliza de 2024. La de 2022 (200 euros) sale como sustituida |
+| 3 | Marta | Una vecina de Calle Olmo 14 tiene moho negro en la pared del dormitorio. ¿Consta algún caso parecido y qué concluyó el técnico? | El caso 2025-027: condensaciones por ventilación insuficiente |
+| 4 | Marta | ¿Qué casos de agua y humedades constan en Calle Olmo 14? | Lista por tema: los casos 2024-017, 2025-014 y 2025-027 |
+| 5 | Marta | ¿De qué color se va a pintar el portal de Calle Abeto 16? | Gris perla. Sale de una ficha aprobada de un trabajador, no de un documento |
+| 6 | Marta | ¿Qué color le van a dar al portal de Residencial Los Naranjos 2? | No consta: la única ficha con ese dato está rechazada |
+| 7 | Marta | ¿Cubre la póliza de Los Almendros los daños por terremoto? | No consta |
+| 8 | Javier | ¿Qué franquicia tiene la póliza ATL-4417-2024 para daños por agua? | No consta: es de Los Almendros y Javier no es miembro. Marta, en cambio, recibe 150 euros |
+| 9 | Javier | ¿Cuántas referencias exigimos para dar de alta a un proveedor? | Dos referencias. Está en «Procedimientos generales», que ve toda Ribera |
+| 10 | Ignacio | ¿Dónde se guardan las llaves de los cuartos técnicos y de las azoteas en la oficina de Ribera? | No consta: es una norma de Ribera e Ignacio es de Albar. Marta: en la caja fuerte de la oficina |
+
+Son datos ficticios: la IA puede fallar alguna. Lo que se mide está en `make answer-battery`.
 
 ## Claves de la base de datos
 
