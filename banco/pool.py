@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 from banco.cache import RunCache, run_key
 from banco.config import SearcherSpec
+from banco.ledger import Ledger
 from banco.medir_path import ejecutar
 
 
@@ -41,10 +42,9 @@ class _Job:
 
 @dataclass
 class _State:
-    cap: float
+    ledger: Ledger
     lock: threading.Lock = field(default_factory=threading.Lock)
     stop: threading.Event = field(default_factory=threading.Event)
-    spent: float = 0.0
     skipped: int = 0
     reasons: list = field(default_factory=list)
     isolation_error: Exception | None = None
@@ -80,7 +80,7 @@ def _claim_launch(state):
     with state.lock:
         if state.stop.is_set():
             return False
-        if state.spent >= state.cap:
+        if not state.ledger.can_launch():
             state.skipped += 1
             return False
         return True
@@ -92,9 +92,12 @@ def _process_job(job, carga, cache, temp_dir, state):
         return _with_extras(previous, job, cached=True)
     if not _claim_launch(state):
         return None
-    record = ejecutar.responder(job.item, carga, job.args, temp_dir, job.text)
-    with state.lock:
-        state.spent += record["coste_usd"] or 0
+    try:
+        record = ejecutar.responder(job.item, carga, job.args, temp_dir, job.text)
+    except Exception:  # la llamada pudo gastar antes de fallar: coste desconocido
+        state.ledger.charge(None)
+        raise
+    state.ledger.charge(record.get("coste_usd"))
     if record["error"] and ejecutar.LIMITE.search(record["error"]):
         _halt(state, f"cuota o límite en {job.item['id']}: {record['error'][:200]}")
     cache.put(job.key, record)
@@ -128,17 +131,16 @@ def _close(state, stop_file):
         if state.unexpected_error is not None:
             raise state.unexpected_error
         raise PoolStopped("; ".join(state.reasons))
-    if state.skipped:
-        message = (f"Tope de gasto alcanzado: gastado {state.spent:.4f} USD de un tope de {state.cap:.4f} USD; "
-                   f"{state.skipped} ejecuciones sin lanzar.")
+    if state.skipped or state.ledger.unknown:
+        message = state.ledger.stop_message(state.skipped)
         _write_stop(stop_file, message)
         raise BudgetExceeded(message)
 
 
 def run_pool(items: list[dict], specs: tuple[SearcherSpec, ...], carga: dict, cache: RunCache,
-             settings: PoolSettings, approaches_dir: Path, stop_file: Path) -> list[dict]:
+             settings: PoolSettings, approaches_dir: Path, stop_file: Path, ledger: Ledger | None = None) -> list[dict]:
     jobs = _build_jobs(items, specs, approaches_dir, settings)
-    state = _State(cap=settings.budget_usd)
+    state = _State(ledger=ledger if ledger is not None else Ledger(settings.budget_usd))
     with ThreadPoolExecutor(max(1, settings.concurrency)) as pool:
         futures = [pool.submit(_execute_job, job, carga, cache, stop_file.parent, state) for job in jobs]
         results = [f.result() for f in futures]
