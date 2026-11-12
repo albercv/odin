@@ -155,12 +155,21 @@ public final class Responses {
         }
     }
 
+    /** El vigente del final de la cadena, como lo ve el trabajador. */
+    public record Replacement(UUID documentId, String title) {
+        static Replacement from(DocumentRef ref) {
+            return new Replacement(ref.id().value(), ref.title());
+        }
+    }
+
     /** Vista del trabajador: solo documentos listos y sin datos internos del proceso. */
     public record WorkerDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
-            boolean paginated, Instant uploadedAt) {
-        public static WorkerDocumentView from(Document d) {
+            boolean paginated, Instant uploadedAt, boolean superseded, @Nullable Replacement replacement) {
+        public static WorkerDocumentView from(DocumentEntry entry) {
+            Document d = entry.document();
             return new WorkerDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
-                    d.filename(), d.format().name(), d.paginated(), d.uploadedAt());
+                    d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
+                    entry.replacement().map(Replacement::from).orElse(null));
         }
     }
 
@@ -192,11 +201,13 @@ public final class Responses {
     }
 
     public record Hit(String sourceType, UUID sourceId, String title, @Nullable Integer pageNumber, boolean paginated,
-            @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank) {
+            @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank,
+            boolean superseded, @Nullable Replacement replacement) {
         static Hit from(SearchHit h) {
             return new Hit(h.sourceType().name(), h.sourceId(), h.title(), h.pageNumber().orElse(null),
                     h.paginated(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),
-                    h.excerpt(), h.rank());
+                    h.excerpt(), h.rank(), h.superseded(),
+                    h.replacement().map(Replacement::from).orElse(null));
         }
     }
 
@@ -206,10 +217,12 @@ public final class Responses {
         }
     }
 
-    public record Page(UUID documentId, String title, int pageNumber, boolean paginated, String text) {
+    public record Page(UUID documentId, String title, int pageNumber, boolean paginated, String text,
+            boolean superseded, @Nullable Replacement replacement) {
         public static Page from(PageView v) {
             return new Page(v.document().id().value(), v.document().title(), v.page().number(),
-                    v.document().paginated(), v.page().text());
+                    v.document().paginated(), v.page().text(), v.document().superseded(),
+                    v.entry().replacement().map(Replacement::from).orElse(null));
         }
     }
 

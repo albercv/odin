@@ -58,7 +58,7 @@ class SearchKnowledgeTest {
     void recordsQuestionWithAuthor() {
         Actor worker = Actors.worker(companyA);
         SearchHit hit = new SearchHit(SourceType.KNOWLEDGE_CARD, UUID.randomUUID(), "t", Optional.empty(), false,
-                Optional.empty(), "Ana", Fixtures.NOW, "...", 1.0);
+                Optional.empty(), "Ana", Fixtures.NOW, "...", 1.0, false, Optional.empty());
         search.returns(new SearchResult(List.of(hit)));
 
         useCase.execute(worker, request(Optional.empty()));

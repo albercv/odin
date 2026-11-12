@@ -60,7 +60,7 @@ describe('buildServer', () => {
   const P1 = { id: 'p1', name: 'Comunidad Sol' };
   const P2 = { id: 'p2', name: 'Obra Norte' };
   const docHit = (projectId?: string) => ({ sourceType: 'ORIGINAL_DOCUMENT', sourceId: 'd1', title: 'Manual', pageNumber: 1,
-    paginated: true, projectId, authorName: 'Ana', date: '2026-01-01T00:00:00Z', excerpt: 'x', rank: 1 });
+    paginated: true, projectId, authorName: 'Ana', date: '2026-01-01T00:00:00Z', excerpt: 'x', rank: 1, superseded: false });
   const search = async (hits: unknown[], projects = [P1, P2]) => {
     const client = await connect((r) =>
       r.url === '/v1/me' ? meWith(ALL, 'Empresa Uno', projects) : { status: 200, body: { hits, noSource: false } });
@@ -107,6 +107,49 @@ describe('buildServer', () => {
     const client = await connect(() => meWith(ALL));
     expect(client.getInstructions()).toContain(
       'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.');
+  });
+
+  it('searchMapsSupersededAndReplacementForDocumentsOnly', async () => {
+    const replacement = { documentId: 'd2', title: 'Póliza 2024' };
+    const card = { sourceType: 'KNOWLEDGE_CARD', sourceId: 'k1', title: 'Truco', paginated: false, authorName: 'Ana',
+      date: '2026-01-01T00:00:00Z', excerpt: 'x', rank: 1, superseded: false };
+    const parsed = await search([{ ...docHit('p1'), superseded: true, replacement },
+      { ...docHit('p1'), superseded: true }, docHit('p1'), card]);
+    expect(parsed.hits[0]).toMatchObject({ superseded: true, replacement });
+    expect(parsed.hits[1]).toMatchObject({ superseded: true, replacement: null });
+    expect(parsed.hits[2]).toMatchObject({ superseded: false, replacement: null });
+    expect(parsed.hits[3]).not.toHaveProperty('superseded');
+    expect(parsed.hits[3]).not.toHaveProperty('replacement');
+  });
+
+  it('searchDescriptionExplainsProjectFilterIncludesCompanyWide', async () => {
+    const client = await connect(() => meWith(ALL));
+    const tool = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');
+    const projectId = (tool?.inputSchema.properties as Record<string, { description?: string }>).projectId;
+    expect(projectId?.description).toContain('también incluye lo que no tiene proyecto');
+  });
+
+  it('readPageAndListDocumentsPassSupersededAndReplacement', async () => {
+    const replacement = { documentId: 'd2', title: 'Póliza 2024' };
+    const client = await connect((r) => {
+      if (r.url === '/v1/me') return meWith(ALL, 'Empresa Uno', [P1]);
+      if (r.url.startsWith('/v1/documents/d1/pages')) {
+        return { status: 200, body: { documentId: 'd1', title: 'T', pageNumber: 1, paginated: true, text: 'x', superseded: true, replacement } };
+      }
+      return { status: 200, body: [{ id: 'd1', projectId: 'p1', title: 'T', superseded: true, replacement }] };
+    });
+    const page = JSON.parse(textOf(await client.callTool({ name: 'readPage', arguments: { documentId: 'd1', pageNumber: 1 } })));
+    expect(page).toMatchObject({ superseded: true, replacement });
+    const listed = JSON.parse(textOf(await client.callTool({ name: 'listDocuments', arguments: {} })));
+    expect(listed.documents[0]).toMatchObject({ superseded: true, replacement, projectName: 'Comunidad Sol' });
+  });
+
+  it('instructionsTellHowToTreatSupersededAndConflictingSources', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).toContain(
+      'Si un resultado viene marcado como sustituido, no lo presentes como vigente: di que está sustituido y por cuál, y busca o lee el que lo sustituye antes de responder. Si no puedes ver el que lo sustituye, di solo que está sustituido.');
+    expect(instructions).toContain(
+      'Si dos fuentes no cuadran y ninguna está marcada como sustituida, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.');
   });
 
   it('searchMapsHitsWithCitation', async () => {

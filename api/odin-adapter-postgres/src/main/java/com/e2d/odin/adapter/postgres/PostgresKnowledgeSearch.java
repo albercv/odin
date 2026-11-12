@@ -27,16 +27,18 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     private static final String CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
                    d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
-                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank
+                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
                  q
-            WHERE d.status = 'READY' AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project) AND %5$s AND %7$s
+            WHERE d.status = 'READY'
+              AND (CAST(:project AS uuid) IS NULL OR d.project_id = :project OR d.project_id IS NULL) AND %5$s AND %7$s
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
-                   %3$s + ts_rank_cd(c.tsv, q.q)::float8
+                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
-            WHERE c.status = 'APPROVED' AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project) AND %6$s AND %8$s
+            WHERE c.status = 'APPROVED'
+              AND (CAST(:project AS uuid) IS NULL OR c.project_id = :project OR c.project_id IS NULL) AND %6$s AND %8$s
               AND (c.tsv @@ q.q OR %4$s)""";
     private final ScopedTransactions tx;
 
@@ -56,10 +58,13 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     }
 
     private List<SearchHit> rows(JdbcClient jdbc, List<String> terms, List<String> exact, SearchQuery query) {
-        String sql = "WITH q AS (SELECT " + tsquery(terms.size()) + " AS q) SELECT id, source, title, page, paginated,"
-                + " project_id, author, date, body, rank, ts_headline('odin_spanish', body, q.q,"
-                + " 'StartSel=\"\", StopSel=\"\", MaxFragments=1') AS headline FROM (" + candidates(exact.size())
-                + ") r, q ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
+        String sql = "WITH q AS (SELECT " + tsquery(terms.size()) + " AS q) SELECT t.*, " + SupersessionSql.COLUMNS
+                + " FROM (SELECT id, source, title, page, paginated, project_id, author, date, body, rank,"
+                + " superseded_by, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
+                + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
+                + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit) t "
+                + SupersessionSql.joins("t.superseded_by")
+                + " ORDER BY t.superseded_by IS NOT NULL, t.rank DESC, t.title, t.page NULLS FIRST, t.id";
         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
                 .param("limit", query.limit());
@@ -114,7 +119,8 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
         return new SearchHit(SourceType.valueOf(rs.getString("source")), Sql.uuid(rs, "id"), rs.getString("title"),
                 pageNumber, rs.getBoolean("paginated"),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), rs.getString("author"),
-                Sql.instant(rs, "date"), excerpt(rs.getString("headline"), body, terms), rs.getDouble("rank"));
+                Sql.instant(rs, "date"), excerpt(rs.getString("headline"), body, terms), rs.getDouble("rank"),
+                Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs));
     }
 
     private static String excerpt(String headline, String body, List<String> terms) {

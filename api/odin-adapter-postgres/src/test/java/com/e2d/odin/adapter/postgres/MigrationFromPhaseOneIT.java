@@ -241,7 +241,7 @@ class MigrationFromPhaseOneIT {
                 new PostgresProjectMemberRepository(tx), new PostgresDocumentRepository(tx));
         Actor worker = new Actor(new UserId(ACTIVE_WORKER), "Persona", Role.WORKER, Set.of(new CompanyId(COMPANY)));
 
-        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty())).extracting(d -> d.id().value())
+        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty())).extracting(e -> e.document().id().value())
                 .containsExactly(DOCUMENT_IN_DELETED_PROJECT);
         assertThatThrownBy(() -> list.execute(worker, Optional.of(new ProjectId(DELETED_PROJECT)), 0,
                 Optional.empty())).isInstanceOf(NotFoundException.class);

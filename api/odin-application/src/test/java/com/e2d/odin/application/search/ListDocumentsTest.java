@@ -9,6 +9,8 @@ import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentEntry;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -30,12 +32,47 @@ class ListDocumentsTest {
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 
+    private List<Document> documents(Actor actor, Optional<ProjectId> project, int offset, Optional<Integer> limit) {
+        return list.execute(actor, project, offset, limit).stream().map(DocumentEntry::document).toList();
+    }
+
+    @Test
+    void listsSupersededWithItsReplacement() {
+        Document old = Fixtures.readyDocument(docs, companyA, "viejo");
+        Document middle = Fixtures.readyDocument(docs, companyA, "medio");
+        Document current = Fixtures.readyDocument(docs, companyA, "vigente");
+        docs.markSuperseded(companyA, old.id(), middle.id(), Fixtures.NOW);
+        docs.markSuperseded(companyA, middle.id(), current.id(), Fixtures.NOW);
+
+        List<DocumentEntry> entries = list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty());
+
+        DocumentEntry oldEntry = entries.stream().filter(e -> e.document().id().equals(old.id())).findFirst().orElseThrow();
+        assertThat(oldEntry.document().superseded()).isTrue();
+        assertThat(oldEntry.replacement()).contains(DocumentRef.of(current));
+        assertThat(entries.stream().filter(e -> e.document().id().equals(current.id())).findFirst().orElseThrow()
+                .replacement()).isEmpty();
+    }
+
+    @Test
+    void replacementInAClosedProjectIsNotRevealed() {
+        Document old = Fixtures.readyDocument(docs, companyA, "viejo");
+        Document hidden = Fixtures.documentIn(docs, companyA, Fixtures.project(orgs, companyA), "oculto");
+        docs.markSuperseded(companyA, old.id(), hidden.id(), Fixtures.NOW);
+
+        List<DocumentEntry> entries = list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty());
+
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).document().superseded()).isTrue();
+        assertThat(entries.get(0).replacement()).isEmpty();
+        assertThat(entries.get(0).supersededBy()).isEmpty();
+    }
+
     @Test
     void capsLimitAt500() {
         IntStream.range(0, 510).forEach(i -> Fixtures.document(docs, companyA, DocumentStatus.READY));
 
-        assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.of(1000))).hasSize(500);
-        assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).hasSize(100);
+        assertThat(documents(Actors.worker(companyA), Optional.empty(), 0, Optional.of(1000))).hasSize(500);
+        assertThat(documents(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).hasSize(100);
     }
 
     @Test
@@ -46,14 +83,14 @@ class ListDocumentsTest {
             Fixtures.document(docs, companyA, other);
         }
 
-        assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).containsExactly(ready);
+        assertThat(documents(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).containsExactly(ready);
     }
 
     @Test
     void workerOfOtherCompanyNeverSeesCompanyADocuments() {
         Document a = Fixtures.document(docs, companyA, DocumentStatus.READY);
 
-        assertThat(list.execute(Actors.worker(companyB), Optional.empty(), 0, Optional.empty())).doesNotContain(a);
+        assertThat(documents(Actors.worker(companyB), Optional.empty(), 0, Optional.empty())).doesNotContain(a);
         assertThat(docs.lastListScope()).isEqualTo(CompanyScope.of(companyB));
     }
 
@@ -78,14 +115,14 @@ class ListDocumentsTest {
         Document withoutProject = Fixtures.readyDocument(docs, companyA, "libre");
         Actor worker = Actors.worker(companyA);
 
-        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty())).containsExactly(withoutProject);
+        assertThat(documents(worker, Optional.empty(), 0, Optional.empty())).containsExactly(withoutProject);
         assertThatThrownBy(() -> list.execute(worker, Optional.of(closed), 0, Optional.empty()))
                 .isInstanceOf(NotFoundException.class).hasMessage("Proyecto no encontrado");
 
         members.add(closed, worker.userId());
-        assertThat(list.execute(worker, Optional.empty(), 0, Optional.empty()))
+        assertThat(documents(worker, Optional.empty(), 0, Optional.empty()))
                 .containsExactlyInAnyOrder(inClosed, withoutProject);
-        assertThat(list.execute(worker, Optional.of(closed), 0, Optional.empty())).containsExactly(inClosed);
+        assertThat(documents(worker, Optional.of(closed), 0, Optional.empty())).containsExactly(inClosed);
     }
 
     @Test
@@ -93,7 +130,7 @@ class ListDocumentsTest {
         ProjectId open = Fixtures.companyWideProject(orgs, companyA);
         Document inOpen = Fixtures.documentIn(docs, companyA, open, "texto");
 
-        assertThat(list.execute(Actors.worker(companyA), Optional.of(open), 0, Optional.empty()))
+        assertThat(documents(Actors.worker(companyA), Optional.of(open), 0, Optional.empty()))
                 .containsExactly(inOpen);
     }
 
@@ -105,8 +142,8 @@ class ListDocumentsTest {
         members.add(closed, member.userId());
         orgs.deleteProject(companyA, closed, Fixtures.NOW);
 
-        assertThat(list.execute(member, Optional.empty(), 0, Optional.empty())).containsExactly(inClosed);
-        assertThat(list.execute(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).isEmpty();
+        assertThat(documents(member, Optional.empty(), 0, Optional.empty())).containsExactly(inClosed);
+        assertThat(documents(Actors.worker(companyA), Optional.empty(), 0, Optional.empty())).isEmpty();
         assertThatThrownBy(() -> list.execute(member, Optional.of(closed), 0, Optional.empty()))
                 .isInstanceOf(NotFoundException.class);
     }
