@@ -12,7 +12,8 @@ from banco.cache import RunCache, run_key
 from banco.config import SearcherSpec
 from banco.ledger import Ledger
 from banco.medir_path import ejecutar
-from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, run_pool
+from banco.pool import BudgetExceeded, PoolSettings, PoolStopped, _build_jobs, run_pool
+from banco.run import stack_digest
 
 FAKE = str(Path(__file__).resolve().parent / "fakes" / "fake_claude_turno.py")
 ITEMS = [{"id": "Q001", "actor": "t01", "pregunta": "¿Cuánto cuesta?"}, {"id": "Q002", "actor": "t01", "pregunta": "¿Quién?"}]
@@ -33,6 +34,30 @@ def fake_env(**env):
 def _launches(counter):
     """Número de llamadas al falso claude (una línea por llamada)."""
     return len(counter.read_text().splitlines()) if counter.exists() else 0
+
+
+class CacheKeyTest(unittest.TestCase):
+    """La clave de caché depende de la huella del código y de los mapas de ids de la pila."""
+
+    def _settings(self, **changes):
+        base = dict(claude_bin=FAKE, timeout=30, concurrency=1, budget_usd=100.0, max_turns=None, odin_commit="abc")
+        return PoolSettings(**{**base, **changes})
+
+    def test_key_changes_when_the_stack_ids_change(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        approaches = Path(tmp.name)
+        (approaches / "main.txt").write_text("", encoding="utf-8")
+        (approaches / "topic.txt").write_text("Busca por tema.", encoding="utf-8")
+        keys = [{job.key for job in _build_jobs(ITEMS, SPECS, approaches, self._settings(stack_digest=digest))}
+                for digest in ("pila-1", "pila-2")]
+        self.assertTrue(keys[0].isdisjoint(keys[1]))
+
+    def test_stack_digest_depends_on_the_id_maps_not_on_their_order(self):
+        same = stack_digest({"doc_ruta": {"d1": "a.txt", "d2": "b.txt"}, "ficha_f": {}})
+        self.assertEqual(same, stack_digest({"doc_ruta": {"d2": "b.txt", "d1": "a.txt"}, "ficha_f": {}}))
+        self.assertNotEqual(same, stack_digest({"doc_ruta": {"d1": "c.txt", "d2": "b.txt"}, "ficha_f": {}}))
+        self.assertNotEqual(same, stack_digest({"doc_ruta": {"d1": "a.txt", "d2": "b.txt"}, "ficha_f": {"F001": "c1"}}))
 
 
 class PoolTest(unittest.TestCase):

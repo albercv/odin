@@ -28,6 +28,7 @@ class PoolSettings:
     budget_usd: float
     max_turns: int | None
     odin_commit: str
+    stack_digest: str = ""  # huella de los mapas de ids de carga.json: una pila recargada no reutiliza caché
 
 
 @dataclass(frozen=True)
@@ -60,7 +61,7 @@ def _build_jobs(items, specs, approaches_dir, settings):
         for item in items:
             for replica in range(spec.count):
                 key = run_key(item["id"], item["pregunta"], spec.approach, text, spec.model, replica,
-                              settings.odin_commit, settings.max_turns)
+                              settings.odin_commit, settings.max_turns, settings.stack_digest)
                 jobs.append(_Job(item, spec, replica, text, args, key))
     return jobs
 

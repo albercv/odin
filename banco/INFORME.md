@@ -23,7 +23,7 @@ Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:
 
 | Fichero | Contenido |
 |---|---|
-| `ORIGEN.txt` | configuración, rama, commit, modo, batería, muestra, fecha |
+| `ORIGEN.txt` | configuración, rama, huella del código (commit; con «+hash» si había cambios sin commit en banco o medir), modo, batería, muestra, fecha |
 | `ids.json` | documentos y fichas (ids de Odín a rutas), preguntas; sin claves de API |
 | `buscadores.jsonl` | una línea por ejecución de buscador (con `cached`) |
 | `final.jsonl` | respuesta final por pregunta, `correcta_script`, coste del redactor y `error` si lo hubo (`run`) |
@@ -34,6 +34,12 @@ Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:
 | `PARADA.txt` | solo si hubo parada: tope de gasto, coste desconocido, cuota o límite, aislamiento roto |
 
 `buscadores`, `final`, `veredictos` y `libro.json` se escriben siempre, también si algo falla a mitad (`try/finally`); tras una parada, `buscadores.jsonl` incluye lo que se hizo antes de parar, también los registros de pago fallidos (la excepción de parada lleva `records`), y lo que quedó en la caché, sin duplicados. La orden sale con código 2 si hubo parada.
+
+## Caché y reanudación
+
+La clave de cada ejecución (`banco/cache.py`) incluye la pregunta, el enfoque, el modelo, la réplica, el tope de turnos, la **huella del código** y un hash de los **mapas de ids** de la pila (`doc_ruta` y `ficha_f` de `carga.json`). La huella del código es el HEAD; si hay cambios sin commit en `banco/` o en `medir/`, se añade un hash de esos cambios (`git diff HEAD`). Así, cambiar el código del banco o recargar la pila con ids nuevos no reutiliza ejecuciones antiguas.
+
+Limitación: el hash cubre los ficheros con cambios seguidos por git; un fichero nuevo sin añadir a git no entra en la huella.
 
 ## Presupuesto (un solo tope por experimento)
 

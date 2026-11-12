@@ -12,9 +12,10 @@ def _digest(text: str) -> str:
 
 
 def run_key(question_id: str, question_text: str, approach: str, approach_text: str, model: str, replica: int,
-            odin_commit: str, max_turns: int | None) -> str:
+            odin_commit: str, max_turns: int | None, stack_digest: str = "") -> str:
+    """Clave de una ejecución: pregunta, enfoque, modelo, réplica, huella del código, tope de turnos y mapas de ids."""
     parts = [question_id, _digest(question_text), approach, _digest(approach_text), model, str(replica),
-             odin_commit, str(max_turns)]
+             odin_commit, str(max_turns), stack_digest]
     return hashlib.sha256(json.dumps(parts).encode("utf-8")).hexdigest()
 
 

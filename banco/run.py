@@ -1,5 +1,6 @@
 """Órdenes run y sweep: preparan la carpeta, lanzan buscadores, respuesta final y jueces bajo un mismo tope, y escriben la salida."""
 
+import hashlib
 import json
 import random
 import subprocess
@@ -125,10 +126,25 @@ def _select_items(layout, cfg):
     return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed)
 
 
-def _git(repo):
+CODE_PATHS = ("banco", "experimentos/2026-11-12-archivo-ficticio/medir")
+
+
+def code_fingerprint(repo):
+    """Huella del código para la caché: HEAD y, si hay cambios sin commit en banco y medir, un hash de esos cambios."""
     def run_git(*args):
-        return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
-    return run_git("rev-parse", "HEAD"), run_git("rev-parse", "--abbrev-ref", "HEAD")
+        return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True).stdout
+    head = run_git("rev-parse", "HEAD").strip()
+    branch = run_git("rev-parse", "--abbrev-ref", "HEAD").strip()
+    changes = run_git("diff", "HEAD", "--", *CODE_PATHS)
+    if changes:
+        head += "+" + hashlib.sha256(changes.encode("utf-8")).hexdigest()[:16]
+    return head, branch
+
+
+def stack_digest(stack):
+    """Huella de los mapas de ids (documentos y fichas) de la pila: recargarla cambia los ids y la caché no se reutiliza."""
+    ids = {"doc_ruta": stack["doc_ruta"], "ficha_f": stack["ficha_f"]}
+    return hashlib.sha256(json.dumps(ids, sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def _new_folder(results_dir, name):
@@ -166,9 +182,10 @@ def prepare(config_path, layout, sweep=False, reset_budget=False):
     stack = _load_stack(layout)
     items = _select_items(layout, cfg)
     ctx = scoring.build_context(layout.exp, stack)
-    commit, branch = _git(layout.repo)
+    commit, branch = code_fingerprint(layout.repo)
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
-                            budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit)
+                            budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit,
+                            stack_digest=stack_digest(stack))
     ledger = open_ledger(layout.state_dir / f"libro-{cfg.name}.json", cfg.budget_usd, reset_budget)
     folder = _new_folder(layout.results_dir, cfg.name)
     sess = Session(layout=layout, cfg=cfg, items=items, stack=stack, ctx=ctx, settings=settings, folder=folder,

@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +14,7 @@ from banco.config import ConfigError
 from banco.fakes.fake_ollama import start_fake_ollama
 from banco.layout import Layout
 from banco.medir_path import ejecutar
-from banco.run import draw_sample, prepare
+from banco.run import code_fingerprint, draw_sample, prepare
 
 BANCO = Path(__file__).resolve().parent
 EXP = BANCO.parent / "experimentos" / "2026-11-12-archivo-ficticio"
@@ -403,6 +404,40 @@ class StopRecordsTest(Harness):
         keys = [(r["id"], r["approach"], r["replica"]) for r in records]
         self.assertEqual(len(records), 3)
         self.assertEqual(len(set(keys)), 3)
+
+
+class CodeFingerprintTest(unittest.TestCase):
+    """La huella del código: HEAD, y un hash de los cambios sin commit en banco y medir."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.repo = Path(tmp.name)
+        (self.repo / "banco").mkdir()
+        (self.repo / "banco" / "x.py").write_text("a = 1\n", encoding="utf-8")
+        (self.repo / "otro.txt").write_text("uno\n", encoding="utf-8")
+        self.git("init", "-q")
+        self.git("add", "-A")
+        self.git("-c", "user.name=prueba", "-c", "user.email=prueba@invalid", "commit", "-qm", "inicio")
+
+    def git(self, *args):
+        return subprocess.run(["git", *args], cwd=self.repo, check=True, capture_output=True, text=True)
+
+    def test_clean_tree_is_plain_head(self):
+        head, _ = code_fingerprint(self.repo)
+        self.assertRegex(head, r"^[0-9a-f]{40}$")
+
+    def test_uncommitted_change_in_bench_code_changes_the_fingerprint(self):
+        clean, _ = code_fingerprint(self.repo)
+        (self.repo / "banco" / "x.py").write_text("a = 2\n", encoding="utf-8")
+        dirty, _ = code_fingerprint(self.repo)
+        self.assertNotEqual(clean, dirty)
+        self.assertTrue(dirty.startswith(clean + "+"))
+
+    def test_change_outside_the_code_paths_is_ignored(self):
+        clean, _ = code_fingerprint(self.repo)
+        (self.repo / "otro.txt").write_text("dos\n", encoding="utf-8")
+        self.assertEqual(clean, code_fingerprint(self.repo)[0])
 
 
 class SweepTest(Harness):
