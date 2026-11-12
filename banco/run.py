@@ -11,7 +11,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
-from banco import combine, judge, report, scoring
+from banco import combine, judge, preflight, report, scoring
 from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
@@ -251,6 +251,17 @@ def _merged(records, cached):
     return [*records, *(r for r in cached if key(r) not in seen)]
 
 
+def _preflight(sess, sin_prueba):
+    """Llamada de prueba antes del primer grupo. Si falla, PARADA.txt y ningún grupo se lanza. True si se puede seguir."""
+    if sin_prueba:
+        return True
+    error = preflight.run_preflight(sess.layout.claude_bin, sess.cfg.searchers[0].model, sess.layout.timeout, sess.ledger)
+    if error is None:
+        return True
+    _stop(sess, f"la llamada de prueba falló: {error}")
+    return False
+
+
 def _pool(sess, specs, settings, sink):
     """Lanza un grupo de buscadores con el libro compartido. Se pare como se pare, lo hecho (también lo fallido)
     y lo de la caché van a `sink`."""
@@ -486,11 +497,12 @@ def _write_outputs(sess, runs, finals, verdicts, turn_runs=None):
     report.rebuild(sess.folder, sess.layout)
 
 
-def run_experiment(config_path, layout, reset_budget=False):
+def run_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
     sess = prepare(config_path, layout, reset_budget=reset_budget)
     runs, finals, verdicts = [], [], []
     try:
-        _pool(sess, sess.cfg.searchers, sess.settings, runs)
+        if _preflight(sess, sin_prueba):
+            _pool(sess, sess.cfg.searchers, sess.settings, runs)
         if not _stopped(sess):
             answer_stage(sess, runs, finals)
         if finals:  # también con parada: los veredictos guardados no cuestan nada y se sirven igual
@@ -548,11 +560,12 @@ def _curves(sess, runs, turn_runs):
     return {"variacion": variation, "mezclas": mix_rows, "single": turn_rows, "single_por_defecto": default}
 
 
-def sweep_experiment(config_path, layout, reset_budget=False):
+def sweep_experiment(config_path, layout, reset_budget=False, sin_prueba=False):
     sess = prepare(config_path, layout, sweep=True, reset_budget=reset_budget)
     runs, turn_runs = [], []
     try:
-        _pool(sess, sess.cfg.searchers, sess.settings, runs)
+        if _preflight(sess, sin_prueba):
+            _pool(sess, sess.cfg.searchers, sess.settings, runs)
         if not _stopped(sess):
             _turn_runs(sess, turn_runs)
         if not _stopped(sess):

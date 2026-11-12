@@ -129,9 +129,10 @@ class Harness(unittest.TestCase):
         self.assertEqual(len(folders), 1)
         return folders[0]
 
-    def run_cli(self, config, env=None):
+    def run_cli(self, config, env=None, preflight=False):
+        flags = [] if preflight else ["--sin-prueba"]
         with fake_env(**{"FAKE_VEREDICTO": "si", **(env or {})}):
-            return banco.main(["run", "--config", str(config)], layout=self.layout)
+            return banco.main(["run", *flags, "--config", str(config)], layout=self.layout)
 
 
 class RunTest(Harness):
@@ -253,7 +254,7 @@ class RunTest(Harness):
 
     def test_sweep_cap_is_cumulative_across_pools(self):
         # el grupo principal (0,006 USD) no pasa de 0,0075; los turnos suman hasta cruzarlo
-        code = banco.main(["sweep", "--config", str(self.config(budget=0.0075, sweep=SWEEP))], layout=self.layout)
+        code = banco.main(["sweep", "--sin-prueba", "--config", str(self.config(budget=0.0075, sweep=SWEEP))], layout=self.layout)
         folder = self.only_folder()
         self.assertEqual(code, 2)
         self.assertIn("Tope de gasto", (folder / "PARADA.txt").read_text(encoding="utf-8"))
@@ -430,7 +431,7 @@ class BudgetPersistenceTest(Harness):
     def test_relaunch_after_budget_stop_does_not_spend(self):
         self.assertEqual(self.run_cli(self.config(budget=0.0015)), 2)
         with mock.patch("banco.medir_path.ejecutar.responder", wraps=ejecutar.responder) as responder, contextlib.redirect_stderr(io.StringIO()) as errors:
-            code = banco.main(["run", "--config", str(self.config(budget=0.0015))], layout=self.layout)
+            code = banco.main(["run", "--sin-prueba", "--config", str(self.config(budget=0.0015))], layout=self.layout)
         self.assertEqual(code, 2)
         self.assertEqual(responder.call_count, 0)
         self.assertIn("ya gastó", errors.getvalue())
@@ -439,7 +440,7 @@ class BudgetPersistenceTest(Harness):
     def test_reiniciar_presupuesto_starts_the_book_again(self):
         self.assertEqual(self.run_cli(self.config(budget=0.0015)), 2)
         with fake_env(FAKE_VEREDICTO="si"):
-            code = banco.main(["run", "--config", str(self.config(budget=0.0015)), "--reiniciar-presupuesto"],
+            code = banco.main(["run", "--sin-prueba", "--config", str(self.config(budget=0.0015)), "--reiniciar-presupuesto"],
                               layout=self.layout)
         folders = list((self.tmp / "resultados").iterdir())
         self.assertEqual(len(folders), 2)
@@ -461,7 +462,7 @@ class RelaunchCacheTest(Harness):
                 mock.patch("banco.judge.run_ollama_judge", wraps=judge.run_ollama_judge) as ollama, \
                 mock.patch("banco.medir_path.ejecutar.responder", wraps=ejecutar.responder) as responder:
             with fake_env(FAKE_VEREDICTO="si"):
-                code = banco.main(["run", "--config", str(composer), "--reiniciar-presupuesto"], layout=self.layout)
+                code = banco.main(["run", "--sin-prueba", "--config", str(composer), "--reiniciar-presupuesto"], layout=self.layout)
         self.assertEqual(code, 0)
         self.assertEqual((compose_mock.call_count, claude.call_count, ollama.call_count, responder.call_count), (0, 0, 0, 0))
         folder = max((self.tmp / "resultados").iterdir())
@@ -482,7 +483,7 @@ class RelaunchCacheTest(Harness):
         with mock.patch("banco.judge.run_claude_judge", wraps=judge.run_claude_judge) as claude, \
                 mock.patch("banco.judge.run_ollama_judge", wraps=judge.run_ollama_judge) as ollama:
             with fake_env(FAKE_VEREDICTO="si"):
-                code = banco.main(["run", "--config", str(path), "--reiniciar-presupuesto"], layout=self.layout)
+                code = banco.main(["run", "--sin-prueba", "--config", str(path), "--reiniciar-presupuesto"], layout=self.layout)
         self.assertEqual(code, 0)
         self.assertEqual(claude.call_count, 0)  # mismo juez de Claude: sale de la caché
         self.assertEqual(ollama.call_count, 3)  # think cambió: el veredicto de Ollama no se reutiliza
@@ -492,7 +493,7 @@ class RelaunchCacheTest(Harness):
         self.assertEqual(self.run_cli(self.config(), env={"FAKE_VEREDICTO": "invalido"}), 0)
         with mock.patch("banco.judge.run_claude_judge", wraps=judge.run_claude_judge) as claude:
             with fake_env(FAKE_VEREDICTO="si"):
-                code = banco.main(["run", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
+                code = banco.main(["run", "--sin-prueba", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
         self.assertEqual(code, 0)
         self.assertEqual(claude.call_count, 6)  # 3 preguntas × 2 jueces de Claude: los inválidos no se guardaron
 
@@ -501,7 +502,7 @@ class RelaunchCacheTest(Harness):
         with mock.patch("banco.ledger.Ledger.can_launch", return_value=False), \
                 mock.patch("banco.judge.run_claude_judge") as claude, mock.patch("banco.judge.run_ollama_judge") as ollama:
             with fake_env(FAKE_VEREDICTO="si"):
-                code = banco.main(["run", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
+                code = banco.main(["run", "--sin-prueba", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
         self.assertEqual(code, 0)
         self.assertEqual((claude.call_count, ollama.call_count), (0, 0))
         verdicts = self.read_jsonl(max((self.tmp / "resultados").iterdir()), "veredictos.jsonl")
@@ -519,7 +520,7 @@ class RelaunchCacheTest(Harness):
         with mock.patch("banco.run.answer_stage", side_effect=stopping), \
                 mock.patch("banco.judge.run_claude_judge") as claude:
             with fake_env(FAKE_VEREDICTO="si"):
-                code = banco.main(["run", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
+                code = banco.main(["run", "--sin-prueba", "--config", str(self.config()), "--reiniciar-presupuesto"], layout=self.layout)
         self.assertEqual(code, 2)
         self.assertEqual(claude.call_count, 0)
         verdicts = self.read_jsonl(max((self.tmp / "resultados").iterdir()), "veredictos.jsonl")
@@ -617,7 +618,7 @@ class CodeFingerprintTest(unittest.TestCase):
 
 class SweepTest(Harness):
     def test_sweep_writes_curves(self):
-        code = banco.main(["sweep", "--config", str(self.config(sweep=SWEEP))], layout=self.layout)
+        code = banco.main(["sweep", "--sin-prueba", "--config", str(self.config(sweep=SWEEP))], layout=self.layout)
         folder = self.only_folder()
         self.assertEqual(code, 0)
         curves = json.loads((folder / "curvas.json").read_text(encoding="utf-8"))
@@ -647,7 +648,7 @@ class SampleAndConfigTest(Harness):
     def test_reserve_battery_with_explore_is_rejected_by_cli(self):
         errors = io.StringIO()
         with contextlib.redirect_stderr(errors):
-            code = banco.main(["run", "--config", str(self.config(battery="reserva", mode="explore"))], layout=self.layout)
+            code = banco.main(["run", "--sin-prueba", "--config", str(self.config(battery="reserva", mode="explore"))], layout=self.layout)
         self.assertEqual(code, 1)
         self.assertIn("reserva", errors.getvalue())
 
@@ -685,6 +686,63 @@ class ErrorStopTest(Harness):
         self.assertEqual(code, 2)
         self.assertIn("3 errores seguidos de claude: fallo del juez",
                       (self.only_folder() / "PARADA.txt").read_text(encoding="utf-8"))
+
+
+class PreflightTest(Harness):
+    """Llamada de prueba antes del primer grupo: si falla, no se lanza nada; con --sin-prueba no se hace."""
+
+    def setUp(self):
+        super().setUp()
+        self.layout = replace(self.layout, claude_bin=TURNO)
+        self.counter = self.tmp / "contador"
+
+    def _env(self, **extra):
+        return {"FAKE_CONTADOR": str(self.counter), "FAKE_MODO_DESDE": "1", **extra}
+
+    def _calls(self):
+        return len(self.counter.read_text(encoding="utf-8").splitlines())
+
+    def test_command_is_isolated_and_has_no_odin_tools(self):
+        from banco.preflight import build_command
+        command = build_command("claude", "haiku", "/tmp/vacio.json")
+        self.assertIn("--strict-mcp-config", command)
+        self.assertNotIn("--allowedTools", command)
+        self.assertNotIn("mcp__odin", " ".join(command))
+
+    def test_ok_preflight_lets_the_group_run(self):
+        code = self.run_cli(self.config(concurrency=1), preflight=True, env=self._env(FAKE_MODO_DESDE="99"))
+        self.assertEqual(code, 0)
+        self.assertEqual(self._calls(), 1 + 6)  # prueba + 6 buscadores
+        self.assertEqual(len(self.read_jsonl(self.only_folder(), "buscadores.jsonl")), 6)
+
+    def test_failed_preflight_stops_before_the_group(self):
+        code = self.run_cli(self.config(), preflight=True, env=self._env(FAKE_MODO_DESDE_MODO="error"))
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertEqual(self._calls(), 1)  # solo la prueba
+        self.assertIn("la llamada de prueba falló: fallo cualquiera", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+        self.assertEqual(self.read_jsonl(folder, "buscadores.jsonl"), [])
+
+    def test_limit_in_preflight_stops_too(self):
+        code = self.run_cli(self.config(), preflight=True, env=self._env(FAKE_MODO_DESDE_MODO="limite"))
+        self.assertEqual(code, 2)
+        self.assertIn("la llamada de prueba falló: Claude AI usage limit reached",
+                      (self.only_folder() / "PARADA.txt").read_text(encoding="utf-8"))
+
+    def test_sin_prueba_skips_the_preflight(self):
+        code = self.run_cli(self.config(concurrency=1), env=self._env(FAKE_MODO_DESDE_MODO="error"))
+        self.assertEqual(code, 2)  # el grupo sí se lanza y para por errores seguidos, no por la prueba
+        self.assertEqual(self._calls(), 3)
+        self.assertNotIn("la llamada de prueba", (self.only_folder() / "PARADA.txt").read_text(encoding="utf-8"))
+
+    def test_failed_preflight_in_sweep_writes_no_curves(self):
+        with fake_env(**self._env(FAKE_MODO_DESDE_MODO="error")):
+            code = banco.main(["sweep", "--config", str(self.config(sweep=SWEEP))], layout=self.layout)
+        folder = self.only_folder()
+        self.assertEqual(code, 2)
+        self.assertFalse((folder / "curvas.json").exists())
+        self.assertIn("la llamada de prueba falló", (folder / "PARADA.txt").read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

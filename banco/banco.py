@@ -29,6 +29,8 @@ def _parser():
         order.add_argument("--config", required=True)
         order.add_argument("--reiniciar-presupuesto", action="store_true",
                            help="archiva el libro de gasto del experimento y empieza el tope en cero")
+        order.add_argument("--sin-prueba", action="store_true",
+                           help="no hace la llamada de prueba a claude antes del primer grupo")
     orders.add_parser("report").add_argument("--results", required=True)
     return ap
 
@@ -41,7 +43,7 @@ def main(argv=None, layout=None):
             report.rebuild(Path(args.results), layout)
             return 0
         order = run.run_experiment if args.orden == "run" else run.sweep_experiment
-        return order(Path(args.config), layout, reset_budget=args.reiniciar_presupuesto)
+        return order(Path(args.config), layout, reset_budget=args.reiniciar_presupuesto, sin_prueba=args.sin_prueba)
     except ConfigError as error:
         print(f"error de configuración: {error}", file=sys.stderr)
         return 1
