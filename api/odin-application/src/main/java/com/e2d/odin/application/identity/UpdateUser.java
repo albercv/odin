@@ -34,6 +34,9 @@ public class UpdateUser {
         UserAdministration.requireGroupAdminToActOn(actor, user);
         boolean active = changes.active().orElse(user.active());
         requireMayChangeActive(actor, user, active);
+        if (user.active() && !active) {
+            UserAdministration.requireAnotherActiveGroupAdmin(users, user);
+        }
         String firstName = changes.firstName().map(UserAdministration::requireFirstName).orElse(user.firstName());
         Optional<String> lastName = changes.lastName().map(UserAdministration::requireLastName).or(user::lastName);
         Optional<String> email = changes.email().map(e -> newEmail(actor, user, theirMemberships, e)).orElse(user.email());

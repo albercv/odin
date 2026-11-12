@@ -5,7 +5,10 @@ import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
+import com.e2d.odin.application.identity.ListGroupAdmins;
+import com.e2d.odin.application.identity.RevokeGroupAdmin;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.DescribeAdmin;
@@ -195,6 +198,23 @@ public class UseCaseConfiguration {
                 transaction.executeWithoutResult(status -> super.execute(actor, companyId, userId));
             }
         };
+    }
+
+    @Bean
+    ListGroupAdmins listGroupAdmins(UserRepository users) {
+        return new ListGroupAdmins(users);
+    }
+
+    @Bean
+    AddGroupAdmin addGroupAdmin(UserRepository users, PasswordHasher passwords, IdGenerator ids,
+            PersonCodeGenerator personCodes) {
+        return new AddGroupAdmin(users, passwords, ids, personCodes);
+    }
+
+    @Bean
+    RevokeGroupAdmin revokeGroupAdmin(UserRepository users, MembershipRepository memberships,
+            AdminSessions sessions) {
+        return new RevokeGroupAdmin(users, memberships, sessions);
     }
 
     @Bean

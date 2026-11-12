@@ -25,6 +25,15 @@ describe('Sidebar', () => {
     expect(setPage).toHaveBeenCalledWith('companies');
   });
 
+  it('groupAdminsLinkOnlyForTheGroupAdmin', async () => {
+    const { unmount } = render(<Sidebar isGroup={false} name="Bea" page="company" pending={0} setPage={() => {}} onLogout={() => {}} />);
+    expect(screen.queryByRole('link', { name: 'Administración del grupo' })).toBeNull();
+    unmount();
+    const { setPage } = show({ isGroup: true });
+    await userEvent.click(screen.getByRole('link', { name: 'Administración del grupo' }));
+    expect(setPage).toHaveBeenCalledWith('groupAdmins');
+  });
+
   it('sidebarMarksTheCurrentPage', () => {
     show({ page: 'documents' });
     expect(screen.getByRole('link', { name: 'Documentos' })).toHaveAttribute('aria-current', 'page');

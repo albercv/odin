@@ -127,13 +127,22 @@ class AuthenticationTest extends WebTestSupport {
     @Test
     void recoverAdminIsPublicAndNeedsToken() throws Exception {
         savedAdmin("recover@e.test");
-        String email = w.users.findGroupAdmin().orElseThrow().email().orElseThrow();
+        String email = "recover@e.test";
         mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"setupToken\":\"otro\",\"newPassword\":\"clave-nueva-1234\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.detail").value("Código de instalación no válido"));
         mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"setupToken\":\"setup-secret\",\"newPassword\":\"clave-nueva-1234\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"setupToken\":\"setup-secret\",\"email\":\"nadie@e.test\","
+                        + "\"newPassword\":\"clave-nueva-1234\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("No hay ningún administrador del grupo con ese correo"));
+        mvc.perform(post("/v1/setup/admin-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"setupToken\":\"setup-secret\",\"email\":\"" + email + "\","
+                        + "\"newPassword\":\"clave-nueva-1234\"}"))
                 .andExpect(status().isNoContent());
         mvc.perform(post("/v1/admin/session").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"password\":\"clave-nueva-1234\"}"))

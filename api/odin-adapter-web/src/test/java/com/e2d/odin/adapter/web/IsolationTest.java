@@ -173,4 +173,26 @@ class IsolationTest extends WebTestSupport {
         mvc.perform(get("/v1/admin/companies/" + b.value() + "/members/" + worker.value() + "/projects")
                 .cookie(other)).andExpect(status().isNotFound());
     }
+
+    @Test
+    void companyAdminCannotManageGroupAdmins() throws Exception {
+        CompanyId a = newCompany();
+        var company = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        UserId groupAdmin = People.groupAdmin(w.users, new UserId(java.util.UUID.randomUUID()), "Gema",
+                Optional.of("gema-iso@e.test"), true, Optional.of("pw:x")).id();
+        String body = "{\"firstName\":\"Gael\",\"lastName\":\"Ruiz\",\"email\":\"gael-iso@e.test\","
+                + "\"password\":\"clave-muy-larga-1\"}";
+
+        mvc.perform(get("/v1/admin/group-admins").cookie(company)).andExpect(status().isForbidden());
+        mvc.perform(post("/v1/admin/group-admins").cookie(company).contentType(MediaType.APPLICATION_JSON)
+                .content(body)).andExpect(status().isForbidden());
+        mvc.perform(delete("/v1/admin/group-admins/" + groupAdmin.value()).cookie(company))
+                .andExpect(status().isForbidden());
+        mvc.perform(patch("/v1/admin/users/" + groupAdmin.value()).cookie(company)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
+                .andExpect(status().isForbidden());
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(groupAdmin).orElseThrow())
+                .satisfies(u -> org.assertj.core.api.Assertions.assertThat(u.groupAdmin() && u.active()).isTrue());
+        org.assertj.core.api.Assertions.assertThat(w.users.findByEmail("gael-iso@e.test")).isEmpty();
+    }
 }

@@ -4,6 +4,7 @@ import { Account } from '../pages/Account';
 import { Companies } from '../pages/Companies';
 import { Company } from '../pages/Company';
 import { Documents } from '../pages/Documents';
+import { GroupAdmins } from '../pages/GroupAdmins';
 import { Review } from '../pages/Review';
 import { withViewTransition } from '../ui/viewTransition';
 import { Sidebar, type Page } from './Sidebar';
@@ -30,7 +31,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
   const open = (id: string, name: string) => { setCompanyId(id); setOpenedName(name); setPage('company'); };
   const companyName = openedName ?? me.companies?.find((c) => c.id === companyId)?.name;
   const switchTo = (id: string) => { setCompanyId(id); setOpenedName(undefined); };
-  const needsCompany = page !== 'companies' && page !== 'account';
+  const needsCompany = page !== 'companies' && page !== 'account' && page !== 'groupAdmins';
   return (
     <div className={styles.shell}>
       <Sidebar isGroup={isGroup} name={me.displayName} companyName={companyId ? companyName : undefined} page={page}
@@ -38,6 +39,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         pending={pending} setPage={setPage} onLogout={onLogout} />
       <main className={styles.main}>
         {page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} onProfileChanged={onProfileChanged} />}
+        {page === 'groupAdmins' && isGroup && <GroupAdmins me={me} />}
         {page === 'companies' && <Companies onOpen={open} />}
         {needsCompany && !companyId && <p>Elige primero una empresa en «Empresas».</p>}
         {needsCompany && companyId && page === 'company' && <Company key={companyId} companyId={companyId} me={me} />}
