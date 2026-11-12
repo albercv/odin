@@ -1,15 +1,18 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ApiClient, Hit } from '../api/client.js';
+import type { ProjectNames } from '../projects.js';
 import { NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
 
-export function registerSearchKnowledge(server: McpServer, api: ApiClient): void {
+export function registerSearchKnowledge(server: McpServer, api: ApiClient, projects: ProjectNames): void {
   server.registerTool(
     'searchKnowledge',
     {
       description:
         'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
-        'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha y su origen, y no tienen página.',
+        'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
+        'projectName es el proyecto (comunidad, cliente u obra) del resultado. ' +
+        'addedAt es la fecha en que entró en Odín, no la del documento.',
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto'),
@@ -20,21 +23,22 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient): void
       guarded(async () => {
         const result = await api.search(args);
         if (result.noSource || !result.hits.length) return textResult(NO_SOURCE_MESSAGE);
-        return jsonResult({ hits: result.hits.map(toCitation) });
+        return jsonResult({ hits: result.hits.map((hit) => toCitation(hit, projects)) });
       }),
   );
 }
 
 // Una ficha nunca se presenta como documento: lleva cardId y su marca de origen (spec 6.8, D-024).
-const toCitation = (hit: Hit) =>
+const toCitation = (hit: Hit, projects: ProjectNames) =>
   hit.sourceType === 'KNOWLEDGE_CARD'
     ? {
         sourceType: hit.sourceType,
         cardId: hit.sourceId,
         title: hit.title,
         authorName: hit.authorName,
-        date: hit.date,
+        addedAt: hit.date,
         projectId: hit.projectId ?? null,
+        projectName: projects.nameOf(hit.projectId),
         excerpt: hit.excerpt,
         origin: `Ficha aportada por ${hit.authorName}; resumen hecho por IA`,
       }
@@ -45,7 +49,8 @@ const toCitation = (hit: Hit) =>
         pageNumber: hit.pageNumber ?? null,
         paginated: hit.paginated,
         projectId: hit.projectId ?? null,
+        projectName: projects.nameOf(hit.projectId),
         authorName: hit.authorName,
-        date: hit.date,
+        addedAt: hit.date,
         excerpt: hit.excerpt,
       };

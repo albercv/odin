@@ -28,9 +28,85 @@ describe('buildServer', () => {
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['listDocuments', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
+  });
+
+  it('registersListProjectsWithSearchCapability', async () => {
+    const search = await connect(() => meWith(['SEARCH_KNOWLEDGE']));
+    expect((await search.listTools()).tools.map((t) => t.name)).toContain('listProjects');
+    await fake.close();
+    const save = await connect(() => meWith(['SAVE_KNOWLEDGE_CARD']));
+    expect((await save.listTools()).tools.map((t) => t.name)).not.toContain('listProjects');
+  });
+
+  it('listProjectsReturnsIdAndName', async () => {
+    const projects = [{ id: 'p1', name: 'Comunidad Sol' }, { id: 'p2', name: 'Obra Norte' }];
+    const client = await connect(() => meWith(ALL, 'Empresa Uno', projects));
+    const parsed = JSON.parse(textOf(await client.callTool({ name: 'listProjects', arguments: {} })));
+    expect(parsed).toEqual({ projects: [{ projectId: 'p1', name: 'Comunidad Sol' }, { projectId: 'p2', name: 'Obra Norte' }] });
+  });
+
+  it('listProjectsOnlyShowsMyProjects', async () => {
+    // El proyecto cerrado p9 existe en la empresa, pero /v1/me no lo devuelve porque el trabajador no es miembro.
+    const client = await connect((r) =>
+      r.url === '/v1/me' ? meWith(ALL, 'Empresa Uno', [{ id: 'p1', name: 'Comunidad Sol' }]) : { status: 500, body: {} });
+    const parsed = JSON.parse(textOf(await client.callTool({ name: 'listProjects', arguments: {} })));
+    expect(parsed.projects.map((p: { projectId: string }) => p.projectId)).toEqual(['p1']);
+    expect(fake.requests.map((r) => r.url).filter((u) => u !== '/v1/me')).toEqual([]);
+  });
+
+  const P1 = { id: 'p1', name: 'Comunidad Sol' };
+  const P2 = { id: 'p2', name: 'Obra Norte' };
+  const docHit = (projectId?: string) => ({ sourceType: 'ORIGINAL_DOCUMENT', sourceId: 'd1', title: 'Manual', pageNumber: 1,
+    paginated: true, projectId, authorName: 'Ana', date: '2026-01-01T00:00:00Z', excerpt: 'x', rank: 1 });
+  const search = async (hits: unknown[], projects = [P1, P2]) => {
+    const client = await connect((r) =>
+      r.url === '/v1/me' ? meWith(ALL, 'Empresa Uno', projects) : { status: 200, body: { hits, noSource: false } });
+    return JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['x'] } })));
+  };
+
+  it('searchHitsCarryProjectName', async () => {
+    const card = { ...docHit('p2'), sourceType: 'KNOWLEDGE_CARD', paginated: false };
+    const parsed = await search([docHit('p1'), card]);
+    expect(parsed.hits.map((h: { projectName: string }) => h.projectName)).toEqual(['Comunidad Sol', 'Obra Norte']);
+  });
+
+  it('deletedProjectShowsDeletedProjectName', async () => {
+    const parsed = await search([docHit('p-borrado')]);
+    expect(parsed.hits[0].projectName).toBe('Proyecto borrado');
+  });
+
+  it('hitWithoutProjectHasNullProjectName', async () => {
+    const parsed = await search([docHit(undefined)]);
+    expect(parsed.hits[0].projectName).toBeNull();
+  });
+
+  it('searchResultStillHasProjectId', async () => {
+    const parsed = await search([docHit('p1')]);
+    expect(parsed.hits[0]).toMatchObject({ projectId: 'p1', projectName: 'Comunidad Sol' });
+  });
+
+  it('projectNameNeverRevealsAnotherProject', async () => {
+    const parsed = await search([docHit('p1')], [P1, P2]);
+    expect(JSON.stringify(parsed)).not.toContain('Obra Norte');
+    const notMember = await search([docHit('p2')], [P1]);
+    expect(JSON.stringify(notMember)).not.toContain('Obra Norte');
+    expect(notMember.hits[0].projectName).toBe('Proyecto borrado');
+  });
+
+  it('listDocumentsCarriesProjectName', async () => {
+    const client = await connect((r) => r.url === '/v1/me' ? meWith(ALL, 'Empresa Uno', [P1])
+      : { status: 200, body: [{ id: 'd1', projectId: 'p1', title: 'T' }, { id: 'd2', title: 'S' }] });
+    const parsed = JSON.parse(textOf(await client.callTool({ name: 'listDocuments', arguments: {} })));
+    expect(parsed.documents.map((d: { projectName: string | null }) => d.projectName)).toEqual(['Comunidad Sol', null]);
+  });
+
+  it('instructionsTellToFilterByProject', async () => {
+    const client = await connect(() => meWith(ALL));
+    expect(client.getInstructions()).toContain(
+      'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.');
   });
 
   it('searchMapsHitsWithCitation', async () => {
@@ -39,7 +115,8 @@ describe('buildServer', () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [hit], noSource: false } }));
     const result = await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['plazo'], limit: 5 } });
     const parsed = JSON.parse(textOf(result));
-    expect(parsed.hits[0]).toMatchObject({ documentId: 'd1', title: 'Manual', pageNumber: 3, excerpt: 'el <b>plazo</b>' });
+    expect(parsed.hits[0]).toMatchObject({ documentId: 'd1', title: 'Manual', pageNumber: 3, addedAt: '2026-01-01T00:00:00Z', excerpt: 'el <b>plazo</b>' });
+    expect(parsed.hits[0]).not.toHaveProperty('date');
     expect(JSON.parse(fake.requests.at(-1)!.body)).toEqual({ queries: ['plazo'], limit: 5 });
   });
 
@@ -49,17 +126,40 @@ describe('buildServer', () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [card], noSource: false } }));
     const parsed = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['truco'] } })));
     expect(parsed.hits[0]).toEqual({ sourceType: 'KNOWLEDGE_CARD', cardId: 'k1', title: 'Truco', authorName: 'Ana',
-      date: '2026-01-01T00:00:00Z', projectId: null, excerpt: 'se hace así',
+      addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: null, excerpt: 'se hace así',
       origin: 'Ficha aportada por Ana; resumen hecho por IA' });
   });
 
-  it('instructionsExplainHowToCiteCardsAndUseVerifyCitation', async () => {
+  it('searchDescriptionExplainsAddedAt', async () => {
+    const client = await connect(() => meWith(ALL));
+    const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');
+    expect(search?.description).toContain('addedAt es la fecha en que entró en Odín, no la del documento.');
+  });
+
+  it('instructionsKeepCardCitationRule', async () => {
     const client = await connect(() => meWith(ALL));
     const instructions = client.getInstructions() ?? '';
-    expect(instructions).toContain('por título, autor y fecha');
+    expect(instructions).toContain('con su título, autor y fecha de alta');
     expect(instructions).toContain('no tienen página');
     expect(instructions).toContain('verifyCitation es solo para documentos');
     expect(instructions).toContain('si verifyCitation devuelve false, no uses esa cita');
+  });
+
+  it('instructionsRequireLiteralQuotes', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).toContain('Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.');
+    expect(instructions).toContain('De una ficha, cita solo su texto, sin el título, el autor ni la fecha.');
+    expect(instructions).toContain('preséntalas con su título, autor y fecha');
+  });
+
+  it('instructionsAskForPartialSourceWarning', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).toContain(
+      'Afirma solo lo que dicen las citas. Si la fuente es parcial, porque falta el documento que lo regula o el que tienes no lo dice todo, dilo y no completes la conclusión.');
+  });
+
+  it('instructionsStayUnderLengthBudget', async () => {
+    expect((await connect(() => meWith(ALL))).getInstructions()?.length).toBeLessThanOrEqual(2200);
   });
 
   it('noSourceMessage', async () => {
