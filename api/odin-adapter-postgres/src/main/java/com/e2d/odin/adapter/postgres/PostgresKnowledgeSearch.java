@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.postgres;
 
 import com.e2d.odin.application.port.KnowledgeSearch;
 import com.e2d.odin.domain.document.DocumentRef;
+import com.e2d.odin.domain.knowledge.ReviewStatus;
 import com.e2d.odin.domain.search.CasePage;
 import com.e2d.odin.domain.search.CasePageSelection;
 import com.e2d.odin.domain.search.SearchHit;
@@ -30,7 +31,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     private static final String CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
                    d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
-                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id
+                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id, NULL AS review_status
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
                  q
             WHERE d.status = 'READY'
@@ -38,25 +39,25 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
-                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id
+                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id, c.status
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
-            WHERE c.status = 'APPROVED'
+            WHERE %11$s
               AND %10$s AND %6$s AND %8$s
               AND (c.tsv @@ q.q OR %4$s)""";
     /** Un candidato por página de documento marcado como caso y por ficha aprobada; sin autor a propósito (D-040). */
     private static final String CASE_CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.project_id,
                    d.uploaded_at AS date, p.text AS body,
-                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id
+                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id, NULL AS review_status
             FROM document_page p JOIN document d ON d.id = p.document_id, q
             WHERE d.status = 'READY' AND d.case_document
               AND %5$s AND %6$s AND %7$s
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, c.project_id, c.created_at, c.body,
-                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id
+                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id, c.status
             FROM knowledge_card c, q
-            WHERE c.status = 'APPROVED'
+            WHERE %11$s
               AND %8$s AND %9$s AND %10$s
               AND (c.tsv @@ q.q OR %4$s)""";
     private static final String PAGES_OF_CASES = """
@@ -97,23 +98,23 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
 
     private record CaseRow(SourceType type, UUID id, String title, Optional<ProjectId> projectId, Instant addedAt,
             Optional<Integer> bestPage, String body, String headline, boolean superseded,
-            Optional<DocumentRef> replacement) {
+            Optional<DocumentRef> replacement, Optional<ReviewStatus> reviewStatus) {
 
         SimilarCase toCase(Map<UUID, List<CasePage>> pages, List<String> terms) {
             String excerpt = SearchSql.excerpt(headline, body, terms);
             if (type == SourceType.KNOWLEDGE_CARD) {
                 return new SimilarCase(type, id, title, projectId, addedAt, 0, List.of(), Optional.of(body), false,
-                        excerpt, superseded, replacement);
+                        excerpt, superseded, replacement, reviewStatus);
             }
             List<CasePage> all = pages.getOrDefault(id, List.of());
             var selection = CasePageSelection.select(all, bestPage.orElse(1));
             return new SimilarCase(type, id, title, projectId, addedAt, all.size(), selection.pages(), Optional.empty(),
-                    selection.truncated(), excerpt, superseded, replacement);
+                    selection.truncated(), excerpt, superseded, replacement, Optional.empty());
         }
     }
 
     private List<CaseRow> caseRows(JdbcClient jdbc, List<String> terms, List<String> exact, SimilarCasesQuery query) {
-        String inner = "SELECT id, source, title, page, project_id, date, body, rank, superseded_by, company_id,"
+        String inner = "SELECT id, source, title, page, project_id, date, body, rank, superseded_by, company_id, review_status,"
                 + " ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\", MaxFragments=1') AS headline"
                 + " FROM best, q ORDER BY rank DESC, title, id LIMIT :limit";
         String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q), cand AS ("
@@ -121,7 +122,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 + " ORDER BY id, rank DESC, page NULLS FIRST) " + SearchSql.withSupersession(inner, "t.id");
         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
-                .param("limit", query.limit());
+                .param("limit", query.limit()).param("searcher", query.searcher().value());
         return SearchSql.bindTerms(spec, terms, exact).query(PostgresKnowledgeSearch::caseRow).list();
     }
 
@@ -131,7 +132,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 SearchSql.anyMatch("c.body", exactCount), SearchSql.inProject("d.project_id"),
                 Sql.inScope("d.company_id"), Sql.inVisibleProjects("d.project_id"),
                 SearchSql.inProject("c.project_id"), Sql.inScope("c.company_id"),
-                Sql.inVisibleProjects("c.project_id"));
+                Sql.inVisibleProjects("c.project_id"), SearchSql.visibleCards("c"));
     }
 
     private static CaseRow caseRow(ResultSet rs, int n) throws SQLException {
@@ -139,7 +140,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
         return new CaseRow(SourceType.valueOf(rs.getString("source")), Sql.uuid(rs, "id"), rs.getString("title"),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), Sql.instant(rs, "date"),
                 rs.wasNull() ? Optional.empty() : Optional.of(page), rs.getString("body"), rs.getString("headline"),
-                Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs));
+                Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs), reviewStatus(rs));
     }
 
     /** Las páginas de los documentos elegidos, con el mismo filtro de empresa y de proyectos que la consulta. */
@@ -162,14 +163,14 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
 
     private List<SearchHit> rows(JdbcClient jdbc, List<String> terms, List<String> exact, SearchQuery query) {
         String inner = "SELECT id, source, title, page, paginated, project_id, author, date, body, rank,"
-                + " superseded_by, company_id, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
+                + " superseded_by, company_id, review_status, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
                 + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
                 + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
         String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q) "
                 + SearchSql.withSupersession(inner, "t.page NULLS FIRST, t.id");
         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
-                .param("limit", query.limit());
+                .param("limit", query.limit()).param("searcher", query.searcher().value());
         return SearchSql.bindTerms(spec, terms, exact).query((rs, n) -> hit(rs, terms)).list();
     }
 
@@ -180,7 +181,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 SearchSql.boost("c.body", exactCount), cardMatch, Sql.inScope("d.company_id"),
                 Sql.inScope("c.company_id"), Sql.inVisibleProjects("d.project_id"),
                 Sql.inVisibleProjects("c.project_id"), SearchSql.inProject("d.project_id"),
-                SearchSql.inProject("c.project_id"));
+                SearchSql.inProject("c.project_id"), SearchSql.visibleCards("c"));
     }
 
     private static SearchHit hit(ResultSet rs, List<String> terms) throws SQLException {
@@ -191,6 +192,11 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 pageNumber, rs.getBoolean("paginated"),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), rs.getString("author"),
                 Sql.instant(rs, "date"), SearchSql.excerpt(rs.getString("headline"), body, terms),
-                rs.getDouble("rank"), Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs));
+                rs.getDouble("rank"), Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs),
+                reviewStatus(rs));
+    }
+
+    private static Optional<ReviewStatus> reviewStatus(ResultSet rs) throws SQLException {
+        return Optional.ofNullable(rs.getString("review_status")).map(ReviewStatus::valueOf);
     }
 }

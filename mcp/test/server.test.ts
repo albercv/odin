@@ -24,11 +24,11 @@ afterEach(() => fake?.close());
 describe('buildServer', () => {
   it('registersOnlyEnabledCapabilities', async () => {
     const onlySave = await connect(() => meWith(['SAVE_KNOWLEDGE_CARD']));
-    expect((await onlySave.listTools()).tools.map((t) => t.name)).toEqual(['saveKnowledgeCard']);
+    expect((await onlySave.listTools()).tools.map((t) => t.name)).toEqual(['saveKnowledgeCard', 'listMyKnowledgeCards']);
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
   });
@@ -184,10 +184,37 @@ describe('buildServer', () => {
       origin: 'Ficha aportada por Ana, redactada con IA' });
   });
 
+  it('searchCardsCarryReviewStatusAndDescriptionExplainsPending', async () => {
+    const card = { sourceType: 'KNOWLEDGE_CARD', sourceId: 'k1', title: 'Truco', paginated: false, authorName: 'Ana',
+      date: '2026-01-01T00:00:00Z', excerpt: 'x', rank: 1, superseded: false, reviewStatus: 'PENDING' };
+    const parsed = await search([card, docHit('p1')]);
+    expect(parsed.hits[0]).toMatchObject({ cardId: 'k1', reviewStatus: 'PENDING' });
+    expect(parsed.hits[1]).not.toHaveProperty('reviewStatus');
+    const tools = (await (await connect(() => meWith(ALL))).listTools()).tools;
+    expect(tools.find((t) => t.name === 'searchKnowledge')?.description).toContain(
+      'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.');
+  });
+
+  it('pendingCardRuleLivesInToolDescriptionsNotInInstructions', async () => {
+    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
+    expect(instructions).not.toContain('reviewStatus');
+  });
+
   it('searchDescriptionExplainsAddedAt', async () => {
     const client = await connect(() => meWith(ALL));
     const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');
     expect(search?.description).toContain('addedAt es la fecha en que entró en Odín, no la del documento.');
+  });
+
+  it.each([
+    'Cada consulta, una idea, en 1 a 3 palabras específicas.',
+    'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena.',
+    'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas.',
+    'Si una ficha dice algo distinto que un documento, cita las dos.',
+  ])('searchDescriptionGuidesTheModel: %s', async (sentence) => {
+    const client = await connect(() => meWith(ALL));
+    const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');
+    expect(search?.description).toContain(sentence);
   });
 
   it('instructionsKeepCardCitationRule', async () => {

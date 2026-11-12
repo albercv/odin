@@ -484,6 +484,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myQuestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -564,6 +596,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/usage-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["usageStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/tagging-status": {
         parameters: {
             query?: never;
@@ -604,6 +652,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["projects_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["gaps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/delivered-volume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["deliveredVolume"];
         put?: never;
         post?: never;
         delete?: never;
@@ -758,6 +838,7 @@ export interface components {
             originLabel?: string;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SimilarCasesResponse: {
             cases: components["schemas"]["SimilarCaseView"][];
@@ -805,6 +886,7 @@ export interface components {
             rank: number;
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
+            reviewStatus?: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
@@ -1027,6 +1109,33 @@ export interface components {
             /** Format: int32 */
             pendingDocuments: number;
         };
+        MyQuestionView: {
+            text: string;
+            kind: string;
+            /** Format: int32 */
+            hitCount: number;
+            /** Format: date-time */
+            askedAt: string;
+        };
+        MyCardView: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            body: string;
+            originalBody?: string;
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
+            review?: components["schemas"]["MyReviewView"];
+        };
+        MyReviewView: {
+            decision: string;
+            note?: string;
+            /** Format: date-time */
+            reviewedAt: string;
+        };
         Health: {
             status: string;
         };
@@ -1100,6 +1209,65 @@ export interface components {
             topicListVersion: number;
             failureReason?: string;
         };
+        CardCountsView: {
+            /** Format: int32 */
+            saved: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            approved?: number;
+            /** Format: int32 */
+            corrected?: number;
+            /** Format: int32 */
+            rejected?: number;
+            withheld: boolean;
+            reason?: string;
+        };
+        CompanyUsageView: {
+            questions: components["schemas"]["QuestionCountsView"];
+            /** Format: int32 */
+            questionsWithoutResults: number;
+            cards: components["schemas"]["CardCountsView"];
+            documents: components["schemas"]["DocumentCountsView"];
+            tagging?: components["schemas"]["TaggingCountsView"];
+        };
+        DocumentCountsView: {
+            /** Format: int32 */
+            uploaded: number;
+            /** Format: int32 */
+            ready: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            waitingForReader: number;
+        };
+        PersonUsageView: {
+            /** Format: uuid */
+            userId?: string;
+            displayName: string;
+            memberCode?: string;
+            /** Format: int32 */
+            questions: number;
+            /** Format: int32 */
+            cardsSaved: number;
+        };
+        QuestionCountsView: {
+            /** Format: int32 */
+            search: number;
+            /** Format: int32 */
+            similarCases: number;
+        };
+        TaggingCountsView: {
+            /** Format: int32 */
+            tagged: number;
+            /** Format: int32 */
+            pending: number;
+        };
+        UsageStatsView: {
+            month: string;
+            company: components["schemas"]["CompanyUsageView"];
+            people: components["schemas"]["PersonUsageView"][];
+        };
         TaggingStatusView: {
             /** Format: int32 */
             pendingDocuments: number;
@@ -1127,6 +1295,30 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             revokedAt?: string;
+        };
+        GapView: {
+            text: string;
+            kind: string;
+            /** Format: int32 */
+            times: number;
+            /** Format: date */
+            lastAskedOn: string;
+        };
+        GapsView: {
+            withheld: boolean;
+            reason?: string;
+            gaps: components["schemas"]["GapView"][];
+        };
+        DeliveredVolumeView: {
+            month: string;
+            totals: components["schemas"]["DeliveryTotalView"][];
+        };
+        DeliveryTotalView: {
+            tool: string;
+            /** Format: int64 */
+            calls: number;
+            /** Format: int64 */
+            bytes: number;
         };
     };
     responses: never;
@@ -2232,6 +2424,50 @@ export interface operations {
             };
         };
     };
+    myQuestions: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyQuestionView"][];
+                };
+            };
+        };
+    };
+    myCards: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "APPROVED" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCardView"][];
+                };
+            };
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -2343,6 +2579,30 @@ export interface operations {
             };
         };
     };
+    usageStats: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageStatsView"];
+                };
+            };
+        };
+    };
     taggingStatus: {
         parameters: {
             query?: never;
@@ -2407,6 +2667,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectView"][];
+                };
+            };
+        };
+    };
+    gaps: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GapsView"];
+                };
+            };
+        };
+    };
+    deliveredVolume: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveredVolumeView"];
                 };
             };
         };

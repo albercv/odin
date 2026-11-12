@@ -118,7 +118,7 @@ class SimilarCasesBatteryIT extends AbstractPostgresIT {
 
     private Set<String> titlesOf(PostgresKnowledgeSearch search, CompanyId company, ProjectVisibility visibility,
             List<String> terms) {
-        var query = new SimilarCasesQuery(terms, CompanyScope.of(company), visibility, Optional.empty(), LIMIT);
+        var query = new SimilarCasesQuery(terms, CompanyScope.of(company), visibility, Optional.empty(), LIMIT, Db.NOBODY);
         return search.findSimilarCases(query).cases().stream().map(SimilarCase::title).collect(Collectors.toSet());
     }
 

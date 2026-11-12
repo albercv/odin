@@ -5,20 +5,68 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.People;
+import com.e2d.odin.application.usage.CardCounts;
+import com.e2d.odin.application.usage.CompanyUsage;
+import com.e2d.odin.application.usage.DocumentCounts;
+import com.e2d.odin.application.usage.GapGroup;
+import com.e2d.odin.application.usage.QuestionCounts;
+import com.e2d.odin.application.usage.WorkerTool;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.knowledge.CardStatus;
+import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.QuestionKind;
+import com.e2d.odin.domain.knowledge.QuestionRecord;
+import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UserId;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 class IsolationTest extends WebTestSupport {
+
+    @Test
+    void keyOfOtherPersonNeverListsSomeoneElsesCardsOrQuestions() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId author = workerId(a);
+        joinAsWorker(author, b);
+        w.cards.save(new KnowledgeCard(new CardId(UUID.randomUUID()), a, Optional.empty(), "Secreta", "texto",
+                Optional.empty(), author, w.clock.instant(), CardStatus.PENDING, Optional.empty()));
+        w.questions.record(new QuestionRecord(UUID.randomUUID(), a, author, "pregunta secreta", 0, w.clock.instant(),
+                QuestionKind.SEARCH));
+        String own = keyOf(author, a);
+        String colleague = workerKey(a);
+        String sameAuthorInOtherCompany = keyOf(author, b);
+
+        mvc.perform(get("/v1/me/cards").header("Authorization", own)).andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(get("/v1/me/questions").header("Authorization", own)).andExpect(jsonPath("$", hasSize(1)));
+        for (String key : new String[] {colleague, sameAuthorInOtherCompany, workerKey(b)}) {
+            mvc.perform(get("/v1/me/cards").header("Authorization", key)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
+            mvc.perform(get("/v1/me/questions").header("Authorization", key)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
+        }
+    }
+
+    @Test
+    void adminSessionNeverListsCardsOrQuestionsOfAWorker() throws Exception {
+        CompanyId a = newCompany();
+        var admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+
+        mvc.perform(get("/v1/me/cards").cookie(admin)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/v1/me/questions").cookie(admin)).andExpect(status().isUnauthorized());
+    }
 
     @Test
     void companyAdminOfBCannotListDocumentsOfA() throws Exception {
@@ -323,28 +371,6 @@ class IsolationTest extends WebTestSupport {
                 .cookie(other)).andExpect(status().isNotFound());
     }
 
-    @Test
-    void companyAdminCannotManageGroupAdmins() throws Exception {
-        CompanyId a = newCompany();
-        var company = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
-        UserId groupAdmin = People.groupAdmin(w.users, new UserId(java.util.UUID.randomUUID()), "Gema",
-                Optional.of("gema-iso@e.test"), true, Optional.of("pw:x")).id();
-        String body = "{\"firstName\":\"Gael\",\"lastName\":\"Ruiz\",\"email\":\"gael-iso@e.test\","
-                + "\"password\":\"clave-muy-larga-1\"}";
-
-        mvc.perform(get("/v1/admin/group-admins").cookie(company)).andExpect(status().isForbidden());
-        mvc.perform(post("/v1/admin/group-admins").cookie(company).contentType(MediaType.APPLICATION_JSON)
-                .content(body)).andExpect(status().isForbidden());
-        mvc.perform(delete("/v1/admin/group-admins/" + groupAdmin.value()).cookie(company))
-                .andExpect(status().isForbidden());
-        mvc.perform(patch("/v1/admin/users/" + groupAdmin.value()).cookie(company)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
-                .andExpect(status().isForbidden());
-        org.assertj.core.api.Assertions.assertThat(w.users.findById(groupAdmin).orElseThrow())
-                .satisfies(u -> org.assertj.core.api.Assertions.assertThat(u.groupAdmin() && u.active()).isTrue());
-        org.assertj.core.api.Assertions.assertThat(w.users.findByEmail("gael-iso@e.test")).isEmpty();
-    }
-
     private String createTopic(jakarta.servlet.http.Cookie admin, CompanyId company, String name) throws Exception {
         var created = mvc.perform(post("/v1/admin/companies/" + company.value() + "/topics").cookie(admin)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + name + "\",\"definition\":\"x\"}"))
@@ -387,5 +413,73 @@ class IsolationTest extends WebTestSupport {
 
         mvc.perform(put(base + "/" + topicOfB).cookie(adminOfA)).andExpect(status().isNotFound());
         mvc.perform(get(base).cookie(adminOfA)).andExpect(jsonPath("$.topics.length()").value(0));
+    }
+    @Test
+    void otherCompanyAdminCannotReadUsageOrGaps() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        w.usage.seed(a, new CompanyUsage(new QuestionCounts(7, 0), 0, new CardCounts(0, 0, Optional.empty(), false),
+                new DocumentCounts(0, 0, 0, 0), Optional.empty()), List.of());
+        w.usage.seed(b, new CompanyUsage(new QuestionCounts(1, 0), 0, new CardCounts(0, 0, Optional.empty(), false),
+                new DocumentCounts(0, 0, 0, 0), Optional.empty()), List.of());
+        w.usage.seedGaps(a, List.of(new GapGroup("secreto de A", QuestionKind.SEARCH, 1, LocalDate.of(2026, 11, 1))));
+        var ownerOfA = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+        var group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+        String stats = "/v1/admin/companies/" + a.value() + "/usage-stats";
+        String gaps = "/v1/admin/companies/" + a.value() + "/gaps";
+
+        mvc.perform(get(stats).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(gaps).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(stats).cookie(ownerOfA)).andExpect(jsonPath("$.company.questions.search").value(7));
+        mvc.perform(get(stats).cookie(group)).andExpect(jsonPath("$.company.questions.search").value(7));
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/usage-stats").cookie(group))
+                .andExpect(jsonPath("$.company.questions.search").value(1));
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/gaps").cookie(group)).andExpect(jsonPath("$.gaps", hasSize(0)));
+        mvc.perform(get(gaps).cookie(ownerOfA)).andExpect(jsonPath("$.gaps", hasSize(1)))
+                .andExpect(jsonPath("$.gaps[0].text").value("secreto de A"));
+        mvc.perform(get(gaps).cookie(group)).andExpect(jsonPath("$.gaps", hasSize(1)));
+        for (String route : new String[] {"usage-stats", "gaps", "delivered-volume"}) {
+            mvc.perform(get("/v1/admin/companies/" + a.value() + "/" + route).header("Authorization", workerKey(a)))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+    @Test
+    void otherCompanyAdminCannotReadDeliveredVolume() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        w.meter.record(a, WorkerTool.SEARCH, 500, w.clock.instant());
+        w.meter.record(b, WorkerTool.SEARCH, 7, w.clock.instant());
+        String urlOfA = "/v1/admin/companies/" + a.value() + "/delivered-volume";
+        var group = adminCookie(Role.GROUP_ADMIN, Optional.empty());
+
+        mvc.perform(get(urlOfA).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(b)))).andExpect(status().isForbidden());
+        mvc.perform(get(urlOfA).cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(a))))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(500));
+        mvc.perform(get(urlOfA).cookie(group)).andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(500));
+        mvc.perform(get("/v1/admin/companies/" + b.value() + "/delivered-volume").cookie(group))
+                .andExpect(jsonPath("$.totals[?(@.tool == 'SEARCH')].bytes").value(7));
+    }
+
+    @Test
+    void companyAdminCannotManageGroupAdmins() throws Exception {
+        CompanyId a = newCompany();
+        var company = adminCookie(Role.COMPANY_ADMIN, Optional.of(a));
+        UserId groupAdmin = People.groupAdmin(w.users, new UserId(java.util.UUID.randomUUID()), "Gema",
+                Optional.of("gema-iso@e.test"), true, Optional.of("pw:x")).id();
+        String body = "{\"firstName\":\"Gael\",\"lastName\":\"Ruiz\",\"email\":\"gael-iso@e.test\","
+                + "\"password\":\"clave-muy-larga-1\"}";
+
+        mvc.perform(get("/v1/admin/group-admins").cookie(company)).andExpect(status().isForbidden());
+        mvc.perform(post("/v1/admin/group-admins").cookie(company).contentType(MediaType.APPLICATION_JSON)
+                .content(body)).andExpect(status().isForbidden());
+        mvc.perform(delete("/v1/admin/group-admins/" + groupAdmin.value()).cookie(company))
+                .andExpect(status().isForbidden());
+        mvc.perform(patch("/v1/admin/users/" + groupAdmin.value()).cookie(company)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
+                .andExpect(status().isForbidden());
+        org.assertj.core.api.Assertions.assertThat(w.users.findById(groupAdmin).orElseThrow())
+                .satisfies(u -> org.assertj.core.api.Assertions.assertThat(u.groupAdmin() && u.active()).isTrue());
+        org.assertj.core.api.Assertions.assertThat(w.users.findByEmail("gael-iso@e.test")).isEmpty();
     }
 }

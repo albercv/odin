@@ -1,0 +1,196 @@
+diff --git a/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearch.java b/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearch.java
+index 2ddc783..8efc4de 100644
+--- a/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearch.java
++++ b/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearch.java
+@@ -31,7 +31,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
+     private static final String CANDIDATES = """
+             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
+                    d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
+-                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id, NULL AS review_status
++                   %1$s AS boost, ts_rank_cd(p.tsv, q.q)::float8 AS tsrank, p.tsv AS tsv, d.superseded_by, d.company_id, NULL AS review_status
+             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
+                  q
+             WHERE d.status = 'READY'
+@@ -39,7 +39,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
+               AND (p.tsv @@ q.q OR %2$s)
+             UNION ALL
+             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
+-                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id, c.status
++                   %3$s, ts_rank_cd(c.tsv, q.q)::float8, c.tsv, NULL::uuid, c.company_id, c.status
+             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
+             WHERE %11$s
+               AND %10$s AND %6$s AND %8$s
+@@ -48,14 +48,14 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
+     private static final String CASE_CANDIDATES = """
+             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.project_id,
+                    d.uploaded_at AS date, p.text AS body,
+-                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id, NULL AS review_status
++                   %1$s AS boost, ts_rank_cd(p.tsv, q.q)::float8 AS tsrank, p.tsv AS tsv, d.superseded_by, d.company_id, NULL AS review_status
+             FROM document_page p JOIN document d ON d.id = p.document_id, q
+             WHERE d.status = 'READY' AND d.case_document
+               AND %5$s AND %6$s AND %7$s
+               AND (p.tsv @@ q.q OR %2$s)
+             UNION ALL
+             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, c.project_id, c.created_at, c.body,
+-                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id, c.status
++                   %3$s, ts_rank_cd(c.tsv, q.q)::float8, c.tsv, NULL::uuid, c.company_id, c.status
+             FROM knowledge_card c, q
+             WHERE %11$s
+               AND %8$s AND %9$s AND %10$s
+@@ -114,12 +114,12 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
+     }
+ 
+     private List<CaseRow> caseRows(JdbcClient jdbc, List<String> terms, List<String> exact, SimilarCasesQuery query) {
+-        String inner = "SELECT id, source, title, page, project_id, date, body, rank, superseded_by, company_id, review_status,"
++        String inner = "SELECT id, source, title, page, project_id, date, body, rank, tsrank, superseded_by, company_id, review_status,"
+                 + " ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\", MaxFragments=1') AS headline"
+-                + " FROM best, q ORDER BY rank DESC, title, id LIMIT :limit";
+-        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q), cand AS ("
+-                + caseCandidates(exact.size()) + "), best AS (SELECT DISTINCT ON (id) * FROM cand"
+-                + " ORDER BY id, rank DESC, page NULLS FIRST) " + SearchSql.withSupersession(inner, "t.id");
++                + " FROM best, q ORDER BY rank DESC, tsrank DESC, title, id LIMIT :limit";
++        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q), "
++                + SearchSql.rankedCtes(caseCandidates(exact.size()), terms.size()) + ", best AS (SELECT DISTINCT ON (id) * FROM scored"
++                + " ORDER BY id, rank DESC, tsrank DESC, page NULLS FIRST) " + SearchSql.withSupersession(inner, "t.id");
+         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
+                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
+                 .param("limit", query.limit()).param("searcher", query.searcher().value());
+@@ -162,11 +162,12 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
+     }
+ 
+     private List<SearchHit> rows(JdbcClient jdbc, List<String> terms, List<String> exact, SearchQuery query) {
+-        String inner = "SELECT id, source, title, page, paginated, project_id, author, date, body, rank,"
++        String inner = "SELECT id, source, title, page, paginated, project_id, author, date, body, rank, tsrank,"
+                 + " superseded_by, company_id, review_status, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
+-                + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
+-                + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
+-        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q) "
++                + " MaxFragments=1') AS headline FROM scored r, q"
++                + " ORDER BY rank DESC, tsrank DESC, title, page NULLS FIRST, id LIMIT :limit";
++        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q), "
++                + SearchSql.rankedCtes(candidates(exact.size()), terms.size()) + " "
+                 + SearchSql.withSupersession(inner, "t.page NULLS FIRST, t.id");
+         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
+                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
+diff --git a/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/SearchSql.java b/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/SearchSql.java
+index 8761c5c..0f3f1e0 100644
+--- a/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/SearchSql.java
++++ b/api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/SearchSql.java
+@@ -15,8 +15,10 @@ final class SearchSql {
+     private static final Pattern IDENTIFIER = Pattern.compile("(?=.*\\d)(?=.*[\\p{L}\\-/.]).{5,}");
+     private static final Pattern EDGE_PUNCTUATION = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
+     private static final int MAX_IDENTIFIERS = 10;
++    private static final int RRF_K = 60;
++    private static final int PER_QUERY_CANDIDATES = 100;
+     /** Los sustituidos van detrás de los vigentes, sin cambiar el orden entre ellos. */
+-    private static final String SUPERSEDED_LAST = " ORDER BY t.superseded_by IS NOT NULL, t.rank DESC, t.title, ";
++    private static final String SUPERSEDED_LAST = " ORDER BY t.superseded_by IS NOT NULL, t.rank DESC, t.tsrank DESC, t.title, ";
+ 
+     private SearchSql() {
+     }
+@@ -33,6 +35,41 @@ final class SearchSql {
+         return String.join(" || ", parts);
+     }
+ 
++    /**
++     * Las CTE del orden: cada consulta de la llamada puntúa por su cuenta (sus 100 mejores candidatos) y se funden con
++     * Reciprocal Rank Fusion. {@code rank} = canal exacto + RRF; {@code tsrank}, el ts_rank_cd de todas juntas, desempata.
++     * Los candidatos traen boost, tsrank y tsv; el resultado es {@code scored}.
++     */
++    static String rankedCtes(String candidates, int termCount) {
++        String v = System.getenv().getOrDefault("ODIN_V", "A");
++        boolean perQ = !v.equals("D") && !v.equals("G");
++        boolean union = !v.equals("A") && !v.equals("B") || termCount == 1;
++        boolean covU = v.equals("I");
++        boolean idf = v.equals("G") || v.equals("K");
++        boolean cov = v.equals("B") || v.equals("E") || v.equals("D") || v.equals("H");
++        List<String> perQuery = new ArrayList<>();
++        List<String> all = new ArrayList<>();
++        for (int i = 0; i < termCount; i++) {
++            perQuery.add("(" + i + ", replace(plainto_tsquery('odin_spanish', :t" + i + ")::text, '&', '|')::tsquery,"
++                    + " tsvector_to_array(to_tsvector('odin_spanish', :t" + i + ")))");
++            all.add(":t" + i);
++        }
++        if (!perQ && termCount > 1) {
++            perQuery.clear();
++        }
++        if (union && (termCount > 1 || !perQ)) {
++            perQuery.add("(-1, (SELECT q FROM q), tsvector_to_array(to_tsvector('odin_spanish', " + String.join(" || ' ' || ", all) + ")))");
++        }
++        String idfOrder = "(CASE WHEN qs.i = -1 THEN (SELECT coalesce(sum(ln(1 + (SELECT count(*) FROM cand)::float8 / df.n)), 0) FROM unnest(qs.roots) r JOIN df ON df.root = r WHERE r = ANY (tsvector_to_array(cand.tsv))) ELSE 0 END) DESC, ";
++        String covOrder = idf ? idfOrder : covU ? "(CASE WHEN qs.i = -1 THEN (SELECT count(*) FROM unnest(qs.roots) r WHERE r = ANY (tsvector_to_array(cand.tsv))) ELSE 0 END) DESC, " : cov ? "(SELECT count(*) FROM unnest(qs.roots) r WHERE r = ANY (tsvector_to_array(cand.tsv))) DESC, " : "";
++        return "qs(i, q, roots) AS (VALUES " + String.join(", ", perQuery) + "), cand AS MATERIALIZED (SELECT row_number() OVER () AS rid,"
++                + " r.* FROM (" + candidates + ") r), df AS (SELECT ar.root, count(*) AS n FROM (SELECT unnest(roots) AS root FROM qs WHERE i = -1) ar JOIN cand ON ar.root = ANY (tsvector_to_array(cand.tsv)) GROUP BY ar.root), fused AS (SELECT rid, sum((CASE WHEN i = -1 THEN " + System.getenv().getOrDefault("ODIN_W", "1") + " ELSE 1.0 END) / (" + RRF_K + " + rn))::float8 AS rrf FROM ("
++                + "SELECT cand.rid, qs.i, row_number() OVER (PARTITION BY qs.i ORDER BY " + covOrder + "ts_rank_cd(cand.tsv, qs.q) DESC, cand.tsrank DESC,"
++                + " cand.title, cand.page NULLS FIRST, cand.id) AS rn FROM cand JOIN qs ON cand.tsv @@ qs.q) x"
++                + " WHERE rn <= " + PER_QUERY_CANDIDATES + " GROUP BY rid), scored AS (SELECT cand.*, cand.boost + coalesce(fused.rrf, 0)"
++                + " AS rank FROM cand LEFT JOIN fused USING (rid))";
++    }
++
+     static String anyMatch(String column, int exactCount) {
+         List<String> parts = new ArrayList<>(List.of("false"));
+         for (int i = 0; i < exactCount; i++) {
+diff --git a/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/ArchiveBattery.java b/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/ArchiveBattery.java
+index cee9930..a830c81 100644
+--- a/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/ArchiveBattery.java
++++ b/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/ArchiveBattery.java
+@@ -109,6 +109,7 @@ final class ArchiveBattery {
+         List<String> problems = new ArrayList<>();
+         int total = 0;
+         int withoutProject = 0;
++        long nanos = 0;
+         for (JsonNode item : items) {
+             if (item.get("citas_resueltas").isEmpty()) {
+                 continue;
+@@ -120,12 +121,15 @@ final class ArchiveBattery {
+                 continue;
+             }
+             total++;
++            long start = System.nanoTime();
+             List<SearchHit> hits = hitsOf(search, company, project.get(), item);
++            nanos += System.nanoTime() - start;
+             if (!found(hits, item, pagesByDocument)) {
+                 misses.add(item.get("id").asString());
+             }
+             problems.addAll(SupersessionCheck.problems(item.get("id").asString(), hits, supersededBy));
+         }
++        System.out.printf(Locale.ROOT, "ARCHIVO búsqueda %.1f ms por consulta%n", nanos / 1e6 / Math.max(1, total));
+         return new Result(total - misses.size(), total, withoutProject, misses, problems);
+     }
+ 
+diff --git a/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearchIT.java b/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearchIT.java
+index 314f151..4eacf52 100644
+--- a/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearchIT.java
++++ b/api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/PostgresKnowledgeSearchIT.java
+@@ -64,6 +64,31 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
+         assertThat(hits.get(0).authorName()).isEqualTo("Persona Pérez");
+     }
+ 
++    private static final String GENERIC = "siniestro aviso ".repeat(30);
++    private static final String SHORT_NORM = "La mudanza se comunica a la administración con 48 horas.";
++
++    @Test
++    void specificShortQueryIsNotDilutedByGenericQueriesInTheSameCall() {
++        CompanyId c = newCompany();
++        for (int i = 0; i < 8; i++) {
++            page(c, "Póliza " + i, DocumentStatus.READY, GENERIC);
++        }
++        page(c, "Norma mudanzas", DocumentStatus.READY, SHORT_NORM);
++        assertThat(find(CompanyScope.of(c), "mudanza", "siniestro aviso")).extracting(SearchHit::title)
++                .contains("Norma mudanzas");
++    }
++
++    @Test
++    void specificShortQueryIsNotDilutedInSimilarCasesEither() {
++        CompanyId c = newCompany();
++        for (int i = 0; i < 8; i++) {
++            caseDocument(c, "Póliza " + i, GENERIC);
++        }
++        caseDocument(c, "Norma mudanzas", SHORT_NORM);
++        assertThat(caseTitles(cases(c, ProjectVisibility.all(), "mudanza", "siniestro aviso")))
++                .contains("Norma mudanzas");
++    }
++
+     @Test
+     void identifierChannelRanksFirst() {
+         CompanyId c = newCompany();

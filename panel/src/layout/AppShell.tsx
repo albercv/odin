@@ -5,8 +5,11 @@ import { Account } from '../pages/Account';
 import { Companies } from '../pages/Companies';
 import { Company } from '../pages/Company';
 import { Documents } from '../pages/Documents';
+import { Gaps } from '../pages/Gaps';
 import { GroupAdmins } from '../pages/GroupAdmins';
 import { Review } from '../pages/Review';
+import { Topics } from '../pages/Topics';
+import { Usage } from '../pages/Usage';
 import { withViewTransition } from '../ui/viewTransition';
 import { Sidebar, type Page } from './Sidebar';
 import styles from './AppShell.module.css';
@@ -25,6 +28,22 @@ function usePendingCount(companyId: string) {
 /** The group admin's list comes from the companies API: `me.companies` is fixed at login. */
 function useGroupCompanies(isGroup: boolean) {
   return useLoad(() => (isGroup ? api.companies() : Promise.resolve<S['CompanyView'][]>([])), [isGroup]);
+}
+
+type CompanyPageProps = { page: Page; companyId: string; me: S['AdminMe']; onPendingChanged: (count: number) => void };
+
+/** Everything inside the chosen company; `key` makes each company start from a clean screen. */
+function CompanyPage({ page, companyId, me, onPendingChanged }: CompanyPageProps) {
+  return (
+    <>
+      {page === 'company' && <Company key={companyId} companyId={companyId} me={me} />}
+      {page === 'documents' && <Documents key={companyId} companyId={companyId} scannedDocumentsSupported={me.scannedDocumentsSupported} />}
+      {page === 'topics' && <Topics key={companyId} companyId={companyId} />}
+      {page === 'review' && <Review key={companyId} companyId={companyId} onPendingChanged={onPendingChanged} />}
+      {page === 'usage' && <Usage key={companyId} companyId={companyId} />}
+      {page === 'gaps' && <Gaps key={companyId} companyId={companyId} />}
+    </>
+  );
 }
 
 export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: Props) {
@@ -48,9 +67,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         {page === 'groupAdmins' && isGroup && <GroupAdmins me={me} />}
         {page === 'companies' && <Companies onOpen={open} onChanged={groupCompanies.reload} />}
         {needsCompany && !companyId && <p>Elige una empresa en el menú.</p>}
-        {needsCompany && companyId && page === 'company' && <Company key={companyId} companyId={companyId} me={me} />}
-        {needsCompany && companyId && page === 'documents' && <Documents key={companyId} companyId={companyId} scannedDocumentsSupported={me.scannedDocumentsSupported} />}
-        {needsCompany && companyId && page === 'review' && <Review key={companyId} companyId={companyId} onPendingChanged={setPending} />}
+        {needsCompany && companyId && <CompanyPage page={page} companyId={companyId} me={me} onPendingChanged={setPending} />}
       </main>
     </div>
   );

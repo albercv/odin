@@ -138,7 +138,7 @@ final class ArchiveBattery {
     private static List<SearchHit> hitsOf(PostgresKnowledgeSearch search, Company company, ProjectId project,
             JsonNode item) {
         SearchQuery query = new SearchQuery(List.of(item.get("pregunta").asString()), CompanyScope.of(company.id()),
-                company.visibility(), Optional.of(project), LIMIT);
+                company.visibility(), Optional.of(project), LIMIT, Db.NOBODY);
         return search.search(query).hits();
     }
 
