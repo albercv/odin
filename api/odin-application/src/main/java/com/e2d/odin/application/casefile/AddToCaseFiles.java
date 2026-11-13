@@ -11,7 +11,9 @@ import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Clock;
 import java.time.Instant;
@@ -50,6 +52,15 @@ public class AddToCaseFiles {
     public int execute(Actor actor, CompanyId companyId, List<CaseFileAssignment> assignments) {
         return add(actor, CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers),
                 assignments);
+    }
+
+    /** Antes de guardar un documento para un caso: el caso existe, lo es, y el documento irá en su proyecto o en lo general. */
+    public void requireTarget(Actor actor, CompanyId companyId, DocumentId caseId, Optional<ProjectId> projectId) {
+        Document caseDocument = CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers)
+                .caseDocument(documents, caseId);
+        if (projectId.isPresent() && !projectId.equals(caseDocument.projectId())) {
+            throw new NotFoundException("Caso no encontrado");
+        }
     }
 
     private int add(Actor actor, CaseFileAccess access, List<CaseFileAssignment> assignments) {

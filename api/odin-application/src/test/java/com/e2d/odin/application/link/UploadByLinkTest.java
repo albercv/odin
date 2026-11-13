@@ -156,4 +156,38 @@ class UploadByLinkTest {
         assertThat(info.projectName()).isEqualTo("Proyecto");
         assertThat(info.expiresAt()).isEqualTo(w.clock.instant().plus(Duration.ofMinutes(15)));
     }
+
+    @Test
+    void failureInTheEntryStepLeavesNoDocument() {
+        w.caseFiles.failTheEntryStep();
+
+        assertThatThrownBy(() -> send("a.pdf", "uno")).isInstanceOf(IllegalStateException.class);
+
+        assertThat(w.docs.all()).containsExactly(caseDoc);
+        assertThat(w.caseFiles.allEvents()).isEmpty();
+    }
+
+    @Test
+    void parallelIdenticalUploadLinksTheDocumentTheOtherOneCreated() {
+        w.caseFiles.raceWith(mine -> w.docs.save(new Document(new com.e2d.odin.domain.shared.DocumentId(
+                java.util.UUID.randomUUID()), w.company, mine.projectId(), "otro", "otro.pdf", mine.format(),
+                mine.sha256(), mine.status(), Optional.empty(), false, w.worker.userId(), mine.uploadedAt(),
+                Optional.empty(), 0, Optional.empty(), Optional.empty())));
+
+        assertThat(send("a.pdf", "mismo").filename()).isEqualTo("a.pdf");
+
+        assertThat(inCaseProject()).isEqualTo(1);
+        assertThat(w.caseFiles.countEntries(w.company, caseDoc.id())).isEqualTo(1);
+    }
+
+    @Test
+    void aWithdrawnCopyInTheCaseProjectDoesNotBlockTheUpload() {
+        Document old = sameContentIn(w.project, "retirado");
+        w.docs.save(old.withWithdrawal(Optional.of(w.clock.instant()), Optional.of(w.worker.userId())));
+
+        assertThat(send("nuevo.pdf", "retirado").filename()).isEqualTo("nuevo.pdf");
+
+        assertThat(inCaseProject()).isEqualTo(2);
+        assertThat(w.caseFiles.countEntries(w.company, caseDoc.id())).isEqualTo(1);
+    }
 }

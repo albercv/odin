@@ -438,8 +438,8 @@ public class UseCaseConfiguration {
 
     @Bean
     UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadDocument upload,
-            AddToCaseFiles addToCaseFiles) {
-        return new UploadByLink(resolve, links, upload, addToCaseFiles);
+            AddToCaseFiles addToCaseFiles, CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
+        return new UploadByLink(resolve, links, upload, addToCaseFiles, caseFiles, ids, clock);
     }
 
     @Bean

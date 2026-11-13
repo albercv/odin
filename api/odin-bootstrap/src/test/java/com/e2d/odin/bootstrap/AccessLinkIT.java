@@ -312,26 +312,58 @@ class AccessLinkIT {
 
     // ---- original
 
+    private Reply openOriginalOf(Worker marta, String project, String name, byte[] content) {
+        String id = adminUploadBytes(name, project, content).json().get("document").get("id").asString();
+        Reply reply = api.get(path(requestOriginalLink(marta, id, 4)), "X-Forwarded-For", OFFICE);
+        assertThat(reply.status()).isEqualTo(200);
+        assertThat(reply.bytes()).isEqualTo(content);
+        assertThat(reply.header("Cache-Control")).isEqualTo("no-store");
+        assertThat(reply.header("X-Content-Type-Options")).isEqualTo("nosniff");
+        return reply;
+    }
+
     @Test
-    void originalHeaders() throws Exception {
+    void originalHeadersOfAPdfLetTheBrowserViewerRenderIt() {
         String project = project();
         Worker marta = worker(List.of(project));
-        byte[] pdf = withSuffix("%PDF-1.4 contenido ficticio".getBytes(StandardCharsets.UTF_8));
-        String pdfId = adminUploadBytes("informe.pdf", project, pdf).json().get("document").get("id").asString();
-        String docxId = adminUploadBytes("acta.docx", project, docx(COUNTER.incrementAndGet())).json().get("document").get("id").asString();
 
-        Reply inline = api.get(path(requestOriginalLink(marta, pdfId, 4)), "X-Forwarded-For", OFFICE);
-        Reply attached = api.get(path(requestOriginalLink(marta, docxId, null)), "X-Forwarded-For", OFFICE);
+        Reply pdf = openOriginalOf(marta, project, "informe.pdf", withSuffix("%PDF-1.4 ficticio".getBytes()));
 
-        assertThat(inline.status()).isEqualTo(200);
-        assertThat(inline.bytes()).isEqualTo(pdf);
-        assertThat(inline.contentType()).startsWith("application/pdf");
-        assertThat(inline.header("Cache-Control")).isEqualTo("no-store");
-        assertThat(inline.header("X-Content-Type-Options")).isEqualTo("nosniff");
-        assertThat(inline.header("Content-Security-Policy")).isEqualTo("sandbox");
-        assertThat(inline.header("Content-Disposition")).startsWith("inline");
-        assertThat(attached.header("Content-Disposition")).startsWith("attachment");
-        assertThat(requestOriginalLink(marta, pdfId, 4)).endsWith("#page=4");
+        assertThat(pdf.contentType()).startsWith("application/pdf");
+        assertThat(pdf.header("Content-Disposition")).startsWith("inline");
+        assertThat(pdf.header("Content-Security-Policy")).isNull();
+    }
+
+    @Test
+    void originalHeadersOfEveryOtherTypeKeepTheSandbox() throws Exception {
+        String project = project();
+        Worker marta = worker(List.of(project));
+
+        Reply docx = openOriginalOf(marta, project, "acta.docx", docx(COUNTER.incrementAndGet()));
+        Reply text = openOriginalOf(marta, project, "nota.txt", withSuffix("texto plano".getBytes()));
+        Reply markdown = openOriginalOf(marta, project, "nota.md", withSuffix("# titulo\ncuerpo".getBytes()));
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, (byte) COUNTER.incrementAndGet()};
+        Reply image = openOriginalOf(marta, project, "foto.png", png);
+
+        assertThat(docx.header("Content-Disposition")).startsWith("attachment");
+        assertThat(text.contentType()).startsWith("text/plain");
+        assertThat(markdown.contentType()).startsWith("text/plain");
+        assertThat(image.contentType()).startsWith("image/png");
+        for (Reply reply : List.of(docx, text, markdown, image)) {
+            assertThat(reply.header("Content-Security-Policy")).isEqualTo("sandbox");
+        }
+        assertThat(text.header("Content-Disposition")).startsWith("inline");
+        assertThat(image.header("Content-Disposition")).startsWith("inline");
+    }
+
+    @Test
+    void originalLinkCarriesThePageInTheFragment() {
+        String project = project();
+        Worker marta = worker(List.of(project));
+        String id = adminUploadBytes("informe.pdf", project, withSuffix("%PDF-1.4 x".getBytes())).json()
+                .get("document").get("id").asString();
+
+        assertThat(requestOriginalLink(marta, id, 4)).endsWith("#page=4");
     }
 
     @Test
@@ -403,6 +435,75 @@ class AccessLinkIT {
 
         assertThat(reply.status()).isEqualTo(201);
         assertThat(entries(caseId)).containsExactly(reply.json().get("document").get("id").asString());
+    }
+
+    @Test
+    void administratorUploadWithAnUnusableCaseStoresNothing() {
+        String project = project();
+        String notACase = adminUpload("anexo.txt", project, false, unique("Anexo")).json().get("document").get("id")
+                .asString();
+        long before = count("SELECT count(*) FROM document");
+
+        Reply reply = api.upload("/v1/admin/companies/" + company + "/documents?projectId=" + project + "&caseId="
+                + notACase, "otro.txt", unique("Otro").getBytes(StandardCharsets.UTF_8), "Cookie", adminCookie);
+
+        assertThat(reply.status()).isEqualTo(404);
+        assertThat(count("SELECT count(*) FROM document")).isEqualTo(before);
+    }
+
+    @Test
+    void administratorUploadIntoTheWrongProjectOfTheCaseStoresNothing() {
+        String caseProject = project();
+        String other = project();
+        String caseId = adminUpload("ficha.txt", caseProject, true, unique("Ficha")).json().get("document").get("id")
+                .asString();
+        long before = count("SELECT count(*) FROM document");
+
+        Reply reply = api.upload("/v1/admin/companies/" + company + "/documents?projectId=" + other + "&caseId="
+                + caseId, "otro.txt", unique("Otro").getBytes(StandardCharsets.UTF_8), "Cookie", adminCookie);
+
+        assertThat(reply.status()).isEqualTo(404);
+        assertThat(count("SELECT count(*) FROM document")).isEqualTo(before);
+    }
+
+    @Test
+    void parallelIdenticalUploadsBothSucceedAndLinkOneDocumentOnce() throws Exception {
+        String project = project();
+        Worker marta = worker(List.of(project));
+        String caseId = adminUpload("ficha.txt", project, true, unique("Ficha")).json().get("document").get("id")
+                .asString();
+        String token = tokenOf(requestUploadLink(marta, caseId));
+        String same = unique("contenido idéntico en paralelo");
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        List<Future<Integer>> results = new ArrayList<>();
+        for (String name : List.of("a.txt", "b.txt")) {
+            results.add(pool.submit(() -> upload(token, name, same, OFFICE).status()));
+        }
+
+        assertThat(results.get(0).get()).isEqualTo(200);
+        assertThat(results.get(1).get()).isEqualTo(200);
+        pool.shutdown();
+        assertThat(entries(caseId)).hasSize(1);
+        assertThat(count("SELECT count(*) FROM case_file_event WHERE case_document_id = '" + caseId + "'")).isOne();
+    }
+
+    @Test
+    void aWithdrawnCopyOfTheSameFileDoesNotBlockTheUpload() {
+        String project = project();
+        Worker marta = worker(List.of(project));
+        String caseId = adminUpload("ficha.txt", project, true, unique("Ficha")).json().get("document").get("id")
+                .asString();
+        String text = unique("contenido retirado");
+        String old = adminUpload("viejo.txt", project, false, text).json().get("document").get("id").asString();
+        assertThat(api.put("/v1/admin/documents/" + old + "/withdrawal", map(), "Cookie", adminCookie).status())
+                .isEqualTo(200);
+        String token = tokenOf(requestUploadLink(marta, caseId));
+
+        Reply sent = upload(token, "nuevo.txt", text, OFFICE);
+
+        assertThat(sent.status()).isEqualTo(200);
+        assertThat(sent.body()).doesNotContain("retirado", "duplic");
+        assertThat(entries(caseId)).hasSize(1).doesNotContain(old);
     }
 
     @Test

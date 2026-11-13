@@ -32,8 +32,13 @@ public class InMemoryAccessLinkRepository implements AccessLinkRepository {
     }
 
     @Override
-    public synchronized String bind(AccessLink link, String address) {
-        return update(link, l -> l.boundAddress().isPresent() ? l : bound(l, address)).boundAddress().orElseThrow();
+    public synchronized Optional<String> bind(AccessLink link, String address) {
+        return find(link).map(l -> update(link, x -> x.boundAddress().isPresent() ? x : bound(x, address)))
+                .flatMap(AccessLink::boundAddress);
+    }
+
+    private Optional<AccessLink> find(AccessLink link) {
+        return byHash.values().stream().filter(l -> l.id().equals(link.id())).findFirst();
     }
 
     @Override

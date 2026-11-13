@@ -23,11 +23,15 @@ public final class OriginalResponse {
 
     /** Con {@code Resource}, Spring atiende también las peticiones por rangos del visor de PDF. */
     public static ResponseEntity<Resource> of(OriginalFile file) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .header("X-Content-Type-Options", "nosniff")
-                .header("Content-Security-Policy", "sandbox")
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition(file))
-                .contentType(mediaType(file)).body(new ByteArrayResource(file.content()));
+                .contentType(mediaType(file));
+        if (file.format() != DocumentFormat.PDF) {
+            // el visor de PDF de Chromium no abre un PDF con «sandbox»; el resto sí lleva el aislamiento
+            response.header("Content-Security-Policy", "sandbox");
+        }
+        return response.body(new ByteArrayResource(file.content()));
     }
 
     private static MediaType mediaType(OriginalFile file) {

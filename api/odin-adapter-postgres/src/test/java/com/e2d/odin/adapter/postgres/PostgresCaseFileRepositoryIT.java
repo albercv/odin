@@ -316,4 +316,48 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
     private CaseFileEvent event(Document theCase, Document member, CaseFileAction action, Instant at) {
         return new CaseFileEvent(UUID.randomUUID(), company, theCase.id(), member.id(), action, user, at);
     }
+
+    private Document unsaved(Optional<ProjectId> project, String sha) {
+        return new Document(new DocumentId(UUID.randomUUID()), company, project, "Nuevo", "n.pdf", DocumentFormat.PDF,
+                sha, DocumentStatus.RECEIVED, Optional.empty(), false, user, NOW, Optional.empty(), 0, Optional.empty(),
+                Optional.empty());
+    }
+
+    @Test
+    void addNewDocumentWritesDocumentEntryAndEventInOneTransaction() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document created = unsaved(Optional.of(projectA), UUID.randomUUID().toString());
+
+        files.addNewDocument(created, entry(theCase, created), event(theCase, created, CaseFileAction.ADDED));
+
+        assertThat(docs.findById(CompanyScope.of(company), ProjectVisibility.all(), created.id())).isPresent();
+        assertThat(files.countEntries(company, theCase.id())).isEqualTo(1);
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).hasSize(1);
+    }
+
+    @Test
+    void addNewDocumentLeavesNoDocumentWhenTheEntryStepFails() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document elsewhere = unsaved(Optional.of(projectB), UUID.randomUUID().toString());
+
+        assertThatThrownBy(() -> files.addNewDocument(elsewhere, entry(theCase, elsewhere),
+                event(theCase, elsewhere, CaseFileAction.ADDED))).isInstanceOf(RuntimeException.class);
+
+        assertThat(docs.findById(CompanyScope.of(company), ProjectVisibility.all(), elsewhere.id())).isEmpty();
+        assertThat(files.countEntries(company, theCase.id())).isZero();
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).isEmpty();
+    }
+
+    @Test
+    void addNewDocumentWithAnExistingSameFileInTheProjectIsAConflictAndStoresNothing() {
+        Document theCase = document(Optional.of(projectA), true);
+        String sha = UUID.randomUUID().toString();
+        document(Optional.of(projectA), sha, false);
+        Document twin = unsaved(Optional.of(projectA), sha);
+
+        assertThatThrownBy(() -> files.addNewDocument(twin, entry(theCase, twin),
+                event(theCase, twin, CaseFileAction.ADDED))).isInstanceOf(ConflictException.class);
+
+        assertThat(docs.findById(CompanyScope.of(company), ProjectVisibility.all(), twin.id())).isEmpty();
+    }
 }

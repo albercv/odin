@@ -45,12 +45,12 @@ public class PostgresAccessLinkRepository implements AccessLinkRepository {
     }
 
     @Override
-    public String bind(AccessLink link, String address) {
+    public Optional<String> bind(AccessLink link, String address) {
         return tx.inScope(CompanyScope.of(link.companyId()), jdbc -> {
             jdbc.sql("UPDATE access_link SET bound_address = :address WHERE id = :id AND bound_address IS NULL")
                     .param("address", address).param("id", link.id()).update();
             return jdbc.sql("SELECT bound_address FROM access_link WHERE id = :id").param("id", link.id())
-                    .query(String.class).single();
+                    .query(String.class).optional();
         });
     }
 

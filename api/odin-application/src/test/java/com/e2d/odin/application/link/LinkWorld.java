@@ -80,7 +80,7 @@ final class LinkWorld {
     UploadByLink uploadByLink() {
         var upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(1000), ids, clock);
         var add = new AddToCaseFiles(orgs, members, docs, caseFiles, ids, clock);
-        return new UploadByLink(resolve(), links, upload, add);
+        return new UploadByLink(resolve(), links, upload, add, caseFiles, ids, clock);
     }
 
     OpenOriginal openOriginal() {

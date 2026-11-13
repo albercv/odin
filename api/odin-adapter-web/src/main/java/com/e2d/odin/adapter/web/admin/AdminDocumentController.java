@@ -99,9 +99,12 @@ public class AdminDocumentController {
             @RequestParam(required = false) @Schema(description = "Caso a cuyo expediente se añade el documento.")
             UUID caseId) throws IOException {
         String name = title == null || title.isBlank() ? file.getOriginalFilename() : title;
+        Optional<ProjectId> project = Optional.ofNullable(projectId).map(ProjectId::new);
+        if (caseId != null) {
+            addToCaseFiles.requireTarget(actor, new CompanyId(companyId), new DocumentId(caseId), project);
+        }
         UploadOutcome outcome = upload.execute(actor, new CompanyId(companyId),
-                Optional.ofNullable(projectId).map(ProjectId::new), name, file.getOriginalFilename(),
-                file.getBytes(), caseDocument);
+                project, name, file.getOriginalFilename(), file.getBytes(), caseDocument);
         if (caseId != null) {
             addToCaseFiles.execute(actor, new CompanyId(companyId),
                     List.of(new CaseFileAssignment(new DocumentId(caseId), Set.of(outcome.document().id()))));

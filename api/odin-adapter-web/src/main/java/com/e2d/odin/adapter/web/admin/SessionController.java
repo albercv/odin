@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.web.admin;
 import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.ActorResolutionFilter;
+import com.e2d.odin.adapter.web.security.ClientAddress;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.adapter.web.security.LoginRateLimiter;
 import com.e2d.odin.application.identity.DescribeAdmin;
@@ -39,15 +40,18 @@ public class SessionController {
     private final ListCompanies listCompanies;
     private final DescribeAdmin describeAdmin;
     private final InstallationSettings installation;
+    private final ClientAddress addresses;
 
     public SessionController(LogInAdmin logIn, LogOutAdmin logOut, LoginRateLimiter limiter,
-            ListCompanies listCompanies, DescribeAdmin describeAdmin, InstallationSettings installation) {
+            ListCompanies listCompanies, DescribeAdmin describeAdmin, InstallationSettings installation,
+            ClientAddress addresses) {
         this.logIn = logIn;
         this.logOut = logOut;
         this.limiter = limiter;
         this.listCompanies = listCompanies;
         this.describeAdmin = describeAdmin;
         this.installation = installation;
+        this.addresses = addresses;
     }
 
     @PostMapping("/session")
@@ -57,8 +61,9 @@ public class SessionController {
             throw new ValidationException("Faltan el correo o la contraseña");
         }
         String email = request.email().trim().toLowerCase(Locale.ROOT);
-        limiter.check(email, http.getRemoteAddr());
-        NewSession session = logInRecordingFailure(request, email, http.getRemoteAddr());
+        String ip = addresses.of(http);
+        limiter.check(email, ip);
+        NewSession session = logInRecordingFailure(request, email, ip);
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie(session.token(), false).toString())
                 .body(new Responses.UserRef(session.userId().value()));
     }

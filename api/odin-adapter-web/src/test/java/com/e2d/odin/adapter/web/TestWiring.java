@@ -303,7 +303,7 @@ public class TestWiring {
     }
 
     @Bean UploadByLink uploadByLink() {
-        return new UploadByLink(resolveLink(), links, uploadDocument(), addToCaseFiles());
+        return new UploadByLink(resolveLink(), links, uploadDocument(), addToCaseFiles(), caseFiles, ids, clock);
     }
 
     @Bean OpenOriginal openOriginal() {

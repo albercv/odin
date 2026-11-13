@@ -77,8 +77,8 @@ public class ResolveLink {
     }
 
     private void requireBoundTo(AccessLink link, String clientAddress) {
-        String bound = link.boundAddress().orElseGet(() -> links.bind(link, clientAddress));
-        if (!bound.equals(clientAddress)) {
+        Optional<String> bound = link.boundAddress().or(() -> links.bind(link, clientAddress));
+        if (bound.filter(clientAddress::equals).isEmpty()) {
             throw notFound();
         }
     }

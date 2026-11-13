@@ -15,6 +15,7 @@ import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.PayloadTooLargeException;
@@ -25,6 +26,7 @@ import com.e2d.odin.domain.shared.ValidationException;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class UploadDocument {
@@ -55,21 +57,23 @@ public class UploadDocument {
         projectId.ifPresent(id -> organizations.findProject(companyId, id)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado")));
         return store(actor, companyId, projectId, title, filename, content, caseDocument,
-                sha256 -> documents.findBySha256(companyId, sha256));
+                sha256 -> documents.findBySha256(companyId, sha256), documents::save);
     }
 
     /**
      * La subida por enlace: la persona ya la autorizó el enlace, el título es el nombre del fichero y los duplicados
-     * se buscan solo en el proyecto y entre lo general, sin delatar lo que haya en otros proyectos.
+     * se buscan solo en el proyecto y entre lo general, sin delatar lo que haya en otros proyectos. Quien llama
+     * decide cómo se guarda un documento nuevo ({@code persist}), para hacerlo junto con su entrada en el expediente.
      */
     public UploadOutcome executeForLink(Actor actor, CompanyId companyId, Optional<ProjectId> projectId,
-            String filename, byte[] content) {
+            String filename, byte[] content, Consumer<Document> persist) {
         return store(actor, companyId, projectId, filename, filename, content, false,
-                sha256 -> documents.findBySha256InProject(companyId, projectId, sha256));
+                sha256 -> documents.findBySha256InProject(companyId, projectId, sha256), persist);
     }
 
     private UploadOutcome store(Actor actor, CompanyId companyId, Optional<ProjectId> projectId, String title,
-            String filename, byte[] content, boolean caseDocument, Function<String, Optional<Document>> duplicate) {
+            String filename, byte[] content, boolean caseDocument, Function<String, Optional<Document>> duplicate,
+            Consumer<Document> persist) {
         String cleanTitle = Validation.requireText(title, "el título");
         String cleanFilename = Validation.requireText(filename, "el nombre del fichero");
         DocumentFormat format = detectFormat(content);
@@ -81,7 +85,18 @@ public class UploadDocument {
         Document document = new Document(new DocumentId(ids.newId()), companyId, projectId, cleanTitle, cleanFilename,
                 format, sha256, DocumentStatus.RECEIVED, Optional.empty(), false, actor.userId(), clock.instant(),
                 Optional.empty(), 0, Optional.empty(), Optional.empty(), List.of(), caseDocument);
-        documents.save(document);
+        return persistOrLinkTheOneThatWon(document, duplicate, persist);
+    }
+
+    /** Si otra subida idéntica ganó el índice único por un instante, se enlaza el documento que creó. */
+    private UploadOutcome persistOrLinkTheOneThatWon(Document document, Function<String, Optional<Document>> duplicate,
+            Consumer<Document> persist) {
+        try {
+            persist.accept(document);
+        } catch (ConflictException e) {
+            Document winner = duplicate.apply(document.sha256()).orElseThrow(() -> e);
+            return new UploadOutcome(requeueIfFailed(winner), true);
+        }
         return new UploadOutcome(new DocumentEntry(document, Optional.empty(), Optional.empty()), false);
     }
 
