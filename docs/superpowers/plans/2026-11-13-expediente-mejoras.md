@@ -182,6 +182,33 @@ Lo pide D-094, punto 6: el tope tiene que cortar a mitad de ejecución, no solo 
 - [ ] **Step 1: Pruebas que fallan. Step 2: implementar y comprobar que pasan.** También `bash -n prueba-d093.sh`. El guion no se ejecuta: gasta IA.
 - [ ] **Step 3: Commit** en `task/expediente-mejoras/guion-prueba`: `feat: guion de la prueba de D-093 con humo, paradas tempranas y tope (D-094)`.
 
+### Task 9: Números de caso en la búsqueda (spec §3.1)
+
+**Files:**
+- Modify: `api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/SearchSql.java`:
+  - `static List<String> numberVariants(List<String> terms)` da los términos '-N' y los grupos de los números compuestos;
+  - `exactTokens` añade las formas «-N», «/N» y «N/».
+  - Ninguno de los dos se aplica a los años (1900 a 2099) ni a los números de menos de 3 cifras.
+- Modify: `PostgresKnowledgeSearch` (y la búsqueda de casos parecidos, si comparte la preparación de términos), para usar las variantes.
+- Create: `api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/CaseNumberBatteryIT.java`.
+  - Carga el archivo ficticio y sus 12 expedientes (`datos/expedientes.json` y `datos/expedientes/`; las imágenes no). Reutiliza `ArchiveLoader` y `ArchiveBattery`.
+  - Deja el resultado en `target/` como las otras baterías y exige 72 de 72.
+- Test: `SearchSqlTest` (unitario) y `PostgresKnowledgeSearchIT`.
+
+- [ ] **Step 1: Pruebas que fallan.**
+  - Unitarias de `numberVariants` y `exactTokens`:
+    - «530» da «-530», y su forma literal «-530», «/530» y «530/»;
+    - «2024/530» da «2024/530», «530» y «-530»;
+    - «exp. 530/24» da «530» y «-530», sin «24»;
+    - «2025», «12/11/2024», «1.940» y «24» no dan variantes nuevas.
+  - IT: una ficha «Caso 2024-530» y un correo con «Expte. 2024/530» salen los dos primeros al buscar «expediente nº 530», por delante de un acta con «expediente» y «nº» repetidos.
+  - `CaseNumberBatteryIT` en rojo.
+- [ ] **Step 2: Implementar y comprobar.**
+  - `cd api && mvn -q verify`: incluye las tres baterías.
+  - `CaseNumberBatteryIT` da 72 de 72.
+  - `SearchBatteryIT` ≥ 90,00 y `ArchiveSearchBatteryIT` ≥ 73,28. Si sube alguna, no se toca el umbral sin decirlo.
+- [ ] **Step 3: Commit** en `task/expediente-mejoras/numeros-caso`: `fix: la búsqueda encuentra los números de caso en cualquiera de sus formas (D-093)`.
+
 ### Task 8: Verificación completa
 
 - [ ] `make check`: termina con 0.

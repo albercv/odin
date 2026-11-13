@@ -46,6 +46,27 @@
 - **MCP, `getCaseFile` y `readCaseFile`:** la descripción dice que un documento que cita el mismo número de caso pero no aparece en `getCaseFile` no forma parte del expediente. La IA no debe incluirlo, aunque puede mencionarlo aparte, diciendo que no está en el expediente.
 - **Pruebas:** la frase está en las dos descripciones. `INSTRUCTIONS` no cambia y se queda en 2.200 caracteres o menos.
 
+## 3.1 Números de caso en la búsqueda (aprobado por el CEO, 2026-11-13, sin IA)
+
+- **Problema, visto en la comprobación previa contra la pila real:**
+  - Ninguna forma del número de las preguntas («expte. 2024/530», «exp. 530/24», «su referencia 530», «expediente nº 530») trae la ficha «Caso 2024-530» entre los 20 primeros.
+  - Causa 1: el analizador de PostgreSQL guarda «2024-530» como '2024' y '-530', con el guion como signo, así que «530» no coincide.
+  - Causa 2: la búsqueda une los términos con OR, y los documentos con muchas apariciones de «expediente» y «nº» quedan por delante de la ficha.
+- **Qué se hace (en la consulta; sin migración ni reindexado, así que no hace falta vaciar):**
+  - Un número de 3 cifras o más que no sea un año (1900 a 2099) añade el término '-N'.
+  - Un número compuesto de dos grupos de cifras separados por «/» o «-» («2024/530», «530/24») añade sus grupos de 3 cifras o más con las mismas reglas.
+  - Esos números (no los años) añaden al canal literal (ILIKE, +100) sus formas compuestas: «-N», «/N» y «N/». Así quedan delante la ficha y los documentos que citan el número como referencia.
+  - No reciben esa prioridad un importe con punto o coma («1.940»), un número suelto en el texto («530 euros») ni una fecha completa.
+- **Pruebas:**
+  - Batería determinista nueva `CaseNumberBatteryIT` sobre el archivo ficticio con los 12 expedientes cargados. Cada caso se busca con 6 formas: «AAAA-N», «AAAA/N» y sus 4 `formas_numero`. Son 72 búsquedas, sin filtrar por proyecto y con 10 resultados.
+  - En cada una, la ficha del caso y al menos un documento de su expediente están entre los 10 primeros. El objetivo es 72 de 72.
+  - Las baterías de siempre no bajan: `SearchBatteryIT` (recall@5 ≥ 90,00) y `ArchiveSearchBatteryIT` (recall@10 ≥ 73,28).
+  - Pruebas unitarias de importes, fechas y años: «1.940», «12/11/2024» y «2025» no reciben la prioridad nueva (`pureNumbersAreNotBoosted` sigue en verde).
+- **Límites aceptados:**
+  - Un número suelto de 3 cifras o más favorece a los documentos que lo citan como referencia («Caso 2024-530», «Ref. 12-530») frente a aquellos donde es un importe. El documento del importe sigue saliendo (prueba `amountIsNotHiddenByCaseNumbersForTheSameDigits`), pero puede quedar detrás.
+  - ILIKE no tiene límite de palabra: «-530» también coincide con «-5301» y «530/» con «1530/24».
+  - Un número de 4 cifras fuera de 1900 a 2099 («1530», «2100») se trata como número de caso.
+
 ## 4. Medición
 
 - **Plan de prueba con el formato de D-094:** `docs/superpowers/plans/2026-11-13-expediente-mejoras-prueba.md`. No se lanza sin que el propietario lo apruebe. Lo de abajo es el diseño original.

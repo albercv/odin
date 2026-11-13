@@ -29,6 +29,7 @@ final class ArchiveLoader {
     private static final Pattern PAGE_MARK = Pattern.compile("^=== Página (\\d+) ===\\s*$", Pattern.MULTILINE);
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private final AbstractPostgresIT it;
+    private final Map<String, ProjectId> projects = new LinkedHashMap<>();
     private final Map<String, LoadedDocument> documents = new LinkedHashMap<>();
 
     private record LoadedDocument(DocumentId id, CompanyId company, Optional<ProjectId> project) {
@@ -53,7 +54,7 @@ final class ArchiveLoader {
             Optional<ProjectId> project = Optional.ofNullable(folder.getValue()).map(name -> newProject(company, name));
             project.ifPresent(p -> projectByFolder.put(folder.getKey(), p));
             try (var files = Files.list(corpusDir.resolve(folder.getKey()))) {
-                for (Path file : files.sorted().toList()) {
+                for (Path file : files.sorted().filter(f -> !f.toString().endsWith(".png")).toList()) {
                     String key = folder.getKey() + "/" + file.getFileName();
                     pagesByDocument.put(key, loadDocument(company, uploader, project, key, file,
                             isCaseDocument.test(key)));
@@ -109,10 +110,13 @@ final class ArchiveLoader {
         return couples;
     }
 
+    /** Una segunda carga con el mismo nombre de proyecto reutiliza el proyecto. */
     private ProjectId newProject(CompanyId company, String name) {
-        ProjectId project = new ProjectId(UUID.randomUUID());
-        it.orgs.saveProject(new Project(project, company, name, true));
-        return project;
+        return projects.computeIfAbsent(company.value() + "/" + name, k -> {
+            ProjectId project = new ProjectId(UUID.randomUUID());
+            it.orgs.saveProject(new Project(project, company, name, true));
+            return project;
+        });
     }
 
     private Map<Integer, String> loadDocument(CompanyId company, UserId uploader, Optional<ProjectId> project,

@@ -102,6 +102,28 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     }
 
     @Test
+    void caseNumberInAnyFormFindsTheCaseCardAndTheEmailBeforeALongMinutes() {
+        CompanyId c = newCompany();
+        page(c, "Acta", DocumentStatus.READY, "expediente nº expediente nº expediente nº expediente nº expediente nº "
+                + "expediente nº expediente nº expediente nº expediente nº del asunto tratado en la junta");
+        page(c, "Caso 2024-530", DocumentStatus.READY, "Caso 2024-530 filtración en la azotea");
+        page(c, "Correo", DocumentStatus.READY, "Expte. 2024/530 adjunto el presupuesto de la reparación");
+        List<SearchHit> hits = find(CompanyScope.of(c), "expediente nº 530");
+        assertThat(hits.subList(0, 2)).extracting(SearchHit::title).containsExactlyInAnyOrder("Caso 2024-530",
+                "Correo");
+    }
+
+    /** Límite aceptado: la ficha del caso 530 puede ir por delante del importe, pero este tiene que salir. */
+    @Test
+    void amountIsNotHiddenByCaseNumbersForTheSameDigits() {
+        CompanyId c = newCompany();
+        page(c, "Factura", DocumentStatus.READY, "Total de la reparación: 530 euros con IVA incluido");
+        page(c, "Caso 2024-530", DocumentStatus.READY, "Caso 2024-530 filtración en la azotea");
+        List<SearchHit> hits = find(CompanyScope.of(c), "530 euros");
+        assertThat(hits).extracting(SearchHit::title).contains("Factura");
+    }
+
+    @Test
     void identifierWithoutWordsStillMatchesByLiteral() {
         CompanyId c = newCompany();
         page(c, "Doc", DocumentStatus.READY, "Referencia ATL-4417-2024 del contrato.");
