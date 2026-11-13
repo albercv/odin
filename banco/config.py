@@ -6,7 +6,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from banco.archivos import ARCHIVES, BATTERIES, missing_archives
+from banco.capas import ARCHIVES, BATTERIES, missing_archives
 
 MODES = ("explore", "closing")
 COMBINER_KINDS = ("single", "majorityVote", "pageFusion", "composer")

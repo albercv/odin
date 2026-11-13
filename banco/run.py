@@ -11,7 +11,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
-from banco import archivos, combine, judge, preflight, report, scoring, tanda
+from banco import capas, combine, judge, preflight, report, scoring, tanda
 from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
@@ -73,13 +73,13 @@ class Session:
 # ---------- preparación ----------
 def _check_supported(cfg):
     for archive in cfg.archives:
-        if archive not in archivos.ARCHIVES:
+        if archive not in capas.ARCHIVES:
             raise ConfigError(f"capa no disponible todavía: {archive}")
     for name in cfg.batteries:
-        if name not in archivos.BATTERIES:
-            known = ", ".join(archivos.BATTERIES)
+        if name not in capas.BATTERIES:
+            known = ", ".join(capas.BATTERIES)
             raise ConfigError(f"la batería «{name}» no existe todavía: en esta fase solo están: {known}")
-        missing = archivos.missing_archives(name, cfg.archives)
+        missing = capas.missing_archives(name, cfg.archives)
         if missing:
             raise ConfigError(f"la batería «{name}» necesita el archivo «{missing[0]}» en «archives»")
 
@@ -160,7 +160,7 @@ def _round_robin(items, strata, size, seed):
 
 
 def _select_items(layout, cfg):
-    items = archivos.load_items(layout, cfg.batteries)
+    items = capas.load_items(layout, cfg.batteries)
     if cfg.sample is None:
         return items
     return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed, cfg.sample.include)
@@ -261,7 +261,7 @@ def prepare(config_path, layout, sweep=False, reset_budget=False, resume=None):
     _check_main(cfg, sweep)
     spec = load_sweep(config_path, cfg) if sweep else None
     stack = _load_stack(layout)
-    folder = archivos.data_dir(layout, cfg.archives)
+    folder = capas.data_dir(layout, cfg.archives)
     _check_loaded(folder, stack, cfg.archives)
     items = _select_items(layout, cfg)
     ctx = scoring.build_context(folder, stack)

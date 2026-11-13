@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from banco import archivos, metrics, scoring, tanda
+from banco import capas, metrics, scoring, tanda
 
 
 def _read_jsonl(path):
@@ -39,10 +39,10 @@ def rebuild(folder, layout):
     folder = Path(folder)
     data = read_folder(folder)
     archives = _names(data["origin"].get("Archivos", "ficticio"))  # carpetas anteriores a las capas
-    ctx = scoring.build_context(archivos.data_dir(layout, archives),
+    ctx = scoring.build_context(capas.data_dir(layout, archives),
                                 {"doc_ruta": data["ids"]["documentos"], "ficha_f": data["ids"]["fichas"]})
     wanted = set(data["ids"]["preguntas"])
-    items = [i for i in archivos.load_items(layout, _names(data["origin"].get("Batería", "desarrollo"))) if i["id"] in wanted]
+    items = [i for i in capas.load_items(layout, _names(data["origin"].get("Batería", "desarrollo"))) if i["id"] in wanted]
     summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"],
                                     ledger=data["ledger"])
     summary.update(origen=data["origin"], stopped=data["stopped"], batches=data["batches"])

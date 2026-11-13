@@ -49,7 +49,7 @@ banco-arriba:
 	$(BANCO_ENV) $(EXP)/pila/pila.sh up
 
 banco-cargar:
-	@D=$(EXP)/datos; if [ "$(ARCHIVOS)" != ficticio ]; then D=$$($(BANCO_ENV) python3 banco/archivos.py fusionar --archivos "$(ARCHIVOS)") || exit 1; fi; \
+	@D=$(EXP)/datos; if [ "$(ARCHIVOS)" != ficticio ]; then D=$$($(BANCO_ENV) python3 banco/capas.py fusionar --archivos "$(ARCHIVOS)") || exit 1; fi; \
 	$(BANCO_ENV) python3 $(EXP)/pila/cargar.py --manifiesto $$D/manifiesto.json --corpus $$D/corpus --marcar
 
 banco-abajo:
@@ -69,4 +69,4 @@ banco-informe:
 	python3 banco/banco.py report --results $(RESULTADOS)
 
 banco-test:
-	python3 -m unittest discover -s banco -t . && (cd $(EXP)/medir && python3 -m unittest)
+	python3 -m unittest discover -s banco -t . && python3 -m unittest banco.archivos.generalidad.test_generar && (cd $(EXP)/medir && python3 -m unittest)
