@@ -1,0 +1,27 @@
+# D-084: ¿da la IA por hecho el sector o mezcla empresas? Variante «antes»: textos del conector de antes de cafcf40 (variante de control).
+# 32 preguntas de Brumeral y las 2 generica del conector; 3 réplicas de main (la peor cuenta). Sin redactor; el juez es local, no consume y no cuenta (jurado aparcado, D-081).
+name = "generalidad-antes"
+archives = ["ficticio", "generalidad"]
+battery = ["conector", "generalidad"]
+mode = "explore"
+repetitions = 1
+budgetUsd = 0.75
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 3
+model = "haiku"
+
+[combiner]
+kind = "single"
+
+[[judges]]
+rubric = "strict"
+count = 1
+model = "ollama:qwen3.5:9b"
+think = false
+timeoutS = 120
+
+[judging]
+aggregation = "majority"
