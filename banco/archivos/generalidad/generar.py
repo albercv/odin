@@ -37,7 +37,7 @@ CLIENTES = {
     "bodegas-quintafria": {"nombre": "Bodegas Quintafría, S.L.", "cif": "B-00000025",
                            "dom": "Viñedo de Quintafría, Valdecerro", "rep": "Lucía Ferrer Sanz"},
 }
-NOMBRES = {k: v["nombre"] for k, v in CLIENTES.items()}
+NOMBRES = {k: v["nombre"].split(",")[0] for k, v in CLIENTES.items()}  # el proyecto, sin la forma jurídica
 TRABAJADORES = [
     {"clave": "t09", "empresa": EMPRESA, "nombre": "Irene", "apellidos": "Salcedo Moya", "proyectos": ["*"]},
     {"clave": "t10", "empresa": EMPRESA, "nombre": "Óscar", "apellidos": "Leiva Durán",

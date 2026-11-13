@@ -11,31 +11,31 @@
   {
    "clave": "talleres-murcano",
    "empresa": "brumeral",
-   "nombre": "Talleres Murcano, S.L.",
+   "nombre": "Talleres Murcano",
    "abierto": false
   },
   {
    "clave": "conservas-dalmira",
    "empresa": "brumeral",
-   "nombre": "Conservas Dalmira, S.A.",
+   "nombre": "Conservas Dalmira",
    "abierto": false
   },
   {
    "clave": "logistica-penedal",
    "empresa": "brumeral",
-   "nombre": "Logística Penedal, S.L.",
+   "nombre": "Logística Penedal",
    "abierto": false
   },
   {
    "clave": "alojamientos-cerrolago",
    "empresa": "brumeral",
-   "nombre": "Alojamientos Cerrolago, S.L.",
+   "nombre": "Alojamientos Cerrolago",
    "abierto": false
   },
   {
    "clave": "bodegas-quintafria",
    "empresa": "brumeral",
-   "nombre": "Bodegas Quintafría, S.L.",
+   "nombre": "Bodegas Quintafría",
    "abierto": false
   }
  ],
