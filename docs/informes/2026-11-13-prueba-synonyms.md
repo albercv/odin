@@ -105,6 +105,10 @@
 - **Otras baterías:** la de reserva, la de expedientes (encargo 13) y la de los demás archivos. Solo se ha medido la batería de desarrollo del archivo ficticio.
 - **La ubicación real de las reglas:** en el producto irían en la descripción de `searchKnowledge`.
 - **Otros modelos:** Sonnet y las IAs de otros proveedores.
+- **Sin `findSimilarCases`.** El cargador de la pila (`pila/cargar.py`) da a las empresas solo las capacidades `SEARCH_KNOWLEDGE` y `SAVE_KNOWLEDGE_CARD`. Por eso la IA no tuvo `findSimilarCases` ni las herramientas del expediente. Lo encontró el CTO 2 el 13 de noviembre.
+  - Pasa lo mismo en el piloto y en el barrido.
+  - La comparación sigue siendo justa, porque las dos variantes tenían las mismas herramientas.
+  - Las cifras absolutas no son las del producto con todas sus capacidades.
 
 ## 9. Qué propongo
 
