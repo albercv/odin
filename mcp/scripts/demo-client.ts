@@ -270,8 +270,10 @@ async function readCitedStep(key: string, caseId: string, ids: Record<string, st
 async function searchAndRemoveStep(key: string, caseId: string, ids: Record<string, string>): Promise<void> {
   await withMcp(key, async (call) => {
     const { hits } = JSON.parse(await call('searchKnowledge', { queries: ['filtración de agua azotea lámina'], caseId })) as { hits: Hit[] };
-    const inside = new Set(EXPEDIENTE.map(([, title]) => ids[title]));
-    check(hits.length > 0 && hits.every((h) => inside.has(h.documentId)), 'Paso 14d: searchKnowledge con caseId devuelve solo documentos del expediente (no el acta de fuera)');
+    // la ficha del caso también es parte del expediente que busca caseId
+    const inside = new Set([caseId, ...EXPEDIENTE.map(([, title]) => ids[title])]);
+    const decoy = hits.some((h) => h.documentId === ids['Acta fuera']);
+    check(hits.length > 0 && !decoy && hits.every((h) => inside.has(h.documentId)), 'Paso 14d: searchKnowledge con caseId devuelve solo documentos del expediente (no el acta de fuera)');
     const factura = ids['Factura']!;
     await call('removeFromCaseFile', { caseId, documentId: factura });
     check(!(await caseFile(key, caseId)).documents.some((d) => d.id === factura), 'Paso 14e: removeFromCaseFile quita la factura del expediente');
@@ -315,8 +317,9 @@ async function caseFileStep(): Promise<void> {
   await searchAndRemoveStep(s.worker.key, s.caseId, s.ids);
   await openOriginalStep(s.worker.key, s.ids['Informe del perito']!);
   await uploadLinkStep(s);
-  const denied = await caseFile(s.outsider.key, s.caseId).then(() => false, () => true);
-  check(denied, 'Paso 17: un trabajador de otro proyecto recibe un error de getCaseFile para ese caso');
+  // errorMessage de mcp/src/tools/result.ts: 404 «No se ha encontrado…», 403 «No tienes permiso…»
+  const denied = await caseFile(s.outsider.key, s.caseId).then(() => '', (e: Error) => e.message);
+  check(/no encontrad|no tienes permiso|\b40[34]\b/i.test(denied), 'Paso 17: un trabajador de otro proyecto recibe un 404 o 403 de getCaseFile para ese caso');
 }
 
 async function prepare(): Promise<void> {
