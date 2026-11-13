@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/upload-links/{token}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadByLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/similar-cases": {
         parameters: {
             query?: never;
@@ -164,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/documents/{documentId}/original-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["originalLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/citations/verify": {
         parameters: {
             query?: never;
@@ -174,6 +206,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/upload-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -516,6 +564,38 @@ export interface paths {
         patch: operations["update_3"];
         trace?: never;
     };
+    "/v1/upload-links/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["describeUploadLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/originals/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openOriginalByLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -668,6 +748,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["documentTopics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/documents/{documentId}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadOriginal"];
         put?: never;
         post?: never;
         delete?: never;
@@ -948,6 +1044,9 @@ export interface components {
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
             codeReviewed: boolean;
         };
+        UploadReceipt: {
+            filename: string;
+        };
         SimilarCasesRequestBody: {
             queries?: string[];
             /** Format: uuid */
@@ -1039,6 +1138,18 @@ export interface components {
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
             noSource: boolean;
+        };
+        OriginalLinkRequest: {
+            /**
+             * Format: int32
+             * @description Página en la que abre el visor de PDF; si falta, abre por la primera.
+             */
+            page?: number;
+        };
+        IssuedLink: {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         VerifyCitation: {
             /** Format: uuid */
@@ -1238,6 +1349,12 @@ export interface components {
             roles?: ("GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER")[];
             active?: boolean;
             password?: string;
+        };
+        UploadLinkInfo: {
+            caseTitle: string;
+            projectName: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         Me: {
             /** Format: uuid */
@@ -1775,6 +1892,35 @@ export interface operations {
             };
         };
     };
+    uploadByLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadReceipt"];
+                };
+            };
+        };
+    };
     similarCases: {
         parameters: {
             query?: never;
@@ -1869,6 +2015,32 @@ export interface operations {
             };
         };
     };
+    originalLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OriginalLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
+                };
+            };
+        };
+    };
     verify: {
         parameters: {
             query?: never;
@@ -1889,6 +2061,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Verification"];
+                };
+            };
+        };
+    };
+    uploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
                 };
             };
         };
@@ -2344,6 +2538,8 @@ export interface operations {
                 title?: string;
                 projectId?: string;
                 caseDocument?: boolean;
+                /** @description Caso a cuyo expediente se añade el documento. */
+                caseId?: string;
             };
             header?: never;
             path: {
@@ -2723,6 +2919,50 @@ export interface operations {
             };
         };
     };
+    describeUploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadLinkInfo"];
+                };
+            };
+        };
+    };
+    openOriginalByLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -2940,6 +3180,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentTopicsResponse"];
+                };
+            };
+        };
+    };
+    downloadOriginal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };

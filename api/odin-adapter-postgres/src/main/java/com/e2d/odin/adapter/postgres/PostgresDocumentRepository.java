@@ -251,7 +251,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 }));
     }
 
-    private static void upsert(JdbcClient jdbc, Document d) {
+    static void upsert(JdbcClient jdbc, Document d) {
         jdbc.sql("""
                 INSERT INTO document (id, company_id, project_id, title, filename, format, sha256, status,
                     failure_reason, paginated, uploaded_by, uploaded_at, processing_started_at, attempt_count,
