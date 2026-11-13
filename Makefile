@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
+.PHONY: instalacion-desplegar setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -57,3 +57,6 @@ instalacion-restaurar:
 
 mcp-claude-desktop:
 	@TRABAJADOR="$(TRABAJADOR)" deploy/instalacion/cerrojo.sh deploy/instalacion/mcp-claude-desktop.sh
+
+instalacion-desplegar:
+	@CONFIRMAR="$(CONFIRMAR)" TRABAJADOR="$(TRABAJADOR)" CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
