@@ -1,0 +1,25 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L.
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Informe de auditoría energética
+Fecha: 30/06/2025. Cliente: Conservas Dalmira, S.A.. Página 1 de 3.
+
+Alcance: planta de envasado de la empresa cliente.
+Fecha del informe: 30/06/2025.
+=== Página 2 ===
+Brumeral Ingeniería y Consultoría, S.L.
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Informe de auditoría energética
+Fecha: 30/06/2025. Cliente: Conservas Dalmira, S.A.. Página 2 de 3.
+
+Tabla de consumos anuales.
+Electricidad: 1.284.000 kWh al año.
+Gas natural: 412.000 kWh al año.
+=== Página 3 ===
+Brumeral Ingeniería y Consultoría, S.L.
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Informe de auditoría energética
+Fecha: 30/06/2025. Cliente: Conservas Dalmira, S.A.. Página 3 de 3.
+
+Medidas propuestas: variadores en las bombas, recuperación de calor de los compresores e iluminación LED.
+Ahorro anual estimado con las medidas propuestas: 186.500 kWh, unos 27.900 euros al año.

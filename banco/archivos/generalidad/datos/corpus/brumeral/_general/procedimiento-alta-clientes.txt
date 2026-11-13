@@ -1,0 +1,11 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L.
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Procedimiento de alta de clientes
+Fecha: 25/11/2024. Cliente: Uso interno. Página 1 de 1.
+
+Cuatro pasos:
+1. Pedir el CIF y los datos de facturación de la empresa cliente.
+2. Firmar el contrato o aceptar la oferta.
+3. Crear el proyecto del cliente en Odín.
+4. Asignar un ingeniero responsable.
