@@ -24,6 +24,7 @@ import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.application.usage.TaggingCounts;
 import com.e2d.odin.application.usage.UsageReport;
+import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
@@ -431,10 +432,12 @@ public final class Responses {
     public record UploadReceipt(String filename) {
     }
 
-    public record CaseFileEventView(UUID id, UUID documentId, String action, UUID actorId, Instant at) {
-        public static CaseFileEventView from(CaseFileEvent e) {
-            return new CaseFileEventView(e.id(), e.documentId().value(), e.action().name(), e.actorId().value(),
-                    e.at());
+    public record CaseFileEventView(UUID id, UUID documentId, @Nullable String documentTitle, String action, UUID actorId,
+            Instant at) {
+        public static CaseFileEventView from(ListCaseFileEvents.Line line) {
+            CaseFileEvent e = line.event();
+            return new CaseFileEventView(e.id(), e.documentId().value(), line.documentTitle(), e.action().name(),
+                    e.actorId().value(), e.at());
         }
     }
 

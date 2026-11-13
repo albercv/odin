@@ -4288,6 +4288,9 @@
             "type" : "string",
             "format" : "uuid"
           },
+          "documentTitle" : {
+            "type" : "string"
+          },
           "action" : {
             "type" : "string"
           },

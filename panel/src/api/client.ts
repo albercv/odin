@@ -37,15 +37,26 @@ const PAGE_SIZE = 500;
 export const MAX_DOCUMENTS = 2000;
 
 // Recorre las páginas de la API con offset, como collectDocuments en el MCP.
-async function allDocuments(companyId: string) {
+async function allDocuments(companyId: string, withdrawn = false) {
   const documents: S['DocumentView'][] = [];
   while (documents.length <= MAX_DOCUMENTS) {
-    const page = await request<S['DocumentView'][]>('GET', `${co(companyId)}/documents?offset=${documents.length}&limit=${PAGE_SIZE}`);
+    const page = await request<S['DocumentView'][]>('GET', `${co(companyId)}/documents?offset=${documents.length}&limit=${PAGE_SIZE}${withdrawn ? '&withdrawn=true' : ''}`);
     documents.push(...page);
     if (page.length < PAGE_SIZE) break;
   }
   return { documents: documents.slice(0, MAX_DOCUMENTS), truncated: documents.length > MAX_DOCUMENTS };
 }
+
+export const originalUrl = (documentId: string) => `${a}/documents/${documentId}/original`;
+
+export const uploadLinks = {
+  info: (token: string) => request<S['UploadLinkInfo']>('GET', `/v1/upload-links/${encodeURIComponent(token)}`, undefined, true),
+  upload: (token: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<S['UploadReceipt']>('POST', `/v1/upload-links/${encodeURIComponent(token)}/documents`, form, true);
+  },
+};
 
 export const api = {
   me: () => request<S['AdminMe']>('GET', `${a}/me`, undefined, true),
@@ -84,11 +95,20 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
-  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false) => {
+  withdraw: (documentId: string) => request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/withdrawal`),
+  restore: (documentId: string) => request<S['DocumentView']>('DELETE', `${a}/documents/${documentId}/withdrawal`),
+  caseFile: (id: string, caseId: string) => request<S['CaseFileResponse']>('GET', `${co(id)}/cases/${caseId}/file`),
+  caseEvents: (id: string, caseId: string) => request<S['CaseFileEventView'][]>('GET', `${co(id)}/cases/${caseId}/events`),
+  addToCase: (id: string, caseId: string, documentIds: string[]) =>
+    request<S['CaseFileAdded']>('POST', `${co(id)}/cases/${caseId}/file/documents`, { documentIds }),
+  removeFromCase: (id: string, caseId: string, documentId: string) =>
+    request<void>('DELETE', `${co(id)}/cases/${caseId}/file/documents/${documentId}`),
+  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false, caseId = '') => {
     const q = new URLSearchParams();
     if (title) q.set('title', title);
     if (projectId) q.set('projectId', projectId);
     if (caseDocument) q.set('caseDocument', 'true');
+    if (caseId) q.set('caseId', caseId);
     const form = new FormData();
     form.append('file', file);
     return request<S['Upload']>('POST', `${co(id)}/documents?${q}`, form);

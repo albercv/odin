@@ -221,3 +221,70 @@ test('showsTaggingStatusLabels', async () => {
   expect(topics.getByText('Seguros')).not.toHaveTextContent('asignado por IA');
   expect(screen.getByRole('columnheader', { name: 'Temas' })).toBeInTheDocument();
 });
+
+const withdrawnList = `${list}&withdrawn=true`;
+const withdrawal = 'PUT /v1/admin/documents/d1/withdrawal';
+const restoreUrl = 'DELETE /v1/admin/documents/d1/withdrawal';
+
+test('withdrawAsksConfirmationWithHelpTextAndReloads', async () => {
+  const calls = show(routes([old, renewed], { [withdrawal]: () => ({ status: 200, body: { ...old, withdrawnAt: '2026-11-13T10:00:00Z' } }) }));
+  await openMenu('Póliza 2022');
+  await userEvent.click(screen.getByRole('button', { name: 'Retirar Póliza 2022' }));
+  const dialog = screen.getByRole('dialog', { name: /Retirar «Póliza 2022»/ });
+  expect(within(dialog).getByText(/Dejará de salir en las búsquedas y en los expedientes/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Puedes recuperarlo desde «Retirados»/)).toBeInTheDocument();
+  expect(calls.some((c) => c.key === withdrawal)).toBe(false);
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Retirar' }));
+  await waitFor(() => expect(calls.some((c) => c.key === withdrawal)).toBe(true));
+  await waitFor(() => expect(calls.filter((c) => c.key === list)).toHaveLength(2));
+});
+
+test('cancellingTheConfirmationDoesNotWithdraw', async () => {
+  const calls = show(routes([old], { [withdrawal]: () => ({ status: 200, body: old }) }));
+  await openMenu('Póliza 2022');
+  await userEvent.click(screen.getByRole('button', { name: 'Retirar Póliza 2022' }));
+  await userEvent.click(within(screen.getByRole('dialog', { name: /Retirar/ })).getByRole('button', { name: 'Cancelar' }));
+  expect(calls.some((c) => c.key === withdrawal)).toBe(false);
+});
+
+test('withdrawnFilterListsOnlyWithdrawnAndRestores', async () => {
+  const gone = { ...old, withdrawnAt: '2026-11-13T10:00:00Z' };
+  const calls = show(routes([renewed], { [withdrawnList]: () => [gone], [restoreUrl]: () => ({ status: 200, body: old }) }));
+  await screen.findByText('Póliza 2024');
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  expect(await screen.findByText('Póliza 2022')).toBeInTheDocument();
+  expect(screen.queryByText('Póliza 2024')).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Recuperar Póliza 2022' }));
+  await waitFor(() => expect(calls.some((c) => c.key === restoreUrl)).toBe(true));
+});
+
+test('restoreConflictShowsTheServerMessage', async () => {
+  const gone = { ...old, withdrawnAt: '2026-11-13T10:00:00Z' };
+  show(routes([], { [withdrawnList]: () => [gone], [restoreUrl]: () => ({ status: 409, body: { detail: 'Ya hay un documento activo igual' } }) }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Retirados' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Recuperar Póliza 2022' }));
+  expect(await screen.findByText('Ya hay un documento activo igual')).toBeInTheDocument();
+});
+
+test('caseDocumentLinksToItsCaseScreen', async () => {
+  show(routes([{ ...old, caseDocument: true }, renewed]));
+  const row = (await screen.findByText('Póliza 2022')).closest('tr')!;
+  expect(within(row).getByRole('link', { name: 'Ver expediente de Póliza 2022' })).toHaveAttribute('href', '/casos/d1?empresa=c1');
+});
+
+test('detailOffersTheOriginalDownload', async () => {
+  show(routes([old, renewed]));
+  await openMenu('Póliza 2022');
+  await userEvent.click(screen.getByRole('button', { name: 'Ver detalle de Póliza 2022' }));
+  const dialog = screen.getByRole('dialog', { name: 'Póliza 2022' });
+  expect(within(dialog).getByRole('link', { name: 'Descargar original' })).toHaveAttribute('href', '/v1/admin/documents/d1/original');
+});
+
+test('withdrawnViewHasNoSelectionNorCaseLink', async () => {
+  const gone = { ...old, caseDocument: true, withdrawnAt: '2026-11-13T10:00:00Z' };
+  show(routes([], { [withdrawnList]: () => [gone] }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Retirados' }));
+  await screen.findByText('Póliza 2022');
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  expect(screen.queryByRole('link', { name: /Ver expediente/ })).toBeNull();
+});

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 
 const state = JSON.parse(readFileSync(process.env.DEMO_STATE ?? '', 'utf8')) as { admin: { email: string; password: string }; sessionCookie: string };
@@ -332,6 +333,35 @@ async function uploadCaseFilesAndMarkSelection(page: Page): Promise<void> {
   console.log('✓ Admin 17: dos ficheros subidos a la vez como fichas de caso; la selección se desmarca y se vuelve a marcar por lotes');
 }
 
+async function caseScreenAndWithdrawal(page: Page): Promise<void> {
+  const [caseName, other] = [CASE_FILES[1] ?? '', CASE_FILES[0] ?? ''];
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await page.getByRole('link', { name: `Ver expediente de ${caseName}`, exact: true }).click();
+  await expect(page.getByRole('heading', { name: caseName, level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Añadir documentos', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Añadir documentos' });
+  await picker.getByRole('checkbox', { name: other, exact: true }).check();
+  await picker.getByRole('button', { name: 'Añadir', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Historial' })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await page.getByRole('button', { name: `Quitar del expediente ${other}`, exact: true }).click();
+  await confirmDialog(page, `¿Quitar «${other}» del expediente? El documento sigue en Odín; solo deja de formar parte de este caso.`, 'Quitar');
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await openActions(page.locator('main'), other);
+  await page.getByRole('button', { name: `Retirar ${other}`, exact: true }).click();
+  await page.getByRole('dialog', { name: new RegExp(`Retirar «${other}»`) }).getByRole('button', { name: 'Retirar', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retirados', exact: true }).click();
+  await page.getByRole('button', { name: `Recuperar ${other}`, exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retirados', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toBeVisible();
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 17b: pantalla del caso (añadir, historial, quitar con confirmación, axe) y retirar y recuperar un documento');
+}
+
 const groupAdminsSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Administradores del grupo' }) });
 
 async function openGroupAdmins(page: Page, email: string, password: string): Promise<void> {
@@ -465,6 +495,33 @@ async function workersAskAndSaveCard(page: Page): Promise<void> {
   }
 }
 
+// El trabajador pide el enlace con su clave real (la API); la página pública se abre sin sesión y sube un fichero.
+async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<void> {
+  const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
+  const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES'] });
+  const documents = await apiJson<{ id: string; title: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/documents`);
+  const caseId = documents.find((d) => d.title === CASE_FILES[1])?.id ?? '';
+  const members = await apiJson<{ userId: string; displayName: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/members`);
+  const worker = members.find((m) => m.displayName === ASKERS[0])?.userId ?? '';
+  const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${worker}/keys`, { label: 'enlace e2e' });
+  const link = await apiJson<{ url: string }>(page, 'post', `/v1/cases/${caseId}/upload-links`, undefined, { Authorization: `Bearer ${key}` });
+  const token = link.url.split('/').pop() ?? '';
+  const visitor = await browser.newPage();
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/${token}`);
+  await expect(visitor.getByText('Caso', { exact: true })).toBeVisible();
+  await expect(visitor.getByText(CASE_FILES[1] ?? '')).toBeVisible();
+  await visitor.getByLabel('Elegir ficheros').setInputFiles({ name: 'foto-e2e.txt', mimeType: 'text/plain', buffer: Buffer.from('Foto ficticia enviada por el enlace.') });
+  await expect(visitor.getByText('recibido: foto-e2e.txt')).toBeVisible();
+  await expect(visitor.getByRole('link')).toHaveCount(0);
+  expect((await new AxeBuilder({ page: visitor }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/token-que-no-existe`);
+  await expect(visitor.getByRole('alert')).toBeVisible();
+  await expect(visitor.getByText(CASE_FILES[1] ?? '')).toHaveCount(0);
+  await visitor.close();
+  console.log('✓ Admin 20b: página pública de subida por enlace, sin sesión: caso y proyecto, recibido y enlace no válido sin datos del caso');
+}
+
 async function seeUsageOfTheMonth(page: Page): Promise<void> {
   await page.getByRole('link', { name: 'Uso', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Uso', level: 1 })).toBeVisible();
@@ -526,9 +583,11 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await promoteWorkerWithoutPassword(page, browser);
   await deleteProjectMember(page);
   await uploadCaseFilesAndMarkSelection(page);
+  await caseScreenAndWithdrawal(page);
   await createAndEditTopics(page);
   await removeAndRecoverDocumentTopic(page);
   await workersAskAndSaveCard(page);
+  await uploadThroughPublicLink(page, browser);
   await seeUsageOfTheMonth(page);
   await seeTheGapOfTheQuestion(page);
   await rejectCardSeeingTheNoteWarning(page);

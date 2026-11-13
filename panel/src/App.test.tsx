@@ -196,3 +196,67 @@ test('hashChangeDoesNotBreakHookOrder', async () => {
   expect(errors).not.toHaveBeenCalled();
   errors.mockRestore();
 });
+
+test('caseRouteOpensTheCaseScreenInsideTheShell', async () => {
+  history.pushState(null, '', '/casos/k9?empresa=c1');
+  mockFetch({
+    'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', personCode: 'BEA1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] }),
+    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c1/cases/k9/file': () => ({ caseDocument: { id: 'k9', title: 'Expte 9', status: 'READY' }, documents: [], pendingDocuments: 0 }),
+    'GET /v1/admin/companies/c1/cases/k9/events': () => [],
+  });
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Expte 9' })).toBeInTheDocument();
+  history.pushState(null, '', '/');
+});
+
+test('uploadRouteIsPublicAndNeverAsksForTheSession', async () => {
+  history.pushState(null, '', '/subir/tok');
+  const calls = mockFetch({ 'GET /v1/upload-links/tok': () => ({ caseTitle: 'Expte', projectName: 'P', expiresAt: '2026-11-14T10:00:00Z' }) });
+  render(<App />);
+  expect(await screen.findByText('Expte')).toBeInTheDocument();
+  expect(calls.some((c) => c.key.includes('/admin/'))).toBe(false);
+  history.pushState(null, '', '/');
+});
+
+const twoCompanies = {
+  'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', personCode: 'BEA1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }, { id: 'c2', name: 'Beta', code: 'BET' }] }),
+  'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
+  'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
+  'GET /v1/admin/companies/c2/cases/k2/file': () => ({ caseDocument: { id: 'k2', title: 'Expte 2', status: 'READY' }, documents: [], pendingDocuments: 0 }),
+  'GET /v1/admin/companies/c2/cases/k2/events': () => [],
+  'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => [],
+  'GET /v1/admin/companies/c1/projects': () => [],
+  'GET /v1/admin/companies/c2/documents?offset=0&limit=500': () => [],
+  'GET /v1/admin/companies/c2/projects': () => [],
+};
+
+test('caseLinkOpensUnderTheCompanyOfTheLinkForAnAdminOfTwoCompanies', async () => {
+  history.pushState(null, '', '/casos/k2?empresa=c2');
+  mockFetch(twoCompanies);
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Expte 2' })).toBeInTheDocument();
+  history.pushState(null, '', '/');
+});
+
+test('changingCompanyOnTheCaseScreenLeavesTheCase', async () => {
+  history.pushState(null, '', '/casos/k2?empresa=c2');
+  mockFetch(twoCompanies);
+  render(<App />);
+  await screen.findByRole('heading', { name: 'Expte 2' });
+  await userEvent.selectOptions(screen.getByRole('combobox'), 'c1');
+  expect(await screen.findByRole('heading', { name: 'Documentos' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Expte 2' })).toBeNull();
+  expect(location.pathname).toBe('/');
+});
+
+test('backButtonFollowsTheUrlIntoAndOutOfTheCase', async () => {
+  history.pushState(null, '', '/');
+  mockFetch(twoCompanies);
+  render(<App />);
+  await screen.findByRole('link', { name: 'Documentos' });
+  act(() => { history.pushState(null, '', '/casos/k2?empresa=c2'); window.dispatchEvent(new PopStateEvent('popstate')); });
+  expect(await screen.findByRole('heading', { name: 'Expte 2' })).toBeInTheDocument();
+  act(() => { history.pushState(null, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); });
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Expte 2' })).toBeNull());
+});
