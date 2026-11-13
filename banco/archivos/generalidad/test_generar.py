@@ -276,26 +276,44 @@ class ExpedienteTest(unittest.TestCase):
             else:
                 self.assertNotIn("ausente", q, q["id"])
 
-    def test_gx07_pide_las_seis_facturas(self):
+    def test_gx07_pide_las_seis_facturas_sin_iva(self):
         q = next(x for x in self.gx if x["id"] == "GX07")
+        self.assertIn("sin IVA", q["pregunta"])
         self.assertTrue(q["todas_las_citas"])
         self.assertEqual(len(q["esperados"]), 6)
         self.assertTrue(all("expte-2025-017-factura-" in r for r in q["esperados"]))
-        self.assertEqual(q["claves"], [["52.200", "63.162"]])
+        self.assertEqual(q["claves"], [["52.200"]])
 
     def test_gx04_y_gx09_marcan_el_presupuesto_sustituido(self):
         por_id = {q["id"]: q for q in self.gx}
         self.assertEqual(por_id["GX04"]["sustituidos"], [PRES2])
         self.assertEqual(por_id["GX04"]["prohibidas"], ["35.400"])
         self.assertEqual(por_id["GX04"]["claves"], [["33.900"]])
-        self.assertEqual(sorted(g[0] for g in por_id["GX09"]["claves"]), sorted([
+        claves = por_id["GX09"]["claves"]
+        self.assertEqual(sorted(g[0] for g in claves[:6]), sorted([
             "Refractarios Sierra del Mar", "Montajes Garbea", "Electroindustrial Prado Alto",
             "Aislamientos Térmicos Olmedo", "Transportes Hidalgo Cruz", "Ingeniería Civil Ribazo"]))
+        self.assertEqual(sorted(g[0] for g in claves[6:]), sorted(
+            ["21.750", "33.900", "27.480", "12.960", "6.240", "41.300"]))
+        self.assertIn(["33.900"], claves)
+        self.assertNotIn(["35.400"], claves)
 
-    def test_gx12_lleva_el_señuelo_en_docs_prohibidos(self):
+    def test_gx12_lista_los_documentos_con_su_referencia_017(self):
         q = next(x for x in self.gx if x["id"] == "GX12")
         self.assertEqual(q["docs_prohibidos"], [DECOY])
         self.assertEqual(q["subtipo"], "ajenos")
+        self.assertIn("su referencia 017", q["pregunta"])
+        con_forma = sorted(r for r in self.docs() if "su referencia 017" in self.texto(r))
+        self.assertEqual(len(con_forma), 9)
+        self.assertEqual(sorted(q["esperados"]), con_forma)
+        self.assertNotIn(DECOY, q["esperados"])
+        self.assertTrue(q["todas_las_citas"])
+        self.assertEqual(len(q["citas_resueltas"]), 2)
+        for c in q["citas_resueltas"]:
+            self.assertIn(c["doc"], con_forma)
+            self.assertEqual(c["paginas"], [1])
+            self.assertIn(c["ancla"], self.texto(c["doc"]).split("=== Página 2 ===")[0])
+        self.assertEqual(q["claves"], [])
 
     def test_gx13_y_gx14_son_de_aislamiento_y_se_abstienen(self):
         por_id = {q["id"]: q for q in self.gx}

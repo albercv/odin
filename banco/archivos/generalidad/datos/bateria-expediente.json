@@ -263,7 +263,7 @@
   "tipo": "expediente",
   "origen": "generalidad",
   "actor": "t09",
-  "pregunta": "¿Cuánto se ha facturado en total en el expte. 2025/017 de Cerámicas Valtierno? Cita cada factura.",
+  "pregunta": "¿Cuánto se ha facturado en total, sin IVA, en el expte. 2025/017 de Cerámicas Valtierno? Cita cada factura.",
   "citas_resueltas": [
    {
     "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-1.txt",
@@ -312,8 +312,7 @@
   "todas_las_citas": true,
   "claves": [
    [
-    "52.200",
-    "63.162"
+    "52.200"
    ]
   ],
   "abstener": false,
@@ -482,6 +481,24 @@
    ],
    [
     "Ingeniería Civil Ribazo"
+   ],
+   [
+    "21.750"
+   ],
+   [
+    "33.900"
+   ],
+   [
+    "27.480"
+   ],
+   [
+    "12.960"
+   ],
+   [
+    "6.240"
+   ],
+   [
+    "41.300"
    ]
   ],
   "abstener": false,
@@ -598,10 +615,25 @@
   "tipo": "expediente",
   "origen": "generalidad",
   "actor": "t09",
-  "pregunta": "Busca todo lo que cite «su referencia 017» y dime qué documentos forman parte del expte. 2025/017.",
-  "citas_resueltas": [],
+  "pregunta": "Busca todo lo que cite «su referencia 017» y dime cuáles de esos documentos forman parte del expte. 2025/017.",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-correo-9.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Te remitimos la oferta revisada para el montaje mecánico, en su referencia 017."
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-6.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "En relación con su referencia 017, la ampliación de la línea del horno 2 de Cerámicas Valtierno, S.A."
+   }
+  ],
   "fichas_esperadas": [],
-  "todas_las_citas": false,
+  "todas_las_citas": true,
   "claves": [],
   "abstener": false,
   "prohibidas": [],
@@ -611,66 +643,15 @@
   ],
   "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
   "esperados": [
-   "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-adenda-1.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-1.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2-revisado.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-3.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-4.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-5.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-6.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-factura-1.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-factura-2.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-factura-3.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-factura-4.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-factura-5.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-factura-6.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-1.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-2.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-3.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-4.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-5.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-6.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-7.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-8.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-correo-9.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-10.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-11.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-12.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-13.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-14.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-15.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-16.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-17.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-18.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-19.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-20.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-21.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-22.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-23.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-24.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-correo-25.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-1.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-2.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-3.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-4.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-5.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-6.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-7.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-8.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-1.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-2.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-3.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-4.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-5.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-6.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-7.txt",
    "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-8.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-certificado-1.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-certificado-2.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-certificado-3.txt",
-   "brumeral/ceramicas-valtierno/expte-2025-017-certificado-4.txt"
+   "brumeral/ceramicas-valtierno/expte-2025-017-certificado-2.txt"
   ],
   "subtipo": "ajenos",
   "concreta": false,

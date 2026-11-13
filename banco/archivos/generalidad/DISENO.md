@@ -174,7 +174,7 @@
 ## 7. Expediente grande (D-078)
 
 - **Para qué:** probar un expediente de 60 documentos de un solo cliente, con cifras que cambian (adenda, presupuesto revisado) y con un señuelo. Sigue el formato de los expedientes del archivo ficticio (`experimentos/2026-11-12-archivo-ficticio/DISENO.md`, apartado 2), para que el mismo cargador lo suba.
-- **Todo ficticio y sin IA.** Las plantillas están en `generar.py`. «Cerámicas Valtierno» y los nombres de los proveedores son inventados; no se han podido buscar en la web (sin red).
+- **Todo ficticio y sin IA.** Las plantillas están en `generar.py`. «Cerámicas Valtierno» y los nombres de los seis proveedores son inventados. Esta sesión no tenía acceso a la red, así que **no se han comprobado en la web**: queda pendiente de hacerlo antes de usar el expediente fuera de la prueba.
 - **Cliente:** `ceramicas-valtierno`, «Cerámicas Valtierno, S.A.», CIF B-00000026, domicilio en Valdecerro. Proyecto cerrado (`"abierto": false`).
   - `t09` y `t11` lo ven (`"*"`). `t10` no lo ve: su lista de proyectos no cambia.
 - **Caso:** `brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt`, «Caso 2025-017, ampliación de la línea del horno 2». Es una «FICHA DE CASO» de dos páginas, en el manifiesto y en `corpus/`.
@@ -190,7 +190,10 @@
 | Informes técnicos | 8 | `informe-tecnico-1` … `informe-tecnico-8` |
 | Certificados | 4 | `certificado-1` … `certificado-4` |
 
-- **Formas de número** (`formas_numero`): «expte. 2025/017», «exp. 017/25», «su referencia 017», «expediente nº 17». Cada documento lleva una de ellas.
+- **Formas de número** (`formas_numero`): «expte. 2025/017», «exp. 017/25», «su referencia 017», «expediente nº 17». Recuento real sobre los 60 documentos, según el texto generado:
+  - «expte. 2025/017»: 8 documentos; «exp. 017/25»: 8; «su referencia 017»: 9; «expediente nº 17»: 6.
+  - 31 documentos llevan una de estas formas y 29 no llevan ninguna: la adenda, las 6 facturas y 22 de los 25 correos (solo llevan forma el correo 1, el 9 y el 13). Ningún documento lleva dos.
+  - El señuelo lleva «su referencia 017», pero no está entre los 60.
 - **Hechos fijos.** Cada uno aparece una sola vez, en su documento, y ningún otro documento da otro valor:
 
 | Hecho | Documento |
@@ -204,7 +207,7 @@
 | «Se fija la prueba en caliente del horno para el 12 de septiembre de 2025.» | acta de obra 5 |
 | «Temperatura máxima de diseño: 1.180 °C.» | informe técnico 3 |
 
-  - Las seis facturas: base 8.700,00, IVA 1.827,00, «Total factura: 10.527,00 euros». Vencen 60 días después de su fecha. La suma (52.200 de base y 63.162 con IVA) no se escribe en ningún documento: es la cifra que comprueban GX07 y GX08.
+  - Las seis facturas: base 8.700,00, IVA 1.827,00, «Total factura: 10.527,00 euros». Las seis comparten el mismo total, así que GX01 se distingue por la cita (F-2025-104), no por la cifra. Vencen 60 días después de su fecha. La suma (52.200 de base y 63.162 con IVA) no se escribe en ningún documento: es la cifra que comprueban GX07 y GX08.
   - Ningún documento fija penalización por retraso (lo pregunta GX11).
   - El acta de obra 2 acepta el presupuesto revisado de Montajes Garbea, S.L., sin importe.
 - **Sustitución:** `sustituciones: [[presupuesto-2, presupuesto-2-revisado]]`.
@@ -223,15 +226,16 @@
 | GX04 | sustituidos | t09 | Importe actual del presupuesto de Montajes Garbea | 33.900 (revisado); `prohibidas` 35.400; sustituido: presupuesto 2 |
 | GX05 | concreta | t09 | Honorarios totales del contrato | 52.200 (adenda); `prohibidas` 48.600 |
 | GX06 | concreta | t09 | Temperatura máxima de diseño en el informe 3 | 1.180 |
-| GX07 | analisis | t09 | Total facturado, citando cada factura | 52.200 y 63.162; `todas_las_citas`; las 6 facturas |
+| GX07 | analisis | t09 | Total facturado sin IVA, citando cada factura | 52.200; `todas_las_citas`; las 6 facturas |
 | GX08 | analisis | t09 | Resumen: qué se contrató, qué presupuestos hubo, cuál se aceptó, cuánto se facturó | CI-2025-017; Montajes Garbea; 52.200 o 63.162 |
-| GX09 | analisis | t09 | Presupuestos y su importe vigente | las seis empresas; `prohibidas` 35.400 |
+| GX09 | analisis | t09 | Presupuestos y su importe vigente | las seis empresas y sus seis importes vigentes (Montajes Garbea, 33.900, el revisado); `prohibidas` 35.400 |
 | GX10 | contiene | t09 | Contratos del expediente | contrato y adenda |
 | GX11 | no_consta | t09 | Penalización por retraso | «no consta» (`ausente`: penalización) |
-| GX12 | ajenos | t09 | Documentos que citan «su referencia 017» y forman el expediente | `docs_prohibidos`: el señuelo |
+| GX12 | ajenos | t09 | Cuáles de los documentos que citan «su referencia 017» forman el expediente | `esperados` = los 9 del expediente que contienen «su referencia 017»; citas de dos de ellos; `docs_prohibidos`: el señuelo |
 | GX13 | aislamiento | t10 | Facturación del expediente | «no consta»; `docs_prohibidos` `brumeral/ceramicas-valtierno/` |
 | GX14 | aislamiento | t01 | Contrato de Brumeral con Cerámicas Valtierno | «no consta»; `docs_prohibidos` `brumeral/` |
 
+- **Subtipo `aislamiento`:** es un subtipo nuevo, para una abstención por otro trabajador o empresa. No está en el cuadro del archivo ficticio. El puntuador (`puntuar.py`) no lee el campo `subtipo` para decidir si una respuesta es correcta: decide por `abstener`, `docs_prohibidos` y las citas. Con las dos capas fusionadas, `t01` sale de la capa ficticio, no de esta.
 - **Citas y claves:** cada cita (`citas_resueltas`) es la página 1 del documento indicado, con un ancla literal. Las claves se comprueban con `puntuar.has_key`: basta una alternativa por grupo entre los documentos citados o esperados, y para GX07 y GX08 también cuenta la suma de las facturas.
 
 ### Autocomprobaciones y pruebas

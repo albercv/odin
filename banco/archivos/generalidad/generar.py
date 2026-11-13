@@ -1043,8 +1043,10 @@ def pregunta_gx(n, subtipo, actor, texto, citas=(), claves=(), esperados=(), con
 
 
 def preguntas_expediente():
-    rutas = [ruta(EXP_PROY, d["fichero"]) for d in expedientes_documentos()]
-    presupuestos_vigentes = ["presupuesto-1", "presupuesto-2-revisado", "presupuesto-3", "presupuesto-4", "presupuesto-5", "presupuesto-6"]
+    con_su_referencia = [ruta(EXP_PROY, d["fichero"]) for d in expedientes_documentos() if "su referencia 017" in paginas_de(d)[0]]
+    vigentes = [("presupuesto-1", 21750, "Refractarios Sierra del Mar"), ("presupuesto-2-revisado", 33900, "Montajes Garbea"),
+                ("presupuesto-3", 27480, "Electroindustrial Prado Alto"), ("presupuesto-4", 12960, "Aislamientos Térmicos Olmedo"),
+                ("presupuesto-5", 6240, "Transportes Hidalgo Cruz"), ("presupuesto-6", 41300, "Ingeniería Civil Ribazo")]
     return [
         pregunta_gx(1, "concreta", "t09", "¿Cuál es el total de la factura F-2025-104 de Cerámicas Valtierno?",
                     citas=[cx("factura-4", 1, "Total factura: 10.527,00 euros")], claves=[["10.527"]],
@@ -1064,9 +1066,9 @@ def preguntas_expediente():
         pregunta_gx(6, "concreta", "t09", "¿Cuál es la temperatura máxima de diseño del horno según el informe técnico nº 3?",
                     citas=[cx("informe-tecnico-3", 1, "Temperatura máxima de diseño: 1.180 °C.")], claves=[["1.180"]],
                     esperados=[fx("informe-tecnico-3")], concreta=True),
-        pregunta_gx(7, "analisis", "t09", "¿Cuánto se ha facturado en total en el expte. 2025/017 de Cerámicas Valtierno? Cita cada factura.",
+        pregunta_gx(7, "analisis", "t09", "¿Cuánto se ha facturado en total, sin IVA, en el expte. 2025/017 de Cerámicas Valtierno? Cita cada factura.",
                     citas=[cx(f"factura-{n}", 1, f"Número de factura: F-2025-{100 + n}") for n in range(1, 7)],
-                    claves=[["52.200", "63.162"]], todas=True, esperados=[fx(f"factura-{n}") for n in range(1, 7)]),
+                    claves=[["52.200"]], todas=True, esperados=[fx(f"factura-{n}") for n in range(1, 7)]),
         pregunta_gx(8, "analisis", "t09", "Resume el expte. 2025/017 de Cerámicas Valtierno: qué se contrató, qué presupuestos hubo, cuál se aceptó y cuánto se ha facturado.",
                     citas=[cx("contrato-ingenieria", 1, "CONTRATO DE INGENIERÍA CI-2025-017"),
                            cx("acta-obra-2", 1, "Se acepta el presupuesto revisado de Montajes Garbea, S.L.")],
@@ -1075,12 +1077,10 @@ def preguntas_expediente():
                                fx("presupuesto-2-revisado"), fx("presupuesto-3"), fx("presupuesto-4"), fx("presupuesto-5"),
                                fx("presupuesto-6"), *[fx(f"factura-{n}") for n in range(1, 7)]]),
         pregunta_gx(9, "analisis", "t09", "¿Qué presupuestos hemos recibido para la ampliación de la línea 2 y cuál es el importe vigente de cada uno?",
-                    citas=[cx(p, 1, f"Total del presupuesto: {miles(euros)} euros.") for p, euros in zip(
-                        presupuestos_vigentes, [21750, 33900, 27480, 12960, 6240, 41300])],
-                    claves=[["Refractarios Sierra del Mar"], ["Montajes Garbea"], ["Electroindustrial Prado Alto"],
-                            ["Aislamientos Térmicos Olmedo"], ["Transportes Hidalgo Cruz"], ["Ingeniería Civil Ribazo"]],
+                    citas=[cx(p, 1, f"Total del presupuesto: {miles(euros)} euros.") for p, euros, _ in vigentes],
+                    claves=[[empresa] for _, _, empresa in vigentes] + [[miles(euros)] for _, euros, _ in vigentes],
                     prohibidas=["35.400"], sustituidos=[fx("presupuesto-2")],
-                    esperados=[fx(p) for p in (*presupuestos_vigentes, "presupuesto-2")]),
+                    esperados=[fx(p) for p, _, _ in vigentes] + [fx("presupuesto-2")]),
         pregunta_gx(10, "contiene", "t09", "¿Qué contratos hay en el expte. 2025/017 de Cerámicas Valtierno?",
                     citas=[cx("contrato-ingenieria", 1, "CONTRATO DE INGENIERÍA CI-2025-017"),
                            cx("adenda-1", 1, "ADENDA 1 AL CONTRATO CI-2025-017")],
@@ -1088,8 +1088,10 @@ def preguntas_expediente():
                     esperados=[fx("contrato-ingenieria"), fx("adenda-1")]),
         pregunta_gx(11, "no_consta", "t09", "¿Qué penalización por retraso tiene el contrato con Cerámicas Valtierno?",
                     abstener=True, ausente=["penalización"], esperados=[fx("contrato-ingenieria"), fx("adenda-1")]),
-        pregunta_gx(12, "ajenos", "t09", "Busca todo lo que cite «su referencia 017» y dime qué documentos forman parte del expte. 2025/017.",
-                    esperados=rutas, docs_prohibidos=[DECOY]),
+        pregunta_gx(12, "ajenos", "t09", "Busca todo lo que cite «su referencia 017» y dime cuáles de esos documentos forman parte del expte. 2025/017.",
+                    citas=[cx("correo-9", 1, "Te remitimos la oferta revisada para el montaje mecánico, en su referencia 017."),
+                           cx("presupuesto-6", 1, "En relación con su referencia 017, la ampliación de la línea del horno 2 de Cerámicas Valtierno, S.A.")],
+                    todas=True, esperados=con_su_referencia, docs_prohibidos=[DECOY]),
         pregunta_gx(13, "aislamiento", "t10", "¿Cuánto se ha facturado en el expte. 2025/017 de Cerámicas Valtierno?",
                     abstener=True, docs_prohibidos=[EXP_DIR]),
         pregunta_gx(14, "aislamiento", "t01", "¿Qué contrato tiene Brumeral con Cerámicas Valtierno?",
