@@ -553,13 +553,18 @@ def elegir_seleccion():
     return (seleccionar_completo if modo else seleccionar)(manifiesto, claves)
 
 
-def main():
-    entorno = leer_entorno(PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
+def conectar(entorno):
     api = Api(f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}", entorno.get("ODIN_PANEL_ORIGIN", ""))
     try:
         api.pedir("GET", "/v1/health")
     except (OSError, RuntimeError):
         raise SystemExit(f"La instalación no responde en {api.url}: arráncala con make up. No se ha cambiado nada.")
+    return api
+
+
+def main():
+    entorno = leer_entorno(PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
+    api = conectar(entorno)
     if "--reintentar-fallidos" in sys.argv:
         entrar(api, leer_json(CREDENCIALES / "credenciales.local.json")["administrador"])
         print(f"Documentos fallidos mandados de nuevo al lector: {reintentar_fallidos(api)}.")
