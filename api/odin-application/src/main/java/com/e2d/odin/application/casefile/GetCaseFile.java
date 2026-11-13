@@ -17,7 +17,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/** La ficha de un caso y los documentos de su expediente que ya se pueden leer, por orden de alta en el expediente. */
+/**
+ * La ficha de un caso y los documentos de su expediente por orden de alta: el trabajador solo ve los ya legibles y
+ * cuántos faltan; el administrador ve también los que aún no lo son, con su estado.
+ */
 public class GetCaseFile {
 
     private final OrganizationRepository organizations;
@@ -34,22 +37,31 @@ public class GetCaseFile {
     }
 
     public CaseFileView execute(Actor actor, DocumentId caseId) {
-        return view(CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers), caseId);
+        return view(CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers), caseId, false);
     }
 
     /** La ruta del administrador, que nombra la empresa. */
     public CaseFileView execute(Actor actor, CompanyId companyId, DocumentId caseId) {
-        return view(CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers), caseId);
+        return view(CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers), caseId, true);
     }
 
-    private CaseFileView view(CaseFileAccess access, DocumentId caseId) {
+    private CaseFileView view(CaseFileAccess access, DocumentId caseId, boolean listUnread) {
         access.caseDocument(documents, caseId);
         DocumentEntry caseEntry = access.entry(documents, caseId).orElseThrow();
         List<CaseFileEntry> relations = caseFiles.entries(access.scope(), access.visibility(), caseId);
         Map<DocumentId, DocumentEntry> readable = new LinkedHashMap<>();
+        int pending = 0;
         for (CaseFileEntry relation : relations) {
-            access.entry(documents, relation.documentId()).filter(d -> d.document().status() == DocumentStatus.READY)
-                    .ifPresent(d -> readable.put(relation.documentId(), d));
+            Optional<DocumentEntry> seen = access.entry(documents, relation.documentId())
+                    .filter(d -> d.document().withdrawnAt().isEmpty());
+            if (seen.isEmpty()) {
+                continue;
+            }
+            boolean ready = seen.get().document().status() == DocumentStatus.READY;
+            pending += ready ? 0 : 1;
+            if (ready || listUnread) {
+                readable.put(relation.documentId(), seen.get());
+            }
         }
         Set<DocumentId> toCount = new HashSet<>(readable.keySet());
         toCount.add(caseId);
@@ -57,6 +69,6 @@ public class GetCaseFile {
         List<CaseFileDocumentView> views = relations.stream().filter(r -> readable.containsKey(r.documentId()))
                 .map(r -> new CaseFileDocumentView(readable.get(r.documentId()),
                         pages.getOrDefault(r.documentId(), 0), r.addedBy(), r.addedAt())).toList();
-        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views);
+        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views, pending);
     }
 }

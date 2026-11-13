@@ -53,4 +53,17 @@ class ListCompanyDocumentsTest {
         assertThat(second.topics()).isEmpty();
         assertThat(second.tagging()).isEmpty();
     }
+
+    @Test
+    void withdrawnFilterReturnsOnlyWithdrawnDocuments() {
+        Document active = Fixtures.readyDocument(docs, company, "activo");
+        Document gone = Fixtures.readyDocument(docs, company, "retirado");
+        docs.markWithdrawal(gone.withWithdrawal(java.util.Optional.of(Fixtures.NOW),
+                java.util.Optional.of(Actors.companyAdmin(company).userId())));
+
+        assertThat(list.execute(Actors.companyAdmin(company), company, 0, 100, true))
+                .extracting(t -> t.entry().document().id()).containsExactly(gone.id());
+        assertThat(list.execute(Actors.companyAdmin(company), company, 0, 100))
+                .extracting(t -> t.entry().document().id()).containsExactly(active.id());
+    }
 }

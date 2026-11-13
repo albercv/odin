@@ -16,11 +16,15 @@ import com.e2d.odin.application.link.UploadByLink;
 import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.MarkCaseDocuments;
+import com.e2d.odin.application.shared.CaseFileSettings;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ListGroupAdmins;
@@ -477,6 +481,16 @@ public class UseCaseConfiguration {
     }
 
     @Bean
+    WithdrawDocument withdrawDocument(DocumentRepository documents, Clock clock) {
+        return new WithdrawDocument(documents, clock);
+    }
+
+    @Bean
+    RestoreDocument restoreDocument(DocumentRepository documents) {
+        return new RestoreDocument(documents);
+    }
+
+    @Bean
     MarkCaseDocuments markCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
         return new MarkCaseDocuments(documents, caseFiles, clock);
     }
@@ -485,6 +499,12 @@ public class UseCaseConfiguration {
     GetCaseFile getCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
             DocumentRepository documents, CaseFileRepository caseFiles) {
         return new GetCaseFile(organizations, projectMembers, documents, caseFiles);
+    }
+
+    @Bean
+    ReadCaseFile readCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, CaseFileSettings settings) {
+        return new ReadCaseFile(organizations, projectMembers, documents, caseFiles, settings);
     }
 
     @Bean

@@ -6,13 +6,16 @@ import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,6 +30,11 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
              AND EXISTS (SELECT 1 FROM document m WHERE m.id = x.document_id AND %s AND %s)""".formatted(
             Sql.inVisibleProjects("c.project_id"), Sql.notWithdrawn("c.withdrawn_at"),
             Sql.inVisibleProjects("m.project_id"), Sql.notWithdrawn("m.withdrawn_at"));
+
+    /** Las dos puntas de la relación sin retirar, mirando directamente la columna (sin la RLS). */
+    private static final String NOT_HIDDEN = """
+            (NOT EXISTS (SELECT 1 FROM document c WHERE c.id = x.case_document_id AND c.withdrawn_at IS NOT NULL)
+            AND NOT EXISTS (SELECT 1 FROM document m WHERE m.id = x.document_id AND m.withdrawn_at IS NOT NULL))""";
 
     private final ScopedTransactions tx;
 
@@ -129,19 +137,37 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
                 visibility).param("case", caseId.value()).query(mapper).list());
     }
 
-    @Override
-    public int removeHiddenEntries(CompanyId companyId, DocumentId caseId, UserId actor, Instant at) {
-        // con lo retirado a la vista, lo único que le queda al caso sin verse es lo de documentos retirados
-        return tx.includeWithdrawn(true).inScope(CompanyScope.of(companyId), ProjectVisibility.all(),
-                jdbc -> jdbc.sql("""
-                WITH removed AS (DELETE FROM case_file_entry WHERE company_id = :company AND case_document_id = :case
-                    AND (EXISTS (SELECT 1 FROM document m WHERE m.id = document_id AND m.withdrawn_at IS NOT NULL)
-                        OR EXISTS (SELECT 1 FROM document c WHERE c.id = case_document_id AND c.withdrawn_at IS NOT NULL))
-                    RETURNING document_id)
+    /** Lo retirado a la vista: lo único que le queda al caso sin verse son las relaciones con documentos retirados. */
+    private static int deleteHidden(JdbcClient jdbc, CompanyId companyId, UUID caseId, UserId actor, Instant at) {
+        return jdbc.sql("""
+                WITH removed AS (DELETE FROM case_file_entry x WHERE x.company_id = :company
+                    AND x.case_document_id = :case AND NOT %s RETURNING x.document_id)
                 INSERT INTO case_file_event (id, company_id, case_document_id, document_id, action, actor_id, at)
-                SELECT gen_random_uuid(), :company, :case, document_id, 'REMOVED', :actor, :at FROM removed""")
-                .param("company", companyId.value()).param("case", caseId.value()).param("actor", actor.value())
-                .param("at", Sql.ts(at)).update());
+                SELECT gen_random_uuid(), :company, :case, document_id, 'REMOVED', :actor, :at FROM removed"""
+                .formatted(NOT_HIDDEN)).param("company", companyId.value()).param("case", caseId)
+                .param("actor", actor.value()).param("at", Sql.ts(at)).update();
+    }
+
+    @Override
+    public int unmarkCases(CompanyId companyId, Set<DocumentId> caseIds, UserId actor, Instant at) {
+        List<UUID> ids = caseIds.stream().map(DocumentId::value).toList();
+        return tx.includeWithdrawn(true).inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> {
+            int found = jdbc.sql("SELECT count(*) FROM (SELECT id FROM document WHERE company_id = :company "
+                    + "AND id IN (:ids) ORDER BY id FOR UPDATE) locked").param("company", companyId.value())
+                    .param("ids", ids).query(Integer.class).single();
+            if (found != ids.size()) {
+                throw new NotFoundException("Documento no encontrado");
+            }
+            int visible = jdbc.sql("SELECT count(*) FROM case_file_entry x WHERE x.company_id = :company "
+                    + "AND x.case_document_id IN (:ids) AND " + NOT_HIDDEN).param("company", companyId.value())
+                    .param("ids", ids).query(Integer.class).single();
+            if (visible > 0) {
+                throw new ConflictException("Quita antes los documentos del expediente");
+            }
+            ids.forEach(id -> deleteHidden(jdbc, companyId, id, actor, at));
+            return jdbc.sql("UPDATE document SET case_document = false WHERE company_id = :company AND id IN (:ids)")
+                    .param("company", companyId.value()).param("ids", ids).update();
+        });
     }
 
     @Override
@@ -150,9 +176,13 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
         if (ids.isEmpty()) {
             return Map.of();
         }
-        return tx.inScope(scope, visibility, jdbc -> jdbc.sql("""
-                SELECT document_id, count(*) AS pages FROM document_page WHERE document_id IN (:ids)
-                GROUP BY document_id""").param("ids", ids.stream().map(DocumentId::value).toList())
+        String sql = """
+                SELECT p.document_id, count(*) AS pages FROM document_page p JOIN document d ON d.id = p.document_id
+                WHERE p.document_id IN (:ids) AND %s AND %s AND %s GROUP BY p.document_id""".formatted(
+                Sql.inScope("p.company_id"), Sql.inVisibleProjects("d.project_id"),
+                Sql.notWithdrawn("d.withdrawn_at"));
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("ids", ids.stream().map(DocumentId::value).toList())
                 .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("pages"))).list())
                 .stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }

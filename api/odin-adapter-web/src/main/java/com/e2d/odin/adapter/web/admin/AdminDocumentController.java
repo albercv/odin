@@ -5,6 +5,7 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
@@ -14,6 +15,7 @@ import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.CaseFileAssignment;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -21,6 +23,7 @@ import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
 import com.e2d.odin.adapter.web.link.OriginalResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
 import java.util.List;
@@ -57,10 +60,13 @@ public class AdminDocumentController {
     private final MarkCaseDocuments markCases;
     private final AddToCaseFiles addToCaseFiles;
     private final OpenOriginal openOriginal;
+    private final WithdrawDocument withdraw;
+    private final RestoreDocument restore;
 
     public AdminDocumentController(UploadDocument upload, ListCompanyDocuments list, GetDocument get,
             RetryDocument retry, SupersedeDocument supersede, UpdateDocument update, MarkCaseDocuments markCases,
-            AddToCaseFiles addToCaseFiles, OpenOriginal openOriginal) {
+            AddToCaseFiles addToCaseFiles, OpenOriginal openOriginal, WithdrawDocument withdraw,
+            RestoreDocument restore) {
         this.upload = upload;
         this.list = list;
         this.get = get;
@@ -70,13 +76,16 @@ public class AdminDocumentController {
         this.markCases = markCases;
         this.addToCaseFiles = addToCaseFiles;
         this.openOriginal = openOriginal;
+        this.withdraw = withdraw;
+        this.restore = restore;
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/documents")
     public List<Responses.DocumentView> list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "100") int limit) {
-        return list.execute(actor, new CompanyId(companyId), offset, limit).stream()
+            @RequestParam(defaultValue = "100") int limit, @Parameter(description = "Si es true, devuelve solo los documentos retirados (con su paginación)")
+            @RequestParam(defaultValue = "false") boolean withdrawn) {
+        return list.execute(actor, new CompanyId(companyId), offset, limit, withdrawn).stream()
                 .map(Responses.DocumentView::from).toList();
     }
 
@@ -156,5 +165,17 @@ public class AdminDocumentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unsupersede(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID documentId) {
         supersede.unmark(actor, new DocumentId(documentId));
+    }
+
+    @PutMapping("/v1/admin/documents/{documentId}/withdrawal")
+    public Responses.DocumentView withdraw(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId) {
+        return Responses.DocumentView.from(withdraw.execute(actor, new DocumentId(documentId)));
+    }
+
+    @DeleteMapping("/v1/admin/documents/{documentId}/withdrawal")
+    public Responses.DocumentView restore(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId) {
+        return Responses.DocumentView.from(restore.execute(actor, new DocumentId(documentId)));
     }
 }

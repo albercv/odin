@@ -11,6 +11,7 @@ import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.link.ResolveLink;
 import com.e2d.odin.application.link.UploadByLink;
 import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.GetDocument;
@@ -18,7 +19,9 @@ import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.UpdateDocument;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
@@ -327,8 +330,21 @@ public class TestWiring {
         return new UpdateDocument(docs, caseFiles, clock);
     }
 
+    @Bean WithdrawDocument withdrawDocument() {
+        return new WithdrawDocument(docs, clock);
+    }
+
+    @Bean RestoreDocument restoreDocument() {
+        return new RestoreDocument(docs);
+    }
+
     @Bean MarkCaseDocuments markCaseDocuments() {
         return new MarkCaseDocuments(docs, caseFiles, clock);
+    }
+
+    @Bean ReadCaseFile readCaseFile() {
+        return new ReadCaseFile(orgs, projectMembers, docs, caseFiles,
+                new com.e2d.odin.application.shared.CaseFileSettings());
     }
 
     @Bean GetCaseFile getCaseFile() {

@@ -37,19 +37,22 @@ public class PostgresDocumentRepository implements DocumentRepository {
             d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
             d.superseded_at, d.pages_without_text, d.case_document, d.withdrawn_at, d.withdrawn_by""";
     private final ScopedTransactions tx;
+    /** Los carriles del lector y del etiquetado terminan también lo que se retiró a mitad de trabajo (sin WITH CHECK, la RLS lo impediría). */
+    private final ScopedTransactions pipeline;
 
     public PostgresDocumentRepository(ScopedTransactions tx) {
         this.tx = tx;
+        this.pipeline = tx.includeWithdrawn(true);
     }
 
     @Override
     public void save(Document d) {
-        tx.runInScope(CompanyScope.of(d.companyId()), ProjectVisibility.all(), jdbc -> upsert(jdbc, d));
+        pipeline.runInScope(CompanyScope.of(d.companyId()), ProjectVisibility.all(), jdbc -> upsert(jdbc, d));
     }
 
     @Override
     public void replacePages(DocumentId id, List<DocumentPage> pages) {
-        tx.runInScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> {
+        pipeline.runInScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> {
             jdbc.sql("DELETE FROM document_page WHERE document_id = :id").param("id", id.value()).update();
             // el texto cambió: sus temas se vuelven a calcular (las decisiones del administrador se conservan)
             jdbc.sql("DELETE FROM document_tagging WHERE document_id = :id").param("id", id.value()).update();
@@ -70,11 +73,42 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
+        return findEntry(tx, scope, visibility, id);
+    }
+
+    @Override
+    public Optional<DocumentEntry> findEntryIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility,
+            DocumentId id) {
+        return findEntry(pipeline, scope, visibility, id);
+    }
+
+    private static Optional<DocumentEntry> findEntry(ScopedTransactions transactions, CompanyScope scope,
+            ProjectVisibility visibility, DocumentId id) {
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
                 + SupersessionSql.joins("d.superseded_by", "d.company_id") + " WHERE d.id = :id AND " + Sql.inScope("d.company_id")
                 + " AND " + Sql.inVisibleProjects("d.project_id") + " AND " + Sql.notWithdrawn("d.withdrawn_at");
-        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+        return transactions.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("id", id.value()).query((rs, n) -> entry(rs)).optional());
+    }
+
+    @Override
+    public void markWithdrawal(Document d) {
+        try {
+            pipeline.runInScope(CompanyScope.of(d.companyId()), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                    UPDATE document SET withdrawn_at = :at, withdrawn_by = :by
+                    WHERE id = :id AND company_id = :company""")
+                    .param("at", Sql.ts(d.withdrawnAt())).param("by", d.withdrawnBy().map(UserId::value).orElse(null))
+                    .param("id", d.id().value()).param("company", d.companyId().value()).update());
+        } catch (ConflictException e) {
+            throw new ConflictException("Ya hay un documento igual en ese proyecto; retíralo antes de recuperar este");
+        }
+    }
+
+    @Override
+    public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
+            int limit) {
+        return list(pipeline, true, scope, visibility, Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), offset, limit);
     }
 
     @Override
@@ -133,7 +167,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
                 .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
-                        + "ORDER BY d.seq LIMIT 1")
+                        + "AND d.withdrawn_at IS NULL ORDER BY d.seq LIMIT 1")
                 .param("company", companyId.value()).param("sha", sha256).query((rs, n) -> document(rs)).optional());
     }
 
@@ -142,7 +176,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
             String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS
                 + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
-                + "AND (d.project_id IS NULL OR d.project_id = :project) ORDER BY d.seq LIMIT 1")
+                + "AND d.withdrawn_at IS NULL AND (d.project_id IS NULL OR d.project_id = :project) ORDER BY d.seq LIMIT 1")
                 .param("company", companyId.value()).param("sha", sha256)
                 .param("project", projectId.map(ProjectId::value).orElse(null)).query((rs, n) -> document(rs))
                 .optional());
@@ -152,6 +186,12 @@ public class PostgresDocumentRepository implements DocumentRepository {
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
             int limit) {
+        return list(tx, false, scope, visibility, projectId, topicId, caseDocument, status, offset, limit);
+    }
+
+    private static List<DocumentEntry> list(ScopedTransactions transactions, boolean withdrawnOnly, CompanyScope scope,
+            ProjectVisibility visibility, Optional<ProjectId> projectId, Optional<TopicId> topicId,
+            Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
                 + SupersessionSql.joins("d.superseded_by", "d.company_id") + """
@@ -160,11 +200,12 @@ public class PostgresDocumentRepository implements DocumentRepository {
                       JOIN topic p ON p.id = x.topic_id AND p.deleted_at IS NULL
                       WHERE x.document_id = d.id AND x.topic_id = :topic AND x.state = 'ACTIVE'))
                   AND (CAST(:caseDocument AS boolean) IS NULL OR d.case_document = :caseDocument)
-                  AND (CAST(:status AS text) IS NULL OR d.status = :status) AND %s AND %s AND %s
+                  AND (CAST(:status AS text) IS NULL OR d.status = :status) AND (NOT :withdrawnOnly OR d.withdrawn_at IS NOT NULL)
+                  AND %s AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
                 Sql.inVisibleProjects("d.project_id"), Sql.notWithdrawn("d.withdrawn_at"));
-        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
-                .param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
+        return transactions.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("withdrawnOnly", withdrawnOnly).param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
                 .param("caseDocument", caseDocument.orElse(null))
                 .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
                 .param("limit", limit).query((rs, n) -> entry(rs)).list());
@@ -199,10 +240,10 @@ public class PostgresDocumentRepository implements DocumentRepository {
     private Optional<Document> claim(String waiting, String running, Instant now, Duration staleAfter,
             UnaryOperator<Document> start) {
         String sql = "SELECT " + COLUMNS + """
-                 FROM document d WHERE d.status = '%s' OR (d.status = '%s'
-                    AND (d.processing_started_at IS NULL OR d.processing_started_at <= :threshold))
+                 FROM document d WHERE d.withdrawn_at IS NULL AND (d.status = '%s' OR (d.status = '%s'
+                    AND (d.processing_started_at IS NULL OR d.processing_started_at <= :threshold)))
                 ORDER BY d.seq LIMIT 1 FOR UPDATE SKIP LOCKED""".formatted(waiting, running);
-        return tx.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql(sql)
+        return pipeline.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql(sql)
                 .param("threshold", Sql.ts(now.minus(staleAfter))).query((rs, n) -> document(rs)).optional()
                 .map(start).map(claimed -> {
                     upsert(jdbc, claimed);

@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 public interface CaseFileRepository {
@@ -39,10 +40,11 @@ public interface CaseFileRepository {
     int countEntries(CompanyId companyId, DocumentId caseId);
 
     /**
-     * Quita las relaciones del caso que ya no se ven (por un documento retirado) y deja un REMOVED de cada una, a
-     * nombre de {@code actor}, en una transacción. Devuelve cuántas quitó.
+     * Desmarca los casos todo o nada, en una transacción con los casos bloqueados: si alguno tiene relaciones visibles,
+     * {@code ConflictException} («Quita antes los documentos del expediente»); si falta alguno, 404; si no, quita las
+     * relaciones ocultas (de documentos retirados) con su REMOVED a nombre de {@code actor} y quita la marca.
      */
-    int removeHiddenEntries(CompanyId companyId, DocumentId caseId, UserId actor, Instant at);
+    int unmarkCases(CompanyId companyId, Set<DocumentId> caseIds, UserId actor, Instant at);
 
     /** Páginas guardadas de cada documento visible, en una sola consulta; los que no tienen páginas no salen. */
     Map<DocumentId, Integer> pageCounts(CompanyScope scope, ProjectVisibility visibility, Collection<DocumentId> ids);

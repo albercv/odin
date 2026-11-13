@@ -25,6 +25,7 @@ public final class WorkerRoutes {
             route("GET", "/v1/me/cards", WorkerTool.MY_CARDS),
             route("GET", "/v1/me/questions", WorkerTool.MY_QUESTIONS),
             route("GET", "/v1/cases/{caseId}/file", WorkerTool.CASE_FILE),
+            route("GET", "/v1/cases/{caseId}/file/text", WorkerTool.CASE_FILE),
             route("POST", "/v1/cases/{caseId}/file/documents", WorkerTool.CASE_FILE),
             route("DELETE", "/v1/cases/{caseId}/file/documents/{documentId}", WorkerTool.CASE_FILE),
             route("POST", "/v1/cases/{caseId}/upload-links", WorkerTool.CASE_FILE),

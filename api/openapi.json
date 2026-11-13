@@ -35,6 +35,58 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/withdrawal" : {
+      "put" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "withdraw",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "restore",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/documents/{documentId}/topics/{topicId}" : {
       "put" : {
         "tags" : [ "document-topic-controller" ],
@@ -1046,6 +1098,15 @@
             "format" : "int32",
             "default" : 100
           }
+        }, {
+          "name" : "withdrawn",
+          "in" : "query",
+          "description" : "Si es true, devuelve solo los documentos retirados (con su paginación)",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
         } ],
         "responses" : {
           "200" : {
@@ -1907,6 +1968,40 @@
         }
       }
     },
+    "/v1/cases/{caseId}/file/text" : {
+      "get" : {
+        "tags" : [ "case-file-controller" ],
+        "operationId" : "text",
+        "parameters" : [ {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseFileTextResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/me" : {
       "get" : {
         "tags" : [ "session-controller" ],
@@ -2415,16 +2510,6 @@
           }
         }
       },
-      "SupersedeRequest" : {
-        "type" : "object",
-        "properties" : {
-          "replacementId" : {
-            "type" : "string",
-            "format" : "uuid",
-            "description" : "El documento que lo sustituye entero."
-          }
-        }
-      },
       "DocumentLink" : {
         "type" : "object",
         "properties" : {
@@ -2504,6 +2589,10 @@
           },
           "caseDocument" : {
             "type" : "boolean"
+          },
+          "withdrawnAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         },
         "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
@@ -2523,6 +2612,16 @@
           }
         },
         "required" : [ "id", "name", "source" ]
+      },
+      "SupersedeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "replacementId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "El documento que lo sustituye entero."
+          }
+        }
       },
       "Capabilities" : {
         "type" : "object",
@@ -2752,6 +2851,10 @@
           "limit" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "caseId" : {
+            "type" : "string",
+            "format" : "uuid"
           }
         }
       },
@@ -3681,9 +3784,12 @@
           "addedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string"
           }
         },
-        "required" : [ "filename", "format", "id", "pageCount", "paginated", "superseded", "title", "uploadedAt", "uploadedBy" ]
+        "required" : [ "filename", "format", "id", "pageCount", "paginated", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
       },
       "CaseFileResponse" : {
         "type" : "object",
@@ -3696,9 +3802,74 @@
             "items" : {
               "$ref" : "#/components/schemas/CaseFileDocumentView"
             }
+          },
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         },
-        "required" : [ "caseDocument", "documents" ]
+        "required" : [ "caseDocument", "documents", "pendingDocuments" ]
+      },
+      "CaseFileTextPageView" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "pageNumber" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "unread" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "documentId", "pageNumber", "text", "title", "unread" ]
+      },
+      "CaseFileTextResponse" : {
+        "type" : "object",
+        "properties" : {
+          "pages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CaseFileTextPageView"
+            }
+          },
+          "nextCursor" : {
+            "type" : "string"
+          },
+          "complete" : {
+            "type" : "boolean"
+          },
+          "documentsRead" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "documentsTotal" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pagesRead" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pagesTotal" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "complete", "documentsRead", "documentsTotal", "pages", "pagesRead", "pagesTotal", "pendingDocuments" ]
       },
       "AdminMe" : {
         "type" : "object",

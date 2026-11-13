@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["withdraw"];
+        post?: never;
+        delete: operations["restore"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/documents/{documentId}/topics/{topicId}": {
         parameters: {
             query?: never;
@@ -692,6 +708,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cases/{caseId}/file/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["text"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/me": {
         parameters: {
             query?: never;
@@ -956,13 +988,6 @@ export interface components {
             currentPassword?: string;
             newPassword?: string;
         };
-        SupersedeRequest: {
-            /**
-             * Format: uuid
-             * @description El documento que lo sustituye entero.
-             */
-            replacementId?: string;
-        };
         DocumentLink: {
             /** Format: uuid */
             id: string;
@@ -992,12 +1017,21 @@ export interface components {
             taggingStatus?: string;
             topics: components["schemas"]["TopicLabelView"][];
             caseDocument: boolean;
+            /** Format: date-time */
+            withdrawnAt?: string;
         };
         TopicLabelView: {
             /** Format: uuid */
             id: string;
             name: string;
             source: string;
+        };
+        SupersedeRequest: {
+            /**
+             * Format: uuid
+             * @description El documento que lo sustituye entero.
+             */
+            replacementId?: string;
         };
         Capabilities: {
             capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
@@ -1078,6 +1112,8 @@ export interface components {
             projectId?: string;
             /** Format: int32 */
             limit?: number;
+            /** Format: uuid */
+            caseId?: string;
         };
         Hit: {
             sourceType: string;
@@ -1425,10 +1461,37 @@ export interface components {
             addedBy?: string;
             /** Format: date-time */
             addedAt?: string;
+            status: string;
         };
         CaseFileResponse: {
             caseDocument: components["schemas"]["CaseFileDocumentView"];
             documents: components["schemas"]["CaseFileDocumentView"][];
+            /** Format: int32 */
+            pendingDocuments: number;
+        };
+        CaseFileTextPageView: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+            /** Format: int32 */
+            pageNumber: number;
+            text: string;
+            unread: boolean;
+        };
+        CaseFileTextResponse: {
+            pages: components["schemas"]["CaseFileTextPageView"][];
+            nextCursor?: string;
+            complete: boolean;
+            /** Format: int32 */
+            documentsRead: number;
+            /** Format: int32 */
+            documentsTotal: number;
+            /** Format: int32 */
+            pagesRead: number;
+            /** Format: int32 */
+            pagesTotal: number;
+            /** Format: int32 */
+            pendingDocuments: number;
         };
         AdminMe: {
             /** Format: uuid */
@@ -1624,6 +1687,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    withdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+        };
+    };
+    restore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
             };
         };
     };
@@ -2403,6 +2510,8 @@ export interface operations {
             query?: {
                 offset?: number;
                 limit?: number;
+                /** @description Si es true, devuelve solo los documentos retirados (con su paginación) */
+                withdrawn?: boolean;
             };
             header?: never;
             path: {
@@ -3005,6 +3114,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
+    text: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileTextResponse"];
                 };
             };
         };

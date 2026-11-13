@@ -6,6 +6,7 @@ import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.shared.ProjectVisibility;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.function.Function;
@@ -83,8 +85,7 @@ public class InMemoryCaseFileRepository implements CaseFileRepository {
                 || documents.get(e.documentId()).filter(Document::withdrawn).isPresent();
     }
 
-    @Override
-    public int removeHiddenEntries(CompanyId companyId, DocumentId caseId, UserId actor, Instant at) {
+    private int removeHiddenEntries(CompanyId companyId, DocumentId caseId, UserId actor, Instant at) {
         List<CaseFileEntry> hidden = entries.stream()
                 .filter(e -> e.companyId().equals(companyId) && e.caseId().equals(caseId) && hidden(e)).toList();
         hidden.forEach(e -> {
@@ -93,6 +94,17 @@ public class InMemoryCaseFileRepository implements CaseFileRepository {
                     CaseFileAction.REMOVED, actor, at));
         });
         return hidden.size();
+    }
+
+    @Override
+    public int unmarkCases(CompanyId companyId, Set<DocumentId> caseIds, UserId actor, Instant at) {
+        if (caseIds.stream().anyMatch(id -> !entries(CompanyScope.of(companyId), ProjectVisibility.all(), id)
+                .isEmpty())) {
+            throw new ConflictException("Quita antes los documentos del expediente");
+        }
+        int updated = documents.markCaseDocuments(companyId, caseIds, false);
+        caseIds.forEach(id -> removeHiddenEntries(companyId, id, actor, at));
+        return updated;
     }
 
     @Override

@@ -7,9 +7,11 @@ ALTER TABLE document ADD COLUMN withdrawn_by uuid NULL REFERENCES app_user (id);
 ALTER TABLE document ADD CONSTRAINT document_withdrawal_complete CHECK ((withdrawn_at IS NULL) = (withdrawn_by IS NULL));
 
 -- D-078: el mismo fichero puede estar en dos proyectos de la misma empresa, no dos veces en el mismo sitio.
+-- Lo retirado no cuenta para los duplicados.
 ALTER TABLE document DROP CONSTRAINT document_company_id_sha256_key;
-ALTER TABLE document ADD CONSTRAINT document_company_project_sha256_key
-    UNIQUE NULLS NOT DISTINCT (company_id, project_id, sha256);
+CREATE UNIQUE INDEX document_company_project_sha256_key ON document (company_id, project_id, sha256) NULLS NOT DISTINCT
+    WHERE withdrawn_at IS NULL;
+CREATE INDEX document_company_sha256_idx ON document (company_id, sha256);
 
 -- Copia exacta de la política de V9 más la condición de retirada.
 DROP POLICY document_scope ON document;

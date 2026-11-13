@@ -1,6 +1,5 @@
 package com.e2d.odin.application.document;
 
-import com.e2d.odin.application.casefile.CaseFileGuard;
 import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
@@ -31,13 +30,7 @@ public class MarkCaseDocuments {
         if (documentIds == null || documentIds.isEmpty() || documentIds.size() > MAX_DOCUMENTS) {
             throw new ValidationException("Elige entre 1 y " + MAX_DOCUMENTS + " documentos");
         }
-        if (!caseDocument) {
-            CaseFileGuard.requireNoVisibleEntries(caseFiles, companyId, documentIds);
-        }
-        int updated = documents.markCaseDocuments(companyId, documentIds, caseDocument);
-        if (!caseDocument) {
-            CaseFileGuard.removeHiddenEntries(caseFiles, companyId, documentIds, actor, clock.instant());
-        }
-        return updated;
+        return caseDocument ? documents.markCaseDocuments(companyId, documentIds, true)
+                : caseFiles.unmarkCases(companyId, documentIds, actor.userId(), clock.instant());
     }
 }

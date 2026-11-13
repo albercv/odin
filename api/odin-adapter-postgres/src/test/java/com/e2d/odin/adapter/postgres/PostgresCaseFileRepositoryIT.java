@@ -124,23 +124,52 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
         assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).hasSize(1);
     }
 
+    private boolean isCase(Document d) {
+        return docs.findById(CompanyScope.of(company), ProjectVisibility.all(), d.id()).orElseThrow().caseDocument();
+    }
+
     @Test
-    void removeHiddenEntriesDeletesRelationsOfWithdrawnDocumentsAndRecordsRemoved() {
+    void unmarkCasesIsAllOrNothingWhenOneCaseHasVisibleEntries() {
+        Document hiddenOnly = document(Optional.of(projectA), true);
+        Document hiddenMember = document(Optional.of(projectA), false);
+        files.add(entry(hiddenOnly, hiddenMember));
+        withdraw(hiddenMember);
+        Document busy = document(Optional.of(projectA), true);
+        files.add(entry(busy, document(Optional.of(projectA), false)));
+
+        assertThatThrownBy(() -> files.unmarkCases(company, Set.of(hiddenOnly.id(), busy.id()), user, NOW))
+                .isInstanceOf(ConflictException.class).hasMessage("Quita antes los documentos del expediente");
+
+        assertThat(isCase(hiddenOnly)).isTrue();
+        assertThat(isCase(busy)).isTrue();
+        assertThat(files.countEntries(company, hiddenOnly.id())).isEqualTo(1);
+        assertThat(owner.sql("SELECT count(*) FROM case_file_event").query(Integer.class).single()).isZero();
+    }
+
+    @Test
+    void unmarkCasesRemovesHiddenRelationsWithTheirEventsAndUnmarks() {
         Document theCase = document(Optional.of(projectA), true);
         Document member = document(Optional.of(projectA), false);
         files.add(entry(theCase, member));
-        owner.sql("UPDATE document SET withdrawn_at = now(), withdrawn_by = :u WHERE id = :id")
-                .param("u", user.value()).param("id", member.id().value()).update();
-        assertThat(files.countEntries(company, theCase.id())).isEqualTo(1);
-        assertThat(files.entries(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).isEmpty();
+        withdraw(member);
 
-        int removed = files.removeHiddenEntries(company, theCase.id(), user, NOW);
+        assertThat(files.unmarkCases(company, Set.of(theCase.id()), user, NOW)).isEqualTo(1);
 
-        assertThat(removed).isEqualTo(1);
+        assertThat(isCase(theCase)).isFalse();
         assertThat(files.countEntries(company, theCase.id())).isZero();
-        assertThat(owner.sql("SELECT count(*) FROM case_file_event WHERE case_document_id = :c AND action = 'REMOVED'"
-                + " AND actor_id = :u").param("c", theCase.id().value()).param("u", user.value())
-                .query(Integer.class).single()).isEqualTo(1);
+        assertThat(owner.sql("SELECT count(*) FROM case_file_event WHERE action = 'REMOVED' AND actor_id = :u")
+                .param("u", user.value()).query(Integer.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void unmarkCasesWithAnUnknownDocumentChangesNothing() {
+        Document theCase = document(Optional.of(projectA), true);
+
+        assertThatThrownBy(() -> files.unmarkCases(company,
+                Set.of(theCase.id(), new DocumentId(UUID.randomUUID())), user, NOW))
+                .isInstanceOf(com.e2d.odin.domain.shared.NotFoundException.class);
+
+        assertThat(isCase(theCase)).isTrue();
     }
 
     @Test
@@ -215,6 +244,24 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
                 .isEqualTo(general.id());
         assertThat(docs.findBySha256InProject(company, Optional.of(newProject(company, "C")), sha).orElseThrow().id())
                 .isEqualTo(general.id());
+    }
+
+    private void withdraw(Document d) {
+        owner.sql("UPDATE document SET withdrawn_at = now(), withdrawn_by = :u WHERE id = :id")
+                .param("u", user.value()).param("id", d.id().value()).update();
+    }
+
+    @Test
+    void withdrawnDocumentDoesNotCountForDuplicates() {
+        String sha = UUID.randomUUID().toString();
+        Document old = document(Optional.of(projectA), sha, false);
+        withdraw(old);
+
+        assertThat(docs.findBySha256(company, sha)).isEmpty();
+        assertThat(docs.findBySha256InProject(company, Optional.of(projectA), sha)).isEmpty();
+        Document again = document(Optional.of(projectA), sha, false);
+        assertThat(docs.findBySha256(company, sha).orElseThrow().id()).isEqualTo(again.id());
+        assertThatThrownBy(() -> document(Optional.of(projectA), sha, false)).isInstanceOf(ConflictException.class);
     }
 
     @Test

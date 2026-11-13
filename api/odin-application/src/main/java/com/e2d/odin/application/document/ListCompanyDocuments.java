@@ -27,12 +27,19 @@ public class ListCompanyDocuments {
     }
 
     public List<TaggedDocument> execute(Actor actor, CompanyId companyId, int offset, int limit) {
+        return execute(actor, companyId, offset, limit, false);
+    }
+
+    /** Con {@code withdrawn}, la lista trae solo los retirados. */
+    public List<TaggedDocument> execute(Actor actor, CompanyId companyId, int offset, int limit, boolean withdrawn) {
         AccessPolicy.requireAdminOf(actor, companyId);
         int capped = WorkerAccess.cap(Optional.of(limit), 100, 500);
         CompanyScope scope = CompanyScope.of(companyId);
         ProjectVisibility everything = ProjectVisibility.all();
-        var entries = documents.list(scope, everything, Optional.empty(), Optional.empty(), Optional.empty(),
-                Math.max(0, offset), capped);
+        int from = Math.max(0, offset);
+        var entries = withdrawn ? documents.listWithdrawn(scope, everything, from, capped)
+                : documents.list(scope, everything, Optional.empty(), Optional.empty(), Optional.empty(), from,
+                        capped);
         return TaggedDocuments.of(entries, scope, everything, topics.list(companyId), tagging);
     }
 }

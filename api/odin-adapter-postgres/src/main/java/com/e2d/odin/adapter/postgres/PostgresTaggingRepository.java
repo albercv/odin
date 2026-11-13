@@ -42,7 +42,7 @@ public class PostgresTaggingRepository implements TaggingRepository {
     static final String PENDING = """
             FROM document d JOIN company c ON c.id = d.company_id
             LEFT JOIN document_tagging t ON t.document_id = d.id
-            WHERE d.status = 'READY' AND %s AND %s AND %%s
+            WHERE d.status = 'READY' AND d.withdrawn_at IS NULL AND %s AND %s AND %%s
               AND (t.document_id IS NULL OR NOT (t.status = 'DONE' AND t.topic_list_version = c.topic_list_version))"""
             .formatted(LIVE_TOPIC, Sql.inScope("d.company_id"));
     /**
@@ -54,7 +54,7 @@ public class PostgresTaggingRepository implements TaggingRepository {
                 t.attempt_count AS tagged_attempts
             FROM document d JOIN company c ON c.id = d.company_id
             LEFT JOIN document_tagging t ON t.document_id = d.id
-            WHERE d.status = 'READY' AND %s AND %s AND %s AND (t.document_id IS NULL
+            WHERE d.status = 'READY' AND d.withdrawn_at IS NULL AND %s AND %s AND %s AND (t.document_id IS NULL
                 OR (t.status = 'TAGGING' AND (t.deadline_at IS NULL OR t.deadline_at < :now))
                 OR (t.status <> 'TAGGING' AND (t.status = 'PENDING' OR t.topic_list_version < c.topic_list_version)))
             ORDER BY CASE WHEN t.document_id IS NULL OR t.topic_list_version = c.topic_list_version THEN 0 ELSE 1 END,
@@ -69,16 +69,19 @@ public class PostgresTaggingRepository implements TaggingRepository {
     }
 
     private final ScopedTransactions tx;
+    /** El etiquetado ve también lo retirado a mitad de trabajo para poder terminarlo, pero nunca toma un retirado. */
+    private final ScopedTransactions pipeline;
 
     public PostgresTaggingRepository(ScopedTransactions tx) {
         this.tx = tx;
+        this.pipeline = tx.includeWithdrawn(true);
     }
 
     @Override
     public Optional<TaggingJob> claimNext(Instant now, TaggingSettings settings) {
         CompanyScope all = CompanyScope.all();
         ProjectVisibility everything = ProjectVisibility.all();
-        return tx.inScope(all, everything, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(CLAIM), all), everything)
+        return pipeline.inScope(all, everything, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(CLAIM), all), everything)
                 .param("now", Sql.ts(now)).query((rs, n) -> new Claimed(Sql.uuid(rs, "id"),
                         rs.getString("company_name"), rs.getInt("topic_list_version"),
                         (Integer) rs.getObject("tagged_version"), (Integer) rs.getObject("tagged_attempts")))
@@ -118,7 +121,7 @@ public class PostgresTaggingRepository implements TaggingRepository {
 
     @Override
     public void saveResult(DocumentId documentId, Set<TopicId> aiTopics, String taggerVersion, Instant now) {
-        tx.runInScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> {
+        pipeline.runInScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> {
             // sin fila en TAGGING, el texto se volvió a leer o se pidió etiquetar de nuevo: este resultado ya no vale
             if (!"TAGGING".equals(lockRow(jdbc, CompanyScope.all(), documentId).orElse(""))) {
                 return;

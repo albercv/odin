@@ -1,6 +1,5 @@
 package com.e2d.odin.application.document;
 
-import com.e2d.odin.application.casefile.CaseFileGuard;
 import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
@@ -32,13 +31,10 @@ public class UpdateDocument {
         Document document = documents.findById(actor.scope(), ProjectVisibility.all(), documentId)
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
         AccessPolicy.requireAdminOf(actor, document.companyId());
-        if (!caseDocument) {
-            CaseFileGuard.requireNoVisibleEntries(caseFiles, document.companyId(), Set.of(documentId));
-        }
-        documents.markCaseDocuments(document.companyId(), Set.of(documentId), caseDocument);
-        if (!caseDocument) {
-            CaseFileGuard.removeHiddenEntries(caseFiles, document.companyId(), Set.of(documentId), actor,
-                    clock.instant());
+        if (caseDocument) {
+            documents.markCaseDocuments(document.companyId(), Set.of(documentId), true);
+        } else {
+            caseFiles.unmarkCases(document.companyId(), Set.of(documentId), actor.userId(), clock.instant());
         }
         return documents.findEntry(CompanyScope.of(document.companyId()), ProjectVisibility.all(), documentId)
                 .orElseThrow();

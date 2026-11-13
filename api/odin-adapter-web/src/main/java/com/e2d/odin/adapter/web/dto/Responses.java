@@ -1,5 +1,6 @@
 package com.e2d.odin.adapter.web.dto;
 
+import com.e2d.odin.application.casefile.CaseFileText;
 import com.e2d.odin.application.casefile.CaseFileView;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
@@ -213,7 +214,7 @@ public final class Responses {
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
             int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt,
             List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics,
-            boolean caseDocument) {
+            boolean caseDocument, @Nullable Instant withdrawnAt) {
         public static DocumentView from(DocumentEntry entry) {
             return from(new TaggedDocument(entry, Optional.empty(), List.of()));
         }
@@ -227,7 +228,8 @@ public final class Responses {
                     d.attemptCount(), entry.supersededBy().map(DocumentLink::from).orElse(null),
                     d.supersededAt().orElse(null), d.pagesWithoutText(),
                     tagged.tagging().map(t -> t.status().name()).orElse(null),
-                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
+                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
+                    d.withdrawnAt().orElse(null));
         }
     }
 
@@ -377,22 +379,37 @@ public final class Responses {
     /** Un documento del expediente; la ficha del caso va sin quién la añadió ni cuándo. */
     public record CaseFileDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
-            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt) {
+            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status) {
         static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
                 @Nullable Instant addedAt) {
             Document d = entry.document();
             return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
                     d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
-                    addedBy == null ? null : addedBy.value(), addedAt);
+                    addedBy == null ? null : addedBy.value(), addedAt, d.status().name());
         }
     }
 
-    public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents) {
+    public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents,
+            int pendingDocuments) {
         public static CaseFileResponse from(CaseFileView view) {
             return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null),
                     view.documents().stream()
-                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt())).toList());
+                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt())).toList(),
+                    view.pendingDocuments());
+        }
+    }
+
+    public record CaseFileTextPageView(UUID documentId, String title, int pageNumber, String text, boolean unread) {
+    }
+
+    public record CaseFileTextResponse(List<CaseFileTextPageView> pages, @Nullable String nextCursor, boolean complete,
+            int documentsRead, int documentsTotal, int pagesRead, int pagesTotal, int pendingDocuments) {
+        public static CaseFileTextResponse from(CaseFileText t) {
+            return new CaseFileTextResponse(t.pages().stream().map(p -> new CaseFileTextPageView(p.documentId().value(),
+                    p.title(), p.pageNumber(), p.text(), p.unread())).toList(), t.nextCursor().orElse(null),
+                    t.complete(), t.documentsRead(), t.documentsTotal(), t.pagesRead(), t.pagesTotal(),
+                    t.pendingDocuments());
         }
     }
 

@@ -111,7 +111,7 @@ public final class Requests {
     public record Review(ReviewDecision decision, String correctedBody, String note) {
     }
 
-    public record SearchRequest(List<String> queries, UUID projectId, Integer limit) {
+    public record SearchRequest(List<String> queries, UUID projectId, Integer limit, UUID caseId) {
     }
 
     public record SimilarCasesRequestBody(List<String> queries, UUID projectId, Integer limit) {
