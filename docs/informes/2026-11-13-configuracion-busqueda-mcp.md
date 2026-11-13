@@ -104,7 +104,7 @@ El banco pone delante de la pregunta un texto corto de enfoque, para comparar fo
 - **Lo medido en el barrido de 40 preguntas** (exploratorio):
   - acertó el 94,0 % por ejecución, frente al 89,5 % de la instrucción de hoy;
   - recuperó Q147 (4 de 5, frente a 1 de 10).
-- **Pendiente:** la prueba con las 216 preguntas y 3 repeticiones (D-081), en marcha, decide si se adopta.
+- **Resultado de la prueba de D-081** (216 preguntas y 3 repeticiones): 95,4 % en la peor de 3 ejecuciones, igual que la instrucción de hoy. No se adopta. Detalle en `docs/informes/2026-11-13-prueba-synonyms.md`.
 
 ## 6. Qué se mide hoy y con qué umbrales
 
