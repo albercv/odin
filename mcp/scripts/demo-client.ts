@@ -20,6 +20,10 @@ const RENEWED_TITLE = 'Póliza ficticia renovada';
 const NO_SOURCE = 'No consta en los documentos de tu empresa.';
 const CASE_QUERY = 'filtración de agua desde la azotea lámina';
 const CASE_FILES = [need('DEMO_CASE_1'), need('DEMO_CASE_2')];
+const FILE_DIR = need('DEMO_EXPEDIENTE_DIR');
+const PUBLIC_URL = process.env.DEMO_PANEL_URL ?? 'http://127.0.0.1:18088';
+const EXPEDIENTE: [string, string][] = [['informe-perito-ficticio.pdf', 'Informe del perito'], ['presupuesto-1-ficticio.pdf', 'Presupuesto 1'],
+  ['presupuesto-2-ficticio.pdf', 'Presupuesto 2'], ['factura-ficticio.pdf', 'Factura'], ['correo-ficticio.pdf', 'Correo impreso'], ['foto-azotea-ficticia.png', 'Foto de la azotea']];
 const CARD = { title: 'Franquicia por daños de agua', body: 'La póliza ATL-4417-2024 aplica una franquicia de 150 euros por siniestro de daños por agua.' };
 
 function need(name: string): string {
@@ -229,6 +233,92 @@ async function authorStep(): Promise<void> {
     'Paso 13f: el compañero solo ve su propia consulta');
 }
 
+type CaseFileView = { documents: { id: string; title: string; filename: string; status: string }[]; pendingDocuments: number };
+type CaseFileText = { pages: { documentId: string; pageNumber: number; text: string }[] };
+type Link = { url: string; expiresAt: string };
+const absolute = (url: string): string => (url.startsWith('http') ? url : PUBLIC_URL + url);
+
+async function seedExpediente(): Promise<{ companyId: string; caseId: string; ids: Record<string, string>; worker: { id: string; key: string }; outsider: { id: string; key: string } }> {
+  const companyId = await createCompany('Empresa H', 'EH', ['CASE_FILES']);
+  const worker = await createWorker(companyId, 'Trabajadora', 'Expediente', 'expediente@demo.invalid');
+  const outsider = await createWorker(companyId, 'Trabajador', 'Otro proyecto', 'otro@demo.invalid');
+  const olmo = await addProject(companyId, 'Comunidad Olmo 14 expediente', worker.id);
+  const caseId = await uploadFile(companyId, CASE_FILES[0]!, 'Caso 2026-101 del expediente', olmo, true);
+  const ids: Record<string, string> = {};
+  for (const [file, title] of EXPEDIENTE) ids[title] = await uploadFile(companyId, join(FILE_DIR, file), title, olmo);
+  const acta = join(mkdtempSync(join(tmpdir(), 'odin-demo-')), 'acta-fuera.txt');
+  writeFileSync(acta, 'Acta ficticia fuera del expediente: se habló de la filtración de agua desde la azotea y de la lámina.');
+  ids['Acta fuera'] = await uploadFile(companyId, acta, 'Acta fuera del expediente', olmo);
+  for (const id of [caseId, ...Object.values(ids)]) await waitReady(companyId, id);
+  const body = { documentIds: EXPEDIENTE.map(([, title]) => ids[title]) };
+  await json(await http('POST', `/v1/admin/companies/${companyId}/cases/${caseId}/file/documents`, body), 200);
+  return { companyId, caseId, ids, worker, outsider };
+}
+
+const caseFile = async (key: string, caseId: string): Promise<CaseFileView> => withMcp(key, async (call) => JSON.parse(await call('getCaseFile', { caseId })) as CaseFileView);
+
+async function readCitedStep(key: string, caseId: string, ids: Record<string, string>): Promise<void> {
+  await withMcp(key, async (call) => {
+    const text = JSON.parse(await call('readCaseFile', { caseId })) as CaseFileText;
+    const page = text.pages.find((p) => p.documentId === ids['Informe del perito'] && p.text.includes('Mario Ficticio Lorente'));
+    check(!!page, 'Paso 14b: readCaseFile devuelve el texto del informe del perito');
+    const v = JSON.parse(await call('verifyCitation', { documentId: page!.documentId, pageNumber: page!.pageNumber, quote: 'Mario Ficticio Lorente' })) as { verified: boolean };
+    check(v.verified === true, 'Paso 14c: verifyCitation confirma una cita tomada de la lectura del expediente');
+  });
+}
+
+async function searchAndRemoveStep(key: string, caseId: string, ids: Record<string, string>): Promise<void> {
+  await withMcp(key, async (call) => {
+    const { hits } = JSON.parse(await call('searchKnowledge', { queries: ['filtración de agua azotea lámina'], caseId })) as { hits: Hit[] };
+    const inside = new Set(EXPEDIENTE.map(([, title]) => ids[title]));
+    check(hits.length > 0 && hits.every((h) => inside.has(h.documentId)), 'Paso 14d: searchKnowledge con caseId devuelve solo documentos del expediente (no el acta de fuera)');
+    const factura = ids['Factura']!;
+    await call('removeFromCaseFile', { caseId, documentId: factura });
+    check(!(await caseFile(key, caseId)).documents.some((d) => d.id === factura), 'Paso 14e: removeFromCaseFile quita la factura del expediente');
+    await call('addToCaseFile', { caseId, documentIds: [factura] });
+    check((await caseFile(key, caseId)).documents.some((d) => d.id === factura), 'Paso 14f: addToCaseFile la vuelve a añadir');
+  });
+}
+
+async function openOriginalStep(key: string, documentId: string): Promise<void> {
+  const link = JSON.parse(await withMcp(key, (call) => call('openOriginal', { documentId, page: 1 }))) as Link;
+  const [first, second] = [await fetch(absolute(link.url)), await fetch(absolute(link.url))];
+  check(first.status === 200 && first.headers.get('cache-control')?.includes('no-store') === true && first.headers.get('x-content-type-options') === 'nosniff',
+    'Paso 15: openOriginal devuelve una URL; el original responde 200 con Cache-Control no-store y nosniff');
+  check(!(first.headers.get('content-security-policy') ?? '').includes('sandbox') && (first.headers.get('content-type') ?? '').includes('application/pdf'),
+    'Paso 15b: el PDF se sirve sin «Content-Security-Policy: sandbox»');
+  check(second.status === 200, 'Paso 15c: una segunda descarga desde la misma dirección sigue funcionando');
+}
+
+async function uploadLinkStep(s: Awaited<ReturnType<typeof seedExpediente>>): Promise<void> {
+  const link = JSON.parse(await withMcp(s.worker.key, (call) => call('requestUploadLink', { caseId: s.caseId }))) as Link;
+  const info = await fetch(absolute(link.url));
+  const infoText = await info.text();
+  check(info.status === 200 && infoText.includes('Comunidad Olmo 14 expediente') && infoText.includes('Caso 2026-101'), 'Paso 16: requestUploadLink da un enlace cuya página muestra el caso y el proyecto');
+  const form = new FormData();
+  form.append('file', new Blob([readFileSync(join(FILE_DIR, 'nota-enlace-ficticia.txt'))], { type: 'text/plain' }), 'nota-enlace-ficticia.txt');
+  const up = await fetch(absolute(link.url) + '/documents', { method: 'POST', body: form });
+  check(up.status === 201 || up.status === 200, `Paso 16b: la subida por el enlace se acepta (HTTP ${up.status})`);
+  const docs = await json<{ id: string; filename: string }[]>(await http('GET', `/v1/admin/companies/${s.companyId}/documents`), 200);
+  const id = docs.find((d) => d.filename === 'nota-enlace-ficticia.txt')?.id;
+  if (!id) throw new Error('el documento subido por el enlace no aparece');
+  await waitReady(s.companyId, id);
+  check((await caseFile(s.worker.key, s.caseId)).documents.some((d) => d.id === id), 'Paso 16c: el documento subido por el enlace aparece en el expediente');
+}
+
+async function caseFileStep(): Promise<void> {
+  const s = await seedExpediente();
+  const view = await caseFile(s.worker.key, s.caseId);
+  check(EXPEDIENTE.every(([file]) => view.documents.some((d) => d.filename === file && d.status === 'READY')) && view.pendingDocuments === 0,
+    'Paso 14: getCaseFile muestra el expediente con sus seis documentos READY y ninguno pendiente');
+  await readCitedStep(s.worker.key, s.caseId, s.ids);
+  await searchAndRemoveStep(s.worker.key, s.caseId, s.ids);
+  await openOriginalStep(s.worker.key, s.ids['Informe del perito']!);
+  await uploadLinkStep(s);
+  const denied = await caseFile(s.outsider.key, s.caseId).then(() => false, () => true);
+  check(denied, 'Paso 17: un trabajador de otro proyecto recibe un error de getCaseFile para ese caso');
+}
+
 async function prepare(): Promise<void> {
   const setup = await http('POST', '/v1/setup', { setupToken: SETUP_TOKEN, groupName: 'Grupo Demo', adminName: 'Administrador Demo', adminEmail: ADMIN.email, password: ADMIN.password });
   check(setup.status === 201, `Paso 1: setup inicial del grupo`);
@@ -264,6 +354,7 @@ async function prepare(): Promise<void> {
   await taggingStep();
   await similarCasesStep();
   await authorStep();
+  await caseFileStep();
   writeFileSync(STATE, JSON.stringify({ companyId: a, cardTitle: CARD.title, admin: ADMIN, sessionCookie: cookie, workerKey: wa.key, oldId: docId, renewedId }));
 }
 
