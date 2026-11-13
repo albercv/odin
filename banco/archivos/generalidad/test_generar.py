@@ -42,6 +42,11 @@ class GeneralidadTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
+    def test_los_proyectos_se_llaman_sin_forma_juridica(self):
+        nombres = [p["nombre"] for p in self.manifiesto["proyectos"]]
+        self.assertEqual(nombres, ["Talleres Murcano", "Conservas Dalmira", "Logística Penedal",
+                                   "Alojamientos Cerrolago", "Bodegas Quintafría"])
+
     def test_dos_ejecuciones_dan_los_mismos_ficheros(self):
         otro = self.raiz / "b"
         generar.generar(otro)
