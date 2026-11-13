@@ -292,15 +292,24 @@ async function openOriginalStep(key: string, documentId: string): Promise<void> 
   check(second.status === 200, 'Paso 15c: una segunda descarga desde la misma dirección sigue funcionando');
 }
 
+/** Token de la ruta /subir/{token} del panel; la API lo expone en /v1/upload-links/{token}. */
+function uploadLinkToken(url: string): string {
+  const parsed = new URL(absolute(url));
+  check(parsed.pathname.startsWith('/subir/') && parsed.search === '', 'Paso 16: requestUploadLink devuelve /subir/{token} sin query string');
+  return parsed.pathname.split('/').pop() ?? '';
+}
+
 async function uploadLinkStep(s: Awaited<ReturnType<typeof seedExpediente>>): Promise<void> {
   const link = JSON.parse(await withMcp(s.worker.key, (call) => call('requestUploadLink', { caseId: s.caseId }))) as Link;
-  const info = await fetch(absolute(link.url));
-  const infoText = await info.text();
-  check(info.status === 200 && infoText.includes('Comunidad Olmo 14 expediente') && infoText.includes('Caso 2026-101'), 'Paso 16: requestUploadLink da un enlace cuya página muestra el caso y el proyecto');
+  const token = uploadLinkToken(link.url);
+  const info = await fetch(`${PUBLIC_URL}/v1/upload-links/${token}`);
+  const body = await info.json().catch(() => ({})) as { caseTitle?: string; projectName?: string };
+  check(info.status === 200 && (body.caseTitle ?? '').includes('Caso 2026-101') && (body.projectName ?? '').includes('Comunidad Olmo 14 expediente'),
+    'Paso 16: requestUploadLink da un enlace cuya API muestra el caso y el proyecto');
   const form = new FormData();
   form.append('file', new Blob([readFileSync(join(FILE_DIR, 'nota-enlace-ficticia.txt'))], { type: 'text/plain' }), 'nota-enlace-ficticia.txt');
-  const up = await fetch(absolute(link.url) + '/documents', { method: 'POST', body: form });
-  check(up.status === 201 || up.status === 200, `Paso 16b: la subida por el enlace se acepta (HTTP ${up.status})`);
+  const up = await fetch(`${PUBLIC_URL}/v1/upload-links/${token}/documents`, { method: 'POST', body: form });
+  check(up.status === 200, `Paso 16b: la subida por el enlace responde HTTP 200 (HTTP ${up.status})`);
   const docs = await json<{ id: string; filename: string }[]>(await http('GET', `/v1/admin/companies/${s.companyId}/documents`), 200);
   const id = docs.find((d) => d.filename === 'nota-enlace-ficticia.txt')?.id;
   if (!id) throw new Error('el documento subido por el enlace no aparece');
