@@ -2,6 +2,7 @@ package com.e2d.odin.bootstrap;
 
 import com.e2d.odin.adapter.filestore.FileSystemOriginalFileStore;
 import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
+import com.e2d.odin.adapter.postgres.PostgresAccessLinkRepository;
 import com.e2d.odin.adapter.postgres.PostgresAdminSessionRepository;
 import com.e2d.odin.adapter.postgres.PostgresDeliveryMeter;
 import com.e2d.odin.adapter.postgres.PostgresCaseFileRepository;
@@ -22,6 +23,7 @@ import com.e2d.odin.adapter.readers.PdfBoxTextReader;
 import com.e2d.odin.adapter.readers.PlainTextReader;
 import com.e2d.odin.adapter.readers.PoiDocxTextReader;
 import com.e2d.odin.application.port.AccessKeyRepository;
+import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
@@ -95,6 +97,11 @@ public class AdapterConfiguration {
     @Bean
     DocumentRepository documentRepository(ScopedTransactions tx) {
         return new PostgresDocumentRepository(tx);
+    }
+
+    @Bean
+    AccessLinkRepository accessLinkRepository(ScopedTransactions tx) {
+        return new PostgresAccessLinkRepository(tx);
     }
 
     @Bean

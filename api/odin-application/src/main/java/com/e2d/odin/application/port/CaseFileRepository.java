@@ -2,6 +2,7 @@ package com.e2d.odin.application.port;
 
 import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.casefile.CaseFileEvent;
+import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -24,6 +25,12 @@ public interface CaseFileRepository {
      * Devuelve cuántas eran nuevas; las que ya estaban no dejan evento.
      */
     int addAll(List<CaseFileEntry> entries, Function<CaseFileEntry, CaseFileEvent> eventFor);
+
+    /**
+     * Guarda un documento nuevo y lo añade al expediente con su ADDED, todo en una transacción: si algo falla no queda
+     * ni el documento. {@code ConflictException} si ya hay otro igual (mismo fichero en el mismo proyecto).
+     */
+    void addNewDocument(Document document, CaseFileEntry entry, CaseFileEvent event);
 
     /** Quita la relación del evento y lo registra, juntos; {@code false} si la relación no existía. */
     boolean removeAndRecord(CaseFileEvent event);

@@ -46,6 +46,11 @@ public final class Requests {
         }
     }
 
+    public record OriginalLinkRequest(
+            @Schema(description = "Página en la que abre el visor de PDF; si falta, abre por la primera.")
+            Integer page) {
+    }
+
     public record CaseMarksRequest(
             @Schema(description = "De 1 a 500 documentos de la empresa.", requiredMode = Schema.RequiredMode.REQUIRED)
             List<UUID> documentIds,

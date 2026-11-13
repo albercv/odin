@@ -27,7 +27,9 @@ public final class WorkerRoutes {
             route("GET", "/v1/cases/{caseId}/file", WorkerTool.CASE_FILE),
             route("GET", "/v1/cases/{caseId}/file/text", WorkerTool.CASE_FILE),
             route("POST", "/v1/cases/{caseId}/file/documents", WorkerTool.CASE_FILE),
-            route("DELETE", "/v1/cases/{caseId}/file/documents/{documentId}", WorkerTool.CASE_FILE));
+            route("DELETE", "/v1/cases/{caseId}/file/documents/{documentId}", WorkerTool.CASE_FILE),
+            route("POST", "/v1/cases/{caseId}/upload-links", WorkerTool.CASE_FILE),
+            route("POST", "/v1/documents/{documentId}/original-links", WorkerTool.CASE_FILE));
 
     /** Los dos primeros segmentos de cada ruta: una sola lista, así prefijos y rutas no pueden divergir. */
     private static final List<String> PREFIXES = ROUTES.stream()

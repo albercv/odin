@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import com.e2d.odin.domain.document.Document;
 import java.util.stream.Collectors;
 import java.util.function.Function;
 
@@ -53,6 +54,34 @@ public class InMemoryCaseFileRepository implements CaseFileRepository {
             }
         }
         return added;
+    }
+
+    private java.util.function.Consumer<Document> beforeNewDocument;
+    private boolean failEntryStep;
+
+    /** Antes de guardar el siguiente documento nuevo, otra subida idéntica se cuela y gana el índice único. */
+    public void raceWith(java.util.function.Consumer<Document> otherUpload) {
+        beforeNewDocument = otherUpload;
+    }
+
+    public void failTheEntryStep() {
+        failEntryStep = true;
+    }
+
+    @Override
+    public void addNewDocument(Document document, CaseFileEntry entry, CaseFileEvent event) {
+        if (beforeNewDocument != null) {
+            var race = beforeNewDocument;
+            beforeNewDocument = null;
+            race.accept(document);
+            throw new com.e2d.odin.domain.shared.ConflictException("Ya existe un registro con esos datos");
+        }
+        if (failEntryStep) {
+            throw new IllegalStateException("falla el paso del expediente");
+        }
+        documents.save(document);
+        add(entry);
+        record(event);
     }
 
     @Override

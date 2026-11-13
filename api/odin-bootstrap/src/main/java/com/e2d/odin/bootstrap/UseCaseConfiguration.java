@@ -5,6 +5,15 @@ import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.link.DescribeUploadLink;
+import com.e2d.odin.application.link.IssueOriginalLink;
+import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.LinkIssuer;
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.link.ResolveLink;
+import com.e2d.odin.application.link.UploadByLink;
+import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.ReadCaseFile;
@@ -393,8 +402,49 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    RevokeAccessKey revokeAccessKey(AccessKeyRepository keys, UserRepository users, Clock clock) {
-        return new RevokeAccessKey(keys, users, clock);
+    RevokeAccessKey revokeAccessKey(AccessKeyRepository keys, UserRepository users, AccessLinkRepository links,
+            Clock clock) {
+        return new RevokeAccessKey(keys, users, links, clock);
+    }
+
+    @Bean
+    LinkIssuer linkIssuer(AccessLinkRepository links, TokenGenerator tokens, SecretHasher secrets, IdGenerator ids,
+            Clock clock, LinkSettings settings) {
+        return new LinkIssuer(links, tokens, secrets, ids, clock, settings);
+    }
+
+    @Bean
+    IssueUploadLink issueUploadLink(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, LinkIssuer issuer) {
+        return new IssueUploadLink(organizations, projectMembers, documents, issuer);
+    }
+
+    @Bean
+    IssueOriginalLink issueOriginalLink(OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, DocumentRepository documents, LinkIssuer issuer) {
+        return new IssueOriginalLink(organizations, projectMembers, documents, issuer);
+    }
+
+    @Bean
+    ResolveLink resolveLink(AccessLinkRepository links, ResolveActor actors, OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, DocumentRepository documents, SecretHasher secrets, Clock clock) {
+        return new ResolveLink(links, actors, organizations, projectMembers, documents, secrets, clock);
+    }
+
+    @Bean
+    DescribeUploadLink describeUploadLink(ResolveLink resolve, OrganizationRepository organizations) {
+        return new DescribeUploadLink(resolve, organizations);
+    }
+
+    @Bean
+    UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadDocument upload,
+            AddToCaseFiles addToCaseFiles, CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
+        return new UploadByLink(resolve, links, upload, addToCaseFiles, caseFiles, ids, clock);
+    }
+
+    @Bean
+    OpenOriginal openOriginal(ResolveLink resolve, OriginalFileStore files, DocumentRepository documents) {
+        return new OpenOriginal(resolve, files, documents);
     }
 
     @Bean
