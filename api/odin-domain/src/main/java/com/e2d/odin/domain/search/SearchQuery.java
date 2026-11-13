@@ -9,7 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 public record SearchQuery(List<String> terms, CompanyScope scope, ProjectVisibility visibility,
-        Optional<ProjectId> projectId, int limit, UserId searcher, Optional<DocumentId> caseId) {
+        Optional<ProjectId> projectId, int limit, UserId searcher, Optional<DocumentId> caseId,
+        boolean general) {
+
+    public SearchQuery(List<String> terms, CompanyScope scope, ProjectVisibility visibility,
+            Optional<ProjectId> projectId, int limit, UserId searcher, Optional<DocumentId> caseId) {
+        this(terms, scope, visibility, projectId, limit, searcher, caseId, false);
+    }
 
     public SearchQuery(List<String> terms, CompanyScope scope, ProjectVisibility visibility,
             Optional<ProjectId> projectId, int limit, UserId searcher) {

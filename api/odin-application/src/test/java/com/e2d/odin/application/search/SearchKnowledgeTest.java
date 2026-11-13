@@ -207,4 +207,29 @@ class SearchKnowledgeTest {
         SearchRequest filtered = new SearchRequest(List.of("x"), Optional.of(closed), Optional.empty());
         assertThatThrownBy(() -> useCase.execute(member, filtered)).isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void generalScopeIsPassedToTheSearch() {
+        useCase.execute(Actors.worker(companyA),
+                new SearchRequest(List.of("x"), Optional.empty(), Optional.empty(), Optional.empty(), true));
+
+        assertThat(search.lastQuery().general()).isTrue();
+        useCase.execute(Actors.worker(companyA), request(Optional.empty()));
+        assertThat(search.lastQuery().general()).isFalse();
+    }
+
+    @Test
+    void generalScopeWithProjectOrCaseIsRejected() {
+        var project = Optional.of(Fixtures.project(orgs, companyA));
+        var caseId = Optional.of(new com.e2d.odin.domain.shared.DocumentId(UUID.randomUUID()));
+        var worker = Actors.worker(companyA);
+
+        assertThatThrownBy(() -> useCase.execute(worker,
+                new SearchRequest(List.of("x"), project, Optional.empty(), Optional.empty(), true)))
+                .isInstanceOf(ValidationException.class).hasMessage("El ámbito general no admite proyecto ni expediente");
+        assertThatThrownBy(() -> useCase.execute(worker,
+                new SearchRequest(List.of("x"), Optional.empty(), Optional.empty(), caseId, true)))
+                .isInstanceOf(ValidationException.class);
+        assertThat(search.lastQuery()).isNull();
+    }
 }

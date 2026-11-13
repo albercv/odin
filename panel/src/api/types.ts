@@ -1114,6 +1114,11 @@ export interface components {
             limit?: number;
             /** Format: uuid */
             caseId?: string;
+            /**
+             * @description Solo admite «general»: busca únicamente en lo que no tiene proyecto (normas, procedimientos o políticas de la empresa). No se combina con projectId ni caseId.
+             * @enum {string}
+             */
+            scope?: "general";
         };
         Hit: {
             sourceType: string;

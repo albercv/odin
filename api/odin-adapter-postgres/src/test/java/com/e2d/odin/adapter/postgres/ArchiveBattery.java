@@ -70,7 +70,7 @@ final class ArchiveBattery {
                 supersededBy);
     }
 
-    private static Map<String, String> applySupersessions(ArchiveLoader loader, Iterable<CompanyId> companies)
+    static Map<String, String> applySupersessions(ArchiveLoader loader, Iterable<CompanyId> companies)
             throws IOException {
         Map<String, String> supersededBy = new LinkedHashMap<>();
         for (CompanyId id : companies) {
@@ -81,7 +81,7 @@ final class ArchiveBattery {
     }
 
     /** Carpeta {@code empresa/proyecto} -> nombre, más la carpeta general (sin proyecto). */
-    private static Map<String, String> folderNames(JsonNode manifest, String company) {
+    static Map<String, String> folderNames(JsonNode manifest, String company) {
         Map<String, String> names = new LinkedHashMap<>();
         names.put(company + "/_general", null);
         for (JsonNode project : manifest.get("proyectos")) {

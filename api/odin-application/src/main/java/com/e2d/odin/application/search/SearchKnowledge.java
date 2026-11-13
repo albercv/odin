@@ -39,6 +39,9 @@ public class SearchKnowledge {
     }
 
     public SearchResult execute(Actor actor, SearchRequest request) {
+        if (request.general() && (request.projectId().isPresent() || request.caseId().isPresent())) {
+            throw new ValidationException("El ámbito general no admite proyecto ni expediente");
+        }
         var access = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE);
         WorkerAccess.requireProject(access.visibility(), request.projectId());
         List<String> terms = request.queries() == null ? List.of() : request.queries();
@@ -47,7 +50,7 @@ public class SearchKnowledge {
         }
         int limit = WorkerAccess.cap(request.limit(), DEFAULT_LIMIT, MAX_LIMIT);
         SearchResult result = search.search(new SearchQuery(terms, actor.scope(), access.content(),
-                request.projectId(), limit, actor.userId(), request.caseId()));
+                request.projectId(), limit, actor.userId(), request.caseId(), request.general()));
         questions.record(new QuestionRecord(ids.newId(), access.companyId(), actor.userId(), String.join(" | ", terms),
                 result.hits().size(), clock.instant(), QuestionKind.SEARCH));
         return result;

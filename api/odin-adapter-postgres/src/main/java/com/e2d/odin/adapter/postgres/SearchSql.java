@@ -57,6 +57,11 @@ final class SearchSql {
                 + " IS NULL)";
     }
 
+    /** Filtro opcional (:general): solo lo que no tiene proyecto. */
+    static String generalOnly(String projectColumn) {
+        return "(NOT :general OR " + projectColumn + " IS NULL)";
+    }
+
     /**
      * Filtro opcional por un expediente (:caseId): su ficha y los documentos que se le han añadido. La ficha tiene que
      * ser de la empresa, de un proyecto visible y no estar retirada; si no, no sale nada del expediente.

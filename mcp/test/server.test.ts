@@ -175,6 +175,14 @@ describe('buildServer', () => {
     expect(JSON.parse(fake.requests.at(-1)!.body)).toEqual({ queries: ['plazo'], limit: 5 });
   });
 
+  it('searchPassesTheGeneralScope', async () => {
+    const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [], noSource: true } }));
+    await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['convocatoria'], scope: 'general' } });
+    expect(JSON.parse(fake.requests.at(-1)!.body)).toEqual({ queries: ['convocatoria'], scope: 'general' });
+    const rejected = await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['x'], scope: 'project' } });
+    expect(rejected.isError).toBe(true);
+  });
+
   it('searchMapsCardsAsCardsWithOriginAndWithoutPage', async () => {
     const card = { sourceType: 'KNOWLEDGE_CARD', sourceId: 'k1', title: 'Truco', paginated: false,
       authorName: 'Ana', date: '2026-01-01T00:00:00Z', excerpt: 'se hace así', rank: 1 };
@@ -212,6 +220,7 @@ describe('buildServer', () => {
     'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena.',
     'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas.',
     'Si una ficha dice algo distinto que un documento, cita las dos.',
+    'Para normas, procedimientos o políticas de la propia empresa, busca también con scope: "general" (documentos sin proyecto).',
   ])('searchDescriptionGuidesTheModel: %s', async (sentence) => {
     const client = await connect(() => meWith(ALL));
     const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge');

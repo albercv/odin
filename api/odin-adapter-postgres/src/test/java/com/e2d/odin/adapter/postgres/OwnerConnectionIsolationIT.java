@@ -162,6 +162,21 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     }
 
     @Test
+    void generalScopeNeverReturnsAnotherCompanyOrWithdrawnDocumentsThroughAConnectionThatBypassesRls() {
+        Document ofB = newDocument(b, newUser(b), "General de B", DocumentStatus.READY);
+        docs.replacePages(ofB.id(), List.of(new DocumentPage(ofB.id(), 1, "filtración general de B", "lector", "1")));
+        SearchQuery asB = new SearchQuery(List.of("filtración"), CompanyScope.of(b), ProjectVisibility.all(),
+                Optional.empty(), 10, Db.NOBODY, Optional.empty(), true);
+        assertThat(ownerSearch.search(asB).hits()).extracting(h -> h.sourceId()).containsExactly(ofB.id().value());
+
+        docs.markWithdrawal(documentOfA.withWithdrawal(Optional.of(NOW), Optional.of(documentOfA.uploadedBy())));
+        SearchQuery asA = new SearchQuery(List.of("filtración"), CompanyScope.of(a), ProjectVisibility.all(),
+                Optional.empty(), 10, pendingAuthor, Optional.empty(), true);
+        assertThat(ownerSearch.search(asA).hits()).extracting(h -> h.sourceId())
+                .doesNotContain(documentOfA.id().value(), ofB.id().value());
+    }
+
+    @Test
     void pageCountsRespectCompanyAndWithdrawalThroughAConnectionThatBypassesRls() {
         var ownerFiles = new PostgresCaseFileRepository(ownerTx);
         var ids = List.of(documentOfA.id());

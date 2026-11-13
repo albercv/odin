@@ -4,25 +4,29 @@ import type { ApiClient, Hit } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
 import { NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
 
+const DESCRIPTION =
+  'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
+  'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
+  'projectName es el proyecto (un cliente, un contrato, una obra, una comunidad…) del resultado. ' +
+  'addedAt es la fecha en que entró en Odín, no la del documento. ' +
+  'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
+  'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +
+  'Cada consulta, una idea, en 1 a 3 palabras específicas. ' +
+  'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena. ' +
+  'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas. ' +
+  'Si una ficha dice algo distinto que un documento, cita las dos. ' +
+  'Para normas, procedimientos o políticas de la propia empresa, busca también con scope: "general" (documentos sin proyecto).';
+
 export function registerSearchKnowledge(server: McpServer, api: ApiClient, projects: ProjectNames): void {
   server.registerTool(
     'searchKnowledge',
     {
-      description:
-        'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
-        'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
-        'projectName es el proyecto (un cliente, un contrato, una obra, una comunidad…) del resultado. ' +
-        'addedAt es la fecha en que entró en Odín, no la del documento. ' +
-        'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
-        'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +
-        'Cada consulta, una idea, en 1 a 3 palabras específicas. ' +
-        'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena. ' +
-        'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas. ' +
-        'Si una ficha dice algo distinto que un documento, cita las dos.',
+      description: DESCRIPTION,
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto; también incluye lo que no tiene proyecto'),
         caseId: z.string().optional().describe('Busca solo dentro de los documentos del expediente de este caso'),
+        scope: z.enum(['general']).optional().describe('«general» busca solo en lo que no tiene proyecto; no se combina con projectId ni caseId'),
         limit: z.number().int().positive().optional().describe('Máximo de resultados'),
       },
     },

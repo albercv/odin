@@ -77,7 +77,7 @@ public class WorkerController {
             @RequestBody Requests.SearchRequest request) {
         SearchRequest searchRequest = new SearchRequest(validQueries(request.queries()),
                 Optional.ofNullable(request.projectId()).map(ProjectId::new), Optional.ofNullable(request.limit()),
-                Optional.ofNullable(request.caseId()).map(DocumentId::new));
+                Optional.ofNullable(request.caseId()).map(DocumentId::new), request.general());
         return Responses.SearchResponse.from(search.execute(actor, searchRequest));
     }
 
