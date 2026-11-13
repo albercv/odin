@@ -38,6 +38,7 @@
 
 - **Commit:** `feature/expediente-mejoras` en `<COMMIT>`, que se fija al terminar la construcción, con `make check` y `make demo` en verde y la revisión aprobada.
 - **Carpeta de resultados:** `experimentos/2026-11-12-archivo-ficticio/resultados/2026-11-NN-d093-*`, con su `ORIGEN.txt` (commit, modelo, batería y fecha).
+- **Referencia de consumo (`REFERENCIA`):** va en `experimentos/2026-11-12-archivo-ficticio/estado/` (ya ignorada por git), por ejemplo `estado/referencia-d093.json`, para que la guarda de checkout limpio no la bloquee.
 
 ## 4. Comprobación previa, sin IA (obligatoria, D-094 punto 3)
 
