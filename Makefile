@@ -47,9 +47,11 @@ ARCHIVOS ?= ficticio
 EXPEDIENTES ?=
 
 banco-arriba:
+	$(BANCO_ENV) python3 banco/propietario.py
 	$(BANCO_ENV) $(EXP)/pila/pila.sh up
 
 banco-cargar:
+	$(BANCO_ENV) python3 banco/propietario.py
 	@if [ -n "$(EXPEDIENTES)" ] && [ ! -f $(EXP)/pila/cargar_expedientes.py ]; then echo "EXPEDIENTES=1 pide $(EXP)/pila/cargar_expedientes.py, que no existe en esta rama"; exit 1; fi; \
 	D=$(EXP)/datos; if [ "$(ARCHIVOS)" != ficticio ]; then D=$$($(BANCO_ENV) python3 banco/capas.py fusionar --archivos "$(ARCHIVOS)") || exit 1; fi; \
 	if [ -n "$(EXPEDIENTES)" ] && [ ! -f "$$D/expedientes.json" ]; then echo "sin expedientes.json en $$D"; exit 1; fi; \
@@ -57,6 +59,7 @@ banco-cargar:
 	if [ -n "$(EXPEDIENTES)" ]; then $(BANCO_ENV) python3 $(EXP)/pila/cargar_expedientes.py --mapa "$(CURDIR)/banco/estado/carga.json" --datos "$$D" --marcar-casos || exit 1; fi
 
 banco-abajo:
+	$(BANCO_ENV) python3 banco/propietario.py
 	$(BANCO_ENV) $(EXP)/pila/pila.sh down
 
 banco:
