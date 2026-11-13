@@ -11,7 +11,7 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
       description:
         'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
         'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
-        'projectName es el proyecto (comunidad, cliente u obra) del resultado; «Sin proyecto (general de la empresa)» si no es de ningún proyecto y lo ve toda la empresa. ' +
+        'projectName es el proyecto (un cliente, un contrato, una obra, una comunidad…) del resultado; «Sin proyecto (general de la empresa)» si no es de ningún proyecto y lo ve toda la empresa. ' +
         'addedAt es la fecha en que entró en Odín, no la del documento. ' +
         'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
         'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +

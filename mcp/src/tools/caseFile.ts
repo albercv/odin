@@ -10,7 +10,9 @@ const READING_RULES =
   'Cita cada afirmación con su documento. Regla de lectura: si la pregunta es concreta, busca dentro con searchKnowledge y su caseId, y no leas el expediente entero. ' +
   'Lee el expediente entero con readCaseFile solo si la pregunta pide el conjunto (resumir, analizarlo todo, qué falta). ' +
   'Al responder, si no has leído el expediente entero, dilo y no concluyas sobre lo que no has visto. ' +
-  'Si pendingDocuments es mayor que 0, di en la respuesta cuántos documentos están pendientes de lectura.';
+  'Si pendingDocuments es mayor que 0, di en la respuesta cuántos documentos están pendientes de lectura. ' +
+  'Si unreadableDocuments es mayor que 0, di en la respuesta cuántos documentos del expediente no se pudieron leer. ' +
+  'Una página sin texto (una foto) figura en la lista, pero su contenido no se describe: di que es un documento sin texto y ofrece openOriginal; no inventes lo que muestra.';
 
 // Reglas de las herramientas que modifican el expediente (decisión de negocio).
 const WRITE_RULES =

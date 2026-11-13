@@ -21,6 +21,7 @@ const NO_SOURCE = 'No consta en los documentos de tu empresa.';
 const CASE_QUERY = 'filtración de agua desde la azotea lámina';
 const CASE_FILES = [need('DEMO_CASE_1'), need('DEMO_CASE_2')];
 const FILE_DIR = need('DEMO_EXPEDIENTE_DIR');
+const PHOTOS_DIR = need('DEMO_PHOTOS_DIR');
 const PUBLIC_URL = process.env.DEMO_PANEL_URL ?? 'http://127.0.0.1:18088';
 const EXPEDIENTE: [string, string][] = [['informe-perito-ficticio.pdf', 'Informe del perito'], ['presupuesto-1-ficticio.pdf', 'Presupuesto 1'],
   ['presupuesto-2-ficticio.pdf', 'Presupuesto 2'], ['factura-ficticio.pdf', 'Factura'], ['correo-ficticio.pdf', 'Correo impreso'], ['foto-azotea-ficticia.png', 'Foto de la azotea']];
@@ -233,8 +234,8 @@ async function authorStep(): Promise<void> {
     'Paso 13f: el compañero solo ve su propia consulta');
 }
 
-type CaseFileView = { documents: { id: string; title: string; filename: string; status: string }[]; pendingDocuments: number };
-type CaseFileText = { pages: { documentId: string; pageNumber: number; text: string }[] };
+type CaseFileView = { documents: { id: string; title: string; filename: string; status: string }[]; pendingDocuments: number; unreadableDocuments: number };
+type CaseFileText = { pages: { documentId: string; pageNumber: number; text: string; unread: boolean }[] };
 type Link = { url: string; expiresAt: string };
 const absolute = (url: string): string => (url.startsWith('http') ? url : PUBLIC_URL + url);
 
@@ -317,6 +318,45 @@ async function uploadLinkStep(s: Awaited<ReturnType<typeof seedExpediente>>): Pr
   check((await caseFile(s.worker.key, s.caseId)).documents.some((d) => d.id === id), 'Paso 16c: el documento subido por el enlace aparece en el expediente');
 }
 
+async function waitStatus(companyId: string, docId: string, wanted: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    const docs = await json<{ id: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/documents`), 200);
+    if (docs.find((d) => d.id === docId)?.status === wanted) return;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error(`el documento no llegó a ${wanted} en 60 s`);
+}
+
+async function addPhoto(s: Awaited<ReturnType<typeof seedExpediente>>, file: string, title: string): Promise<string> {
+  const project = (await json<{ id: string; projectId: string }[]>(await http('GET', `/v1/admin/companies/${s.companyId}/documents`), 200))
+    .find((d) => d.id === s.caseId)?.projectId;
+  const id = await uploadFile(s.companyId, join(PHOTOS_DIR, file), title, project);
+  await json(await http('POST', `/v1/admin/companies/${s.companyId}/cases/${s.caseId}/file/documents`, { documentIds: [id] }), 200);
+  return id;
+}
+
+async function photosStep(s: Awaited<ReturnType<typeof seedExpediente>>): Promise<void> {
+  const key = s.worker.key;
+  const bare = await addPhoto(s, 'foto-sin-texto-ficticia.png', 'Foto sin texto');
+  await waitStatus(s.companyId, bare, 'READY');
+  const view = await caseFile(key, s.caseId);
+  const text = await withMcp(key, async (call) => JSON.parse(await call('readCaseFile', { caseId: s.caseId })) as CaseFileText);
+  check(view.documents.some((d) => d.id === bare) && view.unreadableDocuments === 0 && text.pages.some((p) => p.documentId === bare && p.unread),
+    'Paso 18: una foto sin texto queda READY, sale en getCaseFile con su página sin texto y no cuenta como ilegible');
+  const link = JSON.parse(await withMcp(key, (call) => call('openOriginal', { documentId: bare, page: 1 }))) as Link;
+  check((await fetch(absolute(link.url))).status === 200, 'Paso 18b: openOriginal de la foto sin texto devuelve 200');
+  const retry = await addPhoto(s, 'foto-reintento-ficticia.png', 'Foto de reintento');
+  await waitStatus(s.companyId, retry, 'FAILED');
+  const failed = await caseFile(key, s.caseId);
+  check(failed.unreadableDocuments === 1 && failed.pendingDocuments === 0 && !failed.documents.some((d) => d.id === retry),
+    'Paso 18c: la foto que falló en su primera lectura cuenta como ilegible y no se lista');
+  await json(await http('POST', `/v1/admin/documents/${retry}/retry`), 200);
+  await waitStatus(s.companyId, retry, 'READY');
+  const fixed = await caseFile(key, s.caseId);
+  check(fixed.unreadableDocuments === 0 && fixed.documents.some((d) => d.id === retry),
+    'Paso 18d: tras «Reintentar» la foto queda READY, se lista y ya no hay ilegibles');
+}
+
 async function caseFileStep(): Promise<void> {
   const s = await seedExpediente();
   const view = await caseFile(s.worker.key, s.caseId);
@@ -326,6 +366,7 @@ async function caseFileStep(): Promise<void> {
   await searchAndRemoveStep(s.worker.key, s.caseId, s.ids);
   await openOriginalStep(s.worker.key, s.ids['Informe del perito']!);
   await uploadLinkStep(s);
+  await photosStep(s);
   // errorMessage de mcp/src/tools/result.ts: 404 «No se ha encontrado…»; el ajeno tiene la capacidad, así que la API responde 404
   const denied = await caseFile(s.outsider.key, s.caseId).then(() => '', (e: Error) => e.message);
   check(/no (se ha )?encontrad/i.test(denied), 'Paso 17: un trabajador de otro proyecto recibe un 404 de getCaseFile para ese caso');

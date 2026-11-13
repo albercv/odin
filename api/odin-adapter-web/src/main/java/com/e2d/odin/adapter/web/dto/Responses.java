@@ -395,14 +395,14 @@ public final class Responses {
     }
 
     public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents,
-            int pendingDocuments) {
+            int pendingDocuments, int unreadableDocuments) {
         public static CaseFileResponse from(CaseFileView view) {
             return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null,
                     view.names()),
                     view.documents().stream()
                             .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt(),
                                     view.names())).toList(),
-                    view.pendingDocuments());
+                    view.pendingDocuments(), view.unreadableDocuments());
         }
     }
 
@@ -410,12 +410,13 @@ public final class Responses {
     }
 
     public record CaseFileTextResponse(List<CaseFileTextPageView> pages, @Nullable String nextCursor, boolean complete,
-            int documentsRead, int documentsTotal, int pagesRead, int pagesTotal, int pendingDocuments) {
+            int documentsRead, int documentsTotal, int pagesRead, int pagesTotal, int pendingDocuments,
+            int unreadableDocuments) {
         public static CaseFileTextResponse from(CaseFileText t) {
             return new CaseFileTextResponse(t.pages().stream().map(p -> new CaseFileTextPageView(p.documentId().value(),
                     p.title(), p.pageNumber(), p.text(), p.unread())).toList(), t.nextCursor().orElse(null),
                     t.complete(), t.documentsRead(), t.documentsTotal(), t.pagesRead(), t.pagesTotal(),
-                    t.pendingDocuments());
+                    t.pendingDocuments(), t.unreadableDocuments());
         }
     }
 

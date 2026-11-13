@@ -108,7 +108,7 @@ describe('buildServer', () => {
   it('instructionsTellToFilterByProject', async () => {
     const client = await connect(() => meWith(ALL));
     expect(client.getInstructions()).toContain(
-      'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.');
+      'Si la pregunta nombra un proyecto (un cliente, un contrato, una obra…), búscalo con listProjects y filtra la búsqueda con su projectId.');
   });
 
   it('searchMapsSupersededAndReplacementForDocumentsOnly', async () => {
@@ -162,7 +162,7 @@ describe('buildServer', () => {
     expect(instructions).toContain(
       'Si un resultado viene marcado como sustituido, no lo presentes como vigente: di que está sustituido y por cuál, y busca o lee el que lo sustituye antes de responder. Si no puedes ver el que lo sustituye, di solo que está sustituido.');
     expect(instructions).toContain(
-      'Si dos fuentes no cuadran y ninguna está marcada como sustituida: si una dice expresamente que cambia a la otra (un anexo que modifica una cláusula), o es un acuerdo posterior del órgano que decide (la junta, en una comunidad) sobre lo mismo, da lo que vale ahora, di qué documento lo cambia y cita las dos; si el acuerdo no cita la norma que cambia, dilo, y no juzgues si es válido. Que una sea más reciente no basta. Si no se da ninguno de esos casos, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.');
+      'Si dos fuentes no cuadran y ninguna está marcada como sustituida: si una dice expresamente que cambia a la otra (un anexo que modifica una cláusula), o es un acuerdo posterior del órgano que decide (la junta o el consejo) sobre lo mismo, da lo que vale ahora, di qué documento lo cambia y cita las dos; si el acuerdo no cita la norma que cambia, dilo, y no juzgues si es válido. Que una sea más reciente no basta. Si no se da ninguno de esos casos, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.');
   });
 
   it('searchMapsHitsWithCitation', async () => {
