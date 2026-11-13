@@ -1,8 +1,14 @@
 # Tu instalación de Odín: despliegue conjunto del 13 de noviembre de 2026
 
-**Estado:** listo para lanzar, pendiente de que lo lances tú. El sistema de permisos impide al CTO lanzar despliegues en tu instalación.
+**Estado:** desplegado el 13 de noviembre a las 09:41, con salida 0. Lo lanzó el CEO con tu permiso, porque el sistema de permisos impide al CTO lanzar despliegues en tu instalación.
+- **Código:** `integracion/instalacion`, commit cf58b72.
+- **Comprobaciones posteriores, todas correctas:**
+  - el panel, la API y el conector responden;
+  - Marta tiene 15 herramientas;
+  - el aislamiento se cumple: Javier no ve Calle Olmo 47 e Ignacio no ve nada de Ribera;
+  - los expedientes se ven y el enlace al original abre.
 
-**Sobre las cifras:** las de este documento se han contado en la base del ensayo. Ese ensayo usó el mismo código (`integracion/instalacion`, cf58b72), los mismos datos y la misma orden. Al desplegar, la orden escribe el recuento de tu base en `odin/data/recuento-<fecha>.md`; con él se confirma este documento.
+**Sobre las cifras:** contadas en tu base con `make datos-prueba-recuento` después del despliegue. Coinciden con las del ensayo previo.
 
 ## Qué entra
 
@@ -18,33 +24,34 @@
   - El etiquetado por tema usa la IA local (Ollama) y trabaja de 22:00 a 07:00.
 - **Archivo ficticio completo**, en lugar de la muestra pequeña de antes. Todo son casos inventados.
 
-## Cómo lanzarlo
+## Cómo se desplegó
 
-Desde un terminal:
+La orden única (`make instalacion-desplegar CONFIRMAR=DESPLEGAR TRABAJADOR=marta`) hizo esto:
 
-```bash
-make -C /Users/albercv/Documents/personalProjects/odin/.worktrees/ensayo instalacion-desplegar CONFIRMAR=DESPLEGAR TRABAJADOR=marta
-```
+1. Copió tu base, los originales, `deploy/.env` y la configuración de Claude Desktop en `odin/data/copias/` (D-056). La base quedó en `odin-v23-antes-despliegue-conjunto-2026-11-13-093931.sql`.
+2. Puso tu copia principal en `integracion/instalacion` y añadió a `deploy/.env` la dirección pública del panel, la del lector OCR y la del etiquetado.
+3. Vació la instalación y cargó el archivo ficticio completo con sus expedientes. La carga tardó 39 s; la orden entera, unos 1,5 minutos.
+4. Contó lo cargado, registró el conector con Marta y comprobó que todo responde.
 
-La orden se lanza desde la worktree de integración porque tu copia principal (3cf5d1b) aún no la tiene. Trabaja sobre tu instalación: la pila `odin`, `odin/deploy/.env` y `odin/data/`. Hace lo siguiente:
+**Después del despliegue:**
+- **09:45.** El lector OCR terminó los 30 PDF escaneados (55 páginas).
+- **09:46.** Se abrió la ventana de etiquetado para todo el día (`ODIN_TAGGER_WINDOW=always` en `deploy/.env`, con copia previa), para que puedas probar hoy las listas por tema.
 
-1. Copia tu base, los originales, `deploy/.env` y la configuración de Claude Desktop en `odin/data/copias/` (D-056).
-2. Pone tu copia principal en `integracion/instalacion` y añade a `deploy/.env` las tres direcciones que faltan:
-   - la pública del panel;
-   - la del lector OCR;
-   - la del etiquetado.
-3. Reconstruye, vacía la instalación y carga el archivo ficticio completo con sus expedientes.
-4. Cuenta lo cargado y registra el conector de Claude Desktop con Marta. Después comprueba que la API, el panel y el MCP responden y que el MCP rechaza las peticiones sin clave.
+## Próximas actualizaciones: sin vaciar
 
-**Si falla algo, vuelve sola a la copia,** commit incluido, y te dice dónde está el registro.
-
-**Duración:** entre 15 y 20 minutos (unos 5 de construir y unos 10 de carga). Antes de lanzarla, el puente OCR tiene que estar en marcha. Si has reiniciado el Mac, arráncalo así:
+Desde que lo estás probando, lo que hagas en Odín (fichas, subidas, expedientes, retiradas) no se puede perder. Por eso las próximas actualizaciones **no vacían** la instalación. Usarán esta orden:
 
 ```bash
-cd /Users/albercv/Documents/personalProjects/OCR/.worktrees/puente-odin && HF_HOME=/Users/albercv/Documents/personalProjects/OCR/.cache/huggingface HF_HUB_OFFLINE=1 UV_OFFLINE=1 uv run python serve.py --quant 8
+make -C /Users/albercv/Documents/personalProjects/odin/.worktrees/ensayo instalacion-actualizar CONFIRMAR=ACTUALIZAR
 ```
 
-Sin puente, la orden avisa y los escaneos esperan hasta que llegue el lector.
+- **Lo que hace:**
+  - copia lo mismo que el despliegue;
+  - cambia solo el código y conserva tu base y tus originales;
+  - reintenta los documentos fallidos;
+  - renueva el conector sin cambiar el trabajador que tengas puesto.
+- **Si algo falla,** vuelve a la copia.
+- **Vaciar otra vez** exige tu autorización expresa en cada ocasión.
 
 ## Qué tendrás
 
@@ -57,6 +64,8 @@ Sin puente, la orden avisa y los escaneos esperan hasta que llegue el lector.
 | De ellos, casos | 341 |
 | Sustituidos por una versión posterior | 59 |
 | Escaneados en PDF leídos por el lector OCR | 30 (55 páginas) |
+| Páginas leídas en total | 1.359: 1.304 de texto y 55 por OCR |
+| Fotos de expediente sin leer («Fallido») | 20 (ver «Lo que todavía no está bien») |
 | Expedientes | 12, con 134 documentos (entre 8 y 17 cada uno; 118 subidos para ellos) |
 | Fichas de conocimiento | 300: 220 aprobadas, 50 pendientes y 30 rechazadas |
 | Temas | 8 por empresa |
@@ -129,18 +138,22 @@ Las respuestas esperadas salen de las claves del archivo ficticio. Odín debe ci
 
 - **Las fotos de los expedientes salen como «Fallido».** Son 20 fotos sin texto, y el lector OCR las marca como «no encontró texto» en vez de dejarlas como página sin texto.
   - Dentro del expediente no aparecen y cuentan como pendientes: el del caso 2024/176 de Calle Roble 46 dice «3 pendientes» y nunca se resuelven.
-  - Lo revisa el CTO 2. Cuando esté corregido, se vuelve a lanzar la misma orden.
-- **Escaneos recién cargados.** Al terminar la carga, algunos de los 30 PDF escaneados pueden seguir en cola. El lector los lee solo en los minutos siguientes, si el puente OCR está en marcha.
-- **Etiquetado por tema.** Los casos ya llevan sus temas, puestos por el administrador de prueba. El etiquetado con IA del resto (unos 1.200 documentos) se hace de noche, de 22:00 a 07:00.
+  - El CTO 2 lo está corrigiendo, sin migración: una foto sin texto pasará a «Listo» con su página marcada como sin texto.
+  - Llegará con la orden de actualizar sin vaciar, que reintenta los fallidos sola. El CEO te avisará antes de lanzarla.
+- **Etiquetado por tema en curso.**
+  - Los casos ya llevan sus temas, puestos por el administrador de prueba.
+  - La IA etiqueta el resto (1.327 documentos pendientes a las 09:46), a unos 22 por minuto: debería terminar hacia las 10:50.
+  - Mientras tanto, las listas por tema pueden salir incompletas.
+  - La ventana queda abierta todo el día. Para volver a la nocturna, se quita la línea `ODIN_TAGGER_WINDOW=always` de `deploy/.env` y se reinicia la API.
 - **Solo en este Mac.** Los enlaces de subida y los del original usan http://127.0.0.1:8088, así que solo abren en este equipo. Instalar en un cliente con varios equipos necesitará publicar el panel en la red local. Está anotado para entonces.
 
 ## Volver atrás
 
 - **Si la orden falla,** vuelve sola a la copia.
-- **Si después quieres volver a lo que tenías antes,** la orden imprime la ruta de la copia. Con ella, este comando devuelve la base y los originales:
+- **Si quieres volver a lo que tenías antes del despliegue,** este comando devuelve la base y los originales. Perderías lo que hayas hecho desde las 09:41, aunque antes de restaurar se guarda una copia de ello:
 
 ```bash
-make -C /Users/albercv/Documents/personalProjects/odin instalacion-restaurar COPIA=<ruta de la copia .sql> CONFIRMAR=BORRAR
+make -C /Users/albercv/Documents/personalProjects/odin instalacion-restaurar COPIA=data/copias/odin-v23-antes-despliegue-conjunto-2026-11-13-093931.sql CONFIRMAR=BORRAR
 ```
 
 El código de la copia principal no vuelve con esa orden. Si también quieres volver al código anterior, pídeselo al CTO.
