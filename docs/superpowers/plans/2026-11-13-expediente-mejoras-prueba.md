@@ -48,7 +48,7 @@ Todo esto se hace antes de gastar nada. Si un paso falla, no se lanza.
    - en `medir/` y `pila/`, `python3 -m unittest` sale en verde. Esas pruebas incluyen los eventos mal formados y la excepción del ejecutor: el ejecutor no se para entero y distingue un error de una respuesta errónea.
 2. **Pila y datos:**
    - `pila/pila.sh up`, la carga con todas las capacidades y, para las 40, `cargar_expedientes.py --marcar-casos`;
-   - después, `medir/comprobar.py`, que se escribe en la tarea 5 del plan de implementación y no usa IA. Comprueba contra la pila:
+   - después, `medir/comprobar.py`, que se escribe en la tarea 6 del plan de implementación y no usa IA. Comprueba contra la pila:
      - que el trabajador tiene las capacidades `SEARCH_KNOWLEDGE`, `SIMILAR_CASES`, `CASE_FILES` y `SAVE_KNOWLEDGE_CARD`;
      - que el MCP ofrece las 15 herramientas y que `verifyCitation` pide `citations`;
      - que los documentos están cargados: el número de documentos y de expedientes del manifiesto;
