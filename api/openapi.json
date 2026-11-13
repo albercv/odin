@@ -4288,6 +4288,9 @@
             "type" : "string",
             "format" : "uuid"
           },
+          "documentTitle" : {
+            "type" : "string"
+          },
           "action" : {
             "type" : "string"
           },
@@ -4300,7 +4303,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "action", "actorId", "at", "documentId", "id" ]
+        "required" : [ "action", "actorId", "at", "documentId", "documentTitle", "id" ]
       }
     }
   }

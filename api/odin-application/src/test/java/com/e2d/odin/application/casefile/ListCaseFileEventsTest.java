@@ -29,6 +29,22 @@ class ListCaseFileEventsTest {
     }
 
     @Test
+    void eventsCarryTheDocumentTitleAndNullWhenWithdrawn() {
+        Document caseDoc = w.caseIn(w.project);
+        Document doc = w.documentIn(w.project);
+        Document gone = w.documentIn(w.project);
+        w.addToCaseFiles().execute(w.worker, List.of(new CaseFileAssignment(caseDoc.id(), Set.of(doc.id(), gone.id()))));
+        w.docs.save(gone.withWithdrawal(java.util.Optional.of(Fixtures.NOW), java.util.Optional.of(w.worker.userId())));
+
+        var lines = list.execute(Actors.companyAdmin(w.company), w.company, caseDoc.id());
+
+        assertThat(lines).filteredOn(l -> l.event().documentId().equals(doc.id())).singleElement()
+                .satisfies(l -> assertThat(l.documentTitle()).isEqualTo(doc.title()));
+        assertThat(lines).filteredOn(l -> l.event().documentId().equals(gone.id())).singleElement()
+                .satisfies(l -> assertThat(l.documentTitle()).isNull());
+    }
+
+    @Test
     void workerIsForbidden() {
         assertThatThrownBy(() -> list.execute(w.worker, w.company, new DocumentId(UUID.randomUUID())))
                 .isInstanceOf(ForbiddenException.class);

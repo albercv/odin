@@ -47,6 +47,17 @@ async function allDocuments(companyId: string, withdrawn = false) {
   return { documents: documents.slice(0, MAX_DOCUMENTS), truncated: documents.length > MAX_DOCUMENTS };
 }
 
+export const originalUrl = (documentId: string) => `${a}/documents/${documentId}/original`;
+
+export const uploadLinks = {
+  info: (token: string) => request<S['UploadLinkInfo']>('GET', `/v1/upload-links/${token}`, undefined, true),
+  upload: (token: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<S['UploadReceipt']>('POST', `/v1/upload-links/${token}/documents`, form, true);
+  },
+};
+
 export const api = {
   me: () => request<S['AdminMe']>('GET', `${a}/me`, undefined, true),
   login: (b: S['Login']) => request<S['UserRef']>('POST', `${a}/session`, b, true),
@@ -92,11 +103,12 @@ export const api = {
     request<S['CaseFileAdded']>('POST', `${co(id)}/cases/${caseId}/file/documents`, { documentIds }),
   removeFromCase: (id: string, caseId: string, documentId: string) =>
     request<void>('DELETE', `${co(id)}/cases/${caseId}/file/documents/${documentId}`),
-  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false) => {
+  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false, caseId = '') => {
     const q = new URLSearchParams();
     if (title) q.set('title', title);
     if (projectId) q.set('projectId', projectId);
     if (caseDocument) q.set('caseDocument', 'true');
+    if (caseId) q.set('caseId', caseId);
     const form = new FormData();
     form.append('file', file);
     return request<S['Upload']>('POST', `${co(id)}/documents?${q}`, form);

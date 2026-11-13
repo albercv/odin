@@ -495,6 +495,33 @@ async function workersAskAndSaveCard(page: Page): Promise<void> {
   }
 }
 
+// El trabajador pide el enlace con su clave real (la API); la página pública se abre sin sesión y sube un fichero.
+async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<void> {
+  const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
+  const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES'] });
+  const documents = await apiJson<{ id: string; title: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/documents`);
+  const caseId = documents.find((d) => d.title === CASE_FILES[1])?.id ?? '';
+  const members = await apiJson<{ userId: string; displayName: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/members`);
+  const worker = members.find((m) => m.displayName === ASKERS[0])?.userId ?? '';
+  const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${worker}/keys`, { label: 'enlace e2e' });
+  const link = await apiJson<{ url: string }>(page, 'post', `/v1/cases/${caseId}/upload-links`, undefined, { Authorization: `Bearer ${key}` });
+  const token = link.url.split('/').pop() ?? '';
+  const visitor = await browser.newPage();
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/${token}`);
+  await expect(visitor.getByText('Caso', { exact: true })).toBeVisible();
+  await expect(visitor.getByText(CASE_FILES[1] ?? '')).toBeVisible();
+  await visitor.getByLabel('Elegir ficheros').setInputFiles({ name: 'foto-e2e.txt', mimeType: 'text/plain', buffer: Buffer.from('Foto ficticia enviada por el enlace.') });
+  await expect(visitor.getByText('recibido: foto-e2e.txt')).toBeVisible();
+  await expect(visitor.getByRole('link')).toHaveCount(0);
+  expect((await new AxeBuilder({ page: visitor }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/token-que-no-existe`);
+  await expect(visitor.getByRole('alert')).toBeVisible();
+  await expect(visitor.getByText(CASE_FILES[1] ?? '')).toHaveCount(0);
+  await visitor.close();
+  console.log('✓ Admin 20b: página pública de subida por enlace, sin sesión: caso y proyecto, recibido y enlace no válido sin datos del caso');
+}
+
 async function seeUsageOfTheMonth(page: Page): Promise<void> {
   await page.getByRole('link', { name: 'Uso', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Uso', level: 1 })).toBeVisible();
@@ -560,6 +587,7 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await createAndEditTopics(page);
   await removeAndRecoverDocumentTopic(page);
   await workersAskAndSaveCard(page);
+  await uploadThroughPublicLink(page, browser);
   await seeUsageOfTheMonth(page);
   await seeTheGapOfTheQuestion(page);
   await rejectCardSeeingTheNoteWarning(page);

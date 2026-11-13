@@ -271,3 +271,11 @@ test('caseDocumentLinksToItsCaseScreen', async () => {
   const row = (await screen.findByText('Póliza 2022')).closest('tr')!;
   expect(within(row).getByRole('link', { name: 'Ver expediente de Póliza 2022' })).toHaveAttribute('href', '/casos/d1?empresa=c1');
 });
+
+test('detailOffersTheOriginalDownload', async () => {
+  show(routes([old, renewed]));
+  await openMenu('Póliza 2022');
+  await userEvent.click(screen.getByRole('button', { name: 'Ver detalle de Póliza 2022' }));
+  const dialog = screen.getByRole('dialog', { name: 'Póliza 2022' });
+  expect(within(dialog).getByRole('link', { name: 'Descargar original' })).toHaveAttribute('href', '/v1/admin/documents/d1/original');
+});

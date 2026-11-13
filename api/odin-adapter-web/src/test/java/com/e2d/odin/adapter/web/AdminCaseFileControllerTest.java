@@ -55,7 +55,8 @@ class AdminCaseFileControllerTest extends WebTestSupport {
                 .andExpect(jsonPath("$.documents", hasSize(1)));
         mvc.perform(get(base(c) + "/events").cookie(admin)).andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].action").value("ADDED"))
-                .andExpect(jsonPath("$[0].documentId").value(doc.id().value().toString()));
+                .andExpect(jsonPath("$[0].documentId").value(doc.id().value().toString()))
+                .andExpect(jsonPath("$[0].documentTitle").value(doc.title()));
         mvc.perform(delete(base(c) + "/file/documents/" + doc.id().value()).cookie(admin))
                 .andExpect(status().isNoContent());
         mvc.perform(get(base(c) + "/events").cookie(admin)).andExpect(jsonPath("$", hasSize(2)))

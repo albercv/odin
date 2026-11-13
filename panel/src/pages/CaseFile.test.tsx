@@ -18,7 +18,7 @@ const caseDocument = doc('k1', 'Expediente 2024/017', 'READY', 'p1');
 const adminDoc = (id: string, title: string, projectId?: string, status = 'READY') => ({ id, title, status, projectId, companyId: 'c1', filename: 'f.pdf', format: 'PDF', paginated: true, attemptCount: 1, pagesWithoutText: [], topics: [], uploadedAt: '2026-03-10T10:00:00Z' });
 const routes = (documents: unknown[], more: Routes = {}): Routes => ({
   [fileUrl]: () => ({ caseDocument, documents, pendingDocuments: 0 }),
-  [eventsUrl]: () => [{ id: 'v1', documentId: 'e1', action: 'ADDED', actorId: 'u', at: '2026-11-12T09:00:00Z' }, { id: 'v2', documentId: 'e2', action: 'REMOVED', actorId: 'u', at: '2026-11-12T10:00:00Z' }],
+  [eventsUrl]: () => [{ id: 'v1', documentId: 'e1', documentTitle: 'Informe del perito', action: 'ADDED', actorId: 'u', at: '2026-11-12T09:00:00Z' }, { id: 'v2', documentId: 'e2', documentTitle: 'Foto 1', action: 'REMOVED', actorId: 'u', at: '2026-11-12T10:00:00Z' }],
   [docsUrl]: () => [adminDoc('e1', 'Informe del perito', 'p1'), adminDoc('g1', 'Contrato marco'), adminDoc('x1', 'Documento de otro proyecto', 'p2'), adminDoc('k1', 'Expediente 2024/017', 'p1'), adminDoc('n1', 'Sin leer aún', 'p1', 'PROCESSING')],
   ...more,
 });
@@ -56,6 +56,24 @@ test('removingAsksConfirmation', async () => {
   const dialog = screen.getByRole('dialog', { name: /Quitar «Foto 1» del expediente/ });
   await userEvent.click(within(dialog).getByRole('button', { name: 'Quitar' }));
   await waitFor(() => expect(calls.some((c) => c.key === removeUrl)).toBe(true));
+});
+
+test('historyShowsWithdrawnDocumentsAsSuch', async () => {
+  show(routes([], { [eventsUrl]: () => [{ id: 'v3', documentId: 'z', action: 'REMOVED', actorId: 'u', at: '2026-11-12T10:00:00Z' }] }));
+  expect(await screen.findByText(/Quitado: Documento retirado/)).toBeInTheDocument();
+});
+
+test('downloadOriginalLinksToTheAdminRoute', async () => {
+  show(routes([doc('e1', 'Informe del perito')]));
+  expect(await screen.findByRole('link', { name: 'Descargar original de Informe del perito' })).toHaveAttribute('href', '/v1/admin/documents/e1/original');
+});
+
+test('uploadToTheCaseSendsCaseIdAndProject', async () => {
+  const url = `POST ${co}/documents?projectId=p1&caseId=k1`;
+  const calls = show(routes([], { [url]: () => ({ status: 201, body: { document: adminDoc('n2', 'foto.jpg', 'p1'), duplicate: false } }) }));
+  await userEvent.upload(await screen.findByLabelText('Subir al caso'), new File(['x'], 'foto.jpg', { type: 'image/jpeg' }));
+  await waitFor(() => expect(calls.some((c) => c.key === url)).toBe(true));
+  await waitFor(() => expect(calls.filter((c) => c.key === fileUrl)).toHaveLength(2));
 });
 
 test('showsTheHistory', async () => {
