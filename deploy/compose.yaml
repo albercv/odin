@@ -35,6 +35,7 @@ services:
       ODIN_UPLOAD_MAX_BYTES: ${ODIN_UPLOAD_MAX_BYTES:?falta ODIN_UPLOAD_MAX_BYTES en deploy/.env}
       ODIN_PUBLIC_URL: ${ODIN_PUBLIC_URL:-}
       ODIN_LINK_TTL: ${ODIN_LINK_TTL:-PT15M}
+      ODIN_CASE_FILE_CHUNK_CHARS: ${ODIN_CASE_FILE_CHUNK_CHARS:-30000}
       # el nginx del panel reescribe X-Forwarded-For con $remote_addr: solo se fía de él
       ODIN_TRUSTED_PROXIES: panel
       ODIN_READER_URL: ${ODIN_READER_URL:-}

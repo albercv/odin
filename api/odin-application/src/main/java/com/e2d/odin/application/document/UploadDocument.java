@@ -61,13 +61,13 @@ public class UploadDocument {
     }
 
     /**
-     * La subida por enlace: la persona ya la autorizó el enlace, el título es el nombre del fichero y los duplicados
-     * se buscan solo en el proyecto y entre lo general, sin delatar lo que haya en otros proyectos. Quien llama
-     * decide cómo se guarda un documento nuevo ({@code persist}), para hacerlo junto con su entrada en el expediente.
+     * La subida a un expediente: quien llama ya comprobó que la persona puede, y los duplicados se buscan solo en el
+     * proyecto del caso y entre lo general, sin delatar lo que haya en otros proyectos. Quien llama decide cómo se
+     * guarda un documento nuevo ({@code persist}), para hacerlo junto con su entrada en el expediente.
      */
-    public UploadOutcome executeForLink(Actor actor, CompanyId companyId, Optional<ProjectId> projectId,
-            String filename, byte[] content, Consumer<Document> persist) {
-        return store(actor, companyId, projectId, filename, filename, content, false,
+    public UploadOutcome executeForCase(Actor actor, CompanyId companyId, Optional<ProjectId> projectId,
+            String title, String filename, byte[] content, Consumer<Document> persist) {
+        return store(actor, companyId, projectId, title, filename, content, false,
                 sha256 -> documents.findBySha256InProject(companyId, projectId, sha256), persist);
     }
 

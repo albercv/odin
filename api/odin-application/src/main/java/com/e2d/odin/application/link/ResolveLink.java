@@ -68,7 +68,7 @@ public class ResolveLink {
 
     private Document visibleTarget(Actor actor, AccessLink link) {
         if (link.kind() == AccessLinkKind.UPLOAD) {
-            return CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers)
+            return CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers)
                     .caseDocument(documents, link.caseId().orElseThrow());
         }
         var granted = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE);

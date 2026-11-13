@@ -92,8 +92,9 @@ DECLARE
     c document%ROWTYPE;
     d document%ROWTYPE;
 BEGIN
-    SELECT * INTO c FROM document WHERE id = NEW.case_document_id;
-    SELECT * INTO d FROM document WHERE id = NEW.document_id;
+    -- FOR SHARE: una desmarca o una retirada a la vez espera a esta inserción y luego la ve (y al revés)
+    SELECT * INTO c FROM document WHERE id = NEW.case_document_id FOR SHARE;
+    SELECT * INTO d FROM document WHERE id = NEW.document_id FOR SHARE;
     IF NOT c.case_document THEN
         RAISE EXCEPTION 'El documento % no es una ficha de caso', c.id USING ERRCODE = 'check_violation';
     END IF;

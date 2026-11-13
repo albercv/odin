@@ -3,6 +3,7 @@ package com.e2d.odin.application.link;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.domain.link.AccessLinkKind;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.shared.NotFoundException;
 
 /** Lo que la página de subida dice antes de subir: en qué caso y en qué proyecto entrará el documento. */
 public class DescribeUploadLink {
@@ -20,8 +21,8 @@ public class DescribeUploadLink {
     public UploadLinkInfo execute(String token, String clientAddress) {
         ResolvedLink resolved = resolve.execute(token, clientAddress, AccessLinkKind.UPLOAD);
         var caseDocument = resolved.target();
-        String project = caseDocument.projectId()
-                .flatMap(id -> organizations.findProject(caseDocument.companyId(), id)).map(Project::name)
+        String project = caseDocument.projectId().map(id -> organizations.findProject(caseDocument.companyId(), id)
+                .map(Project::name).orElseThrow(() -> new NotFoundException("Enlace no encontrado")))
                 .orElse(GENERAL);
         return new UploadLinkInfo(caseDocument.title(), project, resolved.link().expiresAt());
     }

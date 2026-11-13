@@ -26,7 +26,7 @@ public class IssueUploadLink {
     }
 
     public IssuedLink execute(Actor actor, DocumentId caseId) {
-        var caseDocument = CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers)
+        var caseDocument = CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers)
                 .caseDocument(documents, caseId);
         return issuer.issue(AccessLinkKind.UPLOAD, actor, caseDocument.id(), "/subir/", "");
     }

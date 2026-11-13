@@ -4,6 +4,7 @@ import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
+import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.CaseFileSettings;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
@@ -29,11 +30,12 @@ public class ReadCaseFile {
     private final CaseFileSettings settings;
 
     public ReadCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            DocumentRepository documents, CaseFileRepository caseFiles, CaseFileSettings settings) {
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
+            CaseFileSettings settings) {
         this.organizations = organizations;
         this.projectMembers = projectMembers;
         this.documents = documents;
-        this.getCaseFile = new GetCaseFile(organizations, projectMembers, documents, caseFiles);
+        this.getCaseFile = new GetCaseFile(organizations, projectMembers, documents, caseFiles, users);
         this.settings = settings;
     }
 

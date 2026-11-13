@@ -173,6 +173,22 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
+    void unmarkCasesOfAWithdrawnCaseIsNotFoundAndKeepsItsRelations() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document member = document(Optional.of(projectA), false);
+        files.add(entry(theCase, member));
+        withdraw(theCase);
+
+        assertThatThrownBy(() -> files.unmarkCases(company, Set.of(theCase.id()), user, NOW))
+                .isInstanceOf(com.e2d.odin.domain.shared.NotFoundException.class);
+
+        assertThat(owner.sql("SELECT case_document FROM document WHERE id = :id").param("id", theCase.id().value())
+                .query(Boolean.class).single()).isTrue();
+        assertThat(owner.sql("SELECT count(*) FROM case_file_entry WHERE case_document_id = :id")
+                .param("id", theCase.id().value()).query(Integer.class).single()).isEqualTo(1);
+    }
+
+    @Test
     void pageCountsAreOneAggregateForTheVisibleDocuments() {
         Document two = document(Optional.of(projectA), false);
         Document none = document(Optional.of(projectA), false);

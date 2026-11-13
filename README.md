@@ -59,6 +59,10 @@ La contraseña necesita al menos 12 caracteres.
 
 Ábrelo en http://127.0.0.1:8088 y entra con ese correo y esa contraseña. Usa `127.0.0.1`, no `localhost`: la API comprueba que el `Origin` sea el de `ODIN_PANEL_ORIGIN` y, con `localhost`, la entrada da 403.
 
+### Dirección de Odín en la red (`ODIN_PUBLIC_URL`)
+
+En una instalación en un cliente, `ODIN_PUBLIC_URL` debe ser la dirección del servidor en la red local del cliente (por ejemplo `http://servidor-odin.local:8088` o su IP de la red), con el puerto del panel publicado en esa interfaz y `ODIN_PANEL_ORIGIN` con el mismo valor. Si no, los enlaces de subida y del original solo funcionan en el propio servidor y ningún trabajador puede abrirlos desde su ordenador. `http://127.0.0.1:8088` solo vale para una instalación en un único equipo, como el Mac del propietario. `ODIN_TRUSTED_PROXIES` va fijo como `panel` en `deploy/compose.yaml`: no se toca salvo que haya otro proxy delante.
+
 Desde el panel se crean las empresas, las personas con sus pertenencias y claves personales, los proyectos, se suben documentos y se revisan las fichas.
 
 ## Marca

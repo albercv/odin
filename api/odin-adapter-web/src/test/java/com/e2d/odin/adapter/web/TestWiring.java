@@ -10,6 +10,7 @@ import com.e2d.odin.application.link.LinkSettings;
 import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.link.ResolveLink;
 import com.e2d.odin.application.link.UploadByLink;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
@@ -303,7 +304,11 @@ public class TestWiring {
     }
 
     @Bean UploadByLink uploadByLink() {
-        return new UploadByLink(resolveLink(), links, uploadDocument(), addToCaseFiles(), caseFiles, ids, clock);
+        return new UploadByLink(resolveLink(), links, uploadToCaseFile());
+    }
+
+    @Bean UploadToCaseFile uploadToCaseFile() {
+        return new UploadToCaseFile(uploadDocument(), addToCaseFiles(), caseFiles, ids, clock);
     }
 
     @Bean OpenOriginal openOriginal() {
@@ -343,12 +348,12 @@ public class TestWiring {
     }
 
     @Bean ReadCaseFile readCaseFile() {
-        return new ReadCaseFile(orgs, projectMembers, docs, caseFiles,
+        return new ReadCaseFile(orgs, projectMembers, docs, caseFiles, users,
                 new com.e2d.odin.application.shared.CaseFileSettings());
     }
 
     @Bean GetCaseFile getCaseFile() {
-        return new GetCaseFile(orgs, projectMembers, docs, caseFiles);
+        return new GetCaseFile(orgs, projectMembers, docs, caseFiles, users);
     }
 
     @Bean AddToCaseFiles addToCaseFiles() {

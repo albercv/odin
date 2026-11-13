@@ -23,11 +23,24 @@ import java.util.Optional;
  */
 public record CaseFileAccess(CompanyScope scope, ProjectVisibility visibility) {
 
+    /** Para leer: el trabajador ve también el contenido de los proyectos borrados que veía. */
     public static CaseFileAccess of(Actor actor, Optional<CompanyId> adminCompany, OrganizationRepository organizations,
             ProjectMemberRepository projectMembers) {
+        return access(actor, adminCompany, organizations, projectMembers, false);
+    }
+
+    /** Para escribir: el trabajador solo toca proyectos vivos; en un proyecto borrado no se añade ni se enlaza nada. */
+    public static CaseFileAccess forWrite(Actor actor, Optional<CompanyId> adminCompany,
+            OrganizationRepository organizations, ProjectMemberRepository projectMembers) {
+        return access(actor, adminCompany, organizations, projectMembers, true);
+    }
+
+    private static CaseFileAccess access(Actor actor, Optional<CompanyId> adminCompany,
+            OrganizationRepository organizations, ProjectMemberRepository projectMembers, boolean write) {
         if (actor.role() == Role.WORKER) {
             var granted = WorkerAccess.require(actor, organizations, projectMembers, Capability.CASE_FILES);
-            return new CaseFileAccess(CompanyScope.of(granted.companyId()), granted.content());
+            return new CaseFileAccess(CompanyScope.of(granted.companyId()),
+                    write ? granted.visibility() : granted.content());
         }
         adminCompany.ifPresentOrElse(company -> AccessPolicy.requireAdminOf(actor, company),
                 () -> AccessPolicy.requireAdmin(actor));

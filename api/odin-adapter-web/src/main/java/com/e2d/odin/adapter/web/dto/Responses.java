@@ -54,6 +54,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -380,23 +381,27 @@ public final class Responses {
     /** Un documento del expediente; la ficha del caso va sin quién la añadió ni cuándo. */
     public record CaseFileDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
-            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status) {
+            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status,
+            @Nullable String uploadedByName, @Nullable String addedByName) {
         static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
-                @Nullable Instant addedAt) {
+                @Nullable Instant addedAt, Map<UserId, String> names) {
             Document d = entry.document();
             return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
                     d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
-                    addedBy == null ? null : addedBy.value(), addedAt, d.status().name());
+                    addedBy == null ? null : addedBy.value(), addedAt, d.status().name(), names.get(d.uploadedBy()),
+                    addedBy == null ? null : names.get(addedBy));
         }
     }
 
     public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents,
             int pendingDocuments) {
         public static CaseFileResponse from(CaseFileView view) {
-            return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null),
+            return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null,
+                    view.names()),
                     view.documents().stream()
-                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt())).toList(),
+                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt(),
+                                    view.names())).toList(),
                     view.pendingDocuments());
         }
     }

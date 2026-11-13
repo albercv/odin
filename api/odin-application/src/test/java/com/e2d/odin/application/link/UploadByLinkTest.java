@@ -190,4 +190,25 @@ class UploadByLinkTest {
         assertThat(inCaseProject()).isEqualTo(2);
         assertThat(w.caseFiles.countEntries(w.company, caseDoc.id())).isEqualTo(1);
     }
+
+    @Test
+    void linkOfACaseInADeletedProjectIsNotFoundToUploadOrDescribe() {
+        w.orgs.deleteProject(w.company, w.project, w.clock.instant());
+
+        assertThatThrownBy(() -> send("a.pdf", "uno")).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> new DescribeUploadLink(w.resolve(), w.orgs).execute(token, HOME))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void uploadingTheCaseDocumentsOwnFileReturnsTheReceipt() {
+        Document own = w.docs.get(caseDoc.id()).orElseThrow();
+        w.store.store("texto".getBytes());
+        w.docs.save(new Document(own.id(), w.company, own.projectId(), own.title(), own.filename(), own.format(),
+                w.store.store("propio".getBytes()), own.status(), Optional.empty(), true, own.uploadedBy(),
+                own.uploadedAt(), Optional.empty(), 0, Optional.empty(), Optional.empty(), java.util.List.of(), true));
+
+        assertThat(send("ficha.pdf", "propio").filename()).isEqualTo("ficha.pdf");
+        assertThat(w.caseFiles.countEntries(w.company, caseDoc.id())).isZero();
+    }
 }

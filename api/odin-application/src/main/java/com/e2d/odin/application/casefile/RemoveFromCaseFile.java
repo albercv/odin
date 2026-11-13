@@ -36,7 +36,7 @@ public class RemoveFromCaseFile {
     }
 
     public void execute(Actor actor, DocumentId caseId, DocumentId documentId) {
-        remove(actor, CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers), caseId, documentId);
+        remove(actor, CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers), caseId, documentId);
     }
 
     /** La ruta del administrador, que nombra la empresa. */
