@@ -1,11 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { createProjectNames, DELETED_PROJECT } from '../src/projects.js';
+import type { Me } from '../src/api/client.js';
+import { createProjectNames, UNAVAILABLE_PROJECT } from '../src/projects.js';
 import { meWith } from './fakeApi.js';
 
-const names = createProjectNames(meWith([], 'E', [{ id: 'p1', name: 'Comunidad Sol' }]).body as never);
+const me = (projects: { id: string; name: string }[]) => meWith([], 'E', projects).body as unknown as Me;
+
+function withReloads(...lists: { id: string; name: string }[][]) {
+  let calls = 0;
+  const names = createProjectNames(me(lists[0]!), async () => me(lists[Math.min(++calls, lists.length - 1)]!));
+  return { names, calls: () => calls };
+}
 
 describe('createProjectNames', () => {
-  it('givesNameOfKnownProject', () => expect(names.nameOf('p1')).toBe('Comunidad Sol'));
-  it('givesDeletedProjectForUnknownId', () => expect(names.nameOf('p9')).toBe(DELETED_PROJECT));
-  it('givesNullWithoutProject', () => expect(names.nameOf(undefined)).toBeNull());
+  it('givesNameOfKnownProject', () => expect(withReloads([{ id: 'p1', name: 'Comunidad Sol' }]).names.nameOf('p1')).toBe('Comunidad Sol'));
+  it('givesUnavailableProjectForUnknownId', () => expect(withReloads([]).names.nameOf('p9')).toBe(UNAVAILABLE_PROJECT));
+  it('givesNullWithoutProject', () => expect(withReloads([]).names.nameOf(undefined)).toBeNull());
+  it('saysUnavailableNotDeleted', () => expect(UNAVAILABLE_PROJECT).toBe('Proyecto no disponible'));
+
+  it('doesNotReloadWhenEveryIdIsKnown', async () => {
+    const r = withReloads([{ id: 'p1', name: 'Comunidad Sol' }]);
+    await r.names.refreshFor(['p1', undefined, null]);
+    expect(r.calls()).toBe(0);
+  });
+
+  it('reloadsOnceForAProjectAddedAfterStart', async () => {
+    const r = withReloads([{ id: 'p1', name: 'Sol' }], [{ id: 'p1', name: 'Sol' }, { id: 'p3', name: 'Mirador' }]);
+    await r.names.refreshFor(['p3', 'p3', 'p1']);
+    expect(r.calls()).toBe(1);
+    expect(r.names.nameOf('p3')).toBe('Mirador');
+  });
+
+  it('staysUnavailableIfTheReloadDoesNotHaveIt', async () => {
+    const r = withReloads([{ id: 'p1', name: 'Sol' }]);
+    await r.names.refreshFor(['p9']);
+    expect(r.calls()).toBe(1);
+    expect(r.names.nameOf('p9')).toBe(UNAVAILABLE_PROJECT);
+  });
 });

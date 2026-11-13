@@ -34,6 +34,7 @@ export function registerFindSimilarCases(server: McpServer, api: ApiClient, proj
       guarded(async () => {
         const result = await api.similarCases(args);
         if (result.noSource || !result.cases.length) return textResult(NO_CASES_MESSAGE);
+        await projects.refreshFor(result.cases.map((c) => c.projectId));
         return jsonResult({ cases: result.cases.map((c) => toCitation(c, projects)) });
       }),
   );

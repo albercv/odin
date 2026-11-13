@@ -37,6 +37,7 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
       guarded(async () => {
         const result = await api.search(args);
         if (result.noSource || !result.hits.length) return textResult(NO_SOURCE_MESSAGE);
+        await projects.refreshFor(result.hits.map((hit) => hit.projectId));
         return jsonResult({ hits: result.hits.map((hit) => toCitation(hit, projects)) });
       }),
   );
