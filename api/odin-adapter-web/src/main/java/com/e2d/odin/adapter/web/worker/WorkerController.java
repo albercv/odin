@@ -14,6 +14,7 @@ import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.SearchRequest;
 import com.e2d.odin.application.search.SimilarCasesRequest;
 import com.e2d.odin.application.search.FindSimilarCases;
+import com.e2d.odin.application.search.CitationCheck;
 import com.e2d.odin.application.search.VerifyCitation;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.knowledge.CardStatus;
@@ -24,6 +25,7 @@ import com.e2d.odin.domain.topic.TopicId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class WorkerController {
 
+    private static final int MAX_CITATIONS = 20;
     private static final int MAX_QUERIES = 10;
     private static final int MAX_QUERY_LENGTH = 500;
 
@@ -121,6 +124,24 @@ public class WorkerController {
         }
         return new Responses.Verification(verifyCitation.execute(actor, new DocumentId(request.documentId()),
                 request.pageNumber(), request.quote()));
+    }
+
+    @PostMapping("/v1/citations/verify-batch")
+    public Responses.Verifications verifyBatch(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestBody Requests.VerifyCitations request) {
+        List<Requests.VerifyCitation> citations = request.citations();
+        boolean valid = citations != null && !citations.isEmpty() && citations.size() <= MAX_CITATIONS
+                && citations.stream().allMatch(c -> c != null && c.documentId() != null && c.pageNumber() != null
+                        && c.quote() != null);
+        if (!valid) {
+            throw new ValidationException("Indica de 1 a " + MAX_CITATIONS
+                    + " citas, cada una con documento, página y texto");
+        }
+        List<Boolean> verified = verifyCitation.executeAll(actor, citations.stream()
+                .map(c -> new CitationCheck(new DocumentId(c.documentId()), c.pageNumber(), c.quote())).toList());
+        return new Responses.Verifications(IntStream.range(0, citations.size())
+                .mapToObj(i -> new Responses.VerificationResult(citations.get(i).documentId(),
+                        citations.get(i).pageNumber(), verified.get(i))).toList());
     }
 
     @PostMapping("/v1/cards")

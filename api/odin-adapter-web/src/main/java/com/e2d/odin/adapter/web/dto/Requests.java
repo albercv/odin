@@ -120,6 +120,9 @@ public final class Requests {
     public record VerifyCitation(UUID documentId, Integer pageNumber, String quote) {
     }
 
+    public record VerifyCitations(List<VerifyCitation> citations) {
+    }
+
     public record SaveCard(String title, String body, UUID projectId) {
     }
 }

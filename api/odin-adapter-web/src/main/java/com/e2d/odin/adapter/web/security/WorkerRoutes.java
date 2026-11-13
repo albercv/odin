@@ -21,6 +21,7 @@ public final class WorkerRoutes {
             route("GET", "/v1/documents/{documentId}/pages/{pageNumber}", WorkerTool.READ_PAGE),
             route("GET", "/v1/documents", WorkerTool.LIST_DOCUMENTS),
             route("POST", "/v1/citations/verify", WorkerTool.VERIFY_CITATION),
+            route("POST", "/v1/citations/verify-batch", WorkerTool.VERIFY_CITATION),
             route("POST", "/v1/cards", WorkerTool.SAVE_CARD),
             route("GET", "/v1/me/cards", WorkerTool.MY_CARDS),
             route("GET", "/v1/me/questions", WorkerTool.MY_QUESTIONS),
