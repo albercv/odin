@@ -12,6 +12,8 @@
 - El lote de citas es un caso de uso nuevo en `VerifyCitation`, con su propio endpoint, para que OpenAPI y los tipos generados queden limpios.
 - Las reglas para la IA van en las descripciones de las herramientas, no en `INSTRUCTIONS`.
 
+**Prueba (D-094):** `docs/superpowers/plans/2026-11-13-expediente-mejoras-prueba.md`. Las tareas 5 a 7 preparan sin IA la comprobación previa, el tope y el guion.
+
 **Tech Stack:** Java 21 y Spring Boot (api), PostgreSQL 17, TypeScript con zod y el SDK de MCP (mcp), React (panel: solo tipos regenerados), Python 3 (experimento).
 
 **Spec:** `docs/superpowers/specs/2026-11-13-expediente-mejoras-design.md`
@@ -122,7 +124,65 @@
 - [ ] **Step 3: Implementar y comprobar que pasan.**
 - [ ] **Step 4: Commit** en `task/expediente-mejoras/herramientas-medicion`: `fix: guardar() atómico y privado; el ejecutor cuenta las citas de un lote (D-093)`.
 
-### Task 4: Verificación completa
+### Task 5: Tope de consumo en el ejecutor
+
+Lo pide D-094, punto 6: el tope tiene que cortar a mitad de ejecución, no solo entre ejecuciones.
+
+**Files:**
+- Modify: `experimentos/2026-11-12-archivo-ficticio/medir/ejecutar.py`.
+  - Opción `--tope-usd FLOAT` (por defecto, sin tope).
+  - Al registrar cada fila, se suma `coste_usd` de las filas que ha escrito esta invocación. Cuando la suma llega al tope, la tanda para con `PARADA.txt` y el motivo «tope de consumo: X USD alcanzado en <id>», y sale con 2, como las demás paradas.
+- Test: `medir/test_ejecutar.py`.
+
+- [ ] **Step 1: Prueba que falla.** `test_para_al_llegar_al_tope`: el `claude` falso cuesta 0,001 por pregunta. Con `--concurrencia 1 --tope-usd 0.0025` sale con 2, escribe 3 filas y `PARADA.txt` contiene «tope de consumo». Sin `--tope-usd` responde las 6.
+- [ ] **Step 2: Comprobar que falla, implementar y comprobar que pasa.** `cd experimentos/2026-11-12-archivo-ficticio/medir && python3 -m unittest`.
+- [ ] **Step 3: Commit** en `task/expediente-mejoras/tope-consumo`: `feat: el ejecutor para la tanda al llegar a un tope de consumo (D-094)`.
+
+### Task 6: Comprobación previa sin IA
+
+**Files:**
+- Create: `experimentos/2026-11-12-archivo-ficticio/medir/comprobar.py`.
+  - Reutiliza `pila/cargar.py` (`leer_env`, `http`) y las claves de `estado/`, como `ejecutar.py`.
+  - `main(argv) -> int`: devuelve 0 si pasan todas las comprobaciones y 1 si falla alguna. Imprime una línea por comprobación, «OK …» o «FALLA …».
+  - Opción `--expedientes`: añade las comprobaciones que dependen de la carga de expedientes.
+- Test: `medir/test_comprobar.py`, con `http` y la lista de herramientas MCP inyectadas (sin pila ni red).
+
+**Comprobaciones,** cada una en su función de 30 líneas o menos:
+1. `GET /v1/me` con la clave del trabajador: capacidades `SEARCH_KNOWLEDGE`, `SIMILAR_CASES`, `CASE_FILES` y `SAVE_KNOWLEDGE_CARD`.
+2. MCP `tools/list` (HTTP, en el puerto `ODIN_MCP_PORT` de la pila, con la clave del trabajador): las 15 herramientas de `mcp/src/server.ts`, y el esquema de `verifyCitation` tiene `citations`.
+3. Documentos cargados: el número de documentos READY coincide con `datos/manifiesto.json`. Con `--expedientes`, también el número de expedientes de `datos/expedientes.json`.
+4. Con `--expedientes`:
+   - `POST /v1/search` con el número de caso de E016 trae un resultado con `caseDocument: true`;
+   - `POST /v1/citations/verify-batch` da `[true, false]` con una cita exacta de ese caso y con el título «Poliza seguro 2023».
+
+- [ ] **Step 1: Pruebas que fallan.**
+  - `test_pasa_con_la_pila_buena`: con todos los dobles correctos, sale 0.
+  - Una prueba por cada comprobación que falla, con el doble que la rompe (falta `CASE_FILES`, faltan herramientas, `verifyCitation` sin `citations`, documentos de menos, `caseDocument` falso, el título sale verificado). Cada una sale 1 y nombra la comprobación que falla.
+- [ ] **Step 2: Comprobar que fallan, implementar y comprobar que pasan.**
+- [ ] **Step 3: Commit** en `task/expediente-mejoras/comprobacion-previa`: `feat: comprobación previa sin IA de la pila de medición (D-094)`.
+
+### Task 7: Guion de la prueba de D-093
+
+**Files:**
+- Create: `experimentos/2026-11-12-archivo-ficticio/medir/prueba_d093.py`, con las reglas de decisión como funciones puras:
+  - `humo_pasa(filas, referencia) -> list[str]`: devuelve los fallos y, si pasa, `[]`. Las reglas están en la sección 5 del plan de prueba.
+  - `sigue(resumen, minimo) -> bool`: si `aciertos + abstencion_correcta` llega al mínimo.
+  - `restante(carpetas, tope) -> float`: el tope menos el consumo ya gastado en esas carpetas.
+- Create: `experimentos/2026-11-12-archivo-ficticio/medir/prueba-d093.sh`, que solo pega piezas:
+  - pila;
+  - `comprobar.py`;
+  - humo;
+  - 40 × 3 con parada si una ejecución saca menos de 37;
+  - 216 × 3 con parada si una saca menos de 197;
+  - cada `ejecutar.py` lleva `--tope-usd` con lo que queda de 4,75;
+  - etiquetas `<fecha>-d093-*`, con su `ORIGEN.txt`;
+  - reanudable con la misma fecha.
+- Test: `medir/test_prueba_d093.py`, con las tres funciones y sus casos límite: humo sin `getCaseFile`, sin lotes, demasiado caro o con error; un resumen justo en el mínimo; carpetas que no existen.
+
+- [ ] **Step 1: Pruebas que fallan. Step 2: implementar y comprobar que pasan.** También `bash -n prueba-d093.sh`. El guion no se ejecuta: gasta IA.
+- [ ] **Step 3: Commit** en `task/expediente-mejoras/guion-prueba`: `feat: guion de la prueba de D-093 con humo, paradas tempranas y tope (D-094)`.
+
+### Task 8: Verificación completa
 
 - [ ] `make check`: termina con 0.
 - [ ] `make demo` con los puertos del apartado de restricciones: termina con 0. Si la demo llama a `verifyCitation` del MCP con la forma antigua, se adapta en esta tarea.
