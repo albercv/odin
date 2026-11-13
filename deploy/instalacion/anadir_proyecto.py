@@ -220,9 +220,10 @@ def main(argv):
     rutas = [a for a in argv if not a.startswith("--")]
     if len(rutas) != 1:
         raise SystemExit(__doc__)
+    entorno = dp.leer_entorno(dp.PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
+    dp.proteger_propietario(entorno, os.environ.get("INSTALACION_PROYECTO", "odin"), escribe="--comprobar" not in argv)
     carpeta = Path(rutas[0]).resolve()
     m, expedientes = leer(carpeta)
-    entorno = dp.leer_entorno(dp.PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
     fallos = problemas(m, expedientes, carpeta, int(entorno.get("ODIN_UPLOAD_MAX_BYTES", 52428800)))
     if expedientes and importlib.util.find_spec("cargar_expedientes") is None:
         fallos.append("hay expedientes y falta su cargador (encargo 13): lanza la orden desde integracion/instalacion")

@@ -238,5 +238,73 @@ class CarpetaDeDatosTest(unittest.TestCase):
         self.assertEqual(Path("/r/data/pilas/odin-ensayo"), dp.datos_de(Path("/r"), "odin-ensayo"))
 
 
+ENSAYO = {"ODIN_API_PORT": "38080", "ODIN_PANEL_PORT": "38088", "ODIN_MCP_PORT": "38090"}
+
+
+class ProtegerPropietarioTest(unittest.TestCase):
+    """D-099: una pila de ensayo nunca usa los puertos del propietario y escribir en su instalación pide confirmarlo."""
+
+    def proteger(self, entorno, proyecto, escribe, confirmacion=None):
+        antes = os.environ.pop("CONFIRMAR_INSTALACION", None)
+        if confirmacion:
+            os.environ["CONFIRMAR_INSTALACION"] = confirmacion
+        try:
+            dp.proteger_propietario(entorno, proyecto, escribe)
+        finally:
+            os.environ.pop("CONFIRMAR_INSTALACION", None)
+            if antes is not None:
+                os.environ["CONFIRMAR_INSTALACION"] = antes
+
+    def test_unEnsayoConSusPropiosPuertosPasa(self):
+        self.proteger(ENSAYO, "odin-ensayo", escribe=True)
+
+    def test_unEnsayoConCualquierPuertoDelPropietarioPara(self):
+        for clave, puerto in (("ODIN_API_PORT", "8080"), ("ODIN_PANEL_PORT", "8088"), ("ODIN_MCP_PORT", "8090")):
+            with self.assertRaises(SystemExit, msg=clave):
+                self.proteger(ENSAYO | {clave: puerto}, "odin-ensayo", escribe=False)
+
+    def test_unEnsayoSinPuertosEnSuEntornoTomaLosDelPropietarioYPara(self):
+        with self.assertRaises(SystemExit):
+            self.proteger({}, "odin-ensayo", escribe=False)
+
+    def test_escribirEnLaDelPropietarioSinConfirmarPara(self):
+        with self.assertRaises(SystemExit):
+            self.proteger({}, "odin", escribe=True)
+
+    def test_escribirEnLaDelPropietarioConfirmadoPasa(self):
+        self.proteger({}, "odin", escribe=True, confirmacion="PROPIETARIO")
+
+    def test_otraPalabraNoConfirma(self):
+        with self.assertRaises(SystemExit):
+            self.proteger({}, "odin", escribe=True, confirmacion="SI")
+
+    def test_leerLaDelPropietarioNoPideConfirmacion(self):
+        self.proteger({}, "odin", escribe=False)
+
+
+class ComunShTest(unittest.TestCase):
+    """La misma regla en las órdenes de shell: comun.sh para antes de nada si un ensayo apunta a puertos del propietario."""
+
+    def cargar(self, proyecto, puerto):
+        import subprocess
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as env:
+            env.write(f"ODIN_API_PORT={puerto}\nODIN_PANEL_PORT=38088\nODIN_MCP_PORT=38090\n")
+        try:
+            return subprocess.run(["bash", "-c", f'. "{Path(__file__).parent / "comun.sh"}" && echo cargado'],
+                                  env=os.environ | {"INSTALACION_PROYECTO": proyecto, "INSTALACION_ENV": env.name},
+                                  capture_output=True, text=True)
+        finally:
+            os.unlink(env.name)
+
+    def test_unEnsayoConElPuertoDelPropietarioParaAntesDeNada(self):
+        r = self.cargar("odin-ensayo", 8080)
+        self.assertNotEqual(0, r.returncode)
+        self.assertIn("8080", r.stderr)
+
+    def test_unEnsayoConSusPuertosCarga(self):
+        r = self.cargar("odin-ensayo", 38080)
+        self.assertEqual("cargado", r.stdout.strip(), r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
