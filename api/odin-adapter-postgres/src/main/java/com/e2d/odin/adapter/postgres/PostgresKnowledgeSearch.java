@@ -115,16 +115,17 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     }
 
     private List<CaseRow> caseRows(JdbcClient jdbc, List<String> terms, List<String> exact, SimilarCasesQuery query) {
+        List<String> queryTerms = SearchSql.withNumberVariants(terms);
         String inner = "SELECT id, source, title, page, project_id, date, body, rank, superseded_by, company_id, review_status,"
                 + " ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\", MaxFragments=1') AS headline"
                 + " FROM best, q ORDER BY rank DESC, title, id LIMIT :limit";
-        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q), cand AS ("
+        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(queryTerms.size()) + " AS q), cand AS ("
                 + caseCandidates(exact.size()) + "), best AS (SELECT DISTINCT ON (id) * FROM cand"
                 + " ORDER BY id, rank DESC, page NULLS FIRST) " + SearchSql.withSupersession(inner, "t.id");
         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
                 .param("limit", query.limit()).param("searcher", query.searcher().value());
-        return SearchSql.bindTerms(spec, terms, exact).query(PostgresKnowledgeSearch::caseRow).list();
+        return SearchSql.bindTerms(spec, queryTerms, exact).query(PostgresKnowledgeSearch::caseRow).list();
     }
 
     private static String caseCandidates(int exactCount) {
@@ -165,17 +166,18 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     }
 
     private List<SearchHit> rows(JdbcClient jdbc, List<String> terms, List<String> exact, SearchQuery query) {
+        List<String> queryTerms = SearchSql.withNumberVariants(terms);
         String inner = "SELECT id, source, title, page, paginated, case_document, project_id, author, date, body, rank,"
                 + " superseded_by, company_id, review_status, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
                 + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
                 + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
-        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(terms.size()) + " AS q) "
+        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(queryTerms.size()) + " AS q) "
                 + SearchSql.withSupersession(inner, "t.page NULLS FIRST, t.id");
         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
                 .param("caseId", query.caseId().map(DocumentId::value).orElse(null))
                 .param("limit", query.limit()).param("searcher", query.searcher().value());
-        return SearchSql.bindTerms(spec, terms, exact).query((rs, n) -> hit(rs, terms)).list();
+        return SearchSql.bindTerms(spec, queryTerms, exact).query((rs, n) -> hit(rs, terms)).list();
     }
 
     private static String candidates(int exactCount) {

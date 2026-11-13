@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 
 /** Las piezas de la consulta de búsqueda que comparten la búsqueda normal y los casos parecidos. */
@@ -14,6 +16,9 @@ final class SearchSql {
     private static final int EXCERPT_CONTEXT = 150;
     private static final Pattern IDENTIFIER = Pattern.compile("(?=.*\\d)(?=.*[\\p{L}\\-/.]).{5,}");
     private static final Pattern EDGE_PUNCTUATION = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
+    private static final Pattern NUMBER = Pattern.compile("\\d{3,}");
+    private static final Pattern YEAR = Pattern.compile("(19|20)\\d{2}");
+    private static final Pattern COMPOUND = Pattern.compile("(\\d+)[/-](\\d+)");
     private static final int MAX_IDENTIFIERS = 10;
     /** Los sustituidos van detrás de los vigentes, sin cambiar el orden entre ellos. */
     private static final String SUPERSEDED_LAST = " ORDER BY t.superseded_by IS NOT NULL, t.rank DESC, t.title, ";
@@ -46,9 +51,48 @@ final class SearchSql {
     }
 
     static List<String> exactTokens(List<String> terms) {
+        Stream<String> identifiers = tokens(terms).filter(token -> IDENTIFIER.matcher(token).matches());
+        Stream<String> compounds = caseNumbers(terms).stream().flatMap(n -> Stream.of("-" + n, "/" + n, n + "/"));
+        return Stream.concat(identifiers, compounds).distinct().limit(MAX_IDENTIFIERS).toList();
+    }
+
+    /** Los términos más las variantes de los números de caso, para la consulta de texto completo. */
+    static List<String> withNumberVariants(List<String> terms) {
+        return Stream.concat(terms.stream(), numberVariants(terms).stream()).toList();
+    }
+
+    /**
+     * El analizador guarda «2024-530» como '2024' y '-530': el número suelto solo coincide como '-N'. Da también los
+     * grupos de los compuestos («2024/530», «530/24»).
+     */
+    static List<String> numberVariants(List<String> terms) {
+        List<String> variants = new ArrayList<>();
+        tokens(terms).forEach(token -> {
+            Matcher compound = COMPOUND.matcher(token);
+            if (compound.matches()) {
+                Stream.of(compound.group(1), compound.group(2)).filter(SearchSql::isCaseNumber).forEach(n -> {
+                    variants.add(n);
+                    variants.add("-" + n);
+                });
+            } else if (isCaseNumber(token)) {
+                variants.add("-" + token);
+            }
+        });
+        return variants.stream().distinct().toList();
+    }
+
+    private static List<String> caseNumbers(List<String> terms) {
+        return numberVariants(terms).stream().map(v -> v.replaceFirst("^-", "")).distinct().toList();
+    }
+
+    private static Stream<String> tokens(List<String> terms) {
         return terms.stream().flatMap(t -> Arrays.stream(t.trim().split("\\s+")))
-                .map(token -> EDGE_PUNCTUATION.matcher(token).replaceAll(""))
-                .filter(token -> IDENTIFIER.matcher(token).matches()).distinct().limit(MAX_IDENTIFIERS).toList();
+                .map(token -> EDGE_PUNCTUATION.matcher(token).replaceAll(""));
+    }
+
+    /** Tres cifras o más y que no sea un año (1900 a 2099). */
+    private static boolean isCaseNumber(String s) {
+        return NUMBER.matcher(s).matches() && !YEAR.matcher(s).matches();
     }
 
     /** Filtro opcional por un proyecto: incluye lo que no tiene proyecto (D-053). */
