@@ -174,7 +174,7 @@
 ## 7. Expediente grande (D-078)
 
 - **Para qué:** probar un expediente de 60 documentos de un solo cliente, con cifras que cambian (adenda, presupuesto revisado) y con un señuelo. Sigue el formato de los expedientes del archivo ficticio (`experimentos/2026-11-12-archivo-ficticio/DISENO.md`, apartado 2), para que el mismo cargador lo suba.
-- **Todo ficticio y sin IA.** Las plantillas están en `generar.py`. «Cerámicas Valtierno» y los nombres de los seis proveedores son inventados. Esta sesión no tenía acceso a la red, así que **no se han comprobado en la web**: queda pendiente de hacerlo antes de usar el expediente fuera de la prueba.
+- **Todo ficticio y sin IA.** Las plantillas están en `generar.py`. «Cerámicas Valtierno» y los nombres de los seis proveedores son inventados. El CTO 3 los buscó en la web el 2026-11-13 y no salió ninguna empresa con esos nombres exactos.
 - **Cliente:** `ceramicas-valtierno`, «Cerámicas Valtierno, S.A.», CIF B-00000026, domicilio en Valdecerro. Proyecto cerrado (`"abierto": false`).
   - `t09` y `t11` lo ven (`"*"`). `t10` no lo ve: su lista de proyectos no cambia.
 - **Caso:** `brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt`, «Caso 2025-017, ampliación de la línea del horno 2». Es una «FICHA DE CASO» de dos páginas, en el manifiesto y en `corpus/`.
