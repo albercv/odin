@@ -16,6 +16,7 @@ export type MyQuestion = components['schemas']['MyQuestionView'];
 export type CaseFile = components['schemas']['CaseFileResponse'];
 export type CaseFileText = components['schemas']['CaseFileTextResponse'];
 export type CaseFileAdded = components['schemas']['CaseFileAdded'];
+export type IssuedLink = components['schemas']['IssuedLink'];
 export type SaveCardRequest = components['schemas']['SaveCard'];
 
 export class ApiError extends Error {
@@ -47,6 +48,8 @@ export interface ApiClient {
   caseFileText(caseId: string, cursor?: string): Promise<CaseFileText>;
   addToCaseFile(caseId: string, documentIds: string[]): Promise<CaseFileAdded>;
   removeFromCaseFile(caseId: string, documentId: string): Promise<void>;
+  requestUploadLink(caseId: string): Promise<IssuedLink>;
+  originalLink(documentId: string, page?: number): Promise<IssuedLink>;
 }
 
 export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
@@ -75,12 +78,13 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
     myCards: (status) => call('GET', `/v1/me/cards${status ? `?status=${enc(status)}` : ''}`),
     myQuestions: (limit) => call('GET', `/v1/me/questions${limit ? `?limit=${limit}` : ''}`),
     ...caseFileCalls(call),
+    originalLink: (documentId, page) => call('POST', `/v1/documents/${enc(documentId)}/original-links`, page === undefined ? {} : { page }),
   };
 }
 
 type Call = <T>(method: string, path: string, body?: unknown) => Promise<T>;
 
-function caseFileCalls(call: Call): Pick<ApiClient, 'caseFile' | 'caseFileText' | 'addToCaseFile' | 'removeFromCaseFile'> {
+function caseFileCalls(call: Call): Pick<ApiClient, 'caseFile' | 'caseFileText' | 'addToCaseFile' | 'removeFromCaseFile' | 'requestUploadLink'> {
   const enc = encodeURIComponent;
   return {
     caseFile: (caseId) => call('GET', `/v1/cases/${enc(caseId)}/file`),
@@ -89,6 +93,7 @@ function caseFileCalls(call: Call): Pick<ApiClient, 'caseFile' | 'caseFileText' 
     addToCaseFile: (caseId, documentIds) => call('POST', `/v1/cases/${enc(caseId)}/file/documents`, { documentIds }),
     removeFromCaseFile: (caseId, documentId) =>
       call('DELETE', `/v1/cases/${enc(caseId)}/file/documents/${enc(documentId)}`),
+    requestUploadLink: (caseId) => call('POST', `/v1/cases/${enc(caseId)}/upload-links`, {}),
   };
 }
 

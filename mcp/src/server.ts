@@ -7,6 +7,7 @@ import { registerListDocuments } from './tools/listDocuments.js';
 import { registerListMyKnowledgeCards } from './tools/listMyKnowledgeCards.js';
 import { registerListMyQuestions } from './tools/listMyQuestions.js';
 import { registerListProjects } from './tools/listProjects.js';
+import { registerOpenOriginal } from './tools/openOriginal.js';
 import { registerReadPage } from './tools/readPage.js';
 import { registerSaveKnowledgeCard } from './tools/saveKnowledgeCard.js';
 import { registerSearchKnowledge } from './tools/searchKnowledge.js';
@@ -37,6 +38,7 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
     const projects = createProjectNames(me);
     registerSearchKnowledge(server, api, projects);
     registerReadPage(server, api);
+    registerOpenOriginal(server, api);
     registerListDocuments(server, api, projects);
     registerListProjects(server, api);
     registerVerifyCitation(server, api);

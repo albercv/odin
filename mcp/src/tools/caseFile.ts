@@ -19,6 +19,7 @@ const WRITE_RULES =
 export function registerCaseFileTools(server: McpServer, api: ApiClient): void {
   registerReads(server, api);
   registerWrites(server, api);
+  registerUploadLink(server, api);
 }
 
 function registerReads(server: McpServer, api: ApiClient): void {
@@ -64,5 +65,20 @@ function registerWrites(server: McpServer, api: ApiClient): void {
         await api.removeFromCaseFile(args.caseId, args.documentId);
         return jsonResult({ removed: true });
       }),
+  );
+}
+
+function registerUploadLink(server: McpServer, api: ApiClient): void {
+  server.registerTool(
+    'requestUploadLink',
+    {
+      description:
+        'Pide un enlace para que el trabajador suba ficheros al expediente de un caso. ' +
+        `${WRITE_RULES} ` +
+        'El enlace abre una página de Odín donde el trabajador elige los ficheros, y vale 15 minutos. ' +
+        'Da el enlace tal cual, sin cambiarlo, y di cuándo caduca (expiresAt).',
+      inputSchema: { caseId },
+    },
+    (args) => guarded(async () => jsonResult(await api.requestUploadLink(args.caseId))),
   );
 }
