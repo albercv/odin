@@ -2089,7 +2089,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES", "CASE_FILES" ]
             },
             "uniqueItems" : true
           }
@@ -2112,7 +2112,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES", "CASE_FILES" ]
             },
             "uniqueItems" : true
           },
@@ -2934,7 +2934,7 @@
             "type" : "array",
             "items" : {
               "type" : "string",
-              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES" ]
+              "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES", "CASE_FILES" ]
             },
             "uniqueItems" : true
           }

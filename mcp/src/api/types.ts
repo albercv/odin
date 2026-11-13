@@ -792,14 +792,14 @@ export interface components {
             source: string;
         };
         Capabilities: {
-            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
         };
         CompanyView: {
             /** Format: uuid */
             id: string;
             name: string;
             code: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
             codeReviewed: boolean;
         };
         SimilarCasesRequestBody: {
@@ -1098,7 +1098,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
         };
         MeProject: {
             /** Format: uuid */
