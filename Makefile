@@ -49,8 +49,8 @@ banco-arriba:
 	$(BANCO_ENV) $(EXP)/pila/pila.sh up
 
 banco-cargar:
-	@test "$(ARCHIVOS)" = ficticio || { echo "capa no disponible todavía: $(ARCHIVOS)"; exit 1; }
-	$(BANCO_ENV) python3 $(EXP)/pila/cargar.py --manifiesto $(EXP)/datos/manifiesto.json --corpus $(EXP)/datos/corpus --marcar
+	@D=$(EXP)/datos; if [ "$(ARCHIVOS)" != ficticio ]; then D=$$($(BANCO_ENV) python3 banco/archivos.py fusionar --archivos "$(ARCHIVOS)") || exit 1; fi; \
+	$(BANCO_ENV) python3 $(EXP)/pila/cargar.py --manifiesto $$D/manifiesto.json --corpus $$D/corpus --marcar
 
 banco-abajo:
 	$(BANCO_ENV) $(EXP)/pila/pila.sh down

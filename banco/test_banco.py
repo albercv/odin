@@ -3,6 +3,8 @@ import contextlib
 import io
 import json
 import os
+import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -87,15 +89,28 @@ class Harness(unittest.TestCase):
         self.items = _real_items(3)
         self.state_dir = self.tmp / "estado"
         self.state_dir.mkdir()
+        exp = self.tmp / "exp"
+        datos = exp / "datos"
+        datos.mkdir(parents=True)
+        shutil.copy(EXP / "datos" / "manifiesto.json", datos)
+        shutil.copy(EXP / "datos" / "claves.json", datos)
+        (datos / "corpus").symlink_to(EXP / "datos" / "corpus")
+        (datos / "bateria.json").write_text(json.dumps(self.items, ensure_ascii=False), encoding="utf-8")
+        manifest = json.loads((datos / "manifiesto.json").read_text(encoding="utf-8"))
         doc_ruta = {f"doc-{n}": item["citas_resueltas"][0]["doc"] for n, item in enumerate(self.items, start=1)}
+        known = set(doc_ruta.values())  # la pila carga todos los documentos del manifiesto, no solo los de las preguntas
+        doc_ruta.update({f"doc-r{n}": d["ruta"] for n, d in enumerate(manifest["documentos"]) if d["ruta"] not in known})
+        ficha_f = {f"card-{n}": f["id"] for n, f in enumerate(manifest["fichas"], start=1)}
         keys_by_actor = {item["actor"]: "clave-de-prueba" for item in self.items}
-        stack = {"url_mcp": "http://127.0.0.1:1/", "claves": keys_by_actor, "doc_ruta": doc_ruta, "ficha_f": {}}
+        stack = {"url_mcp": "http://127.0.0.1:1/", "claves": keys_by_actor, "doc_ruta": doc_ruta, "ficha_f": ficha_f}
         (self.state_dir / "carga.json").write_text(json.dumps(stack), encoding="utf-8")
-        battery_file = self.tmp / "bateria.json"
-        battery_file.write_text(json.dumps(self.items, ensure_ascii=False), encoding="utf-8")
+        banco = self.tmp / "banco"
+        banco.mkdir()
+        for folder in ("enfoques", "rubricas"):
+            (banco / folder).symlink_to(BANCO / folder)
         url, stop = start_fake_ollama("ok")
         self.addCleanup(stop)
-        self.layout = Layout(banco=BANCO, exp=EXP, battery_file=battery_file, state_dir=self.state_dir,
+        self.layout = Layout(banco=banco, exp=exp, state_dir=self.state_dir,
                              results_dir=self.tmp / "resultados", cache=self.tmp / "cache", repo=BANCO.parent,
                              claude_bin=FAKE_CLAUDE, claude_judge_bin=FAKE_JUDGE, ollama_url=url, timeout=30)
         real_responder = ejecutar.responder
@@ -166,6 +181,16 @@ class RunTest(Harness):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8")), before)
         self.assertIn("Acierto", (folder / "informe.md").read_text(encoding="utf-8"))
+
+    def test_legacy_origin_without_archives_still_rebuilds(self):
+        self.run_cli(self.config())
+        folder = self.only_folder()
+        origin = folder / "ORIGEN.txt"
+        origin.write_text("".join(line for line in origin.read_text(encoding="utf-8").splitlines(True)
+                                  if not line.startswith(("Archivos:", "Batería:"))), encoding="utf-8")
+        (folder / "resumen.json").unlink()
+        self.assertEqual(banco.main(["report", "--results", str(folder)], layout=self.layout), 0)
+        self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8"))["accuracy"]["total"], 3)
 
     def test_broken_isolation_stops_with_code_2(self):
         code = self.run_cli(self.config(), env={"FAKE_MODO": "tools_extra"})
@@ -669,6 +694,72 @@ class SampleAndConfigTest(Harness):
         self.assertEqual(code, 1)
         self.assertIn("reserva", errors.getvalue())
 
+
+
+class SeveralArchivesTest(Harness):
+    """Dos capas y dos baterías. La capa «generalidad» falsa va en el banco temporal; su batería repite las preguntas
+    del archivo ficticio con otros ids, para que las respuestas falsas sirvan."""
+
+    def setUp(self):
+        super().setUp()
+        datos = self.layout.banco / "archivos" / "generalidad" / "datos"
+        (datos / "corpus" / "brumeral" / "_general").mkdir(parents=True)
+        (datos / "corpus" / "brumeral" / "_general" / "doc.txt").write_text("=== Página 1 ===\nTexto.\n", encoding="utf-8")
+        ruta = "brumeral/_general/doc.txt"
+        manifest = {"semilla": 7, "empresas": [{"clave": "brumeral", "nombre": "Brumeral", "codigo": "BRU"}], "proyectos": [],
+                    "trabajadores": [], "fichas": [], "documentos": [{"ruta": ruta, "empresa": "brumeral", "proyecto": None,
+                    "titulo": "Doc", "subido": "2025-01-01T00:00:00Z", "subido_por": None}]}
+        (datos / "manifiesto.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (datos / "claves.json").write_text("[]", encoding="utf-8")
+        renamed = [dict(item, id="G" + item["id"]) for item in self.items]
+        (datos / "bateria.json").write_text(json.dumps(renamed, ensure_ascii=False), encoding="utf-8")
+
+    def several_config(self, batteries='["desarrollo", "generalidad"]'):
+        path = self.config()
+        text = path.read_text(encoding="utf-8").replace('archives = ["ficticio"]', 'archives = ["ficticio", "generalidad"]')
+        path.write_text(text.replace('battery = "desarrollo"', f"battery = {batteries}"), encoding="utf-8")
+        return path
+
+    def load_generalidad_document(self):
+        stack = json.loads((self.state_dir / "carga.json").read_text(encoding="utf-8"))
+        stack["doc_ruta"]["doc-g1"] = "brumeral/_general/doc.txt"
+        (self.state_dir / "carga.json").write_text(json.dumps(stack), encoding="utf-8")
+
+    def test_two_archives_and_two_batteries_run_and_rebuild(self):
+        self.load_generalidad_document()
+        code = self.run_cli(self.several_config())
+        folder = self.only_folder()
+        self.assertEqual(code, 0)
+        origin = (folder / "ORIGEN.txt").read_text(encoding="utf-8")
+        self.assertIn("Archivos: ficticio, generalidad", origin)
+        self.assertIn("Batería: desarrollo, generalidad", origin)
+        self.assertTrue((self.state_dir / "archivo-ficticio+generalidad" / "manifiesto.json").is_file())
+        before = json.loads((folder / "resumen.json").read_text(encoding="utf-8"))
+        self.assertEqual(before["accuracy"]["total"], 6)
+        (folder / "resumen.json").unlink()
+        self.assertEqual(banco.main(["report", "--results", str(folder)], layout=self.layout), 0)
+        self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8")), before)
+
+    def test_stack_without_the_archive_asks_to_load_it(self):
+        with self.assertRaisesRegex(ConfigError, re.escape("make banco-cargar ARCHIVOS=ficticio,generalidad")):
+            prepare(self.several_config(), self.layout)
+
+    def test_card_not_loaded_is_refused(self):
+        stack = json.loads((self.state_dir / "carga.json").read_text(encoding="utf-8"))
+        stack["ficha_f"] = {}
+        (self.state_dir / "carga.json").write_text(json.dumps(stack), encoding="utf-8")
+        with self.assertRaisesRegex(ConfigError, re.escape("make banco-cargar ARCHIVOS=ficticio")):
+            prepare(self.config(), self.layout)
+
+    def test_missing_battery_file_is_a_clear_cli_error(self):
+        path = self.config()
+        path.write_text(path.read_text(encoding="utf-8").replace('battery = "desarrollo"', 'battery = ["desarrollo", "conector"]'),
+                        encoding="utf-8")
+        errors = io.StringIO()
+        with contextlib.redirect_stderr(errors):
+            code = banco.main(["run", "--sin-prueba", "--config", str(path)], layout=self.layout)
+        self.assertEqual(code, 1)
+        self.assertIn("bateria-conector.json", errors.getvalue())
 
 
 TURNO = str(BANCO / "fakes" / "fake_claude_turno.py")

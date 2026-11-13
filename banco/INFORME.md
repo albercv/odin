@@ -18,6 +18,27 @@ Equivalente sin make: `python3 banco/banco.py run|sweep --config X` y `python3 b
 
 Variables de entorno (por defecto, las de producción): `ODIN_BANCO_CLAUDE` (`claude`), `ODIN_BANCO_CLAUDE_JUEZ` (igual que el anterior), `ODIN_BANCO_OLLAMA_URL` (`http://127.0.0.1:11434`) y `PILA_ESTADO` (`banco/estado`).
 
+## Varias capas y varias baterías
+
+Una configuración puede usar varias capas de archivo y varias baterías de preguntas:
+
+```toml
+archives = ["ficticio", "generalidad"]
+battery = ["desarrollo", "generalidad"]   # o un solo nombre: battery = "desarrollo"
+```
+
+- Capas conocidas (`banco/archivos.py`): `ficticio` (`experimentos/.../datos`) y `generalidad` (`banco/archivos/generalidad/datos`). Baterías: `desarrollo` y `conector` (ficticio), `generalidad` (ficticio y generalidad). `reserva` solo en modo closing, como antes.
+- Cada batería pide sus capas: una batería sin su capa en `archives` no se acepta. Las preguntas de todas las baterías van en el orden dado, y un id repetido entre ficheros se niega.
+- Con varias capas, el banco fusiona sus datos en `banco/estado/archivo-<capa1>+<capa2>/` (manifiesto, claves y copia del corpus). Con `ficticio` solo, todo es como antes.
+- Antes de lanzar, la pila debe tener cargados los documentos de todas las capas. Para cargar:
+
+```
+make banco-cargar ARCHIVOS=ficticio,generalidad   # fusiona y carga; ARCHIVOS=ficticio carga como siempre
+python3 banco/archivos.py fusionar --archivos ficticio,generalidad   # solo fusiona e imprime la carpeta
+```
+
+El informe de una carpeta de resultados vuelve a leer sus capas y baterías de `ORIGEN.txt` (`Archivos:` y `Batería:`), así que las carpetas anteriores se recalculan igual que antes.
+
 ## Salida
 
 Cada orden crea `banco/resultados/<AAAA-MM-DD-HHMM>-<nombre>/` con:

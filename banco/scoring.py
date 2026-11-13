@@ -8,9 +8,9 @@ from banco.medir_path import puntuar, sustituciones
 NOT_FOUND = "(no encontrado)"
 
 
-def build_context(exp, stack):
+def build_context(data_dir, stack):
     """Contexto del puntuador como puntuar.main: corpus, manifiesto y mapas de ids (de carga.json o de ids.json)."""
-    data_dir = Path(exp) / "datos"
+    data_dir = Path(data_dir)
     corpus = puntuar.load_corpus(data_dir / "corpus")
     manifest = json.loads((data_dir / "manifiesto.json").read_text(encoding="utf-8"))
     key_rows = json.loads((data_dir / "claves.json").read_text(encoding="utf-8"))

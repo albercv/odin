@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from banco import report, run  # noqa: E402
+from banco.archivos import ArchivoError  # noqa: E402
 from banco.config import ConfigError  # noqa: E402
 from banco.layout import default_layout  # noqa: E402
 from banco.ledger import BudgetAlreadySpent  # noqa: E402
@@ -50,6 +51,9 @@ def main(argv=None, layout=None):
         return order(Path(args.config), layout, reset_budget=args.reiniciar_presupuesto, sin_prueba=args.sin_prueba)
     except ConfigError as error:
         print(f"error de configuración: {error}", file=sys.stderr)
+        return 1
+    except ArchivoError as error:
+        print(f"error de archivos: {error}", file=sys.stderr)
         return 1
     except BudgetAlreadySpent as error:
         print(f"error de presupuesto: {error}", file=sys.stderr)
