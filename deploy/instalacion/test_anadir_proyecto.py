@@ -171,23 +171,33 @@ class InstalacionTest(unittest.TestCase):
 
 class AislamientoTest(unittest.TestCase):
 
-    def comprobar(self, vistos_por_clave):
+    def comprobar(self, listados, buscados=None):
+        """listados: ids que lista cada clave en GET /v1/documents (en páginas de 2); buscados: los que encuentra buscando."""
+        buscados = buscados or {}
+
         class Api:
             def admin(self, metodo, ruta, cuerpo=None, clave=None, **opciones):
-                return {"hits": [{"sourceId": i} for i in vistos_por_clave[clave]]}
+                if metodo == "POST":
+                    return {"hits": [{"sourceId": i} for i in buscados.get(clave, [])]}
+                inicio = int(ruta.split("offset=")[1].split("&")[0])
+                return [{"id": i} for i in listados[clave][inicio:inicio + 2]]
 
-        return ap.comprobar_aislamiento(Api(), ["consulta"], {"d1", "d2"}, CREDENCIALES, ["marta"])
+        return ap.comprobar_aislamiento(Api(), ["consulta"], {"d1", "d2", "d3"}, {"d1", "d2"}, CREDENCIALES, ["marta"], 2)
 
-    def test_elMiembroLoEncuentraYLosDemasNo(self):
-        self.assertEqual(1, self.comprobar({"k-marta": ["d1", "x"], "k-javier": ["x"]}))
+    def test_elMiembroListaLoLeidoYLosDemasNoVenNada(self):
+        self.assertEqual(1, self.comprobar({"k-marta": ["x", "y", "d1", "d2"], "k-javier": ["x"]}))
 
-    def test_siUnoQueNoEsMiembroLoVeEsFuga(self):
+    def test_siElMiembroNoListaAlgunoYaLeidoFalla(self):
         with self.assertRaises(RuntimeError):
-            self.comprobar({"k-marta": ["d1"], "k-javier": ["d2"]})
+            self.comprobar({"k-marta": ["x", "d1"], "k-javier": []})
 
-    def test_siElMiembroNoLoEncuentraFalla(self):
+    def test_siUnoQueNoEsMiembroLoListaEsFuga(self):
         with self.assertRaises(RuntimeError):
-            self.comprobar({"k-marta": ["x"], "k-javier": []})
+            self.comprobar({"k-marta": ["d1", "d2"], "k-javier": ["x", "y", "d3"]})
+
+    def test_siUnoQueNoEsMiembroLoEncuentraBuscandoEsFuga(self):
+        with self.assertRaises(RuntimeError):
+            self.comprobar({"k-marta": ["d1", "d2"], "k-javier": []}, {"k-javier": ["d2"]})
 
 
 class CredencialesTest(unittest.TestCase):

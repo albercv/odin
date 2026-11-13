@@ -142,15 +142,29 @@ def crear_fichas(api, fichas, proyecto, clave):
     return {e: sum(f["estado"] == e for f in fichas) for e in sorted({f["estado"] for f in fichas})}
 
 
-def comprobar_aislamiento(api, consultas, nuevos, cred, miembros):
-    """Los miembros encuentran documentos nuevos y ningún otro trabajador de prueba ve ninguno. Devuelve cuántos no lo ven."""
+def comprobar_aislamiento(api, consultas, nuevos, leidos, cred, miembros, pagina=500):
+    """Los miembros tienen en su lista todos los documentos nuevos ya leídos; ningún otro trabajador de prueba ve ninguno, ni
+    en su lista ni buscando. La lista lo dice seguro; buscar con frases genéricas no, por eso solo vale para la fuga.
+    Devuelve cuántos no lo ven."""
     for nombre, t in cred["trabajadores"].items():
-        vistos = {h["sourceId"] for c in consultas for h in dp.buscar(api, t["clave"], c)} & nuevos
-        if nombre in miembros and not vistos:
-            raise RuntimeError(f"{nombre} no encuentra los documentos del proyecto nuevo")
-        if nombre not in miembros and vistos:
-            raise RuntimeError(f"Fuga de aislamiento: {nombre} ve {len(vistos)} documentos del proyecto nuevo")
+        listados = visibles(api, t["clave"], pagina) & nuevos
+        if nombre in miembros and not leidos <= listados:
+            raise RuntimeError(f"{nombre} solo ve {len(listados & leidos)} de los {len(leidos)} documentos nuevos ya leídos")
+        buscados = set() if nombre in miembros else {h["sourceId"] for c in consultas for h in dp.buscar(api, t["clave"], c)}
+        if nombre not in miembros and (listados or buscados & nuevos):
+            raise RuntimeError(f"Fuga de aislamiento: {nombre} ve {len(listados | buscados & nuevos)} documentos del proyecto nuevo")
     return len(cred["trabajadores"]) - len(miembros)
+
+
+def visibles(api, clave, pagina):
+    """Ids de todos los documentos que lista la clave (GET /v1/documents, página a página)."""
+    ids, inicio = set(), 0
+    while True:
+        parte = api.admin("GET", f"/v1/documents?offset={inicio}&limit={pagina}", clave=clave)
+        ids |= {d["id"] for d in parte}
+        inicio += len(parte)
+        if len(parte) < pagina:
+            return ids
 
 
 def consultas_de(m, carpeta):
@@ -177,13 +191,15 @@ def anadir(api, entorno, m, expedientes, carpeta, cred, miembros):
         api.admin("PUT", f"/v1/admin/documents/{mapa[s['viejo']]}/superseded-by", {"replacementId": mapa[s["nuevo"]]})
     fichas = crear_fichas(api, m["fichas"], pid, cred["trabajadores"][miembros[0]]["clave"])
     resumen_exp = cargar_expedientes(api, mapa, expedientes, carpeta) if expedientes else "Expedientes: ninguno."
-    otros = comprobar_aislamiento(api, consultas_de(m, carpeta), {mapa[d["ruta"]] for d in m["documentos"]}, cred, miembros)
+    leidos = {d["id"] for d in docs if d["status"] == "READY"}
+    otros = comprobar_aislamiento(api, consultas_de(m, carpeta), set(mapa.values()), leidos, cred, miembros)
     dp.escribir_credenciales(dp.CREDENCIALES, con_proyecto(cred, miembros, p["nombre"]))
     escaneados = {mapa[d["ruta"]] for d in m["documentos"] if tipo_de(Path(d["ruta"])).startswith(("image/", "application/pdf"))}
     return [f"Proyecto «{p['nombre']}» añadido; lo ven {', '.join(miembros)} y los administradores en el panel.",
             f"Documentos: {len(m['documentos'])} ({sum(map(dp.es_caso, mapa))} casos), "
             f"{len(m.get('sustituciones', []))} sustituidos. Fichas: {fichas}.", resumen_exp,
-            f"Aislamiento comprobado por la API: {', '.join(miembros)} lo encuentra; {otros} trabajadores de prueba no.",
+            f"Aislamiento comprobado por la API: {', '.join(miembros)} ve los {len(leidos)} documentos ya leídos; "
+            f"{otros} trabajadores de prueba no ven ninguno, ni en su lista ni buscando.",
             *dp.estado_lectores(api, entorno, {p["empresa"]: sitio.empresa}, docs, escaneados),
             f"Tiempo: {time.time() - inicio:.0f} s."]
 
