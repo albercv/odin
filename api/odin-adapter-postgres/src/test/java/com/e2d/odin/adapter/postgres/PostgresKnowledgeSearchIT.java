@@ -1,6 +1,7 @@
 package com.e2d.odin.adapter.postgres;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentPage;
@@ -346,6 +347,19 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         Document d = page(company, title, DocumentStatus.READY, texts);
         docs.markCaseDocuments(company, Set.of(d.id()), true);
         return d;
+    }
+
+    @Test
+    void caseDocumentFlagsCaseCards() {
+        CompanyId c = newCompany();
+        caseDocument(c, "Ficha del caso", "la franquicia del seguro");
+        page(c, "Documento normal", DocumentStatus.READY, "la franquicia del seguro");
+        card(c, CardStatus.APPROVED, "Ficha aprobada", "la franquicia del seguro");
+
+        List<SearchHit> hits = find(CompanyScope.of(c), "franquicia");
+
+        assertThat(hits).extracting(SearchHit::title, SearchHit::caseDocument).containsExactlyInAnyOrder(
+                tuple("Ficha del caso", true), tuple("Documento normal", false), tuple("Ficha aprobada", false));
     }
 
     private SimilarCasesResult cases(CompanyId company, ProjectVisibility visibility, String... terms) {

@@ -510,11 +510,11 @@ public final class Responses {
     }
 
     public record Hit(String sourceType, UUID sourceId, String title, @Nullable Integer pageNumber, boolean paginated,
-            @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank,
+            boolean caseDocument, @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank,
             boolean superseded, @Nullable Replacement replacement, @Nullable String reviewStatus) {
         static Hit from(SearchHit h) {
             return new Hit(h.sourceType().name(), h.sourceId(), h.title(), h.pageNumber().orElse(null),
-                    h.paginated(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),
+                    h.paginated(), h.caseDocument(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),
                     h.excerpt(), h.rank(), h.superseded(),
                     h.replacement().map(Replacement::from).orElse(null),
                     h.reviewStatus().map(Enum::name).orElse(null));

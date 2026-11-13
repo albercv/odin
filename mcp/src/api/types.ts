@@ -1123,6 +1123,7 @@ export interface components {
             /** Format: int32 */
             pageNumber?: number;
             paginated: boolean;
+            caseDocument: boolean;
             /** Format: uuid */
             projectId?: string;
             authorName: string;

@@ -30,7 +30,7 @@ import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 public class PostgresKnowledgeSearch implements KnowledgeSearch {
 
     private static final String CANDIDATES = """
-            SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated,
+            SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated, d.case_document,
                    d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
                    %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id, NULL AS review_status
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
@@ -39,7 +39,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
               AND %9$s AND %5$s AND %7$s AND %12$s AND %13$s
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
-            SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
+            SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
                    %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id, c.status
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
             WHERE %11$s
@@ -165,7 +165,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     }
 
     private List<SearchHit> rows(JdbcClient jdbc, List<String> terms, List<String> exact, SearchQuery query) {
-        String inner = "SELECT id, source, title, page, paginated, project_id, author, date, body, rank,"
+        String inner = "SELECT id, source, title, page, paginated, case_document, project_id, author, date, body, rank,"
                 + " superseded_by, company_id, review_status, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
                 + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
                 + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
@@ -194,7 +194,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
         Optional<Integer> pageNumber = rs.wasNull() ? Optional.empty() : Optional.of(page);
         String body = rs.getString("body");
         return new SearchHit(SourceType.valueOf(rs.getString("source")), Sql.uuid(rs, "id"), rs.getString("title"),
-                pageNumber, rs.getBoolean("paginated"),
+                pageNumber, rs.getBoolean("paginated"), rs.getBoolean("case_document"),
                 Optional.ofNullable(Sql.uuid(rs, "project_id")).map(ProjectId::new), rs.getString("author"),
                 Sql.instant(rs, "date"), SearchSql.excerpt(rs.getString("headline"), body, terms),
                 rs.getDouble("rank"), Sql.uuid(rs, "superseded_by") != null, SupersessionSql.current(rs),

@@ -44,7 +44,7 @@ class DeliveryMeteringFilterTest extends WebTestSupport {
     void countsBytesOfSuccessfulSearch() throws Exception {
         CompanyId company = newCompany();
         w.search.returns(new SearchResult(List.of(new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(),
-                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto ñ", 0.5, false,
+                "Manual", Optional.of(3), true, false, Optional.empty(), "Ana", Fixtures.NOW, "texto ñ", 0.5, false,
                 Optional.empty(), Optional.empty()))));
 
         byte[] body = mvc.perform(post("/v1/search").header(HttpHeaders.AUTHORIZATION, workerKey(company))

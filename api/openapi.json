@@ -2878,6 +2878,9 @@
           "paginated" : {
             "type" : "boolean"
           },
+          "caseDocument" : {
+            "type" : "boolean"
+          },
           "projectId" : {
             "type" : "string",
             "format" : "uuid"
@@ -2906,7 +2909,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "authorName", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
+        "required" : [ "authorName", "caseDocument", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
       },
       "SearchResponse" : {
         "type" : "object",

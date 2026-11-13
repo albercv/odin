@@ -172,6 +172,31 @@ describe('case file tools', () => {
     expect(cases).not.toContain('openOriginal');
   });
 
+  it('searchKnowledgeKeepsCaseDocumentOnDocumentsOnly', async () => {
+    const hit = { sourceId: 'x', title: 't', paginated: true, date: '2026-01-01T00:00:00Z', authorName: 'Ana', excerpt: 'e', rank: 1, superseded: false };
+    const hits = [
+      { ...hit, sourceType: 'ORIGINAL_DOCUMENT', caseDocument: true },
+      { ...hit, sourceType: 'KNOWLEDGE_CARD', caseDocument: false },
+    ];
+    const client = await connect(() => ({ status: 200, body: { hits, noSource: false } }));
+    const result = await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['x'] } });
+    const [doc, card] = JSON.parse(textOf(result)).hits;
+    expect(doc.caseDocument).toBe(true);
+    expect(card).not.toHaveProperty('caseDocument');
+  });
+
+  it('descriptionsGuideTowardsCaseFile', async () => {
+    const A = 'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage.';
+    const B = 'caseDocument true marca la ficha de un caso: si la pregunta trata de un caso o de un expediente, llama a getCaseFile con ese documentId como caseId antes de responder.';
+    const C = 'Úsala siempre que la pregunta nombre un caso o un número de expediente; si no tienes su caseId, busca antes la ficha del caso con searchKnowledge (caseDocument true).';
+    const D = 'Un documento que cita el mismo número de caso pero no está en getCaseFile no forma parte del expediente: no lo incluyas; si lo mencionas, di aparte que no está en el expediente.';
+    const search = await descriptionOf('searchKnowledge');
+    expect([A, B].filter((x) => !search.includes(x))).toEqual([]);
+    const get = await descriptionOf('getCaseFile');
+    expect([C, D].filter((x) => !get.includes(x))).toEqual([]);
+    expect(await descriptionOf('readCaseFile')).toContain(D);
+  });
+
   it('instructionsStayWithinBudget', () => {
     expect(INSTRUCTIONS.length).toBeLessThanOrEqual(2200);
   });
