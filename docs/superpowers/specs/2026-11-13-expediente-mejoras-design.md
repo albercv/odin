@@ -2,7 +2,7 @@
 
 - **Fecha:** 2026-11-13. **Autor:** CTO 2.
 - **Origen:** la medición de la tarea 9 (`docs/informes/2026-11-13-expediente-medicion.md`). La peor de 3 en las 40 preguntas de expediente fue 30 (75 %), con una cita no literal. La IA usó `getCaseFile` en 28 de 120 preguntas y `verifyCitation` una vez por cita (hasta 23 llamadas en una pregunta).
-- **Rama:** `feature/expediente-mejoras`, que sale de `feature/casos-expediente` (0320222). Cada tarea va en su rama `task/expediente-mejoras/<tarea>`.
+- **Rama:** `feature/expediente-mejoras`, que sale de `feature/casos-expediente` (puesta al día en 1cfd36f, con el ejecutor robusto). Cada tarea va en su rama `task/expediente-mejoras/<tarea>`.
 - **Objetivo (D-093):**
   - en las 40 de expediente, la peor de 3 por encima del 90 %, sin citas inventadas ni fugas; un título citado como si fuera texto de la página cuenta como cita inventada (D-050);
   - en las 216, sin bajar de la base nueva con todas las capacidades.
@@ -19,7 +19,7 @@
 
 ## 2. `verifyCitation` por lotes
 
-- **API:** `POST /v1/citations/verify` acepta también `{"citations": [{documentId, pageNumber, quote}, …]}`, con entre 1 y 20 citas, y devuelve `{"results": [{documentId, pageNumber, verified}, …]}` en el mismo orden. La forma de una sola cita sigue igual, por compatibilidad.
+- **API:** `POST /v1/citations/verify-batch` acepta `{"citations": [{documentId, pageNumber, quote}, …]}`, con entre 1 y 20 citas, y devuelve `{"results": [{documentId, pageNumber, verified}, …]}` en el mismo orden. `POST /v1/citations/verify`, la de una sola cita, sigue igual, por compatibilidad. Va en un endpoint aparte porque dos formas de entrada y de respuesta en la misma ruta dejan OpenAPI y los tipos generados ambiguos.
   - Cada cita se comprueba con la visibilidad de la persona, como hoy. Una cita de un documento que no ve sale como `verified: false`, sin distinguir si el documento existe.
   - El volumen entregado cuenta como hoy.
 - **MCP, `verifyCitation`:** acepta `citations` (una lista) y su descripción dice que se comprueben todas las citas de la respuesta en una sola llamada.
@@ -28,12 +28,28 @@
   - Esa frase va dirigida a la cita no literal de la medición.
 - **Pruebas:** un lote mezclado (exacta, inventada y de un documento invisible) devuelve tres resultados en orden; más de 20 citas dan 400; la forma de una sola cita sigue funcionando.
 
+### 2.1 Un título citado como texto de la página (E016)
+
+- **Qué pasó:** en la ejecución 2 de la fase B, E016 citó «Poliza seguro 2023» del documento 21845e1e, página 1.
+  - Ese texto es el título del documento, que la IA vio en los resultados de `searchKnowledge` o de `listDocuments`.
+  - No leyó ese documento con `readPage` ni comprobó la cita con `verifyCitation`. Las otras 8 citas sí las comprobó, y eran exactas.
+  - Así que el servidor no tuvo ocasión de decir que no: `verifyCitation` habría devuelto `false`, porque el título no está en el texto de la página.
+- **Qué se hace:**
+  - el lote de `verifyCitation` (apartado 2) abarata comprobar todas las citas de la respuesta en una llamada;
+  - la descripción de `verifyCitation` dice que se comprueben todas las citas, también las de documentos que no se han leído con `readPage`, y que una cita sin comprobar no se da;
+  - la descripción de `verifyCitation` dice que el título del documento no es texto de la página;
+  - la descripción de `searchKnowledge` dice que `title` es el nombre del documento y no se cita: se cita el extracto o el texto de la página.
+- **Lo que no se hace:** el servidor no ve la respuesta final de la IA, así que no puede impedir una cita que no se comprueba. No se añade un rechazo específico para los títulos: `verifyCitation` ya devuelve `false`.
+
 ## 3. Pertenencia al expediente
 
 - **MCP, `getCaseFile` y `readCaseFile`:** la descripción dice que un documento que cita el mismo número de caso pero no aparece en `getCaseFile` no forma parte del expediente. La IA no debe incluirlo, aunque puede mencionarlo aparte, diciendo que no está en el expediente.
 - **Pruebas:** la frase está en las dos descripciones. `INSTRUCTIONS` no cambia y se queda en 2.200 caracteres o menos.
 
-## 4. Medición (con el visto bueno del CEO antes de lanzar)
+## 4. Medición
+
+- **Plan de prueba con el formato de D-094:** `docs/superpowers/plans/2026-11-13-expediente-mejoras-prueba.md`. No se lanza sin que el propietario lo apruebe. Lo de abajo es el diseño original.
+
 
 - **Haiku, todas las capacidades,** tres ejecuciones de cada:
   - las 40 de expediente, con la pila con expedientes;
