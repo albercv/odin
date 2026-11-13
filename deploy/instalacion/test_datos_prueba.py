@@ -209,6 +209,26 @@ class LectoresTest(unittest.TestCase):
         self.assertTrue(self.lineas({})[0].startswith("Lector OCR sin configurar"))
 
 
+class ReintentarTest(unittest.TestCase):
+
+    def test_reintentaSoloLosFallidosDeTodasLasEmpresas(self):
+        documentos = {"c1": [{"id": "a", "status": "FAILED"}, {"id": "b", "status": "READY"}],
+                      "c2": [{"id": "c", "status": "FAILED"}]}
+        reintentos = []
+
+        class Api:
+            def admin(self, metodo, ruta, cuerpo=None, **opciones):
+                if ruta == "/v1/admin/companies":
+                    return [{"id": "c1"}, {"id": "c2"}]
+                if metodo == "POST":
+                    reintentos.append(ruta)
+                    return {}
+                return documentos[ruta.split("/")[4]] if "offset=0" in ruta else []
+
+        self.assertEqual(2, dp.reintentar_fallidos(Api()))
+        self.assertEqual(["/v1/admin/documents/a/retry", "/v1/admin/documents/c/retry"], reintentos)
+
+
 class CarpetaDeDatosTest(unittest.TestCase):
 
     def test_laInstalacionOdinUsaData(self):

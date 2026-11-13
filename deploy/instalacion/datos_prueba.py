@@ -243,8 +243,7 @@ def primer_arranque(api, entorno):
                          "Los datos de prueba se cargan en una instalación vacía: déjala vacía antes con\n"
                          "  make instalacion-reiniciar CONFIRMAR=BORRAR\n(hace copia de lo que hay en data/copias/).")
     api.arrancada = True
-    sesion, _ = api.pedir("POST", "/v1/admin/session", {"email": admin["email"], "password": admin["password"]})
-    api.cookie = sesion.headers["Set-Cookie"].split(";")[0]
+    entrar(api, admin)
     return admin
 
 
@@ -327,6 +326,20 @@ def subir_documentos(api, s, empresas, proyectos):
     extras = [] if s.completo else [subir(api, empresas["ribera"], ESCANEO, "Escaneo de prueba del lector OCR (texto "
                                           "ajeno a las comunidades)", tipo="image/png")[0]]
     return ids, extras, repetidos, [ids[r] for r in pdfs]
+
+
+def entrar(api, admin):
+    sesion, _ = api.pedir("POST", "/v1/admin/session", {"email": admin["email"], "password": admin["password"]})
+    api.cookie = sesion.headers["Set-Cookie"].split(";")[0]
+
+
+def reintentar_fallidos(api):
+    """Vuelve a mandar al lector los documentos fallidos de todas las empresas (tras actualizar el código)."""
+    fallidos = [d["id"] for c in api.admin("GET", "/v1/admin/companies") for d in listar_documentos(api, c["id"])
+                if d["status"] == "FAILED"]
+    for documento in fallidos:
+        api.admin("POST", f"/v1/admin/documents/{documento}/retry")
+    return len(fallidos)
 
 
 def listar_documentos(api, empresa, pagina=100):
@@ -547,6 +560,10 @@ def main():
         api.pedir("GET", "/v1/health")
     except (OSError, RuntimeError):
         raise SystemExit(f"La instalación no responde en {api.url}: arráncala con make up. No se ha cambiado nada.")
+    if "--reintentar-fallidos" in sys.argv:
+        entrar(api, leer_json(CREDENCIALES / "credenciales.local.json")["administrador"])
+        print(f"Documentos fallidos mandados de nuevo al lector: {reintentar_fallidos(api)}.")
+        return 0
     s = elegir_seleccion()
     print(f"Cargando datos de prueba en {api.url}. Tarda unos minutos.")
     try:
