@@ -160,6 +160,68 @@ Las respuestas esperadas salen de las claves del archivo ficticio. Odín debe ci
   - La ventana queda abierta todo el día. Para volver a la nocturna, se quita la línea `ODIN_TAGGER_WINDOW=always` de `deploy/.env` y se reinicia la API.
 - **Solo en este Mac.** Los enlaces de subida y los del original usan http://127.0.0.1:8088, así que solo abren en este equipo. Instalar en un cliente con varios equipos necesitará publicar el panel en la red local. Está anotado para entonces.
 
+## El lector OCR, tras reiniciar el Mac
+
+- **Qué es:** el lector OCR (Unlimited-OCR 2) no va en Docker. Corre en este Mac como un programa aparte, el puente OCR, en `127.0.0.1:8077`, sin red.
+- **Si el Mac se reinicia o el puente se para:** los escaneos nuevos se quedan en «Esperando al lector OCR» y se leen solos cuando vuelve. Lo demás funciona igual.
+- **Se paró el 13 de noviembre a las 18:17** y se volvió a arrancar a las 19:35. No había ningún escaneo esperando. Con una prueba leyó 2 páginas en 4,8 s, con un pico de 5,9 GB de memoria.
+- **Para comprobar que está en marcha,** este comando tiene que responder `200`:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8077/health
+```
+
+- **Para arrancarlo a mano,** separado de la Terminal: sigue en marcha aunque cierres la Terminal o Claude Desktop.
+
+```bash
+cd /Users/albercv/Documents/personalProjects/OCR/.worktrees/puente-odin && HF_HOME=/Users/albercv/Documents/personalProjects/OCR/.cache/huggingface HF_HUB_OFFLINE=1 UV_OFFLINE=1 nohup uv run python serve.py --quant 8 >> /Users/albercv/Documents/personalProjects/odin/data/puente-ocr.log 2>&1 < /dev/null &
+```
+
+- **Para pararlo:**
+
+```bash
+kill $(lsof -t -iTCP:8077 -sTCP:LISTEN)
+```
+
+- **Registro:** `odin/data/puente-ocr.log`.
+- **Depende de la carpeta `OCR/.worktrees/puente-odin`.** No la borres mientras el puente esté en uso.
+- **El etiquetado** usa Ollama, que también corre fuera de Docker. Si no está abierto, los documentos esperan su etiquetado. Para comprobarlo: `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:11434/api/tags`.
+
+### Propuesta para que decidas: arranque automático
+
+Un servicio de arranque (LaunchAgent) arrancaría el puente al iniciar tu sesión y lo volvería a levantar si se cae. Toca la configuración de tu usuario, así que **no está instalado**: lo decides tú.
+
+- **Qué sería:** el fichero `~/Library/LaunchAgents/com.e2d.odin.puente-ocr.plist`, con lo siguiente.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.e2d.odin.puente-ocr</string>
+  <key>WorkingDirectory</key><string>/Users/albercv/Documents/personalProjects/OCR/.worktrees/puente-odin</string>
+  <key>ProgramArguments</key>
+  <array><string>/opt/homebrew/bin/uv</string><string>run</string><string>python</string><string>serve.py</string><string>--quant</string><string>8</string></array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HF_HOME</key><string>/Users/albercv/Documents/personalProjects/OCR/.cache/huggingface</string>
+    <key>HF_HUB_OFFLINE</key><string>1</string>
+    <key>UV_OFFLINE</key><string>1</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/albercv/Documents/personalProjects/odin/data/puente-ocr.log</string>
+  <key>StandardErrorPath</key><string>/Users/albercv/Documents/personalProjects/odin/data/puente-ocr.log</string>
+</dict>
+</plist>
+```
+
+- **Cómo se activaría:** `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.e2d.odin.puente-ocr.plist`. Antes hay que parar el puente arrancado a mano, porque los dos usarían el puerto 8077.
+- **Cómo se quitaría:** `launchctl bootout gui/$(id -u)/com.e2d.odin.puente-ocr` y borrar el fichero.
+- **A tener en cuenta:**
+  - el puente ocupa memoria mientras lee, unos 6 GB de pico;
+  - con `KeepAlive`, si lo paras con `kill` vuelve a arrancar: para pararlo de verdad, usa `bootout`.
+
 ## Volver atrás
 
 - **Si la orden falla,** vuelve sola a la copia.
