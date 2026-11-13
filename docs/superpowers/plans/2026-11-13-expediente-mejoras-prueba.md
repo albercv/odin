@@ -36,7 +36,7 @@
 
 ## 3. Commit y datos
 
-- **Commit:** `feature/expediente-mejoras` en `<COMMIT>`, que se fija al terminar la construcción, con `make check` y `make demo` en verde y la revisión aprobada.
+- **Commit:** `feature/expediente-mejoras` en `f5b4dd2`. Ahí están el código, con `make check` y `make demo` en verde y la revisión final aplicada, y la comprobación previa. Los commits posteriores solo cambian documentación.
 - **Carpeta de resultados:** `experimentos/2026-11-12-archivo-ficticio/resultados/2026-11-NN-d093-*`, con su `ORIGEN.txt` (commit, modelo, batería y fecha).
 - **Referencia de consumo (`REFERENCIA`):** va en `experimentos/2026-11-12-archivo-ficticio/estado/` (ya ignorada por git), por ejemplo `estado/referencia-d093.json`, para que la guarda de checkout limpio no la bloquee.
 
@@ -45,7 +45,7 @@
 Todo esto se hace antes de gastar nada. Si un paso falla, no se lanza.
 
 1. **Código:**
-   - el checkout está en `<COMMIT>`, sin cambios (`git status` vacío);
+   - el checkout está en `f5b4dd2` o en un commit posterior que solo cambie documentación, sin cambios (`git status` vacío);
    - en `medir/` y `pila/`, `python3 -m unittest` sale en verde. Esas pruebas incluyen los eventos mal formados y la excepción del ejecutor: el ejecutor no se para entero y distingue un error de una respuesta errónea.
 2. **Pila y datos:**
    - `pila/pila.sh up`, la carga con todas las capacidades y, para las 40, `cargar_expedientes.py --marcar-casos`;
@@ -55,6 +55,21 @@ Todo esto se hace antes de gastar nada. Si un paso falla, no se lanza.
      - que los documentos están cargados: el número de documentos y de expedientes del manifiesto;
      - que buscar el número de caso de E016 trae su ficha de caso con `caseDocument: true`;
      - que `verifyCitation` por lotes da `true` con una cita exacta y `false` con el título «Poliza seguro 2023».
+
+### 4.1 Comprobación previa ya hecha contra la pila real (2026-11-13, sin IA)
+
+- `medir/comprobar.py --expedientes` sale con 0, con la pila de medición cargada con expedientes:
+  - capacidades y las 15 herramientas, con `citations` en `verifyCitation`;
+  - 1.334 documentos READY y 20 fotos sin lector (PENDING_READER): la pila de medición no tiene OCR, igual que en las referencias;
+  - 12 expedientes;
+  - la ficha del caso de E016 sale con `caseDocument: true`;
+  - el lote de citas da `[true, false]`, es decir, el título no se verifica.
+- **Hallazgo:**
+  - Ninguna de las 4 formas del número que usan las preguntas encuentra la ficha del caso de E016: «expte. 2024/530», «exp. 530/24», «su referencia 530» y «expediente nº 530».
+  - La ficha dice «Caso 2024-530», y el analizador de PostgreSQL lo parte en '2024' y '-530', con el guion como signo. Así que «530» no coincide.
+  - Buscando «Calle Pino 26 expediente 530» sale marcada la ficha de otro caso, el 2025/211.
+  - La búsqueda tampoco mira los títulos.
+  - Con esto, la mejora 1 no puede guiar a `getCaseFile` cuando la IA busca el caso por su número. Ver la sección 7.
 
 ## 5. Prueba de humo (D-094 punto 4)
 
@@ -93,6 +108,10 @@ Las cifras salen de lo medido con el mismo método.
   - Las mejoras empujan a usar más `getCaseFile`, y una pregunta de expediente que lo usa cuesta más (mediana de 0,0166 frente a 0,0049 de una suelta).
   - Los lotes de `verifyCitation` bajan el número de llamadas: hoy la mediana es de 4 por pregunta, y hasta 23.
   - La prueba de humo mide el efecto neto antes de la tanda (sección 5).
+- **Riesgo para la hipótesis (hallazgo de 4.1):**
+  - Si la IA busca el caso por el número de la pregunta, no ve la ficha, así que tampoco ve `caseDocument: true`. Puede llegar a `getCaseFile` por `listDocuments` con `caseDocument`, como en la tarea 9, pero no por la mejora 1.
+  - La prueba de humo lo detectaría si menos de 3 de las 5 preguntas usan `getCaseFile`, con un gasto de unos 0,06 USD.
+  - **Recomendación técnica:** antes de gastar la medición de la semana, arreglar cómo se indexan los números con guion («2024-530»). Es otra hipótesis, que se comprueba sin IA: `comprobar.py` diría «la encuentran 4 de 4 formas», y la batería de búsqueda del CTO 3 lo mediría. La decisión es del propietario.
 - **Tiempo:** la base nueva tardó 35 minutos en dos ejecuciones y media de las 216. Con eso, estimo unos 60 minutos para toda la prueba. Es una estimación, no una medición.
 
 ## 8. Al terminar: resumen de 5 líneas (D-094 punto 7)
@@ -110,3 +129,5 @@ Las cifras salen de lo medido con el mismo método.
 - El expediente grande de Valtierno (CTO 3).
 - Q153 con IA.
 - Reanudar la ejecución 2 de la base nueva.
+- Los números con guion en la búsqueda («2024-530»; sección 4.1).
+- Que la búsqueda tenga en cuenta los títulos de los documentos.
