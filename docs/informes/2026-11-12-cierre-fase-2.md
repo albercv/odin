@@ -82,7 +82,8 @@ Desde lo medido (785f1d1) no ha cambiado código del producto: solo los scripts 
 | **Cierre, peor de tres** | **204** | **94,4** | **7** | **0** | **0** |
 
 **Las mediciones no son del todo comparables:**
-- Desde 9f17be8, la batería deja a la IA usar todas las herramientas de lectura del trabajador. Antes solo podía usar `listProjects`, `listDocuments`, `searchKnowledge`, `readPage` y `verifyCitation`. Las nuevas son `findSimilarCases`, `listMyKnowledgeCards` y `listMyQuestions`.
+- Desde 9f17be8, el ejecutor de la batería permite a la IA las herramientas de lectura del trabajador. Antes solo eran `listProjects`, `listDocuments`, `searchKnowledge`, `readPage` y `verifyCitation`; se añadieron `findSimilarCases`, `listMyKnowledgeCards` y `listMyQuestions`.
+  - **Corrección del 2026-11-13:** `findSimilarCases` no estuvo disponible en ninguna ejecución, aunque el ejecutor la permitía. La pila de medición (`pila/cargar.py`) crea las empresas solo con `SEARCH_KNOWLEDGE` y `SAVE_KNOWLEDGE_CARD`, y el conector solo ofrece las herramientas de las capacidades de la empresa. Las preguntas de casos parecidos (13/13) se respondieron sin esa herramienta. Las cifras de este informe son válidas para lo que se midió, pero no representan la instalación del propietario, que tiene todas las capacidades. La nueva línea base con todas las capacidades está pendiente (D-065 y D-088).
 - Las mediciones anteriores eran de una sola ejecución; la de cierre es la peor de tres.
 - Para «sustituido como vigente», el puntuador cuenta ahora solo las sustituciones enteras, no los anexos. Las mediciones anteriores se volvieron a puntuar con ese criterio.
 
