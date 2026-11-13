@@ -57,6 +57,7 @@ COMUNIDADES = {
     "albar": ["c3-avenida-del-muelle-33", "c3-avenida-del-puerto-14"],
 }
 ABIERTO = {"ribera": "procedimientos-generales"}
+CAPACIDADES = ["SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES"]
 # clave, trabajador del archivo del que salen el nombre y la empresa, proyectos ("*": todos los de su empresa)
 TRABAJADORES = [("marta", "t01", ["*"]), ("javier", "t02", ["c1-calle-pino-26", "c1-calle-roble-46"]),
                 ("ignacio", "t06", ["*"])]
@@ -251,8 +252,7 @@ def crear_empresas(api, s):
     ids, temas = {}, {}
     for e in s.empresas:
         cid = api.admin("POST", "/v1/admin/companies", {"name": e["nombre"], "code": e["codigo"]})["id"]
-        api.admin("PUT", f"/v1/admin/companies/{cid}/capabilities",
-                  {"capabilities": ["SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES"]})
+        api.admin("PUT", f"/v1/admin/companies/{cid}/capabilities", {"capabilities": CAPACIDADES})
         temas[e["clave"]] = {t["name"]: api.admin("POST", f"/v1/admin/companies/{cid}/topics", t)["id"]
                              for t in leer_json(TEMAS)}
         ids[e["clave"]] = cid
@@ -468,10 +468,17 @@ def cargar_expedientes_si_hay(api, s, empresas, documentos):
     ruta = f"/v1/admin/companies/{empresas[caso['empresa']]}/cases/{documentos[caso['ruta']]}/file"
     if api.pedir("GET", ruta, esperado=range(100, 600))[0].status == 404:
         return "Expedientes: esta API no los tiene (404): no se cargan."
+    dar_expedientes(api, empresas)
     import cargar_expedientes
     cuentas = cargar_expedientes.cargar_expedientes(api, documentos, leer_json(ARCHIVO / "expedientes.json"), ARCHIVO,
                                                    guardar=lambda mapa: escribir_mapa(CREDENCIALES, mapa))
     return resumen_expedientes(cuentas)
+
+
+def dar_expedientes(api, empresas):
+    """Las empresas se crean sin la capacidad «Expedientes» (CASE_FILES): sin ella el conector no enseña sus herramientas."""
+    for cid in empresas.values():
+        api.admin("PUT", f"/v1/admin/companies/{cid}/capabilities", {"capabilities": CAPACIDADES + ["CASE_FILES"]})
 
 
 def resumen_expedientes(cuentas):
