@@ -35,7 +35,7 @@ echo "MCP copiado en $DESTINO."
 # SOLO_COPIA=si (al actualizar): Claude Desktop ya apunta a esta copia; no se cambia su trabajador ni su clave
 [ "${SOLO_COPIA:-}" = si ] && { echo "Conector de Claude Desktop sin cambios: sigue con el mismo trabajador."; exit 0; }
 # Claude Desktop reescribe su configuración desde memoria: si está abierto, puede deshacer este registro
-[ "$CONFIG" = "$HOME/Library/Application Support/Claude/claude_desktop_config.json" ] && pgrep -xq Claude \
+[ "$CONFIG" = "$HOME/Library/Application Support/Claude/claude_desktop_config.json" ] && ps -axo comm= | grep -q '/Claude.app/Contents/MacOS/Claude$' \
   && echo "AVISO: Claude Desktop está abierto y puede volver a la configuración anterior al guardar sus preferencias." \
      "Ciérralo del todo (Cmd+Q), vuelve a lanzar esta orden y ábrelo después." >&2
 python3 deploy/instalacion/claude_desktop.py --config "$CONFIG" --credenciales "$CREDENCIALES" \
