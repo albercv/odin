@@ -94,6 +94,10 @@ describe('case file tools', () => {
     expect(description).toContain('resumir');
     expect(description).toContain('pendientes de lectura');
     expect(description).toContain('pendingDocuments');
+    expect(description).toContain('unreadableDocuments');
+    expect(description).toContain('no se pudieron leer');
+    expect(description).toContain('sin texto');
+    expect(description).toContain('openOriginal');
   });
 
   it('caseFileToolsNeedCaseFilesCapability', async () => {

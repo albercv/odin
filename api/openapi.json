@@ -3812,9 +3812,13 @@
           "pendingDocuments" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "unreadableDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         },
-        "required" : [ "caseDocument", "documents", "pendingDocuments" ]
+        "required" : [ "caseDocument", "documents", "pendingDocuments", "unreadableDocuments" ]
       },
       "CaseFileTextPageView" : {
         "type" : "object",
@@ -3873,9 +3877,13 @@
           "pendingDocuments" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "unreadableDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         },
-        "required" : [ "complete", "documentsRead", "documentsTotal", "pages", "pagesRead", "pagesTotal", "pendingDocuments" ]
+        "required" : [ "complete", "documentsRead", "documentsTotal", "pages", "pagesRead", "pagesTotal", "pendingDocuments", "unreadableDocuments" ]
       },
       "AdminMe" : {
         "type" : "object",

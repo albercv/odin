@@ -64,7 +64,7 @@ public class ReadCaseFile {
         boolean complete = position >= total;
         return new CaseFileText(pages, complete ? Optional.empty() : Optional.of(cursorAt(sources, position)),
                 complete, documentsRead(sources, position), sources.size(), position, total,
-                view.pendingDocuments());
+                view.pendingDocuments(), view.unreadableDocuments());
     }
 
     private CaseFileTextPage pageAt(CaseFileAccess access, List<Source> sources, int position) {
