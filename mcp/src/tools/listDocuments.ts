@@ -51,6 +51,7 @@ export function registerListDocuments(server: McpServer, api: ApiClient, project
 
 async function listed(api: ApiClient, projects: ProjectNames, projectId?: string, topicId?: string, caseDocument?: boolean) {
   const { documents, truncated } = await collectDocuments(api, projectId, topicId, caseDocument);
+  await projects.refreshFor(documents.map((d) => d.projectId));
   return { documents: documents.map((d) => ({ ...d, projectName: projects.nameOf(d.projectId) })), truncated };
 }
 
