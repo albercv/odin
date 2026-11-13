@@ -1,6 +1,8 @@
 import json
+import os
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import anadir_proyecto as ap
@@ -206,6 +208,32 @@ class CredencialesTest(unittest.TestCase):
         cred = ap.con_proyecto(json.loads(json.dumps(CREDENCIALES)), ["marta"], "Residencial Mirador")
         self.assertEqual(["Calle Olmo 14", "Residencial Mirador"], cred["trabajadores"]["marta"]["proyectos"])
         self.assertEqual(["Calle Pino 26"], cred["trabajadores"]["javier"]["proyectos"])
+
+
+class MainTest(unittest.TestCase):
+    """D-099: la orden comprueba los puertos y la confirmación antes de leer los datos o conectar."""
+
+    def lanzar(self, puerto, proyecto, argv_extra=()):
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as env:
+            env.write(f"ODIN_API_PORT={puerto}\nODIN_PANEL_PORT=38088\nODIN_MCP_PORT=38090\n")
+        cambios = {"INSTALACION_ENV": env.name, "INSTALACION_PROYECTO": proyecto, "CONFIRMAR_INSTALACION": None}
+        with unittest.mock.patch.dict(os.environ, {k: v for k, v in cambios.items() if v}):
+            os.environ.pop("CONFIRMAR_INSTALACION", None)
+            try:
+                with self.assertRaises((SystemExit, FileNotFoundError)) as parada:  # sin parar, llega a leer /no/existe
+                    ap.main([*argv_extra, "/no/existe"])
+            finally:
+                os.unlink(env.name)
+        return str(getattr(parada.exception, "code", parada.exception))
+
+    def test_unEnsayoQueApuntaAlPropietarioParaAntesDeLeerNada(self):
+        self.assertIn("puertos de la instalación del propietario", self.lanzar(8080, "odin-ensayo"))
+
+    def test_escribirEnLaDelPropietarioSinConfirmarParaAntesDeLeerNada(self):
+        self.assertIn("CONFIRMAR_INSTALACION=PROPIETARIO", self.lanzar(8080, "odin"))
+
+    def test_comprobarEnLaDelPropietarioNoPideConfirmacion(self):
+        self.assertNotIn("CONFIRMAR_INSTALACION", self.lanzar(8080, "odin", ["--comprobar"]))
 
 
 if __name__ == "__main__":

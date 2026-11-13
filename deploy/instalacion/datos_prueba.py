@@ -562,8 +562,25 @@ def conectar(entorno):
     return api
 
 
+PUERTOS_PROPIETARIO = {"8080", "8088", "8090"}  # API, panel y MCP de la instalación del propietario
+
+
+def proteger_propietario(entorno, proyecto, escribe):
+    """D-099: una pila de ensayo nunca usa los puertos del propietario, y escribir en su instalación pide
+    CONFIRMAR_INSTALACION=PROPIETARIO. Las órdenes de instalación lo ponen después de su propia confirmación."""
+    puertos = {entorno.get("ODIN_API_PORT", "8080"), entorno.get("ODIN_PANEL_PORT", "8088"),
+               entorno.get("ODIN_MCP_PORT", "8090")} & PUERTOS_PROPIETARIO
+    if proyecto != "odin" and puertos:
+        raise SystemExit(f"La pila «{proyecto}» apunta a puertos de la instalación del propietario ({sorted(puertos)}). "
+                         "No se ha cambiado nada.")
+    if proyecto == "odin" and escribe and os.environ.get("CONFIRMAR_INSTALACION") != "PROPIETARIO":
+        raise SystemExit("Esto escribe en la instalación del propietario: hace falta CONFIRMAR_INSTALACION=PROPIETARIO, "
+                         "con su permiso. No se ha cambiado nada.")
+
+
 def main():
     entorno = leer_entorno(PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
+    proteger_propietario(entorno, os.environ.get("INSTALACION_PROYECTO", "odin"), escribe=True)
     api = conectar(entorno)
     if "--reintentar-fallidos" in sys.argv:
         entrar(api, leer_json(CREDENCIALES / "credenciales.local.json")["administrador"])
