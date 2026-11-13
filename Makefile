@@ -1,4 +1,4 @@
-.PHONY: instalacion-desplegar instalacion-actualizar setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
+.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -63,3 +63,7 @@ instalacion-desplegar:
 
 instalacion-actualizar:
 	@CONFIRMAR="$(CONFIRMAR)" MODO=actualizar CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
+
+# Añade un proyecto nuevo sin vaciar (encargo 14): make instalacion-anadir-proyecto DATOS_PROYECTO=<carpeta> CONFIRMAR=ANADIR
+instalacion-anadir-proyecto:
+	@DATOS_PROYECTO="$(DATOS_PROYECTO)" CONFIRMAR="$(CONFIRMAR)" MIEMBROS="$(or $(MIEMBROS),marta)" deploy/instalacion/cerrojo.sh deploy/instalacion/anadir-proyecto.sh
