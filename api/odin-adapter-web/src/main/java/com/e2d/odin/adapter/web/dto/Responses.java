@@ -565,4 +565,10 @@ public final class Responses {
 
     public record Verification(boolean verified) {
     }
+
+    public record VerificationResult(UUID documentId, int pageNumber, boolean verified) {
+    }
+
+    public record Verifications(List<VerificationResult> results) {
+    }
 }

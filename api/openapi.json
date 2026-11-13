@@ -514,6 +514,34 @@
         }
       }
     },
+    "/v1/citations/verify-batch" : {
+      "post" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "verifyBatch",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VerifyCitations"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Verifications"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cases/{caseId}/upload-links" : {
       "post" : {
         "tags" : [ "case-file-controller" ],
@@ -2973,6 +3001,46 @@
           }
         },
         "required" : [ "verified" ]
+      },
+      "VerifyCitations" : {
+        "type" : "object",
+        "properties" : {
+          "citations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VerifyCitation"
+            }
+          }
+        }
+      },
+      "VerificationResult" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "pageNumber" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "verified" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "documentId", "pageNumber", "verified" ]
+      },
+      "Verifications" : {
+        "type" : "object",
+        "properties" : {
+          "results" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VerificationResult"
+            }
+          }
+        },
+        "required" : [ "results" ]
       },
       "CaseFileDocumentsRequest" : {
         "type" : "object",

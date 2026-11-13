@@ -86,6 +86,7 @@ class DeliveryMeteringFilterTest extends WebTestSupport {
         assertThat(WorkerRoutes.isWorkerPath("/v1/me")).isTrue();
         assertThat(WorkerRoutes.isWorkerPath("/v1/me/cards")).isTrue();
         assertThat(WorkerRoutes.isWorkerPath("/v1/citations/verify")).isTrue();
+        assertThat(WorkerRoutes.toolFor("POST", "/v1/citations/verify-batch")).contains(WorkerTool.VERIFY_CITATION);
     }
 
     @Test

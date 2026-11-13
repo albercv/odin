@@ -135,6 +135,33 @@ class WorkerApiTest extends WebTestSupport {
                 .content(quote.formatted("vacaciones son 23"))).andExpect(jsonPath("$.verified").value(false));
     }
 
+    @Test
+    void verifiesCitationsInBatch() throws Exception {
+        CompanyId company = newCompany();
+        String key = workerKey(company);
+        Document doc = Fixtures.readyDocument(w.docs, company, "Las vacaciones son 22 días");
+        String id = doc.id().value().toString();
+        String body = "{\"citations\":[{\"documentId\":\"" + id + "\",\"pageNumber\":1,\"quote\":\"vacaciones son 22\"},"
+                + "{\"documentId\":\"" + id + "\",\"pageNumber\":1,\"quote\":\"vacaciones son 23\"}]}";
+        mvc.perform(post("/v1/citations/verify-batch").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content(body)).andExpect(status().isOk()).andExpect(jsonPath("$.results", hasSize(2)))
+                .andExpect(jsonPath("$.results[0].documentId").value(id))
+                .andExpect(jsonPath("$.results[0].pageNumber").value(1))
+                .andExpect(jsonPath("$.results[0].verified").value(true))
+                .andExpect(jsonPath("$.results[1].verified").value(false));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "{\"citations\":[]}", "TWENTY_ONE",
+        "{\"citations\":[{\"documentId\":\"00000000-0000-0000-0000-000000000001\",\"pageNumber\":1}]}"})
+    void invalidBatchIs400(String body) throws Exception {
+        String one = "{\"documentId\":\"00000000-0000-0000-0000-000000000001\",\"pageNumber\":1,\"quote\":\"q\"}";
+        String content = "TWENTY_ONE".equals(body)
+                ? "{\"citations\":[" + String.join(",", java.util.Collections.nCopies(21, one)) + "]}" : body;
+        mvc.perform(post("/v1/citations/verify-batch").header(AUTH, workerKey(newCompany()))
+                .contentType(MediaType.APPLICATION_JSON).content(content)).andExpect(status().isBadRequest());
+    }
+
     private KnowledgeCard cardOf(UserId author, CompanyId company, String title, CardStatus status, long minutes) {
         KnowledgeCard card = new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), title,
                 "Texto " + title, Optional.empty(), author, Fixtures.NOW.plusSeconds(60 * minutes), status,

@@ -292,11 +292,25 @@ describe('buildServer', () => {
     expect(textOf(result)).toContain(message);
   });
 
+  it('verifyCitationChecksBatchInOrderAndValidatesSize', async () => {
+    const cite = (n: number) => ({ documentId: `d${n}`, pageNumber: n, quote: `q${n}` });
+    const client = await connect((r) => r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { results: [
+      { documentId: 'd1', pageNumber: 1, verified: true }, { documentId: 'd2', pageNumber: 2, verified: false }] } });
+    const ok = JSON.parse(textOf(await client.callTool({ name: 'verifyCitation', arguments: { citations: [cite(1), cite(2)] } })));
+    expect(ok.results).toEqual([{ ...cite(1), verified: true }, { ...cite(2), verified: false }]);
+    for (const n of [0, 21]) {
+      const bad = await client.callTool({ name: 'verifyCitation', arguments: { citations: Array.from({ length: n }, (_, i) => cite(i + 1)) } });
+      expect(bad.isError).toBe(true);
+    }
+    const tool = (await client.listTools()).tools.find((t) => t.name === 'verifyCitation');
+    expect(tool?.description).toContain('Comprueba en una sola llamada todas las citas literales de tu respuesta (de 1 a 20), también las de documentos que no hayas leído con readPage. Devuelve verified para cada una, en el mismo orden. Si una da false, no la uses; una cita sin comprobar no se da. El título del documento no es texto de la página: solo vale lo que aparece en el texto.');
+  });
+
   it('revokedKeyMidSessionReturnsError', async () => {
     let revoked = false;
-    const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : revoked ? { status: 401, body: { detail: 'x' } } : { status: 200, body: { verified: true } }));
-    const args = { documentId: 'd1', pageNumber: 1, quote: 'q' };
-    expect(JSON.parse(textOf(await client.callTool({ name: 'verifyCitation', arguments: args }))).verified).toBe(true);
+    const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : revoked ? { status: 401, body: { detail: 'x' } } : { status: 200, body: { results: [{ documentId: 'd1', pageNumber: 1, verified: true }] } }));
+    const args = { citations: [{ documentId: 'd1', pageNumber: 1, quote: 'q' }] };
+    expect(JSON.parse(textOf(await client.callTool({ name: 'verifyCitation', arguments: args }))).results[0].verified).toBe(true);
     revoked = true;
     const result = await client.callTool({ name: 'verifyCitation', arguments: args });
     expect(result.isError).toBe(true);
