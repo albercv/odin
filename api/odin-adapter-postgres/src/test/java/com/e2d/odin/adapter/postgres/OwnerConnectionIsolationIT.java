@@ -125,6 +125,22 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     }
 
     @Test
+    void withdrawnDocumentIsHiddenThroughAConnectionThatBypassesRls() {
+        docs.markWithdrawal(documentOfA.withWithdrawal(Optional.of(NOW), Optional.of(documentOfA.uploadedBy())));
+        CompanyScope scope = CompanyScope.of(a);
+        ProjectVisibility all = ProjectVisibility.all();
+
+        assertThat(ownerDocs.findEntry(scope, all, documentOfA.id())).isEmpty();
+        assertThat(ownerDocs.findPage(scope, all, documentOfA.id(), 1)).isEmpty();
+        assertThat(ownerDocs.list(scope, all, Optional.empty(), Optional.empty(), 0, 10)).isEmpty();
+        assertThat(ownerSearch.search(new SearchQuery(List.of("filtración"), scope, all, Optional.empty(), 10,
+                pendingAuthor)).hits()).extracting(h -> h.sourceId()).doesNotContain(documentOfA.id().value());
+        assertThat(ownerSearch.findSimilarCases(new SimilarCasesQuery(List.of("filtración"), scope, all,
+                Optional.empty(), 10, pendingAuthor)).cases()).extracting(c -> c.sourceId())
+                .doesNotContain(documentOfA.id().value());
+    }
+
+    @Test
     void scopeOfBReadsNothingOfAThroughAConnectionThatBypassesRls() {
         assertThat(readEverything(CompanyScope.of(b))).isZero();
     }

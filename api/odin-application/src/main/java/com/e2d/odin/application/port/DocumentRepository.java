@@ -27,6 +27,17 @@ public interface DocumentRepository {
 
     Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id);
 
+    /** Como {@link #findEntry}, pero también encuentra los retirados: solo para retirarlos y recuperarlos. */
+    Optional<DocumentEntry> findEntryIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility,
+            DocumentId id);
+
+    /** Escribe solo la retirada del documento. Al recuperar, si hay otro igual sin retirar en su proyecto, 409. */
+    void markWithdrawal(Document document);
+
+    /** La lista del administrador con los retirados incluidos (se distinguen por {@code withdrawnAt}). */
+    List<DocumentEntry> listIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
+            int limit);
+
     /** Pone la marca de sustituido con su propia orden: {@link #save} no la escribe ni la borra. */
     void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at);
 
