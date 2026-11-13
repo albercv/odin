@@ -9,8 +9,6 @@ export type SimilarCasesResponse = components['schemas']['SimilarCasesResponse']
 export type Hit = components['schemas']['Hit'];
 export type SearchRequest = components['schemas']['SearchRequest'];
 export type SearchResponse = components['schemas']['SearchResponse'];
-export type VerifyCitationRequest = components['schemas']['VerifyCitation'];
-export type Verification = components['schemas']['Verification'];
 export type VerifyCitationsRequest = components['schemas']['VerifyCitations'];
 export type Verifications = components['schemas']['Verifications'];
 export type MyCard = components['schemas']['MyCardView'];
@@ -42,7 +40,6 @@ export interface ApiClient {
   ): Promise<WorkerDocumentView[]>;
   similarCases(body: SimilarCasesRequest): Promise<SimilarCasesResponse>;
   readPage(documentId: string, pageNumber: number): Promise<Page>;
-  verifyCitation(body: VerifyCitationRequest): Promise<Verification>;
   verifyCitations(body: VerifyCitationsRequest): Promise<Verifications>;
   saveCard(body: SaveCardRequest): Promise<SavedCard>;
   myCards(status?: string): Promise<MyCard[]>;
@@ -76,7 +73,6 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
       ),
     similarCases: (body) => call('POST', '/v1/similar-cases', body),
     readPage: (documentId, pageNumber) => call('GET', `/v1/documents/${enc(documentId)}/pages/${pageNumber}`),
-    verifyCitation: (body) => call('POST', '/v1/citations/verify', body),
     verifyCitations: (body) => call('POST', '/v1/citations/verify-batch', body),
     saveCard: (body) => call('POST', '/v1/cards', body),
     myCards: (status) => call('GET', `/v1/me/cards${status ? `?status=${enc(status)}` : ''}`),

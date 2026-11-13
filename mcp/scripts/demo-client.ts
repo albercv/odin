@@ -89,7 +89,7 @@ async function withMcp<T>(key: string, run: (call: (name: string, args: object) 
   await client.connect(transport);
   try {
     return await run(async (name, args) => {
-      const res = await client.callTool({ name, arguments: args });
+      const res = await client.callTool({ name, arguments: args as Record<string, unknown> });
       const text = (res.content as { text: string }[])[0]?.text ?? '';
       if (res.isError) throw new Error(`${name}: ${text}`);
       return text;

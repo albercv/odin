@@ -187,7 +187,7 @@ describe('case file tools', () => {
 
   it('descriptionsGuideTowardsCaseFile', async () => {
     const A = 'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage.';
-    const B = 'caseDocument true marca la ficha de un caso: si la pregunta trata de un caso o de un expediente, llama a getCaseFile con ese documentId como caseId antes de responder.';
+    const B = 'caseDocument true marca el documento ficha de un caso: si la pregunta trata de un caso o de un expediente, llama a getCaseFile con ese documentId como caseId antes de responder.';
     const C = 'Úsala siempre que la pregunta nombre un caso o un número de expediente; si no tienes su caseId, busca antes la ficha del caso con searchKnowledge (caseDocument true).';
     const D = 'Un documento que cita el mismo número de caso pero no está en getCaseFile no forma parte del expediente: no lo incluyas; si lo mencionas, di aparte que no está en el expediente.';
     const search = await descriptionOf('searchKnowledge');
@@ -195,6 +195,18 @@ describe('case file tools', () => {
     const get = await descriptionOf('getCaseFile');
     expect([C, D].filter((x) => !get.includes(x))).toEqual([]);
     expect(await descriptionOf('readCaseFile')).toContain(D);
+  });
+
+  it('searchKnowledgeHasNoCaseFileHintWithoutCapability', async () => {
+    fake = await startFakeApi(() => meWith(['SEARCH_KNOWLEDGE']));
+    const server = await buildServer(createApiClient(fake.url, 'clave'));
+    const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test', version: '1' });
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    const search = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge')?.description ?? '';
+    expect(search).toContain('title es el nombre del documento');
+    expect(search).not.toContain('caseDocument');
+    expect(search).not.toContain('getCaseFile');
   });
 
   it('instructionsStayWithinBudget', () => {

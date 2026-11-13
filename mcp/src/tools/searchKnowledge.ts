@@ -15,14 +15,17 @@ const DESCRIPTION =
   'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena. ' +
   'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas. ' +
   'Si una ficha dice algo distinto que un documento, cita las dos. ' +
-  'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage. ' +
-  'caseDocument true marca la ficha de un caso: si la pregunta trata de un caso o de un expediente, llama a getCaseFile con ese documentId como caseId antes de responder.';
+  'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage.';
 
-export function registerSearchKnowledge(server: McpServer, api: ApiClient, projects: ProjectNames): void {
+// getCaseFile solo existe con la capacidad CASE_FILES: sin ella la pista llevaría a una herramienta que no está.
+const CASE_FILE_HINT =
+  ' caseDocument true marca el documento ficha de un caso: si la pregunta trata de un caso o de un expediente, llama a getCaseFile con ese documentId como caseId antes de responder.';
+
+export function registerSearchKnowledge(server: McpServer, api: ApiClient, projects: ProjectNames, caseFiles: boolean): void {
   server.registerTool(
     'searchKnowledge',
     {
-      description: DESCRIPTION,
+      description: caseFiles ? DESCRIPTION + CASE_FILE_HINT : DESCRIPTION,
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto; también incluye lo que no tiene proyecto'),
