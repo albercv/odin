@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web;
 
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.GetDocument;
@@ -297,6 +298,11 @@ public class TestWiring {
 
     @Bean MarkCaseDocuments markCaseDocuments() {
         return new MarkCaseDocuments(docs, caseFiles, clock);
+    }
+
+    @Bean ReadCaseFile readCaseFile() {
+        return new ReadCaseFile(orgs, projectMembers, docs, caseFiles,
+                new com.e2d.odin.application.shared.CaseFileSettings());
     }
 
     @Bean GetCaseFile getCaseFile() {

@@ -8,6 +8,7 @@ import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.shared.CaseFileSettings;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -51,5 +52,9 @@ final class CaseFileWorld {
 
     RemoveFromCaseFile removeFromCaseFile() {
         return new RemoveFromCaseFile(orgs, members, docs, files, ids, clock);
+    }
+
+    ReadCaseFile readCaseFile(int chunkChars) {
+        return new ReadCaseFile(orgs, members, docs, files, new CaseFileSettings(chunkChars));
     }
 }

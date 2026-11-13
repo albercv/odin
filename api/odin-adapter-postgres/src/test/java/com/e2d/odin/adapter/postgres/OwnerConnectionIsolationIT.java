@@ -118,6 +118,27 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
         assertThat(ownerFiles.events(CompanyScope.of(a), none, theCase.id())).isEmpty();
     }
 
+    @Test
+    void searchInsideACaseOfAnInvisibleProjectFindsNothingThroughAConnectionThatBypassesRls() {
+        ProjectId project = newProject(a, "Cerrado");
+        UserId user = newUser(a);
+        Document theCase = projectDocument(project, user).withCaseDocument(true);
+        Document general = newDocument(a, user, "Anexo general", DocumentStatus.READY);
+        docs.save(theCase);
+        docs.markCaseDocuments(a, Set.of(theCase.id()), true);
+        docs.replacePages(theCase.id(), List.of(new DocumentPage(theCase.id(), 1, "baliza de la ficha", "l", "1")));
+        docs.replacePages(general.id(), List.of(new DocumentPage(general.id(), 1, "baliza del anexo", "l", "1")));
+        new PostgresCaseFileRepository(tx).add(new CaseFileEntry(a, theCase.id(), general.id(), user, NOW));
+
+        assertThat(caseSearch(ProjectVisibility.of(Set.of()), theCase.id())).isEmpty();
+        assertThat(caseSearch(ProjectVisibility.of(Set.of(project)), theCase.id())).hasSize(2);
+    }
+
+    private List<?> caseSearch(ProjectVisibility visibility, DocumentId caseId) {
+        return ownerSearch.search(new SearchQuery(List.of("baliza"), CompanyScope.of(a), visibility, Optional.empty(),
+                10, newUser(a), Optional.of(caseId))).hits();
+    }
+
     private Document projectDocument(ProjectId project, UserId user) {
         return new Document(new DocumentId(UUID.randomUUID()), a, Optional.of(project), "Doc", "f.pdf",
                 DocumentFormat.PDF, UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(), true, user,

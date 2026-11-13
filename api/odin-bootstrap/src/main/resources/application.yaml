@@ -28,6 +28,7 @@ odin:
   panel-origin: ${ODIN_PANEL_ORIGIN:}
   originals-dir: ${ODIN_ORIGINALS_DIR}
   upload-max-bytes: ${ODIN_UPLOAD_MAX_BYTES:52428800}
+  case-file-chunk-chars: ${ODIN_CASE_FILE_CHUNK_CHARS:30000}
   reader:
     url: ${ODIN_READER_URL:}
     timeout: ${ODIN_READER_TIMEOUT:PT30M}
