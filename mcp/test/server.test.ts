@@ -74,9 +74,23 @@ describe('buildServer', () => {
     expect(parsed.hits.map((h: { projectName: string }) => h.projectName)).toEqual(['Comunidad Sol', 'Obra Norte']);
   });
 
-  it('deletedProjectShowsDeletedProjectName', async () => {
+  it('unknownProjectShowsUnavailableProjectName', async () => {
     const parsed = await search([docHit('p-borrado')]);
-    expect(parsed.hits[0].projectName).toBe('Proyecto borrado');
+    expect(parsed.hits[0].projectName).toBe('Proyecto no disponible');
+  });
+
+  it('projectAddedWhileTheServerRunsGetsItsName', async () => {
+    let meCalls = 0;
+    const P3 = { id: 'p3', name: 'Residencial Mirador del Puerto' };
+    const client = await connect((r) => {
+      if (r.url === '/v1/me') return meWith(ALL, 'Empresa Uno', ++meCalls === 1 ? [P1] : [P1, P3]);
+      if (r.url.startsWith('/v1/documents')) return { status: 200, body: [{ id: 'd3', projectId: 'p3', title: 'Contrato' }] };
+      return { status: 200, body: { hits: [docHit('p3')], noSource: false } };
+    });
+    const hits = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['x'] } }))).hits;
+    expect(hits[0].projectName).toBe('Residencial Mirador del Puerto');
+    const docs = JSON.parse(textOf(await client.callTool({ name: 'listDocuments', arguments: {} }))).documents;
+    expect(docs[0].projectName).toBe('Residencial Mirador del Puerto');
   });
 
   it('hitWithoutProjectIsGeneralNeverDeleted', async () => {
@@ -95,7 +109,7 @@ describe('buildServer', () => {
     expect(JSON.stringify(parsed)).not.toContain('Obra Norte');
     const notMember = await search([docHit('p2')], [P1]);
     expect(JSON.stringify(notMember)).not.toContain('Obra Norte');
-    expect(notMember.hits[0].projectName).toBe('Proyecto borrado');
+    expect(notMember.hits[0].projectName).toBe('Proyecto no disponible');
   });
 
   it('listDocumentsCarriesProjectName', async () => {

@@ -20,7 +20,11 @@ export function registerListMyKnowledgeCards(server: McpServer, api: ApiClient, 
       },
     },
     ({ status }) =>
-      guarded(async () => jsonResult({ cards: (await api.myCards(status)).map((card) => toCard(card, projects)) })),
+      guarded(async () => {
+        const cards = await api.myCards(status);
+        await projects.refreshFor(cards.map((card) => card.projectId));
+        return jsonResult({ cards: cards.map((card) => toCard(card, projects)) });
+      }),
   );
 }
 

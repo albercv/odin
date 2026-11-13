@@ -34,8 +34,8 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
   const me = await api.me();
   const capabilities = new Set(me.company.capabilities);
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: INSTRUCTIONS });
+  const projects = createProjectNames(me, () => api.me());
   if (capabilities.has('SEARCH_KNOWLEDGE')) {
-    const projects = createProjectNames(me);
     registerSearchKnowledge(server, api, projects, capabilities.has('CASE_FILES'));
     registerReadPage(server, api);
     registerOpenOriginal(server, api);
@@ -48,7 +48,7 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
   if (capabilities.has('CASE_FILES')) registerCaseFileTools(server, api);
   if (capabilities.has('SAVE_KNOWLEDGE_CARD')) {
     registerSaveKnowledgeCard(server, api);
-    registerListMyKnowledgeCards(server, api, createProjectNames(me));
+    registerListMyKnowledgeCards(server, api, projects);
   }
   return server;
 }
