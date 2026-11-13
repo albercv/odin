@@ -62,6 +62,21 @@ class WorkerApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.noSource").value(true)).andExpect(jsonPath("$.hits", hasSize(0)));
     }
 
+    @Test
+    void generalScopeIsPassedAndAnyOtherScopeIs400() throws Exception {
+        String key = workerKey(newCompany());
+        mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"x\"],\"scope\":\"general\"}")).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(w.search.lastQuery().general()).isTrue();
+        for (String body : new String[] {"{\"queries\":[\"x\"],\"scope\":\"project\"}",
+                "{\"queries\":[\"x\"],\"scope\":\"\"}",
+                "{\"queries\":[\"x\"],\"scope\":\"general\",\"projectId\":\"" + UUID.randomUUID() + "\"}",
+                "{\"queries\":[\"x\"],\"scope\":\"general\",\"caseId\":\"" + UUID.randomUUID() + "\"}"}) {
+            mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"{}", "{\"queries\":[]}", "{\"queries\":[\"  \"]}", "{\"queries\":[null]}"})
     void invalidSearchInputIs400(String body) throws Exception {

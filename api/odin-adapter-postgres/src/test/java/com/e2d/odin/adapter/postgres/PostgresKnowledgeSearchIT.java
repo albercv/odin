@@ -195,6 +195,22 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
     }
 
     @Test
+    void generalScopeReturnsOnlyDocumentsAndCardsWithoutProject() {
+        CompanyId c = newCompany();
+        ProjectId project = newProject(c, "Comunidad Sol");
+        page(c, "General", DocumentStatus.READY, "la franquicia del seguro");
+        inProject(page(c, "Del proyecto", DocumentStatus.READY, "la franquicia del seguro"), project);
+        cardIn(c, project, "Ficha del proyecto", "la franquicia del seguro");
+        ownCard(c, newUser(c), Optional.empty(), CardStatus.APPROVED, "Ficha general", "la franquicia del seguro");
+
+        List<String> general = search.search(new SearchQuery(List.of("franquicia"), CompanyScope.of(c),
+                ProjectVisibility.of(Set.of(project)), Optional.empty(), 10, Db.NOBODY, Optional.empty(), true))
+                .hits().stream().map(h -> h.title()).toList();
+
+        assertThat(general).containsExactlyInAnyOrder("General", "Ficha general");
+    }
+
+    @Test
     void projectFilterIncludesCompanyWideCards() {
         CompanyId c = newCompany();
         ProjectId project = newProject(c, "Comunidad Sol");

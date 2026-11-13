@@ -111,7 +111,20 @@ public final class Requests {
     public record Review(ReviewDecision decision, String correctedBody, String note) {
     }
 
-    public record SearchRequest(List<String> queries, UUID projectId, Integer limit, UUID caseId) {
+    public record SearchRequest(List<String> queries, UUID projectId, Integer limit, UUID caseId,
+            @Schema(description = "Solo admite «general»: busca únicamente en lo que no tiene proyecto (normas, "
+                    + "procedimientos o políticas de la empresa). No se combina con projectId ni caseId.",
+                    allowableValues = "general") String scope) {
+
+        public boolean general() {
+            if (scope == null) {
+                return false;
+            }
+            if (!scope.equals("general")) {
+                throw new ValidationException("El ámbito solo admite el valor «general»");
+            }
+            return true;
+        }
     }
 
     public record SimilarCasesRequestBody(List<String> queries, UUID projectId, Integer limit) {
