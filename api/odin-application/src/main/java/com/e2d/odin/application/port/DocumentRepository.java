@@ -41,7 +41,11 @@ public interface DocumentRepository {
     /** Marca o desmarca la ficha de caso de todos los documentos de la empresa en una transacción; si falta alguno, 404 y no cambia ninguno. */
     int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument);
 
+    /** Si el mismo fichero está varias veces en la empresa, el más antiguo. */
     Optional<Document> findBySha256(CompanyId companyId, String sha256);
+
+    /** Busca solo en ese proyecto y entre los documentos sin proyecto; si hay varios, el más antiguo. */
+    Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId, String sha256);
 
     /**
      * Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. Con {@code caseDocument}, solo los

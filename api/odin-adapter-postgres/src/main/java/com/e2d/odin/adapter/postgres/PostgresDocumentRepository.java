@@ -35,7 +35,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
     static final String COLUMNS = """
             d.id, d.company_id, d.project_id, d.title, d.filename, d.format, d.sha256, d.status, d.failure_reason,
             d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
-            d.superseded_at, d.pages_without_text, d.case_document""";
+            d.superseded_at, d.pages_without_text, d.case_document, d.withdrawn_at, d.withdrawn_by""";
     private final ScopedTransactions tx;
 
     public PostgresDocumentRepository(ScopedTransactions tx) {
@@ -72,7 +72,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
     public Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
                 + SupersessionSql.joins("d.superseded_by", "d.company_id") + " WHERE d.id = :id AND " + Sql.inScope("d.company_id")
-                + " AND " + Sql.inVisibleProjects("d.project_id");
+                + " AND " + Sql.inVisibleProjects("d.project_id") + " AND " + Sql.notWithdrawn("d.withdrawn_at");
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("id", id.value()).query((rs, n) -> entry(rs)).optional());
     }
@@ -132,8 +132,20 @@ public class PostgresDocumentRepository implements DocumentRepository {
     @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
-                .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha")
+                .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
+                        + "ORDER BY d.seq LIMIT 1")
                 .param("company", companyId.value()).param("sha", sha256).query((rs, n) -> document(rs)).optional());
+    }
+
+    @Override
+    public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
+            String sha256) {
+        return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS
+                + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
+                + "AND (d.project_id IS NULL OR d.project_id = :project) ORDER BY d.seq LIMIT 1")
+                .param("company", companyId.value()).param("sha", sha256)
+                .param("project", projectId.map(ProjectId::value).orElse(null)).query((rs, n) -> document(rs))
+                .optional());
     }
 
     @Override
@@ -148,9 +160,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
                       JOIN topic p ON p.id = x.topic_id AND p.deleted_at IS NULL
                       WHERE x.document_id = d.id AND x.topic_id = :topic AND x.state = 'ACTIVE'))
                   AND (CAST(:caseDocument AS boolean) IS NULL OR d.case_document = :caseDocument)
-                  AND (CAST(:status AS text) IS NULL OR d.status = :status) AND %s AND %s
+                  AND (CAST(:status AS text) IS NULL OR d.status = :status) AND %s AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
-                Sql.inVisibleProjects("d.project_id"));
+                Sql.inVisibleProjects("d.project_id"), Sql.notWithdrawn("d.withdrawn_at"));
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
                 .param("caseDocument", caseDocument.orElse(null))
@@ -165,7 +177,8 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 SELECT p.document_id, p.number, p.text, p.reader_name, p.reader_version
                 FROM document_page p JOIN document d ON d.id = p.document_id
                 WHERE p.document_id = :id AND p.number = :number AND """ + Sql.inScope("p.company_id")
-                + " AND " + Sql.inVisibleProjects("d.project_id")), scope), visibility)
+                + " AND " + Sql.inVisibleProjects("d.project_id") + " AND "
+                + Sql.notWithdrawn("d.withdrawn_at")), scope), visibility)
                 .param("id", id.value()).param("number", pageNumber)
                 .query((rs, n) -> new DocumentPage(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("number"),
                         rs.getString("text"), rs.getString("reader_name"), rs.getString("reader_version")))
@@ -232,6 +245,8 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 Sql.optionalInstant(rs, "processing_started_at"), rs.getInt("attempt_count"),
                 Optional.ofNullable(Sql.uuid(rs, "superseded_by")).map(DocumentId::new),
                 Sql.optionalInstant(rs, "superseded_at"),
-                List.of((Integer[]) rs.getArray("pages_without_text").getArray()), rs.getBoolean("case_document"));
+                List.of((Integer[]) rs.getArray("pages_without_text").getArray()), rs.getBoolean("case_document"),
+                Sql.optionalInstant(rs, "withdrawn_at"),
+                Optional.ofNullable(Sql.uuid(rs, "withdrawn_by")).map(UserId::new));
     }
 }

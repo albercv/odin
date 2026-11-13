@@ -30,6 +30,11 @@ final class Sql {
                 + " = ANY (CAST(string_to_array(:projectIds, ',') AS uuid[])))";
     }
 
+    /** Lo retirado solo se ve en la sesión del administrador que activa {@code app.include_withdrawn}. */
+    static String notWithdrawn(String withdrawnColumn) {
+        return "(" + withdrawnColumn + " IS NULL OR current_setting('app.include_withdrawn', true) = 'on')";
+    }
+
     static StatementSpec visible(StatementSpec spec, ProjectVisibility visibility) {
         return spec.param("allProjects", visibility.allProjects()).param("projectIds", projectIds(visibility));
     }

@@ -153,6 +153,14 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
+            String sha256) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
+                .findFirst();
+    }
+
+    @Override
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
             int limit) {
