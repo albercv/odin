@@ -1,17 +1,36 @@
 === Página 1 ===
-Brumeral Ingeniería y Consultoría, S.L.
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
 Polígono Las Viñas, nave 12, 47999 Valdecerro
 Contrato de mantenimiento CM-2024-011
-Fecha: 10/12/2024. Cliente: Talleres Murcano, S.L.. Página 1 de 2.
+Fecha: 10/12/2024 · Cliente: Talleres Murcano, S.L. · CIF B-00000021 · Página 1 de 2
 
-Objeto: mantenimiento preventivo de la instalación de aire comprimido y de la red eléctrica de baja tensión.
-Periodicidad: una visita preventiva al mes.
+CONTRATO DE MANTENIMIENTO
+REUNIDOS
+De una parte, Brumeral Ingeniería y Consultoría, S.L., con CIF B-00000001 y domicilio en Polígono Las Viñas, nave 12, 47999 Valdecerro, representada por Carlos Montesinos Vega, administrador.
+De otra parte, Talleres Murcano, S.L., con CIF B-00000021 y domicilio en Polígono Industrial El Cerro, Valdecerro, representada por Teodoro Peña Lozano, en calidad de representante legal.
+Las dos partes se reconocen capacidad para firmar este contrato y lo suscriben de buena fe.
+
+ESTIPULACIONES
+1. Objeto. Brumeral se obliga a prestar al cliente el mantenimiento preventivo de la instalación de aire comprimido y de la red eléctrica de baja tensión.
+2. Periodicidad. Se realizará una visita preventiva al mes, en fecha pactada con el cliente, con informe escrito de cada visita.
+3. Obligaciones de Brumeral. Brumeral revisará los equipos, realizará los ajustes preventivos y atenderá las incidencias que el cliente comunique por escrito.
+4. Obligaciones del cliente. El cliente facilitará el acceso a las instalaciones, designará una persona de contacto y comunicará cualquier anomalía observada.
 === Página 2 ===
-Brumeral Ingeniería y Consultoría, S.L.
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
 Polígono Las Viñas, nave 12, 47999 Valdecerro
 Contrato de mantenimiento CM-2024-011
-Fecha: 10/12/2024. Cliente: Talleres Murcano, S.L.. Página 2 de 2.
+Fecha: 10/12/2024 · Cliente: Talleres Murcano, S.L. · CIF B-00000021 · Página 2 de 2
 
-Precio.
-La cuota mensual del mantenimiento es de 1.150 euros más IVA.
-Plazo de pago: 30 días desde la fecha de la factura.
+ESTIPULACIONES (continuación)
+5. Precio. La cuota mensual del mantenimiento es de 1.150 euros más IVA.
+6. Forma de pago. Plazo de pago: 30 días desde la fecha de la factura.
+7. Limitaciones. El mantenimiento no incluye las reparaciones mayores ni las reformas, que se presupuestan aparte.
+8. Confidencialidad. Las partes se obligan a mantener en secreto la información técnica y comercial a la que accedan con ocasión de este contrato, y a usarla solo para su ejecución.
+9. Protección de datos. Los datos personales de las personas de contacto se tratarán conforme al Reglamento general de protección de datos y a la normativa española vigente, solo para ejecutar este contrato.
+10. Resolución. Cualquiera de las partes podrá resolver el contrato si la otra incumple una obligación esencial y no la corrige tras un aviso escrito.
+11. Jurisdicción. Para cualquier controversia derivada de este contrato, las partes se someten a los juzgados y tribunales de Valdecerro, con renuncia a cualquier otro fuero.
+
+Y en prueba de conformidad, las partes firman este documento por duplicado en Valdecerro.
+
+Por Brumeral Ingeniería y Consultoría, S.L.          Por Talleres Murcano, S.L.
+Fdo.: Carlos Montesinos Vega          Fdo.: Teodoro Peña Lozano

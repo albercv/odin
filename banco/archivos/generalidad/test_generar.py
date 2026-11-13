@@ -72,6 +72,18 @@ class GeneralidadTest(unittest.TestCase):
         for ficha in self.manifiesto["fichas"]:
             self.assertIsNone(REDACCION.search(sin_tildes(ficha["titulo"] + " " + ficha["texto"])), ficha["id"])
 
+    def test_sin_puntos_dobles_tras_los_nombres(self):
+        for rel in ficheros(self.datos / "corpus"):
+            texto = (self.datos / "corpus" / rel).read_text(encoding="utf-8")
+            self.assertIsNone(re.search(r"\.\.|S\.[LA]\.\.", texto), str(rel))
+
+    def test_cada_pagina_tiene_entre_10_y_25_lineas(self):
+        for doc in self.manifiesto["documentos"]:
+            texto = (self.datos / "corpus" / doc["ruta"]).read_text(encoding="utf-8")
+            for pagina in re.split(r"^=== Página \d+ ===$", texto, flags=re.MULTILINE)[1:]:
+                lineas = [linea for linea in pagina.split("\n") if linea.strip()]
+                self.assertTrue(10 <= len(lineas) <= 25, f"{doc['ruta']}: {len(lineas)} líneas")
+
     def test_cada_pagina_empieza_con_su_marcador(self):
         for doc in self.manifiesto["documentos"]:
             texto = (self.datos / "corpus" / doc["ruta"]).read_text(encoding="utf-8")

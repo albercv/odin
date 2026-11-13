@@ -1,9 +1,16 @@
 === Página 1 ===
-Brumeral Ingeniería y Consultoría, S.L.
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
 Polígono Las Viñas, nave 12, 47999 Valdecerro
 Norma interna de facturación
-Fecha: 20/11/2024. Cliente: Uso interno. Página 1 de 1.
+Fecha: 20/11/2024 · Uso interno · Página 1 de 1
 
-Norma interna de facturación del despacho, de uso para todo el equipo.
-El plazo de pago por defecto con los clientes es de 45 días desde la fecha de la factura.
-Las facturas se numeran F-AAAA-NNN y las rectificativas R-AAAA-NNN.
+Norma interna de facturación, aprobada por la dirección de Brumeral para todo el equipo.
+1. Ámbito. Se aplica a todas las facturas y rectificativas que emite la empresa, sea cual sea el proyecto.
+2. Numeración. Las facturas se numeran F-AAAA-NNN y las rectificativas R-AAAA-NNN.
+3. Plazo de pago. El plazo de pago por defecto con los clientes es de 45 días desde la fecha de la factura.
+4. Contenido. Cada factura incluye los datos del emisor y del cliente, el número, la fecha, el detalle de los conceptos, la base imponible, el IVA y el total.
+5. Forma de pago. Salvo acuerdo escrito, el cobro se hace por transferencia a la cuenta que figure en la factura.
+6. Rectificativas. Una rectificativa indica la factura que corrige, el motivo y los importes corregidos.
+7. Archivo. Las facturas emitidas se guardan en Odín junto al proyecto del cliente.
+8. Revisión. La dirección revisa esta norma una vez al año y comunica los cambios por escrito.
+Ante cualquier duda sobre una factura, se consulta con la dirección antes de emitirla.

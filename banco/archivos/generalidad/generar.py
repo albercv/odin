@@ -14,27 +14,42 @@ import puntuar  # noqa: E402  el puntuador del archivo ficticio, importado sin m
 DATOS = AQUI / "datos"
 EMPRESA = "brumeral"
 NOMBRE_EMPRESA = "Brumeral Ingeniería y Consultoría, S.L."
+CIF_EMPRESA = "B-00000001"
+REP_EMPRESA = "Carlos Montesinos Vega"
 DOMICILIO = "Polígono Las Viñas, nave 12, 47999 Valdecerro"
+IBAN = "ES00 0000 0000 00 0000000000"
 SEMILLA = 7
 PRIMERA_SUBIDA = dt.date(2024, 11, 1)
 NO_AFIRMAR = ["comunidad", "propietario", "finca", "vecino", "junta de propietarios", "derrama"]
 REDACCION = re.compile(r"\b(comunidad|propietario|vecino|finca|junta|derrama)")
 AJENOS = ["ribera/", "albar/"]
+ANCLA_ADENDA = "Desde el 1 de febrero de 2025, la cuota mensual del mantenimiento pasa a ser de 1.240 euros más IVA."
 
-NOMBRES = {
-    "talleres-murcano": "Talleres Murcano, S.L.",
-    "conservas-dalmira": "Conservas Dalmira, S.A.",
-    "logistica-penedal": "Logística Penedal, S.L.",
-    "alojamientos-cerrolago": "Alojamientos Cerrolago, S.L.",
-    "bodegas-quintafria": "Bodegas Quintafría, S.L.",
+CLIENTES = {
+    "talleres-murcano": {"nombre": "Talleres Murcano, S.L.", "cif": "B-00000021",
+                         "dom": "Polígono Industrial El Cerro, Valdecerro", "rep": "Teodoro Peña Lozano"},
+    "conservas-dalmira": {"nombre": "Conservas Dalmira, S.A.", "cif": "B-00000022",
+                          "dom": "Camino de los Huertos, Valdecerro", "rep": "Marina Esteban Vidal"},
+    "logistica-penedal": {"nombre": "Logística Penedal, S.L.", "cif": "B-00000023",
+                          "dom": "Polígono Penedal Norte, Valdecerro", "rep": "Gonzalo Robledo Ibáñez"},
+    "alojamientos-cerrolago": {"nombre": "Alojamientos Cerrolago, S.L.", "cif": "B-00000024",
+                               "dom": "Paseo del Cerrolago, Valdecerro", "rep": "Pilar Amorós Serrano"},
+    "bodegas-quintafria": {"nombre": "Bodegas Quintafría, S.L.", "cif": "B-00000025",
+                           "dom": "Viñedo de Quintafría, Valdecerro", "rep": "Lucía Ferrer Sanz"},
 }
+NOMBRES = {k: v["nombre"] for k, v in CLIENTES.items()}
 TRABAJADORES = [
     {"clave": "t09", "empresa": EMPRESA, "nombre": "Irene", "apellidos": "Salcedo Moya", "proyectos": ["*"]},
     {"clave": "t10", "empresa": EMPRESA, "nombre": "Óscar", "apellidos": "Leiva Durán",
      "proyectos": ["talleres-murcano", "conservas-dalmira", "bodegas-quintafria"]},
     {"clave": "t11", "empresa": EMPRESA, "nombre": "Nuria", "apellidos": "Baeza Ortiz", "proyectos": ["*"]},
 ]
-ANCLA_ADENDA = "Desde el 1 de febrero de 2025, la cuota mensual del mantenimiento pasa a ser de 1.240 euros más IVA."
+CLAUSULAS_FINALES = [
+    ("Confidencialidad", "Las partes se obligan a mantener en secreto la información técnica y comercial a la que accedan con ocasión de este contrato, y a usarla solo para su ejecución."),
+    ("Protección de datos", "Los datos personales de las personas de contacto se tratarán conforme al Reglamento general de protección de datos y a la normativa española vigente, solo para ejecutar este contrato."),
+    ("Resolución", "Cualquiera de las partes podrá resolver el contrato si la otra incumple una obligación esencial y no la corrige tras un aviso escrito."),
+    ("Jurisdicción", "Para cualquier controversia derivada de este contrato, las partes se someten a los juzgados y tribunales de Valdecerro, con renuncia a cualquier otro fuero."),
+]
 
 
 # ---------- utilidades ----------
@@ -65,24 +80,17 @@ def exigir(condicion, mensaje):
         raise AssertionError(mensaje)
 
 
-# ---------- documentos ----------
+# ---------- piezas de plantilla ----------
 def doc(proyecto, fichero, titulo, fecha, paginas):
     return {"proyecto": proyecto, "fichero": fichero, "titulo": titulo,
-            "fecha": dt.date.fromisoformat(fecha), "cliente": NOMBRES.get(proyecto, "Uso interno"),
-            "paginas": paginas}
-
-
-def factura(proyecto, numero, fecha, concepto, base, vencimiento):
-    base_c = base * 100
-    iva_c = base_c * 21 // 100
-    cuerpo = [f"Concepto: {concepto}", f"Base imponible: {eur(base_c)} euros", f"IVA 21 %: {eur(iva_c)} euros",
-              f"Total factura: {eur(base_c + iva_c)} euros", f"Vencimiento: {vencimiento}"]
-    return doc(proyecto, f"factura-{numero}.txt", f"Factura {numero}", fecha, [cuerpo])
+            "fecha": dt.date.fromisoformat(fecha), "paginas": paginas}
 
 
 def cabecera(d, n, total):
-    return [NOMBRE_EMPRESA, DOMICILIO, d["titulo"],
-            f"Fecha: {dmy(d['fecha'])}. Cliente: {d['cliente']}. Página {n} de {total}."]
+    cli = CLIENTES.get(d["proyecto"])
+    ambito = f"Cliente: {cli['nombre']} · CIF {cli['cif']}" if cli else "Uso interno"
+    return [f"{NOMBRE_EMPRESA} · CIF {CIF_EMPRESA}", DOMICILIO, d["titulo"],
+            f"Fecha: {dmy(d['fecha'])} · {ambito} · Página {n} de {total}"]
 
 
 def paginas_de(d):
@@ -91,122 +99,300 @@ def paginas_de(d):
     return ["\n".join([*cabecera(d, n, total), "", *cuerpo]) for n, cuerpo in enumerate(d["paginas"], 1)]
 
 
+def numeradas(pares, inicio=1):
+    return [f"{n}. {titulo}. {texto}" for n, (titulo, texto) in enumerate(pares, inicio)]
+
+
+def partes(proyecto):
+    cli = CLIENTES[proyecto]
+    return ["REUNIDOS",
+            f"De una parte, {NOMBRE_EMPRESA}, con CIF {CIF_EMPRESA} y domicilio en {DOMICILIO}, representada por {REP_EMPRESA}, administrador.",
+            f"De otra parte, {cli['nombre']}, con CIF {cli['cif']} y domicilio en {cli['dom']}, representada por {cli['rep']}, en calidad de representante legal.",
+            "Las dos partes se reconocen capacidad para firmar este contrato y lo suscriben de buena fe."]
+
+
+def firmas(proyecto):
+    cli = CLIENTES[proyecto]
+    return ["Y en prueba de conformidad, las partes firman este documento por duplicado en Valdecerro.", "",
+            f"Por {NOMBRE_EMPRESA}          Por {cli['nombre']}",
+            f"Fdo.: {REP_EMPRESA}          Fdo.: {cli['rep']}"]
+
+
+def factura(proyecto, numero, fecha, lineas, venc):
+    """lineas: (concepto, cantidad, precio en céntimos). La base es la suma de los importes."""
+    cli = CLIENTES[proyecto]
+    base_c = sum(cant * precio for _, cant, precio in lineas)
+    iva_c = base_c * 21 // 100
+    tabla = [f"{c} | {n} | {eur(p)} euros | {eur(n * p)} euros" for c, n, p in lineas]
+    cuerpo = [f"EMISOR: {NOMBRE_EMPRESA}, CIF {CIF_EMPRESA}, {DOMICILIO}.",
+              f"CLIENTE: {cli['nombre']}, CIF {cli['cif']}, {cli['dom']}.",
+              f"Número de factura: {numero}", "",
+              "Concepto | Cantidad | Precio unitario | Importe", *tabla, "",
+              f"Base imponible: {eur(base_c)} euros", f"IVA 21 %: {eur(iva_c)} euros",
+              f"Total factura: {eur(base_c + iva_c)} euros", "",
+              f"Forma de pago: transferencia bancaria a la cuenta {IBAN}.",
+              f"Vencimiento: {venc}",
+              "Factura emitida según la norma interna de facturación de Brumeral."]
+    return doc(proyecto, f"factura-{numero}.txt", f"Factura {numero}", fecha, [cuerpo])
+
+
+def correo(fecha_txt, de, para, asunto, cuerpo, firma):
+    return [f"De: {de}", f"Para: {para}", f"Fecha: {fecha_txt}", f"Asunto: {asunto}", "", *cuerpo, "", *firma]
+
+
+def oferta_cuerpo(cliente_corto, precio_linea, plazo, pago=None):
+    """Texto común de las dos versiones de la oferta; solo cambian el precio, el plazo y la forma de pago."""
+    cuerpo = [f"Oferta dirigida a {cliente_corto}, para la auditoría de su planta de envasado.", "",
+              *precio_linea, plazo]
+    if pago:
+        cuerpo.append(pago)
+    cuerpo += ["", *numeradas([
+        ("Alcance", "Auditoría energética de la planta de envasado: medición de consumos, revisión de equipos y propuesta de medidas de ahorro."),
+        ("Entregables", "Informe técnico con tabla de consumos, medidas propuestas y estimación de ahorro."),
+        ("Condiciones", "La oferta se acepta por escrito y mantiene su validez mientras no se modifique el alcance."),
+        ("Visitas", "Las visitas a la planta se coordinan con el responsable de mantenimiento del cliente."),
+        ("Confidencialidad", "La información recibida se usa solo para esta auditoría."),
+    ]), "", "Atentamente,", f"Carlos Montesinos Vega, administrador de {NOMBRE_EMPRESA}"]
+    return cuerpo
+
+
+# ---------- documentos ----------
 DOCUMENTOS = [
     doc("_general", "norma-facturacion.txt", "Norma interna de facturación", "2024-11-20", [[
-        "Norma interna de facturación del despacho, de uso para todo el equipo.",
-        "El plazo de pago por defecto con los clientes es de 45 días desde la fecha de la factura.",
-        "Las facturas se numeran F-AAAA-NNN y las rectificativas R-AAAA-NNN.",
+        "Norma interna de facturación, aprobada por la dirección de Brumeral para todo el equipo.",
+        "1. Ámbito. Se aplica a todas las facturas y rectificativas que emite la empresa, sea cual sea el proyecto.",
+        "2. Numeración. Las facturas se numeran F-AAAA-NNN y las rectificativas R-AAAA-NNN.",
+        "3. Plazo de pago. El plazo de pago por defecto con los clientes es de 45 días desde la fecha de la factura.",
+        "4. Contenido. Cada factura incluye los datos del emisor y del cliente, el número, la fecha, el detalle de los conceptos, la base imponible, el IVA y el total.",
+        "5. Forma de pago. Salvo acuerdo escrito, el cobro se hace por transferencia a la cuenta que figure en la factura.",
+        "6. Rectificativas. Una rectificativa indica la factura que corrige, el motivo y los importes corregidos.",
+        "7. Archivo. Las facturas emitidas se guardan en Odín junto al proyecto del cliente.",
+        "8. Revisión. La dirección revisa esta norma una vez al año y comunica los cambios por escrito.",
+        "Ante cualquier duda sobre una factura, se consulta con la dirección antes de emitirla.",
     ]]),
     doc("_general", "tarifas-honorarios-2024.txt", "Tarifas de honorarios 2024", "2024-12-02", [[
-        "Tarifas por hora vigentes durante 2024.",
+        "Tarifas de honorarios vigentes durante 2024, para trabajos de ingeniería y consultoría.",
         "Hora de ingeniero sénior: 68 euros.",
         "Hora de ingeniero júnior: 45 euros.",
+        "Las tarifas no incluyen el IVA, que se aplica según la legislación vigente.",
+        "Los desplazamientos fuera de la provincia se facturan aparte, según lo acordado con el cliente.",
+        "Las horas dedicadas a la redacción de informes se facturan con la tarifa del ingeniero que las realiza.",
+        "Las tarifas se revisan una vez al año, y la revisión se comunica por escrito a los clientes.",
+        "Ante cualquier duda sobre la tarifa aplicable, se consulta con la dirección antes de facturar.",
     ]]),
     doc("_general", "tarifas-honorarios-2025.txt", "Tarifas de honorarios 2025", "2024-12-18", [[
         "Estas tarifas sustituyen a las tarifas de honorarios 2024 desde el 1 de enero de 2025.",
         "Hora de ingeniero sénior: 72 euros.",
         "Hora de ingeniero júnior: 48 euros.",
+        "Las tarifas no incluyen el IVA, que se aplica según la legislación vigente.",
+        "Los desplazamientos fuera de la provincia se facturan aparte, según lo acordado con el cliente.",
+        "Las horas dedicadas a la redacción de informes se facturan con la tarifa del ingeniero que las realiza.",
+        "Las tarifas se revisan una vez al año, y la revisión se comunica por escrito a los clientes.",
     ]]),
     doc("_general", "procedimiento-alta-clientes.txt", "Procedimiento de alta de clientes", "2024-11-25", [[
+        "Procedimiento de alta de clientes, de uso para todo el equipo de Brumeral.",
         "Cuatro pasos:",
         "1. Pedir el CIF y los datos de facturación de la empresa cliente.",
         "2. Firmar el contrato o aceptar la oferta.",
         "3. Crear el proyecto del cliente en Odín.",
         "4. Asignar un ingeniero responsable.",
+        "Responsable del procedimiento: la dirección de Brumeral.",
+        "El alta no se da por completa hasta que el proyecto figura en Odín con su ingeniero responsable.",
+        "Los datos de facturación se comprueban antes de emitir la primera factura.",
+        "Cualquier cambio de titularidad del cliente se trata como una nueva alta.",
     ]]),
 ]
 
 DOCUMENTOS += [
     doc("talleres-murcano", "contrato-mantenimiento-2024.txt", "Contrato de mantenimiento CM-2024-011", "2024-12-10", [
-        ["Objeto: mantenimiento preventivo de la instalación de aire comprimido y de la red eléctrica de baja tensión.",
-         "Periodicidad: una visita preventiva al mes."],
-        ["Precio.", "La cuota mensual del mantenimiento es de 1.150 euros más IVA.",
-         "Plazo de pago: 30 días desde la fecha de la factura."],
+        ["CONTRATO DE MANTENIMIENTO", *partes("talleres-murcano"), "", "ESTIPULACIONES", *numeradas([
+            ("Objeto", "Brumeral se obliga a prestar al cliente el mantenimiento preventivo de la instalación de aire comprimido y de la red eléctrica de baja tensión."),
+            ("Periodicidad", "Se realizará una visita preventiva al mes, en fecha pactada con el cliente, con informe escrito de cada visita."),
+            ("Obligaciones de Brumeral", "Brumeral revisará los equipos, realizará los ajustes preventivos y atenderá las incidencias que el cliente comunique por escrito."),
+            ("Obligaciones del cliente", "El cliente facilitará el acceso a las instalaciones, designará una persona de contacto y comunicará cualquier anomalía observada."),
+        ])],
+        ["ESTIPULACIONES (continuación)", *numeradas([
+            ("Precio", "La cuota mensual del mantenimiento es de 1.150 euros más IVA."),
+            ("Forma de pago", "Plazo de pago: 30 días desde la fecha de la factura."),
+            ("Limitaciones", "El mantenimiento no incluye las reparaciones mayores ni las reformas, que se presupuestan aparte."),
+        ], inicio=5), *numeradas(CLAUSULAS_FINALES, inicio=8), "", *firmas("talleres-murcano")],
     ]),
     doc("talleres-murcano", "adenda-1-contrato-mantenimiento.txt", "Adenda 1 al contrato CM-2024-011", "2025-01-15", [[
-        "En Valdecerro, a 15 de enero de 2025.",
-        "Esta adenda modifica la cláusula de precio del contrato CM-2024-011.",
-        ANCLA_ADENDA,
+        "ADENDA 1 AL CONTRATO CM-2024-011", "En Valdecerro, a 15 de enero de 2025.", "",
+        *partes("talleres-murcano"), "", "EXPONEN",
+        "Que las partes suscribieron el contrato CM-2024-011 y acuerdan modificar una de sus cláusulas.", "",
+        "ESTIPULACIONES", *numeradas([
+            ("Modificación de la cláusula de precio", "Esta adenda modifica la cláusula de precio del contrato CM-2024-011."),
+            ("Nuevo precio", ANCLA_ADENDA),
+            ("Resto del contrato", "Se mantienen sin cambios el objeto, la periodicidad y las demás cláusulas del contrato CM-2024-011."),
+            ("Efectos", "Esta adenda forma parte del contrato CM-2024-011 y se firma en el mismo número de ejemplares."),
+        ]), "", *firmas("talleres-murcano"),
     ]]),
-    factura("talleres-murcano", "F-2025-014", "2025-01-31", "Mantenimiento de enero de 2025.", 1150, "02/03/2025"),
-    factura("talleres-murcano", "F-2025-047", "2025-03-31", "Mantenimiento de marzo de 2025.", 1240, "30/04/2025"),
-    factura("talleres-murcano", "F-2025-089", "2025-06-30", "Reparación del compresor 2.", 2380, "30/07/2025"),
-    doc("conservas-dalmira", "oferta-auditoria-energetica-v1.txt", "Oferta de auditoría energética (versión 1)", "2025-02-10", [[
-        "Precio de la auditoría energética: 18.400 euros más IVA.",
-        "Plazo de entrega del informe: 10 semanas.",
-    ]]),
-    doc("conservas-dalmira", "oferta-auditoria-energetica-v2.txt", "Oferta de auditoría energética (versión 2)", "2025-03-03", [[
-        "Esta versión sustituye a la versión 1 de la oferta, de 10 de febrero de 2025.",
-        "Precio de la auditoría energética: 16.900 euros más IVA.",
-        "Plazo de entrega: 12 semanas.",
-        "Forma de pago: anticipo del 40 % a la aceptación y el resto a la entrega del informe.",
-    ]]),
-    factura("conservas-dalmira", "F-2025-052", "2025-04-07", "Anticipo del 50 % de la auditoría energética.", 8450, "07/05/2025"),
+    factura("talleres-murcano", "F-2025-014", "2025-01-31",
+            [("Mantenimiento de enero de 2025, cuota mensual del contrato CM-2024-011", 1, 115000)], "02/03/2025"),
+    factura("talleres-murcano", "F-2025-047", "2025-03-31",
+            [("Mantenimiento de marzo de 2025, cuota mensual del contrato CM-2024-011", 1, 124000)], "30/04/2025"),
+    factura("talleres-murcano", "F-2025-089", "2025-06-30",
+            [("Mano de obra de la reparación del compresor 2", 1, 150000),
+             ("Repuestos del compresor 2", 1, 88000)], "30/07/2025"),
+    doc("conservas-dalmira", "oferta-auditoria-energetica-v1.txt", "Oferta de auditoría energética (versión 1)", "2025-02-10", [
+        ["OFERTA DE AUDITORÍA ENERGÉTICA", *oferta_cuerpo("Conservas Dalmira, S.A.",
+                                                          ["Precio de la auditoría energética: 18.400 euros más IVA."],
+                                                          "Plazo de entrega del informe: 10 semanas.")]]),
+    doc("conservas-dalmira", "oferta-auditoria-energetica-v2.txt", "Oferta de auditoría energética (versión 2)", "2025-03-03", [
+        ["OFERTA DE AUDITORÍA ENERGÉTICA (VERSIÓN 2)", *oferta_cuerpo("Conservas Dalmira, S.A.",
+                                                                    ["Esta versión sustituye a la versión 1 de la oferta, de 10 de febrero de 2025.",
+                                                                     "Precio de la auditoría energética: 16.900 euros más IVA."],
+                                                                    "Plazo de entrega: 12 semanas.",
+                                                                    "Forma de pago: anticipo del 40 % a la aceptación y el resto a la entrega del informe.")]]),
+    factura("conservas-dalmira", "F-2025-052", "2025-04-07",
+            [("Anticipo del 50 % de la auditoría energética.", 1, 845000)], "07/05/2025"),
     doc("conservas-dalmira", "factura-rectificativa-R-2025-003.txt", "Factura rectificativa R-2025-003", "2025-04-22", [[
+        "Número de factura rectificativa: R-2025-003",
         "Rectifica la factura F-2025-052.",
         "Motivo: el anticipo pactado en la oferta es del 40 %, no del 50 %.",
+        f"EMISOR: {NOMBRE_EMPRESA}, CIF {CIF_EMPRESA}, {DOMICILIO}.",
+        "CLIENTE: Conservas Dalmira, S.A., CIF B-00000022, Camino de los Huertos, Valdecerro.",
+        "Concepto | Cantidad | Precio unitario | Importe",
+        "Anticipo de la auditoría energética, corregido al 40 % | 1 | 6.760,00 euros | 6.760,00 euros", "",
         "Base imponible rectificada: 6.760,00 euros.",
         "IVA 21 %: 1.419,60 euros.",
-        "Total rectificado: 8.179,60 euros.",
+        "Total rectificado: 8.179,60 euros.", "",
+        f"Forma de pago: transferencia bancaria a la cuenta {IBAN}.",
+        "Esta rectificativa se emite según la norma interna de facturación de Brumeral.",
     ]]),
     doc("conservas-dalmira", "informe-auditoria-energetica.txt", "Informe de auditoría energética", "2025-06-30", [
-        ["Alcance: planta de envasado de la empresa cliente.", "Fecha del informe: 30/06/2025."],
-        ["Tabla de consumos anuales.", "Electricidad: 1.284.000 kWh al año.", "Gas natural: 412.000 kWh al año."],
-        ["Medidas propuestas: variadores en las bombas, recuperación de calor de los compresores e iluminación LED.",
-         "Ahorro anual estimado con las medidas propuestas: 186.500 kWh, unos 27.900 euros al año."],
+        ["INFORME DE AUDITORÍA ENERGÉTICA", "Cliente: Conservas Dalmira, S.A.", "Índice",
+         "1. Alcance del estudio, página 1", "2. Consumos de partida, página 2",
+         "3. Medidas propuestas, página 3", "4. Ahorro estimado, página 3", "",
+         "1. Alcance del estudio", "Alcance: planta de envasado de la empresa cliente.",
+         "Fecha del informe: 30/06/2025.",
+         "El estudio cubre las líneas de envasado, los compresores, las bombas de la red de agua y la iluminación de las naves.",
+         "La información de partida procede de las facturas de electricidad y gas de los últimos doce meses.",
+         "Las mediciones de potencia se hicieron en jornadas laborables, con la producción normal de la planta."],
+        ["2. Consumos de partida", "Tabla de consumos anuales.",
+         "Electricidad: 1.284.000 kWh al año.", "Gas natural: 412.000 kWh al año.",
+         "La electricidad se reparte entre compresores, bombas, frío industrial e iluminación.",
+         "El gas se usa sobre todo en las calderas de agua caliente de la línea de limpieza.",
+         "El frío industrial es el mayor consumo de la planta, y por eso se revisa en primer lugar.",
+         "Los datos se contrastaron con las lecturas de los contadores de la planta.",
+         "Cualquier diferencia entre facturas y lecturas se anotó en el anexo de mediciones."],
+        ["3. Medidas propuestas",
+         "Medidas propuestas: variadores en las bombas, recuperación de calor de los compresores e iluminación LED.",
+         "Variadores en las bombas: ajustan el caudal a la demanda real de cada línea.",
+         "Recuperación de calor de los compresores: aprovecha el calor residual para calentar el agua de limpieza.",
+         "Iluminación LED: sustituye los fluorescentes de naves y pasillos, con sensores de presencia en los almacenes.",
+         "4. Ahorro estimado",
+         "Ahorro anual estimado con las medidas propuestas: 186.500 kWh, unos 27.900 euros al año.",
+         "La estimación es orientativa y se afinará con las mediciones posteriores a la implantación.",
+         "Conclusión: las medidas son viables y se recomienda ejecutarlas por fases, empezando por los variadores."],
     ]),
 ]
 
 DOCUMENTOS += [
     doc("logistica-penedal", "contrato-legalizacion-fotovoltaica.txt", "Contrato de ingeniería CI-2025-004", "2025-02-12", [
-        ["Objeto: legalización de la instalación fotovoltaica de autoconsumo de 380 kWp en la cubierta de la nave principal."],
-        ["Honorarios: 9.600 euros más IVA, en tres pagos.", "Plazo de pago: 60 días desde la fecha de la factura."],
+        ["CONTRATO DE INGENIERÍA CI-2025-004", "En Valdecerro, a 12 de febrero de 2025.", "", *partes("logistica-penedal"),
+         "", "ESTIPULACIONES", *numeradas([
+             ("Objeto", "Brumeral se obliga a legalizar la instalación fotovoltaica de autoconsumo de 380 kWp en la cubierta de la nave principal ante la administración competente."),
+             ("Alcance", "Memoria técnica, tramitación de la legalización y dirección de las pruebas de puesta en servicio."),
+             ("Obligaciones de Brumeral", "Preparar la documentación técnica, responder a los requerimientos de la distribuidora y mantener informado al cliente por escrito."),
+             ("Obligaciones del cliente", "Facilitar los planos, los certificados de los equipos y el acceso a la cubierta para las mediciones."),
+         ])],
+        ["ESTIPULACIONES (continuación)", *numeradas([
+            ("Precio", "Honorarios: 9.600 euros más IVA, en tres pagos."),
+            ("Forma de pago", "Plazo de pago: 60 días desde la fecha de la factura."),
+        ], inicio=5), *numeradas(CLAUSULAS_FINALES, inicio=7), "", *firmas("logistica-penedal")],
     ]),
-    doc("logistica-penedal", "correo-2025-03-plazo-pago.txt", "Correo de Logística Penedal sobre el plazo de pago", "2025-03-18", [[
-        "De: administración de Logística Penedal. Para: Irene Salcedo Moya, de Brumeral. Asunto: plazo de pago.",
-        "Según lo hablado por teléfono, os pagaremos las facturas a 30 días.",
-        "Un saludo.",
-    ]]),
-    factura("logistica-penedal", "F-2025-061", "2025-04-30", "Primer pago de honorarios del contrato CI-2025-004.", 3200, "29/06/2025"),
-    factura("logistica-penedal", "F-2025-075", "2025-06-30", "Segundo pago de honorarios del contrato CI-2025-004.", 3200, "29/08/2025"),
-    factura("logistica-penedal", "F-2025-098", "2025-09-30", "Tercer pago de honorarios del contrato CI-2025-004.", 3200, "29/11/2025"),
+    doc("logistica-penedal", "correo-2025-03-plazo-pago.txt", "Correo de Logística Penedal sobre el plazo de pago", "2025-03-18", [
+        correo("18/03/2025", "administración de Logística Penedal, Mónica Vega Rubio",
+               "Irene Salcedo Moya, de Brumeral", "Plazo de pago de las facturas",
+               ["Hola, Irene:", "", "Te escribo para dejar por escrito lo que hablamos ayer.",
+                "Según lo hablado por teléfono, os pagaremos las facturas a 30 días.",
+                "Si os parece bien, lo tratamos en la próxima reunión de seguimiento.", "", "Gracias y un saludo."],
+               ["Mónica Vega Rubio", "Administración, Logística Penedal, S.L."]),
+    ]),
+    factura("logistica-penedal", "F-2025-061", "2025-04-30",
+            [("Primer pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/06/2025"),
+    factura("logistica-penedal", "F-2025-075", "2025-06-30",
+            [("Segundo pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/08/2025"),
+    factura("logistica-penedal", "F-2025-098", "2025-09-30",
+            [("Tercer pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/11/2025"),
     doc("logistica-penedal", "acta-reunion-seguimiento-2025-05.txt", "Acta de la reunión de seguimiento de mayo de 2025", "2025-05-20", [[
-        "Reunión de seguimiento del 20/05/2025.",
+        "ACTA DE LA REUNIÓN DE SEGUIMIENTO DE MAYO DE 2025", "Reunión de seguimiento del 20/05/2025.",
+        "Asistentes: Irene Salcedo Moya (Brumeral), Nuria Baeza Ortiz (Brumeral) y Gonzalo Robledo Ibáñez (Logística Penedal).",
+        "Orden del día:", "1. Estado de la legalización de la instalación fotovoltaica.",
+        "2. Documentación pendiente.", "3. Próximas fechas con la distribuidora.", "",
+        "Acuerdos:",
         "Punto 3. Legalización de la instalación fotovoltaica: la distribuidora pidió más documentación.",
         "Fecha prevista de la inspección: 15 de julio de 2025.",
+        "Brumeral enviará la memoria técnica completada y el certificado de los equipos antes de la inspección.",
+        "Logística Penedal aportará los planos actualizados de la cubierta.", "",
+        "Y no habiendo más asuntos, se levanta la reunión.",
+        "Firman el acta: Irene Salcedo Moya, por Brumeral; Gonzalo Robledo Ibáñez, por Logística Penedal.",
     ]]),
 ]
 
 DOCUMENTOS += [
     doc("alojamientos-cerrolago", "presupuesto-climatizacion-2024.txt", "Presupuesto P-2024-031, reforma de la climatización", "2024-11-05", [
-        ["Objeto: reforma de la climatización de las 42 habitaciones y de las zonas de uso común del hotel."],
-        ["Importe: 14.250 euros más IVA.", "Plazo de ejecución del proyecto: 10 semanas desde la aceptación."],
+        ["PRESUPUESTO P-2024-031, REFORMA DE LA CLIMATIZACIÓN", "Fecha del presupuesto: 05/11/2024.", "",
+         *partes("alojamientos-cerrolago"), "", "OBJETO",
+         "Objeto: reforma de la climatización de las 42 habitaciones y de las zonas de uso común del hotel.", "",
+         *numeradas([
+             ("Alcance", "Anteproyecto, proyecto de ejecución, dirección de obra y coordinación con el instalador."),
+             ("Exclusiones", "La obra civil, los trabajos de pintura y la gestión de licencias municipales, que corren a cargo del cliente."),
+             ("Medios", "El cliente facilitará el acceso a las habitaciones y a las zonas comunes en el horario acordado."),
+             ("Entregables", "Proyecto técnico, planos de la instalación y certificados de los equipos."),
+         ])],
+        ["PRESUPUESTO (continuación)", "Importe: 14.250 euros más IVA.",
+         "Plazo de ejecución del proyecto: 10 semanas desde la aceptación.",
+         "Forma de pago: a convenir con el cliente en la aceptación.", "", *numeradas([
+             ("Validez", "Este presupuesto es válido mientras no se modifique el alcance descrito."),
+             ("Modificaciones", "Cualquier cambio de alcance se presupuesta por separado y requiere aceptación escrita."),
+         ], inicio=5), *numeradas(CLAUSULAS_FINALES, inicio=7), "", *firmas("alojamientos-cerrolago")],
     ]),
-    doc("alojamientos-cerrolago", "correo-2025-01-plazo.txt", "Correo de Brumeral a Alojamientos Cerrolago sobre el plazo", "2025-01-14", [[
-        "De: Irene Salcedo Moya, de Brumeral. Para: Alojamientos Cerrolago, S.L. Asunto: plazo de la climatización.",
-        "El proyecto de climatización estará listo en 8 semanas desde la aceptación.",
-        "Un saludo, Irene Salcedo.",
-    ]]),
+    doc("alojamientos-cerrolago", "correo-2025-01-plazo.txt", "Correo de Brumeral a Alojamientos Cerrolago sobre el plazo", "2025-01-14", [
+        correo("14/01/2025", "Irene Salcedo Moya, de Brumeral", "Alojamientos Cerrolago, S.L.",
+               "Plazo de la climatización",
+               ["Hola:", "", "Te confirmo lo que comentamos en la visita a la obra.",
+                "El proyecto de climatización estará listo en 8 semanas desde la aceptación.",
+                "La gerencia ya conoce el calendario de las habitaciones, así que lo cerramos cuando nos confirméis.",
+                "", "Un saludo, Irene."],
+               ["Irene Salcedo Moya", NOMBRE_EMPRESA]),
+    ]),
     doc("alojamientos-cerrolago", "aceptacion-presupuesto.txt", "Aceptación del presupuesto P-2024-031", "2025-01-20", [[
+        "ACEPTACIÓN DEL PRESUPUESTO P-2024-031", "Fecha: 20/01/2025.", "",
         "Alojamientos Cerrolago, S.L. acepta el presupuesto P-2024-031 de reforma de la climatización.",
+        "Se aceptan el alcance, las exclusiones y las condiciones descritas en el presupuesto, sin cambios.",
+        "El cliente recibe copia firmada de esta aceptación para su archivo.", "",
         "Firmado: la gerencia de Alojamientos Cerrolago, S.L., 20/01/2025.",
+        f"Por {NOMBRE_EMPRESA}: {REP_EMPRESA}, administrador.",
+        "Representante del cliente: Pilar Amorós Serrano, gerente.",
     ]]),
 ]
 
 DOCUMENTOS += [
     doc("bodegas-quintafria", "contrato-servicios-2023.txt", "Contrato de servicios de ingeniería CS-2023-02", "2023-03-01", [[
-        "Objeto: servicios de ingeniería para la bodega.",
-        "Honorarios anuales: 7.800 euros más IVA.",
-        "Duración hasta el 31 de marzo de 2025.",
+        "CONTRATO DE SERVICIOS DE INGENIERÍA CS-2023-02", *partes("bodegas-quintafria"), "", "ESTIPULACIONES",
+        *numeradas([
+            ("Objeto", "Servicios de ingeniería para la bodega, incluidas las revisiones técnicas de la instalación frigorífica y la asistencia en la vendimia."),
+            ("Honorarios", "Honorarios anuales: 7.800 euros más IVA."),
+            ("Duración", "Duración hasta el 31 de marzo de 2025."),
+            ("Forma de pago", "Los honorarios se facturan por trimestres vencidos, mediante transferencia bancaria."),
+        ]), *numeradas(CLAUSULAS_FINALES, inicio=5), "", *firmas("bodegas-quintafria"),
     ]]),
     doc("bodegas-quintafria", "contrato-servicios-2025.txt", "Contrato de servicios de ingeniería CS-2025-07", "2025-03-25", [[
-        "Este contrato sustituye y deja sin efecto el contrato CS-2023-02.",
-        "Entrada en vigor: 1 de abril de 2025.",
-        "Honorarios anuales: 8.400 euros más IVA.",
-        "Servicios: ampliación de la sala de barricas, dirección de obra y legalización de la instalación frigorífica.",
+        "CONTRATO DE SERVICIOS DE INGENIERÍA CS-2025-07", *partes("bodegas-quintafria"), "", "ESTIPULACIONES",
+        *numeradas([
+            ("Sustitución", "Este contrato sustituye y deja sin efecto el contrato CS-2023-02."),
+            ("Vigencia", "Entrada en vigor: 1 de abril de 2025."),
+            ("Servicios", "Servicios: ampliación de la sala de barricas, dirección de obra y legalización de la instalación frigorífica."),
+            ("Honorarios", "Honorarios anuales: 8.400 euros más IVA."),
+            ("Forma de pago", "Facturación trimestral, mediante transferencia bancaria."),
+            ("Duración", "El contrato tiene una duración de un año, prorrogable por acuerdo escrito de las partes."),
+        ]), *numeradas(CLAUSULAS_FINALES, inicio=7), "", *firmas("bodegas-quintafria"),
     ]]),
     factura("bodegas-quintafria", "F-2025-033", "2025-04-30",
-            "Honorarios del primer trimestre del contrato CS-2025-07.", 2100, "30/05/2025"),
+            [("Honorarios del primer trimestre del contrato CS-2025-07.", 1, 210000)], "30/05/2025"),
 ]
 
 

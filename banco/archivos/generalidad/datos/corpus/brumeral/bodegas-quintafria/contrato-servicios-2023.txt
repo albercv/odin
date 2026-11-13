@@ -1,9 +1,26 @@
 === Página 1 ===
-Brumeral Ingeniería y Consultoría, S.L.
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
 Polígono Las Viñas, nave 12, 47999 Valdecerro
 Contrato de servicios de ingeniería CS-2023-02
-Fecha: 01/03/2023. Cliente: Bodegas Quintafría, S.L.. Página 1 de 1.
+Fecha: 01/03/2023 · Cliente: Bodegas Quintafría, S.L. · CIF B-00000025 · Página 1 de 1
 
-Objeto: servicios de ingeniería para la bodega.
-Honorarios anuales: 7.800 euros más IVA.
-Duración hasta el 31 de marzo de 2025.
+CONTRATO DE SERVICIOS DE INGENIERÍA CS-2023-02
+REUNIDOS
+De una parte, Brumeral Ingeniería y Consultoría, S.L., con CIF B-00000001 y domicilio en Polígono Las Viñas, nave 12, 47999 Valdecerro, representada por Carlos Montesinos Vega, administrador.
+De otra parte, Bodegas Quintafría, S.L., con CIF B-00000025 y domicilio en Viñedo de Quintafría, Valdecerro, representada por Lucía Ferrer Sanz, en calidad de representante legal.
+Las dos partes se reconocen capacidad para firmar este contrato y lo suscriben de buena fe.
+
+ESTIPULACIONES
+1. Objeto. Servicios de ingeniería para la bodega, incluidas las revisiones técnicas de la instalación frigorífica y la asistencia en la vendimia.
+2. Honorarios. Honorarios anuales: 7.800 euros más IVA.
+3. Duración. Duración hasta el 31 de marzo de 2025.
+4. Forma de pago. Los honorarios se facturan por trimestres vencidos, mediante transferencia bancaria.
+5. Confidencialidad. Las partes se obligan a mantener en secreto la información técnica y comercial a la que accedan con ocasión de este contrato, y a usarla solo para su ejecución.
+6. Protección de datos. Los datos personales de las personas de contacto se tratarán conforme al Reglamento general de protección de datos y a la normativa española vigente, solo para ejecutar este contrato.
+7. Resolución. Cualquiera de las partes podrá resolver el contrato si la otra incumple una obligación esencial y no la corrige tras un aviso escrito.
+8. Jurisdicción. Para cualquier controversia derivada de este contrato, las partes se someten a los juzgados y tribunales de Valdecerro, con renuncia a cualquier otro fuero.
+
+Y en prueba de conformidad, las partes firman este documento por duplicado en Valdecerro.
+
+Por Brumeral Ingeniería y Consultoría, S.L.          Por Bodegas Quintafría, S.L.
+Fdo.: Carlos Montesinos Vega          Fdo.: Lucía Ferrer Sanz
