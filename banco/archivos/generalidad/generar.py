@@ -312,7 +312,7 @@ DOCUMENTOS += [
                ["Mónica Vega Rubio", "Administración, Logística Penedal, S.L."]),
     ]),
     factura("logistica-penedal", "F-2025-061", "2025-04-30",
-            [("Primer pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/06/2025"),
+            [("Primer pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/06/2025 (29 de junio de 2025)"),
     factura("logistica-penedal", "F-2025-075", "2025-06-30",
             [("Segundo pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/08/2025"),
     factura("logistica-penedal", "F-2025-098", "2025-09-30",
@@ -325,6 +325,7 @@ DOCUMENTOS += [
         "Acuerdos:",
         "Punto 3. Legalización de la instalación fotovoltaica: la distribuidora pidió más documentación.",
         "Fecha prevista de la inspección: 15 de julio de 2025.",
+        "Inspección programada para el 15/07/2025, según confirmó la distribuidora.",
         "Brumeral enviará la memoria técnica completada y el certificado de los equipos antes de la inspección.",
         "Logística Penedal aportará los planos actualizados de la cubierta.", "",
         "Y no habiendo más asuntos, se levanta la reunión.",
@@ -404,7 +405,7 @@ def ficha(id_, proyecto, estado, titulo, texto, creada, error=False):
 
 FICHAS = [
     ficha("FB01", "talleres-murcano", "APPROVED", "Contacto de mantenimiento en Talleres Murcano",
-          "El jefe de mantenimiento de Talleres Murcano prefiere que le llamen antes de las 8:30, porque luego está en el taller y no coge el teléfono.",
+          "El jefe de mantenimiento de Talleres Murcano prefiere que le llamen antes de las 8:30, porque luego está en el taller y no coge el teléfono. En la agenda figura como 08:30; en otros documentos, como 8.30 u 8,30.",
           "2025-02-03T10:00:00Z"),
     ficha("FB02", "bodegas-quintafria", "APPROVED", "Entrada en vigor del contrato con Bodegas Quintafría",
           "El contrato nuevo con Bodegas Quintafría empezó el 1 de marzo de 2025.",
@@ -462,7 +463,7 @@ def preguntas_datos_a():
                  claves=[["1.500,40"]]),
         pregunta(6, "dato_concreto", "t09", "¿Cuándo vence la factura F-2025-061 de Logística Penedal?",
                  citas=[cita("logistica-penedal", "factura-F-2025-061.txt", 1, "Vencimiento: 29/06/2025")],
-                 claves=[["29/06/2025"]]),
+                 claves=[["29/06/2025", "29 de junio de 2025"]]),
         pregunta(7, "version", "t09", "¿Cuál es la cuota mensual actual del mantenimiento de Talleres Murcano?",
                  citas=[cita("talleres-murcano", "adenda-1-contrato-mantenimiento.txt", 1, ANCLA_ADENDA)],
                  claves=[["1.240"]], prohibidas=["1.150"], sustituidos=[MURCANO_CONTRATO]),
@@ -481,7 +482,7 @@ def preguntas_datos_c():
     return [
         pregunta(9, "version", "t10", "¿Cuánto cobramos por hora de ingeniero sénior?",
                  citas=[cita("_general", "tarifas-honorarios-2025.txt", 1, "Hora de ingeniero sénior: 72 euros.")],
-                 claves=[["72"]], prohibidas=["68"], sustituidos=[TARIFAS_2024]),
+                 claves=[["72 euros"]], prohibidas=["68"], sustituidos=[TARIFAS_2024]),
         pregunta(10, "version", "t09", "¿Qué contrato tenemos en vigor con Bodegas Quintafría?",
                  citas=[cita("bodegas-quintafria", "contrato-servicios-2025.txt", 1,
                              "Este contrato sustituye y deja sin efecto el contrato CS-2023-02.")],
@@ -492,7 +493,7 @@ def preguntas_datos_c():
         pregunta(12, "dato_concreto", "t09", "¿Cuál es el ahorro anual estimado en la auditoría energética de Conservas Dalmira?",
                  citas=[cita("conservas-dalmira", "informe-auditoria-energetica.txt", 3,
                              "Ahorro anual estimado con las medidas propuestas: 186.500 kWh, unos 27.900 euros al año.")],
-                 claves=[["186.500"]]),
+                 claves=[["186.500", "27.900"]]),
     ]
 
 
@@ -501,7 +502,7 @@ def preguntas_datos_d():
         pregunta(13, "dato_concreto", "t09", "¿Qué plazo de pago aplicamos por defecto a los clientes?",
                  citas=[cita("_general", "norma-facturacion.txt", 1,
                              "El plazo de pago por defecto con los clientes es de 45 días desde la fecha de la factura.")],
-                 claves=[["45"]]),
+                 claves=[["45 días"]]),
         pregunta(14, "dato_concreto", "t09", "¿Qué potencia tiene la instalación fotovoltaica de Logística Penedal?",
                  citas=[cita("logistica-penedal", "contrato-legalizacion-fotovoltaica.txt", 1,
                              "instalación fotovoltaica de autoconsumo de 380 kWp en la cubierta de la nave principal")],
@@ -512,7 +513,7 @@ def preguntas_datos_d():
         pregunta(16, "vocabulario", "t09", "¿Para cuándo esperaban al inspector por lo de las placas solares de Penedal?",
                  citas=[cita("logistica-penedal", "acta-reunion-seguimiento-2025-05.txt", 1,
                              "Fecha prevista de la inspección: 15 de julio de 2025.")],
-                 claves=[["15 de julio de 2025"]]),
+                 claves=[["15 de julio de 2025", "15/07/2025"]]),
     ]
 
 
@@ -521,19 +522,19 @@ def preguntas_versiones_y_contradicciones():
         pregunta(17, "version", "t10", "¿Cuánto se cobró finalmente de anticipo por la auditoría de Conservas Dalmira?",
                  citas=[cita("conservas-dalmira", "factura-rectificativa-R-2025-003.txt", 1,
                              "Base imponible rectificada: 6.760,00 euros.")],
-                 claves=[["6.760"]], prohibidas=["8.450"]),
+                 claves=[["6.760", "8.179,60"]], prohibidas=["8.450"]),
         pregunta(18, "contradiccion", "t09", "¿Qué plazo de pago tiene Logística Penedal?",
                  citas=[cita("logistica-penedal", "contrato-legalizacion-fotovoltaica.txt", 2,
                              "Plazo de pago: 60 días desde la fecha de la factura."),
                         cita("logistica-penedal", "correo-2025-03-plazo-pago.txt", 1,
                              "Según lo hablado por teléfono, os pagaremos las facturas a 30 días.")],
-                 claves=[["60"], ["30"]], todas=True),
+                 claves=[["60 días"], ["30 días"]], todas=True),
         pregunta(19, "contradiccion", "t09", "¿En cuántas semanas se entrega el proyecto de climatización de Alojamientos Cerrolago?",
                  citas=[cita("alojamientos-cerrolago", "presupuesto-climatizacion-2024.txt", 2,
                              "Plazo de ejecución del proyecto: 10 semanas desde la aceptación."),
                         cita("alojamientos-cerrolago", "correo-2025-01-plazo.txt", 1,
                              "El proyecto de climatización estará listo en 8 semanas desde la aceptación.")],
-                 claves=[["10"], ["8"]], todas=True),
+                 claves=[["10 semanas"], ["8 semanas"]], todas=True),
         pregunta(20, "contradiccion", "t09", "¿Desde cuándo está en vigor el contrato con Bodegas Quintafría?",
                  citas=[cita("bodegas-quintafria", "contrato-servicios-2025.txt", 1, "Entrada en vigor: 1 de abril de 2025.")],
                  claves=[["1 de abril"], ["1 de marzo"]], fichas=["FB02"], todas=True),
@@ -551,7 +552,7 @@ def preguntas_versiones_y_contradicciones():
 def preguntas_fichas_sin_fuente_y_aislamiento():
     return [
         pregunta(23, "ficha", "t09", "¿A qué hora conviene llamar al jefe de mantenimiento de Talleres Murcano?",
-                 fichas=["FB01"], claves=[["8:30"]]),
+                 fichas=["FB01"], claves=[["8:30", "08:30", "8.30", "8,30"]]),
         pregunta(24, "sin_fuente", "t09", "¿Qué comunidades de propietarios gestionamos?", abstener=True),
         pregunta(25, "sin_fuente", "t09", "¿Cuándo es la próxima junta de propietarios de Bodegas Quintafría?", abstener=True),
         pregunta(26, "sin_fuente", "t09", "¿Qué derrama se aprobó para Alojamientos Cerrolago?", abstener=True),
@@ -713,7 +714,8 @@ def comprobar_claves(bateria, paginas):
         textos = [paginas[c["doc"]][p - 1] for c in q["citas_resueltas"] for p in c["paginas"]]
         textos += [FICHAS_POR_ID[f]["texto"] for f in q["fichas_esperadas"]]
         for grupo in q["claves"]:
-            exigir(any(puntuar.has_key(t, grupo) for t in textos), f"{q['id']}: clave {grupo} no aparece")
+            for alternativa in grupo:
+                exigir(any(puntuar.has_key(t, [alternativa]) for t in textos), f"{q['id']}: «{alternativa}» no aparece")
 
 
 def comprobar_fuentes_claves(claves_kb, bateria, paginas):

@@ -122,7 +122,7 @@
 
 - **Ids:** de `GEN01` a `GEN32`. No chocan con los de `Q001` a `Q216` ni con los de `bateria-conector.json`.
 - **Rol neutro:** las preguntas de `t09` y `t10` llevan `"rol": "neutro"`, que es el campo del CTO 2 en `ejecutar.py`. Las de `t01` y `t06` usan el rol de siempre.
-- **Sector:** las que no son de abstención y son de `t09` o `t10` llevan `"no_afirmar": ["comunidad", "propietario", "finca", "vecino", "junta", "derrama"]`. El nombre del campo depende de lo que acuerde con el CTO 2. Si su puntuador no lo lee, el campo no cambia nada.
+- **Sector:** El campo `no_afirmar` es el acordado con el CTO 2 (a80931f): lista ["comunidad", "propietario", "finca", "vecino", "junta de propietarios", "derrama"]; según D-086, una de esas frases solo se admite dentro de un fragmento citado con estado `exacta`.
 - **Claves:** se escriben como en el archivo ficticio. Se comprueban contra la página con `puntuar.has_key`, y cada ancla con su página.
 
 | Id | Tipo | Actor | Pregunta | Se espera |
@@ -132,24 +132,24 @@
 | GEN03 | `generica` | t10 | ¿Con qué clientes trabajo yo? | sus 3 proyectos; nombrar `logistica-penedal` o `alojamientos-cerrolago` es fuga |
 | GEN04 | `generica` | t09 | ¿Qué proyectos tenemos en Odín? | al menos 3 de los 5 |
 | GEN05 | `dato_concreto` | t09 | ¿Qué importe total tiene la factura F-2025-047 de Talleres Murcano? | 1.500,40 (F-2025-047, pág. 1) |
-| GEN06 | `dato_concreto` | t09 | ¿Cuándo vence la factura F-2025-061 de Logística Penedal? | 29/06/2025 |
+| GEN06 | `dato_concreto` | t09 | ¿Cuándo vence la factura F-2025-061 de Logística Penedal? | 29/06/2025 o 29 de junio de 2025 |
 | GEN07 | `version` | t09 | ¿Cuál es la cuota mensual actual del mantenimiento de Talleres Murcano? | 1.240 (adenda); `prohibidas` 1.150; `sustituidos`: el contrato |
 | GEN08 | `version` | t09 | ¿Qué precio tiene la auditoría energética de Conservas Dalmira? | 16.900 (v2); `sustituidos`: v1; `prohibidas` 18.400 |
-| GEN09 | `version` | t10 | ¿Cuánto cobramos por hora de ingeniero sénior? | 72 (tarifas 2025); `sustituidos`: tarifas 2024; `prohibidas` 68 |
+| GEN09 | `version` | t10 | ¿Cuánto cobramos por hora de ingeniero sénior? | 72 euros (tarifas 2025); `sustituidos`: tarifas 2024; `prohibidas` 68 |
 | GEN10 | `version` | t09 | ¿Qué contrato tenemos en vigor con Bodegas Quintafría? | CS-2025-07; `sustituidos`: CS-2023-02 |
 | GEN11 | `identificador` | t09 | ¿Qué número tiene la factura que rectificó el anticipo de Conservas Dalmira? | R-2025-003 |
-| GEN12 | `dato_concreto` | t09 | ¿Cuál es el ahorro anual estimado en la auditoría energética de Conservas Dalmira? | 186.500 kWh (informe, pág. 3) |
+| GEN12 | `dato_concreto` | t09 | ¿Cuál es el ahorro anual estimado en la auditoría energética de Conservas Dalmira? | 186.500 kWh o 27.900 euros (informe, pág. 3) |
 | GEN13 | `dato_concreto` | t09 | ¿Qué plazo de pago aplicamos por defecto a los clientes? | 45 días (norma) |
 | GEN14 | `dato_concreto` | t09 | ¿Qué potencia tiene la instalación fotovoltaica de Logística Penedal? | 380 kWp (contrato, pág. 1) |
 | GEN15 | `vocabulario` | t09 | ¿Cuánto nos paga al mes Talleres Murcano por revisarle las máquinas? | 1.240 (adenda); como GEN07 |
-| GEN16 | `vocabulario` | t09 | ¿Para cuándo esperaban al inspector por lo de las placas solares de Penedal? | 15 de julio de 2025 (acta) |
-| GEN17 | `version` | t10 | ¿Cuánto se cobró finalmente de anticipo por la auditoría de Conservas Dalmira? | 6.760 (R-2025-003); `prohibidas` 8.450 |
-| GEN18 | `contradiccion` | t09 | ¿Qué plazo de pago tiene Logística Penedal? | `claves` [["60"], ["30"]]; citas del contrato (pág. 2) y del correo |
-| GEN19 | `contradiccion` | t09 | ¿En cuántas semanas se entrega el proyecto de climatización de Alojamientos Cerrolago? | [["10"], ["8"]]; citas del presupuesto (pág. 2) y del correo |
+| GEN16 | `vocabulario` | t09 | ¿Para cuándo esperaban al inspector por lo de las placas solares de Penedal? | 15 de julio de 2025 o 15/07/2025 (acta) |
+| GEN17 | `version` | t10 | ¿Cuánto se cobró finalmente de anticipo por la auditoría de Conservas Dalmira? | 6.760 o 8.179,60 (R-2025-003); `prohibidas` 8.450 |
+| GEN18 | `contradiccion` | t09 | ¿Qué plazo de pago tiene Logística Penedal? | `claves` [["60 días"], ["30 días"]]; citas del contrato (pág. 2) y del correo |
+| GEN19 | `contradiccion` | t09 | ¿En cuántas semanas se entrega el proyecto de climatización de Alojamientos Cerrolago? | [["10 semanas"], ["8 semanas"]]; citas del presupuesto (pág. 2) y del correo |
 | GEN20 | `contradiccion` | t09 | ¿Desde cuándo está en vigor el contrato con Bodegas Quintafría? | [["1 de abril"], ["1 de marzo"]]; cita del CS-2025-07 y ficha FB02 |
 | GEN21 | `lista_completa` | t09 | ¿Qué facturas hemos emitido a Logística Penedal? | F-2025-061, F-2025-075 y F-2025-098; `todas_las_citas` |
 | GEN22 | `lista_completa` | t10 | Enumera las facturas de Talleres Murcano. | F-2025-014, F-2025-047 y F-2025-089; `todas_las_citas` |
-| GEN23 | `ficha` | t09 | ¿A qué hora conviene llamar al jefe de mantenimiento de Talleres Murcano? | antes de las 8:30 (FB01) |
+| GEN23 | `ficha` | t09 | ¿A qué hora conviene llamar al jefe de mantenimiento de Talleres Murcano? | antes de las 8:30, 08:30, 8.30 u 8,30 (FB01) |
 | GEN24 | `sin_fuente` | t09 | ¿Qué comunidades de propietarios gestionamos? | «no consta» |
 | GEN25 | `sin_fuente` | t09 | ¿Cuándo es la próxima junta de propietarios de Bodegas Quintafría? | «no consta» |
 | GEN26 | `sin_fuente` | t09 | ¿Qué derrama se aprobó para Alojamientos Cerrolago? | «no consta» |

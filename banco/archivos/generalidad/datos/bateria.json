@@ -164,7 +164,8 @@
   "todas_las_citas": false,
   "claves": [
    [
-    "29/06/2025"
+    "29/06/2025",
+    "29 de junio de 2025"
    ]
   ],
   "abstener": false,
@@ -280,7 +281,7 @@
   "todas_las_citas": false,
   "claves": [
    [
-    "72"
+    "72 euros"
    ]
   ],
   "abstener": false,
@@ -396,7 +397,8 @@
   "todas_las_citas": false,
   "claves": [
    [
-    "186.500"
+    "186.500",
+    "27.900"
    ]
   ],
   "abstener": false,
@@ -432,7 +434,7 @@
   "todas_las_citas": false,
   "claves": [
    [
-    "45"
+    "45 días"
    ]
   ],
   "abstener": false,
@@ -544,7 +546,8 @@
   "todas_las_citas": false,
   "claves": [
    [
-    "15 de julio de 2025"
+    "15 de julio de 2025",
+    "15/07/2025"
    ]
   ],
   "abstener": false,
@@ -580,7 +583,8 @@
   "todas_las_citas": false,
   "claves": [
    [
-    "6.760"
+    "6.760",
+    "8.179,60"
    ]
   ],
   "abstener": false,
@@ -625,10 +629,10 @@
   "todas_las_citas": true,
   "claves": [
    [
-    "60"
+    "60 días"
    ],
    [
-    "30"
+    "30 días"
    ]
   ],
   "abstener": false,
@@ -671,10 +675,10 @@
   "todas_las_citas": true,
   "claves": [
    [
-    "10"
+    "10 semanas"
    ],
    [
-    "8"
+    "8 semanas"
    ]
   ],
   "abstener": false,
@@ -857,7 +861,10 @@
   "todas_las_citas": false,
   "claves": [
    [
-    "8:30"
+    "8:30",
+    "08:30",
+    "8.30",
+    "8,30"
    ]
   ],
   "abstener": false,

@@ -72,6 +72,17 @@ class GeneralidadTest(unittest.TestCase):
         for ficha in self.manifiesto["fichas"]:
             self.assertIsNone(REDACCION.search(sin_tildes(ficha["titulo"] + " " + ficha["texto"])), ficha["id"])
 
+    def test_alternativas_de_claves_de_la_revision(self):
+        esperadas = {
+            "GEN06": [["29/06/2025", "29 de junio de 2025"]], "GEN09": [["72 euros"]],
+            "GEN12": [["186.500", "27.900"]], "GEN13": [["45 días"]], "GEN16": [["15 de julio de 2025", "15/07/2025"]],
+            "GEN17": [["6.760", "8.179,60"]], "GEN18": [["60 días"], ["30 días"]], "GEN19": [["10 semanas"], ["8 semanas"]],
+            "GEN23": [["8:30", "08:30", "8.30", "8,30"]],
+        }
+        por_id = {q["id"]: q for q in self.bateria}
+        for qid, claves in esperadas.items():
+            self.assertEqual(por_id[qid]["claves"], claves, qid)
+
     def test_sin_puntos_dobles_tras_los_nombres(self):
         for rel in ficheros(self.datos / "corpus"):
             texto = (self.datos / "corpus" / rel).read_text(encoding="utf-8")
