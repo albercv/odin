@@ -52,6 +52,7 @@ final class SearchSql {
 
     static List<String> exactTokens(List<String> terms) {
         Stream<String> identifiers = tokens(terms).filter(token -> IDENTIFIER.matcher(token).matches());
+        // Las formas compuestas van después de los identificadores: MAX_IDENTIFIERS puede recortarlas.
         Stream<String> compounds = caseNumbers(terms).stream().flatMap(n -> Stream.of("-" + n, "/" + n, n + "/"));
         return Stream.concat(identifiers, compounds).distinct().limit(MAX_IDENTIFIERS).toList();
     }

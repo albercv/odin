@@ -90,6 +90,7 @@ class CaseNumberBatteryIT extends AbstractPostgresIT {
                     caseKeys::contains);
             Map<String, String> names = folders(manifest, key);
             LoadedArchive files = loader.load(id, actor, ArchiveBattery.DIR.resolve("expedientes"), names);
+            // Resultado descartado: solo da de alta al actor en los proyectos del corpus (los de expedientes comparten nombre).
             ArchiveBattery.companyOf(this, id, actor, corpus, corpusNames);
             companies.put(key, ArchiveBattery.companyOf(this, id, actor, files, names));
         }

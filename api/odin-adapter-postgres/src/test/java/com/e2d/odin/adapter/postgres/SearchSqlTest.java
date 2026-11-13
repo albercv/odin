@@ -20,13 +20,25 @@ class SearchSqlTest {
     }
 
     @Test
+    void hyphenatedCaseNumberGivesItsGroupAndTheLiteralForms() {
+        assertThat(SearchSql.numberVariants(List.of("2024-530"))).containsExactly("530", "-530");
+        assertThat(SearchSql.exactTokens(List.of("2024-530"))).contains("2024-530", "-530", "/530", "530/");
+    }
+
+    @Test
+    void fourDigitNumbersOutsideTheYearRangeAreCaseNumbers() {
+        assertThat(SearchSql.numberVariants(List.of("1530"))).containsExactly("-1530");
+        assertThat(SearchSql.numberVariants(List.of("2100"))).containsExactly("-2100");
+    }
+
+    @Test
     void shortYearGroupIsDropped() {
         assertThat(SearchSql.numberVariants(List.of("exp. 530/24"))).containsExactly("530", "-530");
     }
 
     @Test
     void yearsAmountsDatesAndShortNumbersGetNothing() {
-        for (String term : List.of("2025", "12/11/2024", "1.940", "24", "1,940 euros")) {
+        for (String term : List.of("2025", "12/11/2024", "1.940", "24", "1,940 euros", "1.940,50")) {
             assertThat(SearchSql.numberVariants(List.of(term))).as(term).isEmpty();
             assertThat(SearchSql.exactTokens(List.of(term))).as(term)
                     .noneMatch(t -> t.startsWith("-") || t.startsWith("/") || t.endsWith("/"));

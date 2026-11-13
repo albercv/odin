@@ -62,6 +62,10 @@
   - En cada una, la ficha del caso y al menos un documento de su expediente están entre los 10 primeros. El objetivo es 72 de 72.
   - Las baterías de siempre no bajan: `SearchBatteryIT` (recall@5 ≥ 90,00) y `ArchiveSearchBatteryIT` (recall@10 ≥ 73,28).
   - Pruebas unitarias de importes, fechas y años: «1.940», «12/11/2024» y «2025» no reciben la prioridad nueva (`pureNumbersAreNotBoosted` sigue en verde).
+- **Límites aceptados:**
+  - Un número suelto de 3 cifras o más favorece a los documentos que lo citan como referencia («Caso 2024-530», «Ref. 12-530») frente a aquellos donde es un importe. El documento del importe sigue saliendo (prueba `amountIsNotHiddenByCaseNumbersForTheSameDigits`), pero puede quedar detrás.
+  - ILIKE no tiene límite de palabra: «-530» también coincide con «-5301» y «530/» con «1530/24».
+  - Un número de 4 cifras fuera de 1900 a 2099 («1530», «2100») se trata como número de caso.
 
 ## 4. Medición
 

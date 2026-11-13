@@ -113,6 +113,16 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
                 "Correo");
     }
 
+    /** Límite aceptado: la ficha del caso 530 puede ir por delante del importe, pero este tiene que salir. */
+    @Test
+    void amountIsNotHiddenByCaseNumbersForTheSameDigits() {
+        CompanyId c = newCompany();
+        page(c, "Factura", DocumentStatus.READY, "Total de la reparación: 530 euros con IVA incluido");
+        page(c, "Caso 2024-530", DocumentStatus.READY, "Caso 2024-530 filtración en la azotea");
+        List<SearchHit> hits = find(CompanyScope.of(c), "530 euros");
+        assertThat(hits).extracting(SearchHit::title).contains("Factura");
+    }
+
     @Test
     void identifierWithoutWordsStillMatchesByLiteral() {
         CompanyId c = newCompany();
