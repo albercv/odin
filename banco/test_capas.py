@@ -35,12 +35,12 @@ def write_archive(datos, empresa, **overrides):
     (datos / "bateria.json").write_text(json.dumps([{"id": f"{empresa}-Q1"}]), encoding="utf-8")
 
 
-def write_expedientes(datos, caso, documentos):
-    """Expediente falso: un caso con sus documentos, en expedientes.json y en la carpeta expedientes/ de la capa."""
-    case = {"caso": caso, "proyecto": None, "documentos": documentos, "compartidos": [], "ajenos": [],
-            "formas_numero": [], "sustituciones": []}
+def write_expedientes(datos, caso, documentos=(), compartidos=(), ajenos=(), write_files=True):
+    """Expediente falso: `caso` es una ruta real del corpus (así la busca el cargador). Sus ficheros van en expedientes/."""
+    case = {"caso": caso, "proyecto": None, "documentos": list(documentos), "compartidos": list(compartidos),
+            "ajenos": list(ajenos), "formas_numero": [], "sustituciones": []}
     (datos / "expedientes.json").write_text(json.dumps([case], ensure_ascii=False), encoding="utf-8")
-    for ruta in documentos:
+    for ruta in [*documentos, *compartidos, *ajenos] if write_files else []:
         fichero = datos / "expedientes" / ruta
         fichero.parent.mkdir(parents=True, exist_ok=True)
         fichero.write_text("=== Página 1 ===\nTexto del expediente\n", encoding="utf-8")
@@ -193,11 +193,11 @@ class ExpedientesMergeTest(unittest.TestCase):
         self.out = self.root / "fusion"
 
     def test_expedientes_are_concatenated_and_copied(self):
-        write_expedientes(self.ficticio, "ribera-C1", ["ribera/proyecto/c1.txt"])
-        write_expedientes(self.generalidad, "brumeral-C1", ["brumeral/proyecto/c1.txt"])
+        write_expedientes(self.ficticio, "ribera/_general/doc.txt", ["ribera/proyecto/c1.txt"])
+        write_expedientes(self.generalidad, "brumeral/_general/doc.txt", ["brumeral/proyecto/c1.txt"])
         capas.merge([self.ficticio, self.generalidad], self.out)
         cases = json.loads((self.out / "expedientes.json").read_text(encoding="utf-8"))
-        self.assertEqual([c["caso"] for c in cases], ["ribera-C1", "brumeral-C1"])
+        self.assertEqual([c["caso"] for c in cases], ["ribera/_general/doc.txt", "brumeral/_general/doc.txt"])
         copied = self.out / "expedientes" / "brumeral" / "proyecto" / "c1.txt"
         self.assertTrue(copied.is_file())
         self.assertFalse(copied.is_symlink())
@@ -208,16 +208,32 @@ class ExpedientesMergeTest(unittest.TestCase):
         self.assertFalse((self.out / "expedientes").exists())
 
     def test_repeated_caso_is_refused(self):
-        write_expedientes(self.ficticio, "ribera-C1", ["ribera/proyecto/c1.txt"])
-        write_expedientes(self.generalidad, "ribera-C1", ["brumeral/proyecto/c1.txt"])
-        with self.assertRaisesRegex(ArchivoError, "clave repetida en expedientes: ribera-C1"):
+        write_expedientes(self.ficticio, "ribera/_general/doc.txt", ["ribera/proyecto/c1.txt"])
+        write_expedientes(self.generalidad, "ribera/_general/doc.txt", ["brumeral/proyecto/c1.txt"])
+        with self.assertRaisesRegex(ArchivoError, "clave repetida en expedientes: ribera/_general/doc.txt"):
             capas.merge([self.ficticio, self.generalidad], self.out)
 
     def test_repeated_expediente_file_is_refused(self):
-        write_expedientes(self.ficticio, "ribera-C1", ["ribera/proyecto/c1.txt"])
-        write_expedientes(self.generalidad, "brumeral-C1", ["ribera/proyecto/c1.txt"])
+        write_expedientes(self.ficticio, "ribera/_general/doc.txt", ["ribera/proyecto/c1.txt"])
+        write_expedientes(self.generalidad, "brumeral/_general/doc.txt", ["ribera/proyecto/c1.txt"])
         with self.assertRaisesRegex(ArchivoError, re.escape("fichero repetido en los expedientes: ribera/proyecto/c1.txt")):
             capas.merge([self.ficticio, self.generalidad], self.out)
+
+    def test_expediente_ruta_also_in_corpus_is_refused(self):
+        for key in ("documentos", "ajenos"):
+            with self.subTest(key=key):
+                write_expedientes(self.ficticio, "ribera/_general/doc.txt", **{key: ["ribera/_general/doc.txt"]})
+                with self.assertRaisesRegex(ArchivoError, re.escape(
+                        "ruta repetida en el corpus y en los expedientes: ribera/_general/doc.txt")):
+                    capas.merge([self.ficticio, self.generalidad], self.out)
+
+    def test_listed_expediente_file_missing_is_refused(self):
+        for key in ("documentos", "compartidos", "ajenos"):
+            with self.subTest(key=key):
+                write_expedientes(self.ficticio, "ribera/_general/doc.txt", write_files=False,
+                                  **{key: ["ribera/proyecto/falta.txt"]})
+                with self.assertRaisesRegex(ArchivoError, re.escape("falta en los expedientes: ribera/proyecto/falta.txt")):
+                    capas.merge([self.ficticio, self.generalidad], self.out)
 
 
 class ExpedienteBatteryTest(unittest.TestCase):

@@ -70,11 +70,12 @@ class BancoCargarTest(unittest.TestCase):
         self.assertIn("cargar_expedientes.py, que no existe", result.stdout + result.stderr)
         self.assertEqual(self.calls(), [])
 
-    def test_without_expedientes_json_the_loader_is_skipped(self):
+    def test_expedientes_without_expedientes_json_fails_before_loading(self):
         self.add_loader()
         result = self.make("EXPEDIENTES=1")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(self.calls()), 1)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(f"sin expedientes.json en {self.exp / 'datos'}", result.stdout + result.stderr)
+        self.assertEqual(self.calls(), [])
 
     def test_failing_manifest_load_fails_the_target(self):
         self.add_loader()

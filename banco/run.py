@@ -100,9 +100,10 @@ def _check_loaded(folder, stack, cfg):
 
 
 def _expediente_docs(folder):
+    """Documentos y compartidos de los expedientes: los que sube el cargador (los ajenos son señuelos y no)."""
     path = folder / "expedientes.json"
     cases = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
-    return {ruta for case in cases for ruta in case["documentos"]}
+    return {ruta for case in cases for ruta in case["documentos"] + case["compartidos"]}
 
 
 def _check_main(cfg, sweep):

@@ -114,14 +114,31 @@ def _copy_corpus(source, target):
 
 
 def _build_expedientes(data_dirs, target):
-    files = [Path(d) / "expedientes.json" for d in data_dirs if (Path(d) / "expedientes.json").is_file()]
-    if files:
-        cases = [case for f in files for case in _read_json(f)]
-        _check_unique(cases, "caso", "expedientes")
-        _write_json(target / "expedientes.json", cases)
     for d in data_dirs:
         if (Path(d) / "expedientes").is_dir():
             _copy_tree(Path(d) / "expedientes", target / "expedientes", "los expedientes")
+    files = [Path(d) / "expedientes.json" for d in data_dirs if (Path(d) / "expedientes.json").is_file()]
+    if not files:
+        return
+    cases = [case for f in files for case in _read_json(f)]
+    _check_unique(cases, "caso", "expedientes")
+    _check_expedientes(cases, target)
+    _write_json(target / "expedientes.json", cases)
+
+
+def _files_under(root):
+    return {path.relative_to(root).as_posix() for path in Path(root).rglob("*") if path.is_file()}
+
+
+def _check_expedientes(cases, target):
+    """Cada fichero listado existe en expedientes/, y ninguna ruta de expedientes/ existe también en el corpus."""
+    for case in cases:
+        for ruta in case["documentos"] + case["compartidos"] + case["ajenos"]:
+            if not (target / "expedientes" / ruta).is_file():
+                raise ArchivoError(f"falta en los expedientes: {ruta}")
+    repeated = sorted(_files_under(target / "expedientes") & _files_under(target / "corpus"))
+    if repeated:
+        raise ArchivoError(f"ruta repetida en el corpus y en los expedientes: {repeated[0]}")
 
 
 def _check_corpus(documents, corpus):

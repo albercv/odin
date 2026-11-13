@@ -763,7 +763,7 @@ class SeveralArchivesTest(Harness):
 
 
 class ExpedientesCheckTest(unittest.TestCase):
-    """La batería de expedientes exige sus documentos cargados en la pila; las partes ajenas no cuentan."""
+    """La batería de expedientes exige sus documentos y compartidos cargados en la pila; los ajenos no cuentan."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -773,9 +773,9 @@ class ExpedientesCheckTest(unittest.TestCase):
         self.cfg = SimpleNamespace(archives=("ficticio", "generalidad"), batteries=("desarrollo", "generalidad-expediente"))
         self.stack = {"doc_ruta": {"doc-1": "a/x.txt"}, "ficha_f": {}}
 
-    def write_expedientes(self, documentos, ajenos=()):
-        case = {"caso": "a-C1", "proyecto": None, "documentos": list(documentos), "compartidos": [], "ajenos": list(ajenos),
-                "formas_numero": [], "sustituciones": []}
+    def write_expedientes(self, documentos, ajenos=(), compartidos=()):
+        case = {"caso": "a/x.txt", "proyecto": None, "documentos": list(documentos), "compartidos": list(compartidos),
+                "ajenos": list(ajenos), "formas_numero": [], "sustituciones": []}
         (self.folder / "expedientes.json").write_text(json.dumps([case]), encoding="utf-8")
 
     def test_expediente_documents_loaded_pass(self):
@@ -785,6 +785,11 @@ class ExpedientesCheckTest(unittest.TestCase):
     def test_expediente_document_not_loaded_is_refused_with_loader_hint(self):
         self.write_expedientes(["a/y.txt"])
         with self.assertRaisesRegex(ConfigError, re.escape("ARCHIVOS=ficticio,generalidad EXPEDIENTES=1")):
+            run._check_loaded(self.folder, self.stack, self.cfg)
+
+    def test_compartido_not_loaded_is_refused(self):
+        self.write_expedientes(["a/x.txt"], compartidos=["a/y.txt"])
+        with self.assertRaisesRegex(ConfigError, re.escape("EXPEDIENTES=1")):
             run._check_loaded(self.folder, self.stack, self.cfg)
 
     def test_ajenos_are_not_required(self):
