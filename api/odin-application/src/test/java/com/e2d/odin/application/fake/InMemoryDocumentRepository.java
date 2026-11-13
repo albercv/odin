@@ -149,9 +149,9 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public List<DocumentEntry> listIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
+    public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
             int limit) {
-        return documents.values().stream().filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId()))
+        return documents.values().stream().filter(d -> d.withdrawn() && scope.includes(d.companyId()) && visibility.allows(d.projectId()))
                 .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
                 .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
     }

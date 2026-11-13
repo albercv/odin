@@ -141,6 +141,20 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
     }
 
     @Test
+    void pageCountsRespectCompanyAndWithdrawalThroughAConnectionThatBypassesRls() {
+        var ownerFiles = new PostgresCaseFileRepository(ownerTx);
+        var ids = List.of(documentOfA.id());
+
+        assertThat(ownerFiles.pageCounts(CompanyScope.of(a), ProjectVisibility.all(), ids)).containsEntry(
+                documentOfA.id(), 1);
+        assertThat(ownerFiles.pageCounts(CompanyScope.of(b), ProjectVisibility.all(), ids)).isEmpty();
+
+        docs.markWithdrawal(documentOfA.withWithdrawal(Optional.of(NOW), Optional.of(documentOfA.uploadedBy())));
+
+        assertThat(ownerFiles.pageCounts(CompanyScope.of(a), ProjectVisibility.all(), ids)).isEmpty();
+    }
+
+    @Test
     void scopeOfBReadsNothingOfAThroughAConnectionThatBypassesRls() {
         assertThat(readEverything(CompanyScope.of(b))).isZero();
     }

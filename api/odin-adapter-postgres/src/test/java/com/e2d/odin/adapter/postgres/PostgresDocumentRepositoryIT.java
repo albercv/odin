@@ -184,8 +184,10 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         assertThat(docs.findEntry(scope, all, d.id())).isEmpty();
         assertThat(docs.findPage(scope, all, d.id(), 1)).isEmpty();
         assertThat(docs.list(scope, all, Optional.empty(), Optional.empty(), 0, 10)).isEmpty();
-        assertThat(docs.listIncludingWithdrawn(scope, all, 0, 10)).extracting(e -> e.document().id())
-                .containsExactly(d.id());
+        Document active = newDocument(a, admin, "Activo", DocumentStatus.READY);
+        assertThat(docs.listWithdrawn(scope, all, 0, 10)).extracting(e -> e.document().id())
+                .containsExactly(d.id()).doesNotContain(active.id());
+        assertThat(docs.listWithdrawn(scope, all, 1, 10)).isEmpty();
         Document withdrawn = docs.findEntryIncludingWithdrawn(scope, all, d.id()).orElseThrow().document();
         assertThat(withdrawn.withdrawnAt()).contains(NOW);
         assertThat(withdrawn.withdrawnBy()).contains(admin);

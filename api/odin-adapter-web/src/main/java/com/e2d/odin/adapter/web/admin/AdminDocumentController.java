@@ -18,6 +18,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
 import java.util.List;
@@ -71,7 +72,8 @@ public class AdminDocumentController {
     @GetMapping("/v1/admin/companies/{companyId}/documents")
     public List<Responses.DocumentView> list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "100") int limit, @RequestParam(defaultValue = "false") boolean withdrawn) {
+            @RequestParam(defaultValue = "100") int limit, @Parameter(description = "Si es true, devuelve solo los documentos retirados (con su paginación)")
+            @RequestParam(defaultValue = "false") boolean withdrawn) {
         return list.execute(actor, new CompanyId(companyId), offset, limit, withdrawn).stream()
                 .map(Responses.DocumentView::from).toList();
     }

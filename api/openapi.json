@@ -996,6 +996,7 @@
         }, {
           "name" : "withdrawn",
           "in" : "query",
+          "description" : "Si es true, devuelve solo los documentos retirados (con su paginación)",
           "required" : false,
           "schema" : {
             "type" : "boolean",

@@ -108,13 +108,15 @@ class WithdrawnDocumentIT {
     @Test
     void adminListShowsWithdrawnOnlyWithFilter() throws InterruptedException {
         String doc = upload("Texto ficticio de la lista cuarzo", "lista-cuarzo.txt", false);
+        String active = upload("Texto ficticio de la lista activa", "lista-activa.txt", false);
         awaitReady(doc);
+        awaitReady(active);
         assertThat(api.put(withdrawal(doc), map(), "Cookie", adminCookie).status()).isEqualTo(200);
         String list = "/v1/admin/companies/" + company + "/documents";
 
         assertThat(ids(api.get(list, "Cookie", adminCookie))).doesNotContain(doc);
         Reply filtered = api.get(list + "?withdrawn=true", "Cookie", adminCookie);
-        assertThat(ids(filtered)).contains(doc);
+        assertThat(ids(filtered)).contains(doc).doesNotContain(active);
         assertThat(filtered.json().get(ids(filtered).indexOf(doc)).get("withdrawnAt").isNull()).isFalse();
         assertThat(ids(api.get("/v1/documents", "Authorization", worker))).doesNotContain(doc);
 

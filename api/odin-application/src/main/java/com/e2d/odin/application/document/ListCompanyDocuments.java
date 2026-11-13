@@ -30,14 +30,14 @@ public class ListCompanyDocuments {
         return execute(actor, companyId, offset, limit, false);
     }
 
-    /** Con {@code withdrawn}, la lista incluye también los retirados; solo la ve el administrador. */
+    /** Con {@code withdrawn}, la lista trae solo los retirados. */
     public List<TaggedDocument> execute(Actor actor, CompanyId companyId, int offset, int limit, boolean withdrawn) {
         AccessPolicy.requireAdminOf(actor, companyId);
         int capped = WorkerAccess.cap(Optional.of(limit), 100, 500);
         CompanyScope scope = CompanyScope.of(companyId);
         ProjectVisibility everything = ProjectVisibility.all();
         int from = Math.max(0, offset);
-        var entries = withdrawn ? documents.listIncludingWithdrawn(scope, everything, from, capped)
+        var entries = withdrawn ? documents.listWithdrawn(scope, everything, from, capped)
                 : documents.list(scope, everything, Optional.empty(), Optional.empty(), Optional.empty(), from,
                         capped);
         return TaggedDocuments.of(entries, scope, everything, topics.list(companyId), tagging);

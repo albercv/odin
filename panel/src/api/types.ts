@@ -2271,6 +2271,7 @@ export interface operations {
             query?: {
                 offset?: number;
                 limit?: number;
+                /** @description Si es true, devuelve solo los documentos retirados (con su paginación) */
                 withdrawn?: boolean;
             };
             header?: never;

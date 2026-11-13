@@ -34,8 +34,8 @@ public interface DocumentRepository {
     /** Escribe solo la retirada del documento. Al recuperar, si hay otro igual sin retirar en su proyecto, 409. */
     void markWithdrawal(Document document);
 
-    /** La lista del administrador con los retirados incluidos (se distinguen por {@code withdrawnAt}). */
-    List<DocumentEntry> listIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
+    /** Solo los retirados, para la vista «Retirados» del administrador, con su paginación. */
+    List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
             int limit);
 
     /** Pone la marca de sustituido con su propia orden: {@link #save} no la escribe ni la borra. */
