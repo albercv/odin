@@ -1,0 +1,20 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Factura F-2025-106
+Fecha: 15/12/2025 · Cliente: Cerámicas Valtierno, S.A. · CIF B-00000026 · Página 1 de 1
+
+EMISOR: Brumeral Ingeniería y Consultoría, S.L., CIF B-00000001, Polígono Las Viñas, nave 12, 47999 Valdecerro.
+CLIENTE: Cerámicas Valtierno, S.A., CIF B-00000026, Camino de la Tejera, 14, Valdecerro.
+Número de factura: F-2025-106
+
+Concepto | Cantidad | Precio unitario | Importe
+Pago 6 de 6 de honorarios del contrato CI-2025-017. | 1 | 8.700,00 euros | 8.700,00 euros
+
+Base imponible: 8.700,00 euros
+IVA 21 %: 1.827,00 euros
+Total factura: 10.527,00 euros
+
+Forma de pago: transferencia bancaria a la cuenta ES00 0000 0000 00 0000000000.
+Vencimiento: 13/02/2026
+Factura emitida según la norma interna de facturación de Brumeral.

@@ -170,3 +170,71 @@
   - Comprueba también la regla de redacción del apartado 1.
 - `test_generar.py`: dos ejecuciones dan los mismos ficheros. Además comprueba anclas, claves, ids únicos, rutas del manifiesto existentes y la regla de redacción.
 - **El banco** (otra tarea) aprende a cargar varias capas y a leer varias baterías: `archives = ["ficticio", "generalidad"]`.
+
+## 7. Expediente grande (D-078)
+
+- **Para qué:** probar un expediente de 60 documentos de un solo cliente, con cifras que cambian (adenda, presupuesto revisado) y con un señuelo. Sigue el formato de los expedientes del archivo ficticio (`experimentos/2026-11-12-archivo-ficticio/DISENO.md`, apartado 2), para que el mismo cargador lo suba.
+- **Todo ficticio y sin IA.** Las plantillas están en `generar.py`. «Cerámicas Valtierno» y los nombres de los proveedores son inventados; no se han podido buscar en la web (sin red).
+- **Cliente:** `ceramicas-valtierno`, «Cerámicas Valtierno, S.A.», CIF B-00000026, domicilio en Valdecerro. Proyecto cerrado (`"abierto": false`).
+  - `t09` y `t11` lo ven (`"*"`). `t10` no lo ve: su lista de proyectos no cambia.
+- **Caso:** `brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt`, «Caso 2025-017, ampliación de la línea del horno 2». Es una «FICHA DE CASO» de dos páginas, en el manifiesto y en `corpus/`.
+- **Expediente:** 60 documentos de una sola página en `datos/expedientes/brumeral/ceramicas-valtierno/`. Los sube el cargador de expedientes desde `expedientes.json`, no el manifiesto.
+
+| Clase | Nº | Ficheros (prefijo `expte-2025-017-`) |
+|---|---|---|
+| Contratos | 2 | `contrato-ingenieria.txt`, `adenda-1.txt` |
+| Presupuestos | 7 | `presupuesto-1` … `presupuesto-6`, más `presupuesto-2-revisado` |
+| Facturas | 6 | `factura-1` … `factura-6` (F-2025-101 … F-2025-106) |
+| Correos | 25 | `correo-1` … `correo-25` |
+| Actas de obra | 8 | `acta-obra-1` … `acta-obra-8` |
+| Informes técnicos | 8 | `informe-tecnico-1` … `informe-tecnico-8` |
+| Certificados | 4 | `certificado-1` … `certificado-4` |
+
+- **Formas de número** (`formas_numero`): «expte. 2025/017», «exp. 017/25», «su referencia 017», «expediente nº 17». Cada documento lleva una de ellas.
+- **Hechos fijos.** Cada uno aparece una sola vez, en su documento, y ningún otro documento da otro valor:
+
+| Hecho | Documento |
+|---|---|
+| «Honorarios totales: 48.600 euros más IVA, en seis pagos de 8.100 euros.» | contrato |
+| «Directora facultativa: Irene Salcedo Moya.» | contrato |
+| «Plazo de pago: 60 días desde la fecha de la factura.» | contrato |
+| «Los honorarios totales pasan a ser de 52.200 euros más IVA, en seis pagos de 8.700 euros.» (modifica la cláusula de precio del contrato) | adenda 1 |
+| «Total del presupuesto: 35.400 euros.» (sustituido) | presupuesto 2 |
+| «Total del presupuesto: 33.900 euros.» (revisado: «sustituye al presupuesto de febrero de 2025») | presupuesto 2 revisado |
+| «Se fija la prueba en caliente del horno para el 12 de septiembre de 2025.» | acta de obra 5 |
+| «Temperatura máxima de diseño: 1.180 °C.» | informe técnico 3 |
+
+  - Las seis facturas: base 8.700,00, IVA 1.827,00, «Total factura: 10.527,00 euros». Vencen 60 días después de su fecha. La suma (52.200 de base y 63.162 con IVA) no se escribe en ningún documento: es la cifra que comprueban GX07 y GX08.
+  - Ningún documento fija penalización por retraso (lo pregunta GX11).
+  - El acta de obra 2 acepta el presupuesto revisado de Montajes Garbea, S.L., sin importe.
+- **Sustitución:** `sustituciones: [[presupuesto-2, presupuesto-2-revisado]]`.
+- **Señuelo** (`ajenos`): `brumeral/logistica-penedal/correo-ref-017.txt`, en `datos/expedientes/` y fuera de `documentos` y del manifiesto. Es un correo de Logística Penedal que cita «su referencia 017» de otro asunto (un muelle de carga), sin importes ni fechas que compitan.
+
+### Preguntas (`bateria-expediente.json`, 14)
+
+- **Ids:** de `GX01` a `GX14`, tipo `expediente`, origen `generalidad`, caso el de arriba. No se tocan las 32 `GEN`.
+- **Rol neutro:** `t09` y `t10` llevan `"rol": "neutro"`, y `no_afirmar` si no se abstienen (lista del apartado 5).
+
+| Id | Subtipo | Actor | Qué se pide | Se espera |
+|---|---|---|---|---|
+| GX01 | concreta | t09 | Total de la factura F-2025-104 | 10.527 (factura 4) |
+| GX02 | concreta | t09 | Directora facultativa | Irene Salcedo (contrato) |
+| GX03 | concreta | t09 | Día de la prueba en caliente en el acta nº 5 | 12 de septiembre de 2025 o 12/09/2025 |
+| GX04 | sustituidos | t09 | Importe actual del presupuesto de Montajes Garbea | 33.900 (revisado); `prohibidas` 35.400; sustituido: presupuesto 2 |
+| GX05 | concreta | t09 | Honorarios totales del contrato | 52.200 (adenda); `prohibidas` 48.600 |
+| GX06 | concreta | t09 | Temperatura máxima de diseño en el informe 3 | 1.180 |
+| GX07 | analisis | t09 | Total facturado, citando cada factura | 52.200 y 63.162; `todas_las_citas`; las 6 facturas |
+| GX08 | analisis | t09 | Resumen: qué se contrató, qué presupuestos hubo, cuál se aceptó, cuánto se facturó | CI-2025-017; Montajes Garbea; 52.200 o 63.162 |
+| GX09 | analisis | t09 | Presupuestos y su importe vigente | las seis empresas; `prohibidas` 35.400 |
+| GX10 | contiene | t09 | Contratos del expediente | contrato y adenda |
+| GX11 | no_consta | t09 | Penalización por retraso | «no consta» (`ausente`: penalización) |
+| GX12 | ajenos | t09 | Documentos que citan «su referencia 017» y forman el expediente | `docs_prohibidos`: el señuelo |
+| GX13 | aislamiento | t10 | Facturación del expediente | «no consta»; `docs_prohibidos` `brumeral/ceramicas-valtierno/` |
+| GX14 | aislamiento | t01 | Contrato de Brumeral con Cerámicas Valtierno | «no consta»; `docs_prohibidos` `brumeral/` |
+
+- **Citas y claves:** cada cita (`citas_resueltas`) es la página 1 del documento indicado, con un ancla literal. Las claves se comprueban con `puntuar.has_key`: basta una alternativa por grupo entre los documentos citados o esperados, y para GX07 y GX08 también cuenta la suma de las facturas.
+
+### Autocomprobaciones y pruebas
+
+- `generar.py` comprueba: que existan los 60 documentos y el señuelo; una sola página y de 10 a 25 líneas; las anclas y las claves; la redacción del apartado 1; que cada hecho fijo esté solo en su documento; que los totales de factura estén solo en las facturas; que no aparezca «penalización»; que la suma dé 52.200 y 63.162; y que esperados y sustituidos estén dentro del expediente.
+- `test_generar.py` comprueba los recuentos y la determinación (dos ejecuciones iguales); las sustituciones; que el señuelo esté fuera de `documentos`; que t10 no ve el proyecto; las 14 preguntas; y que los 26 documentos anteriores, `bateria.json` y `claves.json` no cambian (frente a las copias versionadas).

@@ -1,0 +1,16 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Informe técnico nº 4
+Fecha: 12/05/2025 · Cliente: Cerámicas Valtierno, S.A. · CIF B-00000026 · Página 1 de 1
+
+INFORME TÉCNICO Nº 4
+Fecha del informe: 12/05/2025.
+Realizado por Brumeral en su referencia 017.
+
+Conclusiones y datos:
+1. La acometida se dimensiona para la potencia de la línea 2, con un margen de reserva.
+2. El cuadro de control se instala en la sala de mandos existente.
+3. Las protecciones se coordinan con el centro de transformación de la planta.
+
+Firmado: Nuria Baeza Ortiz, de Brumeral.
