@@ -217,6 +217,24 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
                 .isEqualTo(general.id());
     }
 
+    private void withdraw(Document d) {
+        owner.sql("UPDATE document SET withdrawn_at = now(), withdrawn_by = :u WHERE id = :id")
+                .param("u", user.value()).param("id", d.id().value()).update();
+    }
+
+    @Test
+    void withdrawnDocumentDoesNotCountForDuplicates() {
+        String sha = UUID.randomUUID().toString();
+        Document old = document(Optional.of(projectA), sha, false);
+        withdraw(old);
+
+        assertThat(docs.findBySha256(company, sha)).isEmpty();
+        assertThat(docs.findBySha256InProject(company, Optional.of(projectA), sha)).isEmpty();
+        Document again = document(Optional.of(projectA), sha, false);
+        assertThat(docs.findBySha256(company, sha).orElseThrow().id()).isEqualTo(again.id());
+        assertThatThrownBy(() -> document(Optional.of(projectA), sha, false)).isInstanceOf(ConflictException.class);
+    }
+
     @Test
     void caseCannotContainItself() {
         Document theCase = document(Optional.of(projectA), true);

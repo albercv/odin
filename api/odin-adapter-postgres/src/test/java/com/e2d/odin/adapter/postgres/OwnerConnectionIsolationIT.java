@@ -2,6 +2,9 @@ package com.e2d.odin.adapter.postgres;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.e2d.odin.domain.casefile.CaseFileAction;
+import com.e2d.odin.domain.casefile.CaseFileEntry;
+import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
@@ -87,6 +90,38 @@ class OwnerConnectionIsolationIT extends AbstractPostgresIT {
                 ProjectVisibility.all(), Optional.empty(), 10, pendingAuthor)).cases().size();
         return seen + ownerSearch.search(new SearchQuery(List.of("filtración"), scope, ProjectVisibility.all(),
                 Optional.empty(), 10, pendingAuthor)).hits().size();
+    }
+
+    @Test
+    void caseFilesRespectScopeAndVisibilityThroughAConnectionThatBypassesRls() {
+        ProjectId project = newProject(a, "Obra");
+        UserId user = newUser(a);
+        Document theCase = projectDocument(project, user).withCaseDocument(true);
+        Document member = projectDocument(project, user);
+        docs.save(theCase);
+        docs.markCaseDocuments(a, Set.of(theCase.id()), true);
+        docs.save(member);
+        var files = new PostgresCaseFileRepository(tx);
+        var ownerFiles = new PostgresCaseFileRepository(ownerTx);
+        files.add(new CaseFileEntry(a, theCase.id(), member.id(), user, NOW));
+        files.record(new CaseFileEvent(UUID.randomUUID(), a, theCase.id(), member.id(), CaseFileAction.ADDED, user,
+                NOW));
+        var none = ProjectVisibility.of(Set.of());
+
+        assertThat(ownerFiles.entries(CompanyScope.of(a), ProjectVisibility.of(Set.of(project)), theCase.id()))
+                .hasSize(1);
+        assertThat(ownerFiles.events(CompanyScope.of(a), ProjectVisibility.of(Set.of(project)), theCase.id()))
+                .hasSize(1);
+        assertThat(ownerFiles.entries(CompanyScope.of(b), ProjectVisibility.all(), theCase.id())).isEmpty();
+        assertThat(ownerFiles.events(CompanyScope.of(b), ProjectVisibility.all(), theCase.id())).isEmpty();
+        assertThat(ownerFiles.entries(CompanyScope.of(a), none, theCase.id())).isEmpty();
+        assertThat(ownerFiles.events(CompanyScope.of(a), none, theCase.id())).isEmpty();
+    }
+
+    private Document projectDocument(ProjectId project, UserId user) {
+        return new Document(new DocumentId(UUID.randomUUID()), a, Optional.of(project), "Doc", "f.pdf",
+                DocumentFormat.PDF, UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(), true, user,
+                NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
     }
 
     @Test
