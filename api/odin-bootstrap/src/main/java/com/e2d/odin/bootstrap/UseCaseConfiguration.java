@@ -9,9 +9,11 @@ import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.MarkCaseDocuments;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ListGroupAdmins;
@@ -424,6 +426,16 @@ public class UseCaseConfiguration {
     @Bean
     UpdateDocument updateDocument(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
         return new UpdateDocument(documents, caseFiles, clock);
+    }
+
+    @Bean
+    WithdrawDocument withdrawDocument(DocumentRepository documents, Clock clock) {
+        return new WithdrawDocument(documents, clock);
+    }
+
+    @Bean
+    RestoreDocument restoreDocument(DocumentRepository documents) {
+        return new RestoreDocument(documents);
     }
 
     @Bean

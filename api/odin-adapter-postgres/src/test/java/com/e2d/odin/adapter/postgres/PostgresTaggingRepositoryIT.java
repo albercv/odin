@@ -112,6 +112,23 @@ class PostgresTaggingRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
+    void doesNotClaimWithdrawnDocumentsAndSavesTheResultOfOneWithdrawnWhileTagging() {
+        CompanyId company = newCompany();
+        Topic water = topic(company, "Agua");
+        Document hidden = readyDocument(company, "Retirado");
+        UserId admin = hidden.uploadedBy();
+        docs.markWithdrawal(hidden.withWithdrawal(Optional.of(NOW), Optional.of(admin)));
+        assertThat(tagging.claimNext(NOW, SETTINGS)).isEmpty();
+
+        Document inFlight = readyDocument(company, "En curso");
+        assertThat(claim(NOW).document().id()).isEqualTo(inFlight.id());
+        docs.markWithdrawal(inFlight.withWithdrawal(Optional.of(NOW), Optional.of(admin)));
+        tagging.saveResult(inFlight.id(), Set.of(water.id()), V1, NOW);
+
+        assertThat(statusOf(inFlight)).isEqualTo("DONE");
+    }
+
+    @Test
     void doesNotClaimCompaniesWithoutTopicsOrDocumentsNotReady() {
         CompanyId withoutTopics = newCompany();
         readyDocument(withoutTopics, "Sin temas");

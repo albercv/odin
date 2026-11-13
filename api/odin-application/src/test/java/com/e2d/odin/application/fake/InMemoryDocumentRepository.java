@@ -8,6 +8,7 @@ import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
@@ -115,6 +116,10 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
+        return visible(scope, visibility, id).filter(d -> !d.withdrawn());
+    }
+
+    private Optional<Document> visible(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
         return Optional.ofNullable(documents.get(id))
                 .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId()));
     }
@@ -122,6 +127,33 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
         return findById(scope, visibility, id).map(d -> entry(scope, visibility, d));
+    }
+
+    @Override
+    public Optional<DocumentEntry> findEntryIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility,
+            DocumentId id) {
+        return visible(scope, visibility, id).map(d -> entry(scope, visibility, d));
+    }
+
+    @Override
+    public void markWithdrawal(Document document) {
+        boolean duplicated = document.withdrawnAt().isEmpty() && documents.values().stream()
+                .anyMatch(d -> !d.id().equals(document.id()) && !d.withdrawn()
+                        && d.companyId().equals(document.companyId()) && d.projectId().equals(document.projectId())
+                        && d.sha256().equals(document.sha256()));
+        if (duplicated) {
+            throw new ConflictException("Ya hay un documento igual en ese proyecto; retíralo antes de recuperar este");
+        }
+        documents.computeIfPresent(document.id(),
+                (id, stored) -> stored.withWithdrawal(document.withdrawnAt(), document.withdrawnBy()));
+    }
+
+    @Override
+    public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
+            int limit) {
+        return documents.values().stream().filter(d -> d.withdrawn() && scope.includes(d.companyId()) && visibility.allows(d.projectId()))
+                .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
+                .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
     }
 
     private DocumentEntry entry(CompanyScope scope, ProjectVisibility visibility, Document d) {
@@ -149,13 +181,14 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return documents.values().stream()
-                .filter(d -> d.companyId().equals(companyId) && d.sha256().equals(sha256)).findFirst();
+                .filter(d -> !d.withdrawn() && d.companyId().equals(companyId) && d.sha256().equals(sha256))
+                .findFirst();
     }
 
     @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
-        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+        return documents.values().stream().filter(d -> !d.withdrawn() && d.companyId().equals(companyId)
                 && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
                 .findFirst();
     }
@@ -166,7 +199,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
             int limit) {
         lastListScope = scope;
         return documents.values().stream()
-                .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId())
+                .filter(d -> !d.withdrawn() && scope.includes(d.companyId()) && visibility.allows(d.projectId())
                         && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
                 .filter(d -> caseDocument.map(flag -> d.caseDocument() == flag).orElse(true))
@@ -187,7 +220,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         for (Document d : candidates) {
             boolean stale = d.status() == DocumentStatus.PROCESSING
                     && d.processingStartedAt().map(t -> !t.plus(staleAfter).isAfter(now)).orElse(true);
-            if (d.status() == DocumentStatus.RECEIVED || stale) {
+            if (!d.withdrawn() && (d.status() == DocumentStatus.RECEIVED || stale)) {
                 Document claimed = d.startProcessing(now);
                 documents.put(claimed.id(), claimed);
                 return Optional.of(claimed);
@@ -201,7 +234,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         for (Document d : new ArrayList<>(documents.values())) {
             boolean stale = d.status() == DocumentStatus.READER_PROCESSING
                     && d.processingStartedAt().map(t -> !t.plus(staleAfter).isAfter(now)).orElse(true);
-            if (d.status() == DocumentStatus.PENDING_READER || stale) {
+            if (!d.withdrawn() && (d.status() == DocumentStatus.PENDING_READER || stale)) {
                 Document claimed = d.startReading(now);
                 documents.put(claimed.id(), claimed);
                 return Optional.of(claimed);
