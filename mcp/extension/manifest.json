@@ -1,0 +1,46 @@
+{
+  "manifest_version": "0.3",
+  "name": "odin",
+  "display_name": "Odín",
+  "version": "0.1.0",
+  "description": "El cerebro digital de tu empresa: busca en sus documentos, casos y fichas, y responde citando la fuente. Los documentos se quedan en la instalación de la empresa.",
+  "author": { "name": "Evolve 2 Digital" },
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/stdio.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/stdio.js"],
+      "env": { "ODIN_API_URL": "${user_config.api_url}", "ODIN_ACCESS_KEY": "${user_config.access_key}" }
+    }
+  },
+  "user_config": {
+    "api_url": {
+      "type": "string",
+      "title": "Dirección del servidor",
+      "description": "La dirección del servidor que te da tu empresa.",
+      "default": "http://127.0.0.1:8080",
+      "required": true
+    },
+    "access_key": {
+      "type": "string",
+      "title": "Tu clave personal",
+      "description": "La clave que te da el administrador de tu empresa. Se guarda cifrada en el llavero del sistema.",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "tools": [
+    { "name": "searchKnowledge", "description": "Busca en los documentos, casos y fichas de la empresa, con cita." },
+    { "name": "readPage", "description": "Lee una página de un documento." },
+    { "name": "listDocuments", "description": "Lista los documentos que puedes ver." },
+    { "name": "listProjects", "description": "Lista los proyectos a los que tienes acceso." },
+    { "name": "verifyCitation", "description": "Comprueba que una cita está tal cual en su documento." },
+    { "name": "listMyQuestions", "description": "Lista tus preguntas recientes." },
+    { "name": "findSimilarCases", "description": "Busca casos parecidos ya resueltos." },
+    { "name": "saveKnowledgeCard", "description": "Guarda una ficha de conocimiento para que la revise un administrador." },
+    { "name": "listMyKnowledgeCards", "description": "Lista tus fichas y su estado." }
+  ],
+  "compatibility": { "platforms": ["darwin", "win32"], "runtimes": { "node": ">=24.0.0" } }
+}

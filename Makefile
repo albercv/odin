@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery
+.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery mcp-extension
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -12,8 +12,11 @@ test:
 
 check:
 	cd api && mvn -q verify
-	cd mcp && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm run build && npm test
+	cd mcp && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm run build && npm test && npm run extension:validate
 	cd panel && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm test && npm run build
+
+mcp-extension:
+	cd mcp && npm ci --silent && npm run build && bash scripts/pack-extension.sh
 
 COMPOSE = docker compose -f deploy/compose.yaml --env-file deploy/.env
 

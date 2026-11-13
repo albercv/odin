@@ -50,14 +50,25 @@
 
 - **El código del MCP no cambia:** `dist/stdio.js` ya lee `ODIN_API_URL` y `ODIN_ACCESS_KEY` del entorno, y el manifiesto se las pasa.
 - **Node:** Claude Desktop trae su propio Node para las extensiones de tipo `node`. En este Mac, Claude Desktop 5.11492.2 lleva Node 24.22.1, y `mcp/` pide Node 24 o superior. En el equipo del trabajador no hace falta instalar Node.
-- **`tools`:** son las 15 herramientas que salen en la página de instalación. Una prueba en `make check` comprobará que la lista del manifiesto coincide con las que registra el servidor, para que no se desfasen. Las de expediente solo aparecen si la empresa tiene esa capacidad; la descripción lo dirá.
+- **`tools`:** son las herramientas que salen en la página de instalación: 9 en `develop` y 15 con el expediente (encargo 13). Al fusionar con `feature/casos-expediente`, la prueba obliga a añadir las 6 suyas al manifiesto. Una prueba en `make check` comprobará que la lista del manifiesto coincide con las que registra el servidor, para que no se desfasen. Las de expediente solo aparecen si la empresa tiene esa capacidad; la descripción lo dirá.
 
 ## 3. Cómo encaja con lo que hay
 
 - **`make mcp-extension`, nueva:**
   - compila `mcp/` de la copia desde la que se lanza;
-  - instala solo las dependencias de producción y empaqueta con `mcpb pack`;
-  - deja `data/odin-<versión>.mcpb`.
+  - instala solo las dependencias de producción y empaqueta con `mcpb pack` (`mcp/scripts/pack-extension.sh`);
+  - deja `mcp/dist-extension/odin-<versión>.mcpb`, ignorado por git.
+  - Al integrarlo con las órdenes de la instalación, `instalacion-actualizar` lo copiará a `data/`.
+- **Hecho el 13 de noviembre (paso 1, D-092):**
+  - el manifiesto en `mcp/extension/manifest.json`, con el nombre visible solo en `display_name`;
+  - el icono `mcp/extension/icon.png`: la insignia de D-039 tal cual, a 340 px dentro de 512×512, con su espacio libre;
+  - la CLI `@anthropic-ai/mcpb` 2.1.2, fija, como dependencia de desarrollo de `mcp/`;
+  - `mcpb validate` en `make check`;
+  - las pruebas de `mcp/test/extension.test.ts`:
+    - la lista de herramientas del manifiesto es la que registra el servidor con todas las capacidades de `openapi.json`;
+    - la versión del manifiesto es la de `package.json`;
+    - la clave se pide como dato sensible y solo pasa por el entorno;
+    - el nombre del producto solo aparece en `display_name`.
 - **La CLI de MCPB** (`@anthropic-ai/mcpb`) va como dependencia de desarrollo de `mcp/` y se usa con `npx`, sin instalar nada global.
 - **La ruta estable `data/mcp-claude-desktop` deja de hacer falta para el conector.** Claude Desktop copia la extensión en su propia carpeta. En este Mac existe `~/Library/Application Support/Claude/Claude Extensions`; la ruta exacta está sin documentar.
 - **`make mcp-claude-desktop` se queda,** con su aviso de Claude Desktop abierto. Sirve para pruebas y para quien no pueda instalar extensiones.
