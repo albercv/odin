@@ -28,7 +28,8 @@ describe('buildServer', () => {
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['addToCaseFile', 'getCaseFile', 'listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'readCaseFile', 'readPage',
+        'removeFromCaseFile', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
   });
