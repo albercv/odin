@@ -2,7 +2,7 @@
 
 > Se ejecuta con `superpowers:subagent-driven-development`. Diseño: `docs/superpowers/specs/2026-11-13-primera-carga-design.md` («spec»).
 >
-> **No se ejecuta todavía.** Espera a dos cosas: que el propietario decida D5 y lo priorice, y que el encargo 13 esté en `develop` (V24, `AddToCaseFiles`, `WithdrawDocument` y la componente de subida del panel).
+> **No se ejecuta todavía.** Diseño validado por el CEO (D-080). Espera a dos cosas: que el propietario lo priorice (y diga si quiere también V2), y que el encargo 13 esté en `develop` (V24, `AddToCaseFiles`, `WithdrawDocument` y la componente de subida del panel).
 
 ## Restricciones globales
 
@@ -174,9 +174,9 @@ Rama `task/primera-carga/panel`. Spec, apartado 6 (panel).
 - [ ] **Paso 2:** implementa.
 - [ ] **Paso 3:** `make check` termina con 0. Commit «feat: bandeja de la primera carga en el panel».
 
-## Tarea 10a: Vía de la orden (V1 y V3) · Haiku
+## Tarea 10a: Vía de la orden (V3; V1 si instala personal del cliente) · Haiku
 
-Solo si D5 la elige. Rama `task/primera-carga/orden`. Spec, apartado 8.
+Vía por defecto (D-080). Rama `task/primera-carga/orden`. Spec, apartado 8.
 
 - **Ficheros:**
   - `deploy/instalacion/primera_carga.py` y su `make primera-carga CARPETA=…`, con el cerrojo de `deploy/instalacion/`;
@@ -191,7 +191,7 @@ Solo si D5 la elige. Rama `task/primera-carga/orden`. Spec, apartado 8.
 
 ## Tarea 10b: Vía del panel (V2) · Sonnet
 
-Solo si D5 la elige. Rama `task/primera-carga/subida-carpeta`. Spec, apartado 8.
+Solo si el propietario decide construirla (D-080). Rama `task/primera-carga/subida-carpeta`. Spec, apartado 8.
 
 - **Ficheros:** el paso «Subir carpeta» de `Intake.tsx`, con `webkitdirectory`. Reutiliza la lista de ficheros y el progreso de la página de subida del encargo 13.
 - [ ] **Paso 1:** pruebas que fallan:
@@ -220,7 +220,7 @@ Rama `task/primera-carga/medicion`. Spec, apartado 9.
 
 ## Orden
 
-- Las tareas van en serie: 1, 2, 3, 4, 5, 6, 7, 8, 9, la vía o vías elegidas en D5 (10a o 10b) y 11.
+- Las tareas van en serie: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10a (V3, por defecto), 10b solo si el propietario la pide, y 11.
 - La 8 lleva revisión de permisos con Opus.
 - Al final, revisión de la rama con Opus, centrada en D1 (que nada pendiente se vea por ningún camino) y en que ningún efecto se aplique sin confirmación (D2).
 - Después, `make check` y `make demo` los ejecuta el CTO.
