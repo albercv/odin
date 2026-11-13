@@ -110,7 +110,7 @@ El banco pone delante de la pregunta un texto corto de enfoque, para comparar fo
 
 | Qué | Umbral | Dónde está hoy |
 |---|---|---|
-| **Respuestas correctas** (con su cita o un «no consta» bien dicho) | Más del 90 % en la peor de 3 repeticiones (D-049, D-060) | Medición del 12 de noviembre: Haiku 93,1 % con 216 preguntas, en una ejecución; el intervalo del 95 % va del 88,9 al 95,8 %. Las cifras de cierre del CTO 2 están en sus informes |
+| **Respuestas correctas** (con su cita o un «no consta» bien dicho) | Más del 90 % en la peor de 3 repeticiones (D-049, D-060) | Cierre de la fase 2 (D-071): Haiku, 94,4 % en la peor de 3 ejecuciones; Sonnet, 95,8 % en una. Antecedente: 93,1 % el 12 de noviembre, con Haiku en una ejecución |
 | Fugas entre empresas o proyectos | 0, siempre | 0 en todas las mediciones |
 | Citas inventadas | 0 (D-050) | 0 desde el bloque 6 |
 | «No consta» cuando sí constaba | 1,5 % como mucho | 6–9 de 216 (2,8–4,2 %) en las últimas mediciones; por encima del objetivo |
@@ -118,7 +118,7 @@ El banco pone delante de la pregunta un texto corto de enfoque, para comparar fo
 | Respuestas «limpias» (cada dato con su cita) | 90 % de las correctas | Por medir con el puntuador recalibrado (fase 2 del plan) |
 | Listas completas | 90 % | Con 8 preguntas de lista, la cifra baila entre 4 y 8 de 8: hay que ampliar la batería |
 | Varios buscadores a la vez | Solo si mejora más que la variación con 0,02 USD de más por respuesta como mucho (D-060) | No compensa: ninguna mezcla de 2 a 5 mejora; los 20 juntos sí, pero con 25 veces el consumo |
-| Jurado de IA para preguntas sin clave | Aceptaciones falsas del 3 % como mucho y kappa de al menos 0,8 (D-060) | No lo cumple (kappa −0,10): aparcado (D-067) |
+| Jurado de IA para preguntas sin clave | Aceptaciones falsas del 3 % como mucho y kappa de al menos 0,8 (D-060) | No lo cumple (kappa −0,10): aparcado (D-081) |
 
 - **Cómo se mide:**
   - con el banco de pruebas, contra un archivo ficticio de 1.236 documentos y 300 fichas, en una copia aparte de Odín;
