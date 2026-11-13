@@ -166,5 +166,15 @@ class MultipartTest(unittest.TestCase):
         self.assertIn("Acta de la junta".encode(), cuerpo)
 
 
+
+class CarpetaDeDatosTest(unittest.TestCase):
+
+    def test_laInstalacionOdinUsaData(self):
+        self.assertEqual(Path("/r/data"), dp.datos_de(Path("/r"), "odin"))
+
+    def test_unaPilaDeEnsayoNoTocaLosDatosDelPropietario(self):
+        self.assertEqual(Path("/r/data/pilas/odin-ensayo"), dp.datos_de(Path("/r"), "odin-ensayo"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -38,7 +38,15 @@ def copia_principal():
 
 
 PRINCIPAL = copia_principal()
-CREDENCIALES = PRINCIPAL / "data" / "datos-prueba"
+
+
+def datos_de(principal, proyecto):
+    """La instalación «odin» usa data/; cualquier otra pila (ensayos), data/pilas/<proyecto>/."""
+    return principal / "data" if proyecto == "odin" else principal / "data" / "pilas" / proyecto
+
+
+CREDENCIALES = datos_de(PRINCIPAL, os.environ.get("INSTALACION_PROYECTO", "odin")) / "datos-prueba"
+ESCANEOS = PRINCIPAL / "data" / "datos-prueba" / "escaneos"  # caché compartida de PDF ficticios
 sys.path.insert(0, str(EXP / "pila"))
 import sustituciones  # noqa: E402
 import escaneos  # noqa: E402
@@ -302,7 +310,7 @@ def preparar_escaneos(s):
         print("Aviso: no hay ImageMagick (magick): se cargan los .txt en lugar de los 30 escaneos.", file=sys.stderr)
         return {}
     print("Preparando los escaneos (se reutilizan si ya existen)...")
-    return escaneos.preparar(escaneos.elegir(s.documentos, leer_corpus), leer_corpus, CREDENCIALES / "escaneos")
+    return escaneos.preparar(escaneos.elegir(s.documentos, leer_corpus), leer_corpus, ESCANEOS)
 
 
 def subir_documentos(api, s, empresas, proyectos):

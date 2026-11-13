@@ -8,7 +8,10 @@ PRINCIPAL=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=abso
 [ -n "$PRINCIPAL" ] && cd "${PRINCIPAL%/.git}"
 PROYECTO="${INSTALACION_PROYECTO:-odin}"
 ENV_FILE="${INSTALACION_ENV:-deploy/.env}"
-COPIAS=data/copias
+# La instalación «odin» usa data/; cualquier otra pila (ensayos), data/pilas/<proyecto>/, para no tocar la del propietario.
+DATOS=data
+[ "$PROYECTO" = odin ] || DATOS="data/pilas/$PROYECTO"
+COPIAS=$DATOS/copias
 umask 077 # las copias llevan datos de la instalación: solo para su dueño
 
 [ -f "$ENV_FILE" ] || { echo "Falta $ENV_FILE (cópialo de deploy/.env.example)." >&2; exit 1; }
