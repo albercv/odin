@@ -1,0 +1,32 @@
+# D-081: instrucción de hoy (main) frente a las reglas de synonyms, en las mismas condiciones.
+# Las 216 preguntas; 3 réplicas por enfoque = 3 repeticiones (la peor cuenta). Sin redactor; el juez es local y no cuenta (jurado aparcado, D-067).
+name = "synonyms-instruccion"
+archives = ["ficticio"]
+battery = "desarrollo"
+mode = "explore"
+repetitions = 1
+budgetUsd = 11.4
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 3
+model = "haiku"
+
+[[searchers]]
+approach = "synonyms"
+count = 3
+model = "haiku"
+
+[combiner]
+kind = "single"
+
+[[judges]]
+rubric = "strict"
+count = 1
+model = "ollama:qwen3.5:9b"
+think = false
+timeoutS = 120
+
+[judging]
+aggregation = "majority"

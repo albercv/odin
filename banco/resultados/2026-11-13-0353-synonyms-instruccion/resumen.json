@@ -1,0 +1,177 @@
+{
+ "byApproach": {
+  "main": {
+   "recall": 0.9874,
+   "accuracy": 0.9583,
+   "errors": 0
+  },
+  "synonyms": {
+   "recall": 0.9937,
+   "accuracy": 0.963,
+   "errors": 0
+  }
+ },
+ "cost": {
+  "notifiedUsd": 9.0163,
+  "notifiedUsdFromRecords": 6.3986,
+  "unknownCostRecords": 0,
+  "strategyUsdPerAnswer": 0.0417,
+  "tokensPerAnswer": 646491.2685,
+  "searchers": {
+   "usdPerAnswer": 0.0417,
+   "tokensPerAnswer": 645413.2454
+  },
+  "combiner": {
+   "usdPerAnswer": 0.0,
+   "tokensPerAnswer": 0.0
+  },
+  "judges": {
+   "usdPerAnswer": 0.0,
+   "tokensPerAnswer": 1078.0231
+  }
+ },
+ "agreementRuns": {
+  "inMajority": {
+   "runs": 1073,
+   "accuracy": 0.9916
+  },
+  "outsideMajority": {
+   "runs": 223,
+   "accuracy": 0.8117
+  },
+  "failuresOutsideMajority": 0.8235,
+  "byLevel": {
+   "atLeast60": {
+    "questions": 187,
+    "accuracy": 0.9947
+   },
+   "below60": {
+    "questions": 29,
+    "accuracy": 0.5862
+   }
+  }
+ },
+ "notMeasured": 0,
+ "accuracy": {
+  "correct": 206,
+  "total": 216,
+  "rate": 0.9537,
+  "wilson": [
+   0.9169,
+   0.9747
+  ]
+ },
+ "byType": {
+  "dato_concreto": {
+   "correct": 25,
+   "total": 28
+  },
+  "identificador": {
+   "correct": 10,
+   "total": 10
+  },
+  "version": {
+   "correct": 44,
+   "total": 46
+  },
+  "vocabulario": {
+   "correct": 34,
+   "total": 34
+  },
+  "casos_parecidos": {
+   "correct": 13,
+   "total": 13
+  },
+  "contradiccion": {
+   "correct": 13,
+   "total": 16
+  },
+  "sin_fuente": {
+   "correct": 19,
+   "total": 19
+  },
+  "lista_completa": {
+   "correct": 7,
+   "total": 8
+  },
+  "ficha": {
+   "correct": 25,
+   "total": 25
+  },
+  "aislamiento": {
+   "correct": 16,
+   "total": 17
+  }
+ },
+ "graveFailures": {
+  "leaks": 0,
+  "inventedCitations": 0,
+  "falseNoConsta": 4,
+  "supersededAsCurrent": 0
+ },
+ "agreement": {
+  "6": {
+   "questions": 120,
+   "accuracy": 0.9917
+  },
+  "5": {
+   "questions": 48,
+   "accuracy": 0.9792
+  },
+  "4": {
+   "questions": 19,
+   "accuracy": 0.9474
+  },
+  "3": {
+   "questions": 19,
+   "accuracy": 0.8421
+  },
+  "2": {
+   "questions": 8,
+   "accuracy": 0.75
+  },
+  "1": {
+   "questions": 2,
+   "accuracy": 0.0
+  }
+ },
+ "judges": {
+  "kappa": 0.0323,
+  "falseAcceptRate": 0.3333,
+  "falseRejectRate": 0.4506,
+  "undecided": 48,
+  "ppi": null,
+  "notJudgedNoConsta": 46,
+  "manualReview": []
+ },
+ "latency": {
+  "p50": 50.5,
+  "p95": 85.7
+ },
+ "origen": {
+  "Configuración": "synonyms-instruccion",
+  "Rama": "feature/calidad-recuperacion",
+  "Commit": "5aaece73621b79d308a51f50be657ad90e643733",
+  "Modo": "explore",
+  "Batería": "desarrollo",
+  "Archivos": "ficticio",
+  "Muestra": "batería entera",
+  "Preguntas": "216",
+  "Fecha": "2026-11-13T03:53"
+ },
+ "stopped": null,
+ "batches": [
+  {
+   "inicio": "2026-11-13T03:53:47",
+   "fin": "2026-11-13T04:24:12",
+   "motivo": "cuota o límite en Q153: You've hit your 5-hour limit · resets 8am (Europe/Madrid)",
+   "llamadas_pago": 460
+  },
+  {
+   "inicio": "2026-11-13T08:02:39",
+   "fin": "2026-11-13T09:29:58",
+   "motivo": "completa",
+   "llamadas_pago": 840
+  }
+ ]
+}

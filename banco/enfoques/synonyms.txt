@@ -1,0 +1,3 @@
+Busca con palabras técnicas, con palabras corrientes y con variantes de escritura.
+Prueba las variantes con y sin tildes, con abreviaturas y con distintas mayúsculas.
+Compara lo que devuelve cada formulación antes de responder.

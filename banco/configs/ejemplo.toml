@@ -1,0 +1,40 @@
+name = "veinte-buscadores"
+archives = ["ficticio", "publico", "alterado"]
+battery = "desarrollo"            # "reserva" solo con mode = "closing"
+mode = "explore"                  # explore | closing
+sample = { size = 40, strata = "tipo", seed = 7 }
+repetitions = 1
+budgetUsd = 6.0                   # tope de coste notificado; el banco para al llegar
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 10
+model = "haiku"
+
+[[searchers]]
+approach = "topic"
+count = 5
+model = "haiku"
+
+[[searchers]]
+approach = "synonyms"
+count = 5
+model = "haiku"
+
+[combiner]
+kind = "composer"
+model = "haiku"
+
+[[judges]]
+rubric = "strict"
+count = 3
+model = "haiku"
+
+[[judges]]
+rubric = "strict"
+count = 2
+model = "ollama:qwen3.5:9b"
+
+[judging]
+aggregation = "majority"

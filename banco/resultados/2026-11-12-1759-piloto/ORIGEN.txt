@@ -1,0 +1,9 @@
+Configuración: piloto
+Rama: feature/calidad-recuperacion
+Commit: 52e4aaad22993b7d520b3213ebe8004ca119a387
+Modo: explore
+Batería: desarrollo
+Archivos: ficticio
+Muestra: 5 (estrato tipo, semilla 7)
+Preguntas: 5
+Fecha: 2026-11-12T17:59

@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery
+.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery banco-arriba banco-cargar banco-abajo banco banco-reanudar banco-barrido banco-informe banco-test
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -38,3 +38,35 @@ tagger-model:
 # Batería del etiquetado con el modelo real (el Ollama de ODIN_TAGGER_URL). Fuera de make check; escribe api/odin-adapter-tagger-ollama/target/tagging-battery.json.
 tagging-battery:
 	cd api && mvn -q -am -pl odin-adapter-tagger-ollama verify -Dgroups=model -DexcludedGroups=
+
+# Banco de pruebas (archivo ficticio, fase 0): pila Docker propia en 48080/48088/48090 y estado en banco/estado (ignorado por git).
+EXP = experimentos/2026-11-12-archivo-ficticio
+BANCO_ENV = PILA_PROYECTO=odin-banco PILA_ESTADO=$(CURDIR)/banco/estado ODIN_API_PORT=48080 ODIN_PANEL_PORT=48088 ODIN_MCP_PORT=48090
+CONFIG ?= banco/configs/piloto.toml
+ARCHIVOS ?= ficticio
+
+banco-arriba:
+	$(BANCO_ENV) $(EXP)/pila/pila.sh up
+
+banco-cargar:
+	@D=$(EXP)/datos; if [ "$(ARCHIVOS)" != ficticio ]; then D=$$($(BANCO_ENV) python3 banco/archivos.py fusionar --archivos "$(ARCHIVOS)") || exit 1; fi; \
+	$(BANCO_ENV) python3 $(EXP)/pila/cargar.py --manifiesto $$D/manifiesto.json --corpus $$D/corpus --marcar
+
+banco-abajo:
+	$(BANCO_ENV) $(EXP)/pila/pila.sh down
+
+banco:
+	$(BANCO_ENV) python3 banco/banco.py run --config $(CONFIG) $(if $(REINICIAR),--reiniciar-presupuesto)
+
+banco-reanudar:
+	$(BANCO_ENV) python3 banco/banco.py reanudar --config $(CONFIG)
+
+banco-barrido:
+	$(BANCO_ENV) python3 banco/banco.py sweep --config $(CONFIG) $(if $(REINICIAR),--reiniciar-presupuesto)
+
+banco-informe:
+	@test -n "$(RESULTADOS)" || { echo "Falta RESULTADOS=<carpeta de banco/resultados>"; exit 1; }
+	python3 banco/banco.py report --results $(RESULTADOS)
+
+banco-test:
+	python3 -m unittest discover -s banco -t . && (cd $(EXP)/medir && python3 -m unittest)

@@ -1,0 +1,20 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Factura F-2025-047
+Fecha: 31/03/2025 · Cliente: Talleres Murcano, S.L. · CIF B-00000021 · Página 1 de 1
+
+EMISOR: Brumeral Ingeniería y Consultoría, S.L., CIF B-00000001, Polígono Las Viñas, nave 12, 47999 Valdecerro.
+CLIENTE: Talleres Murcano, S.L., CIF B-00000021, Polígono Industrial El Cerro, Valdecerro.
+Número de factura: F-2025-047
+
+Concepto | Cantidad | Precio unitario | Importe
+Mantenimiento de marzo de 2025, cuota mensual del contrato CM-2024-011 | 1 | 1.240,00 euros | 1.240,00 euros
+
+Base imponible: 1.240,00 euros
+IVA 21 %: 260,40 euros
+Total factura: 1.500,40 euros
+
+Forma de pago: transferencia bancaria a la cuenta ES00 0000 0000 00 0000000000.
+Vencimiento: 30/04/2025
+Factura emitida según la norma interna de facturación de Brumeral.
