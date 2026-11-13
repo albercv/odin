@@ -16,6 +16,7 @@ OLLAMA_MODEL = re.compile(r"ollama:[A-Za-z0-9._:-]+")
 PLAIN_NAME = re.compile(r"[A-Za-z][A-Za-z0-9]*")
 AT_LEAST = re.compile(r"atLeast:(\d+)")
 JUDGE_TIMEOUT_S = 600
+CAPABILITIES = ("SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES", "CASE_FILES")  # capacidades que la comprobación exige
 ROOT = "la configuración"
 
 
@@ -68,6 +69,8 @@ class ExperimentConfig:
     combiner: CombinerSpec
     judges: tuple[JudgeSpec, ...]
     aggregation: str
+    owner_approval: str | None = None  # «ownerApproval»: sin ella, el presupuesto no puede pasar de 5 USD (D-094)
+    capabilities: tuple[str, ...] = CAPABILITIES  # «capabilities»: las que la empresa debe tener (menos si se quiere)
 
 
 def _need(table: dict, key: str, where: str):
@@ -242,6 +245,24 @@ def _batteries(raw: dict, mode: str, archives: tuple[str, ...]) -> tuple[str, ..
     return tuple(names)
 
 
+def _owner_approval(raw: dict) -> str | None:
+    if "ownerApproval" not in raw:
+        return None
+    value = _text(raw, "ownerApproval", ROOT)
+    if not re.fullmatch(r"D-\d{3}", value):
+        raise ConfigError("«ownerApproval» debe ser la decisión del propietario que lo autoriza, como «D-094»")
+    return value
+
+
+def _capabilities(raw: dict) -> tuple[str, ...]:
+    if "capabilities" not in raw:
+        return CAPABILITIES
+    value = raw["capabilities"]
+    if not isinstance(value, list) or not value or not all(c in CAPABILITIES for c in value) or len(set(value)) != len(value):
+        raise ConfigError(f"«capabilities» debe ser una lista sin repetir de: {', '.join(CAPABILITIES)}")
+    return tuple(value)
+
+
 def load_config(path: Path, base_dir: Path) -> ExperimentConfig:
     try:
         raw = tomllib.loads(Path(path).read_text(encoding="utf-8"))
@@ -268,4 +289,6 @@ def load_config(path: Path, base_dir: Path) -> ExperimentConfig:
         combiner=_combiner(raw),
         judges=judges,
         aggregation=aggregation,
+        owner_approval=_owner_approval(raw),
+        capabilities=_capabilities(raw),
     )

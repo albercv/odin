@@ -141,3 +141,17 @@ Un experimento puede parar a mitad (límite de la suscripción, tres errores seg
 - Un fallo inesperado en una pregunta (redactor o juez) queda registrado en su fila (`error`); el coste de esa llamada queda desconocido y para el experimento por presupuesto. Una cuota o límite detectado en el redactor o en un juez de Claude sí para: el registro del juez lleva el texto del error (`error`) y se aplica el mismo patrón que a los buscadores (`PARADA.txt` y código 2). Los jueces de Ollama no tienen cuota.
 - `banco/resultados/` se versiona como el resto de experimentos (decisión del controlador); solo la reserva queda fuera.
 - La variable `ODIN_BANCO_CLAUDE_JUEZ` conserva su nombre en español por ser un ajuste de entorno.
+
+## Comprobación previa (D-094)
+
+Ninguna medición arranca sin ella: `run`, `sweep` y `reanudar` la hacen antes de la llamada de prueba, del libro y de la carpeta de resultados, y no hay forma de saltarla (tampoco con `--sin-prueba`). Sin IA. Para lanzarla sola: `make banco-comprobar CONFIG=…` (sale con 1 si falla).
+
+| Parte | Qué comprueba |
+|---|---|
+| reglas | `budgetUsd` ≤ 5 USD, salvo que la configuración lleve `ownerApproval = "D-0xx"` con el visto bueno del propietario |
+| ejecutor | que `ejecutar.py` lea sin fallar eventos raros de `claude -p` (`banco/fakes/eventos_raros.jsonl`): `message` como texto, contenido vacío, líneas que no son JSON… |
+| datos | que cada actor tenga su clave en la carga y que estén cargados todos los documentos y fichas que esperan las preguntas (y los de los expedientes, si se usan) |
+| capacidades | `GET /v1/me` con la clave de cada actor: la empresa tiene las capacidades de `capabilities` (por defecto, las cuatro) |
+| herramientas | sesión MCP (`initialize` y `tools/list`) con la clave de cada actor: el conector ofrece las herramientas que corresponden a esas capacidades |
+
+El informe se guarda en `banco/estado/comprobacion-<nombre>.json` y, si la medición arranca, en `COMPROBACION.json` dentro de su carpeta de resultados.
