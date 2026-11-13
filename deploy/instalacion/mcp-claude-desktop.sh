@@ -12,7 +12,10 @@ DATOS=$PRINCIPAL/data
 [ "${INSTALACION_PROYECTO:-odin}" = odin ] || DATOS="$PRINCIPAL/data/pilas/$INSTALACION_PROYECTO"
 CREDENCIALES=$DATOS/datos-prueba/credenciales.local.json
 DESTINO=$DATOS/mcp-claude-desktop
-CONFIG="${CLAUDE_DESKTOP_CONFIG:-$HOME/Library/Application Support/Claude/claude_desktop_config.json}"
+# Solo la instalación «odin» toca el Claude Desktop de verdad; una pila de ensayo usa un fichero suyo.
+CONFIG_REAL="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+[ "${INSTALACION_PROYECTO:-odin}" = odin ] || CONFIG_REAL="$DATOS/claude_desktop_config.json"
+CONFIG="${CLAUDE_DESKTOP_CONFIG:-$CONFIG_REAL}"
 
 [ -f "$CREDENCIALES" ] || { echo "No hay datos de prueba cargados ($CREDENCIALES). Primero: make datos-prueba-cargar" >&2; exit 1; }
 NODE=$(command -v node) || { echo "Falta Node 24 o superior." >&2; exit 1; }
