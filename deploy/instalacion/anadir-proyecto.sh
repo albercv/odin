@@ -30,6 +30,7 @@ volver() {
   exit 1
 }
 
+export CONFIRMAR_INSTALACION=PROPIETARIO # D-099: confirmada con CONFIRMAR=ANADIR
 copiar anadir-proyecto || { echo "No se ha podido copiar. No se ha cambiado nada." >&2; exit 1; }
 echo "Copia hecha: $COPIA_SQL y $COPIA_ORIGINALES. Antes: $(recuento)."
 trap volver ERR

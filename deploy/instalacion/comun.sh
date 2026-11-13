@@ -19,6 +19,16 @@ set -a
 # shellcheck disable=SC1090
 . "$ENV_FILE"
 set +a
+# D-099: una pila de ensayo nunca usa los puertos de la instalación del propietario (API, panel y MCP).
+if [ "$PROYECTO" != odin ]; then
+  for puerto in "${ODIN_API_PORT:-8080}" "${ODIN_PANEL_PORT:-8088}" "${ODIN_MCP_PORT:-8090}"; do
+    case "$puerto" in 8080|8088|8090)
+      echo "La pila «${PROYECTO}» apunta al puerto ${puerto}, que es de la instalación del propietario (${ENV_FILE})." \
+           "No se ha cambiado nada." >&2
+      exit 1 ;;
+    esac
+  done
+fi
 
 compose() { docker compose -p "$PROYECTO" -f deploy/compose.yaml --env-file "$ENV_FILE" "$@"; }
 
