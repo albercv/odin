@@ -188,10 +188,10 @@ Las tres usan la misma API del apartado 4: abrir el lote, subir un fichero cada 
 
 - **V1 y V3 son el mismo código:** solo cambian quién la lanza y la guía.
 - **V2 es independiente:** se puede construir antes, después o en lugar de V1 y V3.
-- **Recomendación técnica:**
-  - V3, por D-019;
-  - y V2 si el propietario quiere que no haga falta una terminal.
-  - V1 solo si el instalador es personal del cliente o el propietario acepta esa excepción a D-019. Es una pregunta de negocio (apartado 11).
+- **Decidido (D-080):**
+  - **V3 es la vía por defecto y la recomendada:** la lanza el administrador del cliente con la guía, y nadie de E2D toca el archivo (D-019).
+  - **V1 solo vale si quien instala es personal del cliente.** Lanzada por alguien de E2D, queda descartada por D-019.
+  - **V2:** si se construye también y cuándo, lo decide el propietario.
 
 ## 9. Cómo se acepta
 
@@ -222,11 +222,11 @@ Las tres usan la misma API del apartado 4: abrir el lote, subir un fichero cada 
 - **El modelo local como clasificador principal:** peor que las reglas en lo medido.
 - **Confirmar solo por encima de un umbral** (D2).
 
-## 11. Para el CEO (negocio)
+## 11. Decisiones de negocio (D-080)
 
-1. **V1 y D-019:**
-   - si quien instala es de E2D, lanzar la orden es tocar el archivo del cliente;
-   - V3 lo evita, porque la lanza el administrador del cliente;
-   - ¿se descarta V1, o se admite cuando el instalador es del cliente?
-2. **Los documentos en «no lo sé» siguen ocultos.** ¿Hay un plazo o un aviso para que no se queden así para siempre? Mi propuesta es un aviso en el panel, sin plazo.
-3. **La exportación del programa de gestión:** este diseño admite CSV y TXT. Excel y los informes de incidencias, cuando las entrevistas digan qué exportan los despachos.
+1. **Vía de entrega:**
+   - V3 por defecto;
+   - V1 solo si quien instala es personal del cliente; lanzada por alguien de E2D, se descarta por D-019;
+   - V2: si se construye y cuándo, lo decide el propietario.
+2. **Los documentos en «no lo sé»** siguen ocultos, con un aviso en el panel y sin plazo.
+3. **Exportaciones del programa de gestión:** CSV y TXT ahora. Excel y los informes de incidencias, después de las entrevistas.
