@@ -176,9 +176,13 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
         if (ids.isEmpty()) {
             return Map.of();
         }
-        return tx.inScope(scope, visibility, jdbc -> jdbc.sql("""
-                SELECT document_id, count(*) AS pages FROM document_page WHERE document_id IN (:ids)
-                GROUP BY document_id""").param("ids", ids.stream().map(DocumentId::value).toList())
+        String sql = """
+                SELECT p.document_id, count(*) AS pages FROM document_page p JOIN document d ON d.id = p.document_id
+                WHERE p.document_id IN (:ids) AND %s AND %s AND %s GROUP BY p.document_id""".formatted(
+                Sql.inScope("p.company_id"), Sql.inVisibleProjects("d.project_id"),
+                Sql.notWithdrawn("d.withdrawn_at"));
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("ids", ids.stream().map(DocumentId::value).toList())
                 .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("pages"))).list())
                 .stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
