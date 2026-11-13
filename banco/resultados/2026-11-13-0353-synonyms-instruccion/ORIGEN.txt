@@ -1,0 +1,9 @@
+Configuración: synonyms-instruccion
+Rama: feature/calidad-recuperacion
+Commit: 5aaece73621b79d308a51f50be657ad90e643733
+Modo: explore
+Batería: desarrollo
+Archivos: ficticio
+Muestra: batería entera
+Preguntas: 216
+Fecha: 2026-11-13T03:53
