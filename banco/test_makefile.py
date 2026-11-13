@@ -86,5 +86,61 @@ class BancoCargarTest(unittest.TestCase):
         self.assertEqual(self.calls(), [])
 
 
+class BancoPropietarioTest(unittest.TestCase):
+    """D-099: arriba, cargar y abajo paran antes que nada si la pila apunta al propietario. Con BANCO_ENV en la orden de
+    make (la variable literal del Makefile no se hereda del entorno); los objetivos llaman a un pila.sh y cargar.py falsos."""
+
+    BANCO_PROPIETARIO = ("PILA_PROYECTO=odin-banco PILA_ESTADO=/nonexistent ODIN_API_PORT=48080 "
+                         "ODIN_PANEL_PORT=48088 ODIN_MCP_PORT=8090")
+    BANCO_PROYECTO_ODIN = "PILA_PROYECTO=odin PILA_ESTADO=/nonexistent ODIN_API_PORT=48080 ODIN_PANEL_PORT=48088 ODIN_MCP_PORT=48090"
+    OBJETIVOS = ("banco-arriba", "banco-cargar", "banco-abajo")
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.exp = Path(tmp.name) / "exp"
+        (self.exp / "pila").mkdir(parents=True)
+        (self.exp / "datos").mkdir()
+        (self.exp / "datos" / "manifiesto.json").write_text("{}", encoding="utf-8")
+        (self.exp / "datos" / "expedientes.json").write_text("[]", encoding="utf-8")
+        for nombre in ("pila.sh", "cargar.py"):
+            ruta = self.exp / "pila" / nombre
+            ruta.write_text("#!/usr/bin/env python3\n" + FAKE, encoding="utf-8")
+            os.chmod(ruta, 0o755)
+        self.log = Path(tmp.name) / "llamadas.txt"
+
+    def run_make(self, target, banco_env):
+        return subprocess.run(["make", "-s", target, f"EXP={self.exp}", f"BANCO_ENV={banco_env}"], cwd=REPO,
+                              env={**os.environ, "FAKE_LOG": str(self.log)}, capture_output=True, text=True)
+
+    def calls(self):
+        return self.log.read_text(encoding="utf-8").splitlines() if self.log.exists() else []
+
+    def test_owner_mcp_port_stops_every_target_before_the_stack(self):
+        for target in self.OBJETIVOS:
+            with self.subTest(target=target):
+                result = self.run_make(target, self.BANCO_PROPIETARIO)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("No se ha cambiado nada.", result.stdout + result.stderr)
+                self.assertEqual(self.calls(), [])
+
+    def test_project_odin_stops_every_target_before_the_stack(self):
+        for target in self.OBJETIVOS:
+            with self.subTest(target=target):
+                result = self.run_make(target, self.BANCO_PROYECTO_ODIN)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("No se ha cambiado nada.", result.stdout + result.stderr)
+                self.assertEqual(self.calls(), [])
+
+    def test_bench_ports_run_the_stack_as_before(self):
+        bench = ("PILA_PROYECTO=odin-banco PILA_ESTADO=/nonexistent ODIN_API_PORT=48080 "
+                 "ODIN_PANEL_PORT=48088 ODIN_MCP_PORT=48090")
+        for target in self.OBJETIVOS:
+            with self.subTest(target=target):
+                result = self.run_make(target, bench)
+                self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls(), ["pila.sh up", "cargar.py --manifiesto " + str(self.exp / "datos" / "manifiesto.json")
+                                        + " --corpus " + str(self.exp / "datos" / "corpus") + " --marcar", "pila.sh down"])
+
 if __name__ == "__main__":
     unittest.main()

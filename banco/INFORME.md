@@ -155,3 +155,7 @@ Ninguna medición arranca sin ella: `run`, `sweep` y `reanudar` la hacen antes d
 | herramientas | sesión MCP (`initialize` y `tools/list`) con la clave de cada actor: el conector ofrece las herramientas que corresponden a esas capacidades |
 
 El informe se guarda en `banco/estado/comprobacion-<nombre>.json` y, si la medición arranca, en `COMPROBACION.json` dentro de su carpeta de resultados.
+
+## Protección de la instalación del propietario (D-099)
+
+El banco es un ejecutor de pruebas y nunca usa la instalación real de Odín: ni la pila «odin» ni los puertos 8080, 8088 y 8090 (API, panel y MCP). La regla vive en `banco/propietario.py`, que `make banco-arriba`, `banco-cargar` y `banco-abajo` ejecutan como primera orden, y en la comprobación previa, cuya primera sección («propietario») mira las URLs de `carga.json`: si apuntan a esos puertos, `run`, `sweep` y `reanudar` se paran antes de la llamada de prueba, del libro y de la carpeta de resultados, y no se habla con la pila. Escribir en la instalación del propietario exige además `CONFIRMAR_INSTALACION=PROPIETARIO`, con su permiso. No hay forma de saltarla: ni `--sin-prueba` ni variables de entorno la desactivan, y los `pila.sh` y `cargar.py` de la pila mantienen su propia guarda con el mismo mensaje.

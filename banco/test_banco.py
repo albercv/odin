@@ -1487,6 +1487,22 @@ class ComprobacionWiringTest(Harness):
         prepare.assert_not_called()
         self.responder.assert_not_called()
 
+    def test_stack_on_the_owner_mcp_port_stops_before_anything(self):
+        """D-099: la carga apunta al MCP del propietario (8090). Ninguna llamada HTTP, ni preflight, ni libro ni carpeta."""
+        mock.patch.stopall()  # sin el doble de la comprobación: se ejecuta la real, con la carga del propietario
+        self.responder = mock.patch("banco.medir_path.ejecutar.responder").start()
+        self.preflight = mock.patch("banco.preflight.run_preflight").start()
+        self.addCleanup(mock.patch.stopall)
+        ruta = self.state_dir / "carga.json"
+        stack = json.loads(ruta.read_text(encoding="utf-8"))
+        ruta.write_text(json.dumps({**stack, "api": "http://127.0.0.1:8080", "url_mcp": "http://127.0.0.1:8090/mcp"}),
+                        encoding="utf-8")
+        with mock.patch("banco.comprobacion._http") as http, mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(comprobacion.ComprobacionError, re.escape("No se ha cambiado nada.")):
+                run.run_experiment(self.config(), self.layout, sin_prueba=True)
+        http.assert_not_called()
+        self.assert_nothing_started()
+
     def test_passing_check_runs_first_and_is_kept_with_the_results(self):
         mock.patch.stopall()  # sin los dobles de la clase: el experimento corre entero con la IA simulada
         with mock.patch("banco.comprobacion.comprobar", return_value={}) as passing:

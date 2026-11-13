@@ -1,6 +1,7 @@
 """Pruebas de la comprobación previa (D-094): reglas, datos, capacidades, herramientas y ejecutor, sin IA y sin red.
 Odín se finge con FakeOdin (API y MCP por JSON-RPC); los datos son los reales del experimento, solo de lectura."""
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -296,7 +297,8 @@ class CheckAndReportTest(Base):
         guardado = json.loads((self.layout.state_dir / "comprobacion-prueba.json").read_text(encoding="utf-8"))
         self.assertEqual(guardado, informe)
         self.assertEqual(len(informe["config_sha256"]), 64)
-        self.assertEqual(set(informe["comprobaciones"]), {"reglas", "datos", "capacidades", "herramientas", "ejecutor"})
+        self.assertEqual(set(informe["comprobaciones"]),
+                         {"propietario", "reglas", "datos", "capacidades", "herramientas", "ejecutor"})
 
     def test_exigir_refuses_a_failed_report(self):
         informe = {"fallos": ["presupuesto de 9 USD"]}
@@ -329,6 +331,30 @@ class CheckAndReportTest(Base):
             code = banco.main(["comprobar", "--config", str(path)], layout=self.layout)
         self.assertEqual(code, 1)
         self.assertIn("D-094", "".join(c.args[0] for c in out.write.call_args_list))
+
+
+class PropietarioTest(Base):
+    """D-099: la comprobación previa no habla con la instalación del propietario (8080, 8088, 8090)."""
+
+    def test_stack_on_an_owner_port_fails_first_and_sends_nothing(self):
+        self.escribir_carga(mcp="http://127.0.0.1:8090/mcp")
+        fake = FakeOdin()
+        with mock.patch.dict(os.environ, {}, clear=True):
+            secciones = comprobacion.comprobar(self.cfg(), self.layout, http=fake)
+        self.assertEqual(list(secciones)[0], "propietario")
+        self.assertIn("No se ha cambiado nada.", secciones["propietario"][0])
+        self.assertEqual(fake.llamadas, [])
+        self.assertEqual(secciones["herramientas"], [comprobacion.NO_SE_COMPRUEBA_PROPIETARIO])
+
+    def test_stack_on_bench_ports_passes_the_section(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(comprobacion.comprobar(self.cfg(), self.layout, http=FakeOdin())["propietario"], [])
+
+    def test_unreadable_carga_fails_closed_with_the_same_message_ending(self):
+        (self.layout.state_dir / "carga.json").write_text("{no es json", encoding="utf-8")
+        with mock.patch.dict(os.environ, {}, clear=True):
+            mensajes = comprobacion.comprobar(self.cfg(), self.layout, http=FakeOdin())["propietario"]
+        self.assertTrue(mensajes[0].endswith("No se ha cambiado nada."))
 
 
 if __name__ == "__main__":

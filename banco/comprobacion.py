@@ -5,13 +5,14 @@ Sin claude y sin red fuera de localhost; `http` y `mcp` se inyectan en las prueb
 import contextlib
 import hashlib
 import json
+import os
 import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from banco import capas
+from banco import capas, propietario
 from banco.config import CAPABILITIES, ConfigError, load_config
 from banco.medir_path import carga_mod, ejecutar
 
@@ -19,6 +20,7 @@ TOPE_USD = 5.0
 EXPEDIENTES_BATTERY = "generalidad-expediente"  # sus documentos deben estar cargados en la pila
 CASOS = Path(__file__).resolve().parent / "fakes" / "eventos_raros.jsonl"
 NO_SE_COMPRUEBA = "no se comprueba sin carga"
+NO_SE_COMPRUEBA_PROPIETARIO = "no se comprueba: la pila apunta a la instalación del propietario (D-099)"
 LOCALES = ("127.0.0.1", "localhost", "::1")
 PREAMBULO = {"type": "assistant", "message": {"content": [
     {"type": "tool_use", "id": "t1", "name": "mcp__odin__searchKnowledge", "input": {"query": "prueba"}}]}}
@@ -222,11 +224,35 @@ def fallos_ejecutor(lineas=None):
     return fallos
 
 
+def _urls_de_carga(layout):
+    """Las URLs de la API y del MCP de carga.json; ninguna si no existe el fichero."""
+    ruta = layout.state_dir / "carga.json"
+    if not ruta.is_file():
+        return ()
+    crudo = json.loads(ruta.read_text(encoding="utf-8"))
+    return tuple(url for url in (crudo.get("api"), carga_mod.leer(ruta)["url_mcp"]) if url)
+
+
+def _seccion_propietario(layout):
+    """D-099: la pila de la carga no puede apuntar a la instalación del propietario. Un fallo es un hallazgo."""
+    try:
+        propietario.proteger_banco(os.environ, _urls_de_carga(layout))
+    except propietario.PropietarioError as error:
+        return [str(error)]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        return [f"no se pudo comprobar la pila del propietario (D-099): {error}. No se ha cambiado nada."]
+    return []
+
+
 def comprobar(cfg, layout, http=None, mcp=None):
-    """Secciones con sus fallos (lista vacía = pasa). Sin carga, las secciones que dependen de ella fallan cerradas."""
+    """Secciones con sus fallos (lista vacía = pasa). Sin carga, las secciones que dependen de ella fallan cerradas.
+    Si la pila apunta al propietario, no se habla con ella: el resto de secciones de red no se comprueban."""
     http = http or _http
     mcp = mcp or (lambda url, clave: herramientas_mcp(url, clave, http))
-    secciones = {"reglas": reglas(cfg), "ejecutor": fallos_ejecutor()}
+    secciones = {"propietario": _seccion_propietario(layout), "reglas": reglas(cfg), "ejecutor": fallos_ejecutor()}
+    if secciones["propietario"]:
+        return {**secciones, "datos": [NO_SE_COMPRUEBA_PROPIETARIO], "capacidades": [NO_SE_COMPRUEBA_PROPIETARIO],
+                "herramientas": [NO_SE_COMPRUEBA_PROPIETARIO]}
     try:
         stack = _carga(layout)
         items = capas.load_items(layout, cfg.batteries)
