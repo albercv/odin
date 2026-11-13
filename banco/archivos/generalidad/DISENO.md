@@ -15,15 +15,15 @@
   - `t09`, Irene Salcedo Moya: todos los proyectos;
   - `t10`, Óscar Leiva Durán: solo `talleres-murcano`, `conservas-dalmira` y `bodegas-quintafria`;
   - `t11`, Nuria Baeza Ortiz: todos los proyectos. Autora de las fichas.
-- **Proyectos:** las 5 empresas clientes, todos cerrados (`"abierto": false`):
+- **Proyectos:** las 5 empresas clientes, todos cerrados (`"abierto": false`). El proyecto se llama como el cliente sin la forma jurídica, porque el puntuador del tipo `generica` busca el nombre del proyecto tal cual; la razón social completa («…, S.L.») va en los documentos:
 
 | Clave | Nombre |
 |---|---|
-| `talleres-murcano` | Talleres Murcano, S.L. |
-| `conservas-dalmira` | Conservas Dalmira, S.A. |
-| `logistica-penedal` | Logística Penedal, S.L. |
-| `alojamientos-cerrolago` | Alojamientos Cerrolago, S.L. |
-| `bodegas-quintafria` | Bodegas Quintafría, S.L. |
+| `talleres-murcano` | Talleres Murcano |
+| `conservas-dalmira` | Conservas Dalmira |
+| `logistica-penedal` | Logística Penedal |
+| `alojamientos-cerrolago` | Alojamientos Cerrolago |
+| `bodegas-quintafria` | Bodegas Quintafría |
 
 - **Regla de redacción:** ningún documento ni ficha de Brumeral usa las palabras «comunidad», «propietario», «vecino», «finca», «junta» ni «derrama». Así, si una respuesta las usa, es la IA quien las pone.
 
