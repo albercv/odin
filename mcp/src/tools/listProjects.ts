@@ -8,9 +8,9 @@ export function registerListProjects(server: McpServer, api: ApiClient): void {
     'listProjects',
     {
       description:
-        'Lista los proyectos (un cliente, un contrato, una obra, una comunidad…) a los que tiene acceso el trabajador, con su projectId. ' +
+        'Lista los proyectos a los que tiene acceso el trabajador, con su projectId. Cada proyecto es una de las unidades con las que la empresa organiza su trabajo en Odín. ' +
         'Odín no sabe a qué se dedica la empresa ni quiénes son sus clientes, salvo lo que digan sus documentos, así que no lo afirmes. ' +
-        'Si preguntan por clientes, empresas o proyectos, lista los proyectos y di que son las unidades con las que la empresa trabaja en Odín, sin decir qué son.',
+        'Si preguntan por clientes, empresas o proyectos, lista los proyectos y di que son las unidades con las que la empresa trabaja en Odín, sin decir qué son y no pongas ejemplos de qué pueden ser.',
     },
     () =>
       guarded(async () => {

@@ -26,7 +26,7 @@ export function registerListDocuments(server: McpServer, api: ApiClient, project
     {
       description:
         'Lista los documentos de la empresa (hasta 2.000; si hay más, truncated es true). ' +
-        'projectName es el proyecto (un cliente, un contrato, una obra, una comunidad…) del documento; «Sin proyecto (general de la empresa)» si no es de ningún proyecto y lo ve toda la empresa. ' +
+        'projectName es el proyecto: una de las unidades con las que la empresa organiza su trabajo en Odín; «Sin proyecto (general de la empresa)» si no es de ningún proyecto y lo ve toda la empresa. ' +
         'Los temas de origen AI los asignó una IA al ingresar el documento; preséntalos como tales. ' +
         'Una lista por tema puede estar incompleta: si taggingPending es mayor que 0, dilo. ' +
         'Para una lista completa, combina el filtro por tema con la búsqueda, porque el etiquetado puede dejarse alguno.',

@@ -17,7 +17,7 @@ export const INSTRUCTIONS = [
   'Odín es el cerebro digital de la empresa del trabajador.',
   'Cita el documento y la página de toda afirmación sobre el trabajo de la empresa.',
   'Si no hay resultados, di «no consta»; no lo inventes.',
-  'Si la pregunta nombra un proyecto (un cliente, un contrato, una obra…), búscalo con listProjects y filtra la búsqueda con su projectId.',
+  'Si la pregunta nombra un proyecto (el nombre de un cliente, un contrato, una obra…), búscalo con listProjects y filtra la búsqueda con su projectId.',
   'Comprueba las citas con verifyCitation antes de darlas por buenas.',
   'Los resultados KNOWLEDGE_CARD son fichas aportadas por trabajadores redactadas con IA: preséntalas con su título, autor y fecha de alta, como fichas y no como documentos, y no tienen página; verifyCitation es solo para documentos, y si verifyCitation devuelve false, no uses esa cita.',
   'Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.',
@@ -36,7 +36,7 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: INSTRUCTIONS });
   if (capabilities.has('SEARCH_KNOWLEDGE')) {
     const projects = createProjectNames(me);
-    registerSearchKnowledge(server, api, projects);
+    registerSearchKnowledge(server, api, projects, capabilities.has('CASE_FILES'));
     registerReadPage(server, api);
     registerOpenOriginal(server, api);
     registerListDocuments(server, api, projects);

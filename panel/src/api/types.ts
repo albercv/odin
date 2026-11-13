@@ -212,6 +212,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/citations/verify-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cases/{caseId}/upload-links": {
         parameters: {
             query?: never;
@@ -1123,6 +1139,7 @@ export interface components {
             /** Format: int32 */
             pageNumber?: number;
             paginated: boolean;
+            caseDocument: boolean;
             /** Format: uuid */
             projectId?: string;
             authorName: string;
@@ -1160,6 +1177,19 @@ export interface components {
         };
         Verification: {
             verified: boolean;
+        };
+        VerifyCitations: {
+            citations?: components["schemas"]["VerifyCitation"][];
+        };
+        VerificationResult: {
+            /** Format: uuid */
+            documentId: string;
+            /** Format: int32 */
+            pageNumber: number;
+            verified: boolean;
+        };
+        Verifications: {
+            results: components["schemas"]["VerificationResult"][];
         };
         CaseFileDocumentsRequest: {
             /** @description De 1 a 500 documentos que ya están en Odín. */
@@ -2068,6 +2098,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Verification"];
+                };
+            };
+        };
+    };
+    verifyBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyCitations"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Verifications"];
                 };
             };
         };
