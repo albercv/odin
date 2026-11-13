@@ -1,6 +1,15 @@
 package com.e2d.odin.adapter.web;
 
 import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
+import com.e2d.odin.application.link.DescribeUploadLink;
+import com.e2d.odin.application.link.IssueOriginalLink;
+import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.LinkIssuer;
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.link.ResolveLink;
+import com.e2d.odin.application.link.UploadByLink;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
@@ -110,6 +119,7 @@ public class TestWiring {
     final InMemoryUserRepository users = new InMemoryUserRepository();
     final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
+    final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository(docs);
@@ -262,7 +272,39 @@ public class TestWiring {
     }
 
     @Bean RevokeAccessKey revokeAccessKey() {
-        return new RevokeAccessKey(keys, users, clock);
+        return new RevokeAccessKey(keys, users, links, clock);
+    }
+
+    @Bean LinkSettings linkSettings() {
+        return new LinkSettings("http://odin.test", java.time.Duration.ofMinutes(15));
+    }
+
+    @Bean LinkIssuer linkIssuer() {
+        return new LinkIssuer(links, tokens, secrets, ids, clock, linkSettings());
+    }
+
+    @Bean IssueUploadLink issueUploadLink() {
+        return new IssueUploadLink(orgs, projectMembers, docs, linkIssuer());
+    }
+
+    @Bean IssueOriginalLink issueOriginalLink() {
+        return new IssueOriginalLink(orgs, projectMembers, docs, linkIssuer());
+    }
+
+    @Bean ResolveLink resolveLink() {
+        return new ResolveLink(links, resolveActor(), orgs, projectMembers, docs, secrets, clock);
+    }
+
+    @Bean DescribeUploadLink describeUploadLink() {
+        return new DescribeUploadLink(resolveLink(), orgs);
+    }
+
+    @Bean UploadByLink uploadByLink() {
+        return new UploadByLink(resolveLink(), links, uploadDocument(), addToCaseFiles());
+    }
+
+    @Bean OpenOriginal openOriginal() {
+        return new OpenOriginal(resolveLink(), files, docs);
     }
 
     @Bean UploadDocument uploadDocument() {

@@ -399,6 +399,21 @@ public final class Responses {
     public record CaseFileAdded(int added) {
     }
 
+    public record IssuedLink(String url, Instant expiresAt) {
+        public static IssuedLink from(com.e2d.odin.application.link.IssuedLink link) {
+            return new IssuedLink(link.url(), link.expiresAt());
+        }
+    }
+
+    public record UploadLinkInfo(String caseTitle, String projectName, Instant expiresAt) {
+        public static UploadLinkInfo from(com.e2d.odin.application.link.UploadLinkInfo info) {
+            return new UploadLinkInfo(info.caseTitle(), info.projectName(), info.expiresAt());
+        }
+    }
+
+    public record UploadReceipt(String filename) {
+    }
+
     public record CaseFileEventView(UUID id, UUID documentId, String action, UUID actorId, Instant at) {
         public static CaseFileEventView from(CaseFileEvent e) {
             return new CaseFileEventView(e.id(), e.documentId().value(), e.action().name(), e.actorId().value(),

@@ -6,6 +6,7 @@ import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
+import com.e2d.odin.application.link.IssueUploadLink;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.DocumentId;
 import java.util.List;
@@ -26,12 +27,14 @@ public class CaseFileController {
     private final GetCaseFile getCaseFile;
     private final AddToCaseFiles addToCaseFiles;
     private final RemoveFromCaseFile removeFromCaseFile;
+    private final IssueUploadLink issueUploadLink;
 
     public CaseFileController(GetCaseFile getCaseFile, AddToCaseFiles addToCaseFiles,
-            RemoveFromCaseFile removeFromCaseFile) {
+            RemoveFromCaseFile removeFromCaseFile, IssueUploadLink issueUploadLink) {
         this.getCaseFile = getCaseFile;
         this.addToCaseFiles = addToCaseFiles;
         this.removeFromCaseFile = removeFromCaseFile;
+        this.issueUploadLink = issueUploadLink;
     }
 
     @GetMapping("/v1/cases/{caseId}/file")
@@ -52,5 +55,12 @@ public class CaseFileController {
     public void remove(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID caseId,
             @PathVariable UUID documentId) {
         removeFromCaseFile.execute(actor, new DocumentId(caseId), new DocumentId(documentId));
+    }
+
+    @PostMapping("/v1/cases/{caseId}/upload-links")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Responses.IssuedLink uploadLink(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID caseId) {
+        return Responses.IssuedLink.from(issueUploadLink.execute(actor, new DocumentId(caseId)));
     }
 }

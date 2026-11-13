@@ -251,6 +251,48 @@
         }
       }
     },
+    "/v1/upload-links/{token}/documents" : {
+      "post" : {
+        "tags" : [ "access-link-controller" ],
+        "operationId" : "uploadByLink",
+        "parameters" : [ {
+          "name" : "token",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UploadReceipt"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/similar-cases" : {
       "post" : {
         "tags" : [ "worker-controller" ],
@@ -356,6 +398,42 @@
         }
       }
     },
+    "/v1/documents/{documentId}/original-links" : {
+      "post" : {
+        "tags" : [ "worker-controller" ],
+        "operationId" : "originalLink",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OriginalLinkRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedLink"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/citations/verify" : {
       "post" : {
         "tags" : [ "worker-controller" ],
@@ -377,6 +455,33 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Verification"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cases/{caseId}/upload-links" : {
+      "post" : {
+        "tags" : [ "case-file-controller" ],
+        "operationId" : "uploadLink",
+        "parameters" : [ {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedLink"
                 }
               }
             }
@@ -992,6 +1097,16 @@
             "type" : "boolean",
             "default" : false
           }
+        }, {
+          "name" : "caseId",
+          "in" : "query",
+          "description" : "Caso a cuyo expediente se añade el documento.",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Caso a cuyo expediente se añade el documento."
+          }
         } ],
         "requestBody" : {
           "content" : {
@@ -1519,6 +1634,59 @@
         }
       }
     },
+    "/v1/upload-links/{token}" : {
+      "get" : {
+        "tags" : [ "access-link-controller" ],
+        "operationId" : "describeUploadLink",
+        "parameters" : [ {
+          "name" : "token",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UploadLinkInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/originals/{token}" : {
+      "get" : {
+        "tags" : [ "access-link-controller" ],
+        "operationId" : "openOriginalByLink",
+        "parameters" : [ {
+          "name" : "token",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me" : {
       "get" : {
         "tags" : [ "worker-controller" ],
@@ -1777,6 +1945,34 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/DocumentTopicsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/documents/{documentId}/original" : {
+      "get" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "downloadOriginal",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
                 }
               }
             }
@@ -2368,6 +2564,15 @@
         },
         "required" : [ "capabilities", "code", "codeReviewed", "id", "name" ]
       },
+      "UploadReceipt" : {
+        "type" : "object",
+        "properties" : {
+          "filename" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "filename" ]
+      },
       "SimilarCasesRequestBody" : {
         "type" : "object",
         "properties" : {
@@ -2614,6 +2819,29 @@
           }
         },
         "required" : [ "hits", "noSource" ]
+      },
+      "OriginalLinkRequest" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Página en la que abre el visor de PDF; si falta, abre por la primera."
+          }
+        }
+      },
+      "IssuedLink" : {
+        "type" : "object",
+        "properties" : {
+          "url" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "expiresAt", "url" ]
       },
       "VerifyCitation" : {
         "type" : "object",
@@ -3154,6 +3382,22 @@
             "type" : "string"
           }
         }
+      },
+      "UploadLinkInfo" : {
+        "type" : "object",
+        "properties" : {
+          "caseTitle" : {
+            "type" : "string"
+          },
+          "projectName" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "caseTitle", "expiresAt", "projectName" ]
       },
       "Me" : {
         "type" : "object",

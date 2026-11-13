@@ -1,5 +1,6 @@
 package com.e2d.odin.adapter.web;
 
+import com.e2d.odin.adapter.web.link.LocalNetworkGuard;
 import com.e2d.odin.adapter.web.security.LoginRateLimiter;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.AdminSession;
@@ -22,7 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(properties = "odin.panel-origin=http://panel.test")
-@Import({TestWiring.class, LoginRateLimiter.class})
+@Import({TestWiring.class, LoginRateLimiter.class, LocalNetworkGuard.class})
 abstract class WebTestSupport {
 
     static final String PANEL = "http://panel.test";

@@ -1,11 +1,13 @@
 package com.e2d.odin.bootstrap;
 
+import com.e2d.odin.application.link.LinkSettings;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.application.shared.TaggingWindow;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +50,12 @@ public class SettingsConfiguration {
             throw new IllegalArgumentException("odin.tagger.window debe ser «always» o «HH:mm-HH:mm»: " + value);
         }
         return TaggingWindow.between(LocalTime.parse(parts[0]), LocalTime.parse(parts[1]), zone);
+    }
+
+    @Bean
+    LinkSettings linkSettings(@Value("${odin.public-url:}") String publicUrl,
+            @Value("${odin.link-ttl:PT15M}") Duration ttl) {
+        return new LinkSettings(publicUrl, ttl);
     }
 
     @Bean
