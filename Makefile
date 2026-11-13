@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery banco-arriba banco-cargar banco-abajo banco banco-reanudar banco-barrido banco-informe banco-test
+.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery banco-arriba banco-cargar banco-abajo banco banco-reanudar banco-barrido banco-informe banco-comprobar banco-test
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -67,6 +67,9 @@ banco-reanudar:
 
 banco-barrido:
 	$(BANCO_ENV) python3 banco/banco.py sweep --config $(CONFIG) $(if $(REINICIAR),--reiniciar-presupuesto)
+
+banco-comprobar:
+	$(BANCO_ENV) python3 banco/banco.py comprobar --config $(CONFIG)
 
 banco-informe:
 	@test -n "$(RESULTADOS)" || { echo "Falta RESULTADOS=<carpeta de banco/resultados>"; exit 1; }

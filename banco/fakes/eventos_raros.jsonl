@@ -1,0 +1,14 @@
+{"_caso": "un evento sin campo type", "message": {"content": [{"type": "text", "text": "hola"}]}}
+{"_caso": "un evento de tipo desconocido", "type": "evento_nuevo_de_la_cli", "datos": {"x": 1}}
+{"_caso": "un evento cuyo message es texto", "type": "assistant", "message": "Respuesta en texto plano"}
+{"_caso": "un evento cuyo message.content es texto", "type": "assistant", "message": {"content": "texto suelto"}}
+{"_caso": "un evento con message.content null", "type": "assistant", "message": {"content": null}}
+{"_caso": "una llamada a herramienta", "type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t1", "name": "mcp__odin__searchKnowledge", "input": {"query": "franquicia"}}]}}
+{"_caso": "un resultado de herramienta con content en texto", "type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": "No consta en Odín."}]}}
+{"_caso": "un resultado de herramienta con content como lista de bloques de texto", "type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": [{"type": "text", "text": "{\"hits\": []}"}]}]}}
+{"_caso": "un resultado de herramienta con bloques que no son texto", "type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": [{"type": "image", "source": {"type": "base64", "data": "AAAA"}}]}]}}
+{"_caso": "un resultado de herramienta con content null", "type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": null}]}}
+{"_caso": "un resultado de herramienta marcado como error", "type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "is_error": true, "content": "Tiempo de espera agotado"}]}}
+{"_caso": "un evento result con coste", "type": "result", "subtype": "success", "total_cost_usd": 0.01}
+no es JSON, salida truncada {"type": "assistant"
+

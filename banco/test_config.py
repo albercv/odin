@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from banco.config import ConfigError, load_config
+from banco.config import CAPABILITIES, ConfigError, load_config
 
 BANCO = Path(__file__).resolve().parent
 CONFIGS = BANCO / "configs"
@@ -56,6 +56,11 @@ def load_text(text: str):
         path = Path(tmp) / "config.toml"
         path.write_text(text, encoding="utf-8")
         return load_config(path, BANCO)
+
+
+def top(extra):
+    """VALID con claves de nivel superior añadidas tras «name», antes de la primera tabla."""
+    return VALID.replace('name = "prueba"\n', 'name = "prueba"\n' + extra, 1)
 
 
 class ConfigTest(unittest.TestCase):
@@ -186,6 +191,23 @@ class ConfigTest(unittest.TestCase):
             load_text(variant('kind = "composer"\nmodel = "haiku"', 'kind = "composer"'))
         cfg = load_text(variant('kind = "composer"\nmodel = "haiku"', 'kind = "single"'))
         self.assertIsNone(cfg.combiner.model)
+
+
+    def test_owner_approval_and_capabilities_are_read(self):
+        config = load_text(top('ownerApproval = "D-077"\ncapabilities = ["SEARCH_KNOWLEDGE"]\n'))
+        self.assertEqual(config.owner_approval, "D-077")
+        self.assertEqual(config.capabilities, ("SEARCH_KNOWLEDGE",))
+
+    def test_defaults_when_absent(self):
+        config = load_text(VALID)
+        self.assertIsNone(config.owner_approval)
+        self.assertEqual(config.capabilities, CAPABILITIES)
+
+    def test_bad_owner_approval_and_capabilities_are_refused(self):
+        for extra in ('ownerApproval = ""\n', 'capabilities = []\n', 'capabilities = ["ADMIN"]\n',
+                      'capabilities = ["SEARCH_KNOWLEDGE", "SEARCH_KNOWLEDGE"]\n'):
+            with self.subTest(extra=extra), self.assertRaises(ConfigError):
+                load_text(top(extra))
 
 
 if __name__ == "__main__":

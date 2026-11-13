@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from banco import report, run  # noqa: E402
+from banco import comprobacion, report, run  # noqa: E402
 from banco.capas import ArchivoError  # noqa: E402
 from banco.config import ConfigError  # noqa: E402
 from banco.layout import default_layout  # noqa: E402
@@ -33,6 +33,7 @@ def _parser():
                            help="archiva el libro de gasto del experimento y empieza el tope en cero")
         order.add_argument("--sin-prueba", action="store_true",
                            help="no hace la llamada de prueba a claude antes del primer grupo")
+    orders.add_parser("comprobar").add_argument("--config", required=True)
     orders.add_parser("report").add_argument("--results", required=True)
     orders.add_parser("reanudar").add_argument("--config", required=True)
     return ap
@@ -47,10 +48,17 @@ def main(argv=None, layout=None):
             return 0
         if args.orden == "reanudar":
             return run.resume_experiment(Path(args.config), layout)
+        if args.orden == "comprobar":
+            informe = comprobacion.previa(Path(args.config), layout)
+            print(comprobacion.resumen(informe))
+            return 1 if informe["fallos"] else 0
         order = run.run_experiment if args.orden == "run" else run.sweep_experiment
         return order(Path(args.config), layout, reset_budget=args.reiniciar_presupuesto, sin_prueba=args.sin_prueba)
     except ConfigError as error:
         print(f"error de configuración: {error}", file=sys.stderr)
+        return 1
+    except comprobacion.ComprobacionError as error:
+        print(error, file=sys.stderr)
         return 1
     except ArchivoError as error:
         print(f"error de archivos: {error}", file=sys.stderr)

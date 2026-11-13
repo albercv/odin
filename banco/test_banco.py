@@ -14,7 +14,7 @@ from unittest import mock
 
 from types import SimpleNamespace
 
-from banco import banco, judge, run
+from banco import banco, comprobacion, judge, run
 from banco.cache import RunCache
 from banco.ledger import Ledger
 from banco.config import ConfigError
@@ -126,6 +126,9 @@ class Harness(unittest.TestCase):
         patcher = mock.patch("banco.medir_path.ejecutar.responder", side_effect=citing)
         patcher.start()
         self.addCleanup(patcher.stop)
+        passing = mock.patch("banco.comprobacion.comprobar", return_value={})  # la comprobación previa se prueba aparte
+        passing.start()
+        self.addCleanup(passing.stop)
 
     def config(self, budget=5.0, kind="majorityVote", combiner_model="", sweep="", battery="desarrollo", mode="explore",
                concurrency=1):
@@ -780,26 +783,26 @@ class ExpedientesCheckTest(unittest.TestCase):
 
     def test_expediente_documents_loaded_pass(self):
         self.write_expedientes(["a/x.txt"])
-        run._check_loaded(self.folder, self.stack, self.cfg)
+        comprobacion.check_loaded(self.folder, self.stack, self.cfg)
 
     def test_expediente_document_not_loaded_is_refused_with_loader_hint(self):
         self.write_expedientes(["a/y.txt"])
         with self.assertRaisesRegex(ConfigError, re.escape("ARCHIVOS=ficticio,generalidad EXPEDIENTES=1")):
-            run._check_loaded(self.folder, self.stack, self.cfg)
+            comprobacion.check_loaded(self.folder, self.stack, self.cfg)
 
     def test_compartido_not_loaded_is_refused(self):
         self.write_expedientes(["a/x.txt"], compartidos=["a/y.txt"])
         with self.assertRaisesRegex(ConfigError, re.escape("EXPEDIENTES=1")):
-            run._check_loaded(self.folder, self.stack, self.cfg)
+            comprobacion.check_loaded(self.folder, self.stack, self.cfg)
 
     def test_ajenos_are_not_required(self):
         self.write_expedientes(["a/x.txt"], ajenos=["b/senuelo.txt"])
-        run._check_loaded(self.folder, self.stack, self.cfg)
+        comprobacion.check_loaded(self.folder, self.stack, self.cfg)
 
     def test_expediente_documents_are_not_required_without_their_battery(self):
         self.write_expedientes(["a/y.txt"])
         cfg = SimpleNamespace(archives=("ficticio",), batteries=("desarrollo",))
-        run._check_loaded(self.folder, self.stack, cfg)
+        comprobacion.check_loaded(self.folder, self.stack, cfg)
 
 
 TURNO = str(BANCO / "fakes" / "fake_claude_turno.py")
@@ -1442,6 +1445,55 @@ class ResumeFailuresTest(Harness):
         self.assertEqual(code, 2)
         self.assertIn("estado de una versión anterior del banco: relanza el experimento", message)
         self.assertNotIn("la configuración cambió", message)
+
+
+
+class ComprobacionWiringTest(Harness):
+    """La comprobación previa va antes de todo: si falla, no hay llamada de prueba, ni libro, ni carpeta, y no hay salto."""
+
+    def setUp(self):
+        super().setUp()
+        failing = mock.patch("banco.comprobacion.comprobar", return_value={"datos": ["falta la carga de prueba"]})
+        self.check = failing.start()
+        self.addCleanup(failing.stop)
+        self.responder = mock.patch("banco.medir_path.ejecutar.responder").start()
+        self.addCleanup(mock.patch.stopall)
+        self.preflight = mock.patch("banco.preflight.run_preflight").start()
+
+    def assert_nothing_started(self):
+        self.responder.assert_not_called()
+        self.preflight.assert_not_called()
+        self.assertFalse((self.tmp / "resultados").exists())
+        self.assertEqual(list(self.state_dir.glob("libro-*.json")), [])
+
+    def test_run_refuses_before_anything_and_the_flag_does_not_skip_it(self):
+        with self.assertRaisesRegex(comprobacion.ComprobacionError,
+                                    re.escape("comprobación previa fallida (D-094): falta la carga de prueba")):
+            run.run_experiment(self.config(), self.layout, sin_prueba=True)
+        self.assert_nothing_started()
+
+    def test_cli_run_and_sweep_exit_one(self):
+        with fake_env(), contextlib.redirect_stderr(io.StringIO()) as errors:
+            self.assertEqual(banco.main(["run", "--sin-prueba", "--config", str(self.config())], layout=self.layout), 1)
+            self.assertEqual(banco.main(["sweep", "--config", str(self.config(sweep=SWEEP))], layout=self.layout), 1)
+        self.assertIn("comprobación previa fallida (D-094)", errors.getvalue())
+        self.assert_nothing_started()
+
+    def test_resume_refuses_before_preparing(self):
+        from banco import tanda
+        state = {"mode": "explore", "carpeta": str(self.tmp), "huella": "h", "stack_digest": "d", "config_sha256": "c"}
+        tanda.save_state(tanda.state_path(self.state_dir, "prueba"), state)
+        with mock.patch("banco.run.prepare") as prepare, self.assertRaises(comprobacion.ComprobacionError):
+            run.resume_experiment(self.config(), self.layout)
+        prepare.assert_not_called()
+        self.responder.assert_not_called()
+
+    def test_passing_check_runs_first_and_is_kept_with_the_results(self):
+        with mock.patch("banco.comprobacion.comprobar", return_value={}) as passing:
+            code = self.run_cli(self.config(), preflight=True)
+        self.assertEqual(code, 0)
+        passing.assert_called_once()
+        self.assertTrue((self.only_folder() / "COMPROBACION.json").is_file())
 
 
 if __name__ == "__main__":
