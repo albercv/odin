@@ -27,6 +27,7 @@ DEFAULT_DRAWS = 20
 DEFAULT_SINGLE_TURNS = [10, 20, 40]
 BUDGET = "budget"  # motivo interno: el presupuesto se agotó antes de lanzar un juez de pago
 NO_CONSTA_MOTIVO = "no juzgable: no consta"
+EXPEDIENTES_BATTERY = "generalidad-expediente"  # sus documentos deben estar cargados en la pila
 STOP_MOTIVO = "parada"
 
 
@@ -84,14 +85,25 @@ def _check_supported(cfg):
             raise ConfigError(f"la batería «{name}» necesita el archivo «{missing[0]}» en «archives»")
 
 
-def _check_loaded(folder, stack, archives):
-    """Las citas y las fichas solo se resuelven si la pila tiene cargados los documentos y fichas del manifiesto."""
+def _check_loaded(folder, stack, cfg):
+    """Las citas y las fichas solo se resuelven si la pila tiene cargados los documentos y fichas del manifiesto.
+    Con la batería de expedientes, también los documentos de sus expedientes (con EXPEDIENTES=1)."""
     manifest = json.loads((folder / "manifiesto.json").read_text(encoding="utf-8"))
     docs, cards = set(stack["doc_ruta"].values()), set(stack["ficha_f"].values())
+    arg = ",".join(cfg.archives)
     if any(d["ruta"] not in docs for d in manifest["documentos"]) or any(f["id"] not in cards for f in manifest["fichas"]):
-        arg = ",".join(archives)
-        raise ConfigError(f"la pila no tiene cargados los documentos de {', '.join(archives)}: "
+        raise ConfigError(f"la pila no tiene cargados los documentos de {', '.join(cfg.archives)}: "
                           f"ejecuta antes «make banco-cargar ARCHIVOS={arg}»")
+    if EXPEDIENTES_BATTERY in cfg.batteries and not _expediente_docs(folder) <= docs:
+        raise ConfigError(f"la pila no tiene cargados los documentos de los expedientes: "
+                          f"ejecuta antes «make banco-cargar ARCHIVOS={arg} EXPEDIENTES=1»")
+
+
+def _expediente_docs(folder):
+    """Documentos y compartidos de los expedientes: los que sube el cargador (los ajenos son señuelos y no)."""
+    path = folder / "expedientes.json"
+    cases = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+    return {ruta for case in cases for ruta in case["documentos"] + case["compartidos"]}
 
 
 def _check_main(cfg, sweep):
@@ -262,7 +274,7 @@ def prepare(config_path, layout, sweep=False, reset_budget=False, resume=None):
     spec = load_sweep(config_path, cfg) if sweep else None
     stack = _load_stack(layout)
     folder = capas.data_dir(layout, cfg.archives)
-    _check_loaded(folder, stack, cfg.archives)
+    _check_loaded(folder, stack, cfg)
     items = _select_items(layout, cfg)
     ctx = scoring.build_context(folder, stack)
     commit, branch = code_fingerprint(layout.repo)

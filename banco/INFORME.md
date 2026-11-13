@@ -37,6 +37,13 @@ make banco-cargar ARCHIVOS=ficticio,generalidad   # fusiona y carga; ARCHIVOS=fi
 python3 banco/capas.py fusionar --archivos ficticio,generalidad   # solo fusiona e imprime la carpeta
 ```
 
+### Expedientes (`EXPEDIENTES=1`)
+
+Una capa puede traer expedientes: `expedientes.json` (casos con sus documentos y sustituciones) y la carpeta `expedientes/` con sus ficheros. La fusión los junta en la carpeta de datos (sin copias enlazadas); un caso o un fichero repetido entre capas se niega. Sin expedientes, nada cambia.
+
+- `make banco-cargar ARCHIVOS=ficticio,generalidad EXPEDIENTES=1` carga después los documentos de los expedientes con `pila/cargar_expedientes.py`. Sin ese cargador en la rama, la orden se niega antes de cargar nada.
+- La batería `generalidad-expediente` (`bateria-expediente.json` de la capa `generalidad`) exige que los documentos de los expedientes (no los ajenos) estén cargados en la pila; si no, el banco pide `EXPEDIENTES=1`.
+
 El informe de una carpeta de resultados vuelve a leer sus capas y baterías de `ORIGEN.txt` (`Archivos:` y `Batería:`), así que las carpetas anteriores se recalculan igual que antes.
 
 ## Salida

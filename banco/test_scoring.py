@@ -1,4 +1,6 @@
 """Pruebas del contexto de puntuación: textos de página para los jueces, páginas esperadas y observadas."""
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -38,6 +40,40 @@ class PagesTest(unittest.TestCase):
     def test_no_answer_is_not_correct(self):
         ctx = scoring.build_context(DATA, {"doc_ruta": {}, "ficha_f": {}})
         self.assertFalse(scoring.is_correct({"id": "Q1", "pregunta": "?", "claves": [["x"]]}, None, ctx))
+
+
+class ExpedientesContextTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.data = Path(tmp.name)
+        (self.data / "corpus").mkdir()
+        (self.data / "manifiesto.json").write_text(json.dumps({"semilla": 1, "empresas": [], "proyectos": [], "trabajadores": [],
+                                                              "documentos": [], "fichas": []}), encoding="utf-8")
+        (self.data / "claves.json").write_text("[]", encoding="utf-8")
+
+    def write_expedientes(self, sustituciones):
+        case = {"caso": "ribera-C1", "proyecto": None, "documentos": [], "compartidos": [], "ajenos": [],
+                "formas_numero": [], "sustituciones": sustituciones}
+        (self.data / "expedientes.json").write_text(json.dumps([case]), encoding="utf-8")
+
+    def test_expediente_pages_join_the_corpus(self):
+        fichero = self.data / "expedientes" / "ribera" / "proyecto" / "c1.txt"
+        fichero.parent.mkdir(parents=True)
+        fichero.write_text("=== Página 1 ===\nTexto del expediente\n", encoding="utf-8")
+        ctx = scoring.build_context(self.data, {"doc_ruta": {}, "ficha_f": {}})
+        self.assertEqual(ctx.corpus["ribera/proyecto/c1.txt"], {1: "Texto del expediente"})
+
+    def test_expediente_substitutions_mark_the_old_document_superseded(self):
+        self.write_expedientes([["ribera/proyecto/viejo.txt", "ribera/proyecto/nuevo.txt"]])
+        ctx = scoring.build_context(self.data, {"doc_ruta": {}, "ficha_f": {}})
+        self.assertIn("ribera/proyecto/viejo.txt", ctx.reales)
+        self.assertNotIn("ribera/proyecto/nuevo.txt", ctx.reales)
+
+    def test_without_expedientes_the_context_is_empty(self):
+        ctx = scoring.build_context(self.data, {"doc_ruta": {}, "ficha_f": {}})
+        self.assertEqual(ctx.corpus, {})
+        self.assertEqual(ctx.reales, set())
 
 
 if __name__ == "__main__":
