@@ -340,9 +340,9 @@
 **Files:**
 - Modify: `experimentos/2026-11-12-archivo-ficticio/generar/generar.py` y `textos.py`. Escriben `datos/expedientes/` y `datos/expedientes.json`, sin cambiar lo que ya generan.
 - Create: `experimentos/2026-11-12-archivo-ficticio/pila/cargar_expedientes.py` (sube los documentos y crea las relaciones por la API del administrador). No se cambia `cargar.py`.
-- Create: `experimentos/2026-11-12-archivo-ficticio/datos/preguntas-expediente.json`
+- Create: `experimentos/2026-11-12-archivo-ficticio/datos/bateria-expedientes.json`
 - Modify:
-  - `experimentos/2026-11-12-archivo-ficticio/medir/puntuar.py`: métrica `cobertura_expediente` y tipo `expediente`, sin cambiar lo que ya puntúa;
+  - `experimentos/2026-11-12-archivo-ficticio/medir/puntuar.py`: métrica `cobertura_expediente` y tipo `expediente`. `score_item` devuelve lo mismo que hoy para los tipos que ya existen, porque el banco del CTO 3 lo usa tal cual; la cobertura es un campo nuevo;
   - `medir/ejecutar.py`: `--bateria`, para elegir el fichero de preguntas, y `getCaseFile` y `readCaseFile` entre las herramientas permitidas. Antes de tocar `ejecutar.py` se acuerda con el CTO 3, que lo tiene cambiado en `feature/calidad-recuperacion`;
   - `deploy/demo/` (un expediente completo con peritaje, dos presupuestos, factura, correo en PDF y foto);
   - `mcp/scripts/demo-client.ts`: pasos del MCP para ver, leer con cita, abrir el original, pedir el enlace y subir, quitar y volver a añadir.
@@ -375,7 +375,7 @@
 - Create: `docs/informes/2026-11-13-expediente-medicion.md`
 - Create: `experimentos/2026-11-12-archivo-ficticio/resultados/<etiqueta>/` (respuestas, mapas, puntuación, origen)
 
-- [ ] **Step 1: Agree with the CTO 3** cuándo y cómo se lanza el banco con `--bateria datos/preguntas-expediente.json` y `cargar_expedientes.py`, sin pisar su ventana de suscripción.
+- [ ] **Step 1: Agree with the CTO 3** (ya está acordado: el banco añadirá `questions = "…/bateria-expedientes.json"` y `types = ["expediente"]`, con otra pila y su propia caché, cuando cierre su barrido; hasta entonces, nada que él vaya a mezclar ni cambios en `medir/` de su rama). Falta fijar cuándo y cómo se lanza el banco con `--bateria datos/bateria-expedientes.json` y `cargar_expedientes.py`, sin pisar su ventana de suscripción.
 - [ ] **Step 2: Run the measurement.**
   - Haiku: tres ejecuciones completas de las 40 preguntas. Cuenta la peor.
   - Sonnet: una ejecución.
