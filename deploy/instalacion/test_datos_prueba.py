@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 import datos_prueba as dp
+import escaneos
 
 
 def seleccion():
@@ -47,6 +48,56 @@ class SeleccionTest(unittest.TestCase):
         for f in s.fichas:
             autor = dp.autor_de(f, s)
             self.assertIn(f["proyecto"], dp.proyectos_de(autor, s), f["id"])
+
+
+def completa():
+    return dp.seleccionar_completo(dp.leer_json(dp.ARCHIVO / "manifiesto.json"), dp.leer_json(dp.ARCHIVO / "claves.json"))
+
+
+class CompletaTest(unittest.TestCase):
+
+    def test_cargaTodoElArchivo(self):
+        s = completa()
+        self.assertEqual((2, 94, 1236, 300), (len(s.empresas), len(s.proyectos), len(s.documentos), len(s.fichas)))
+        self.assertEqual(55, len(s.parejas))
+        self.assertTrue(s.completo)
+
+    def test_ochoTrabajadoresConSusProyectos(self):
+        s = completa()
+        por_origen = {t["origen"]: t for t in s.trabajadores}
+        self.assertEqual(8, len(s.trabajadores))
+        self.assertEqual(10, len(dp.proyectos_de(por_origen["t02"], s)))
+        self.assertEqual(61, len(dp.proyectos_de(por_origen["t01"], s)))
+        self.assertEqual(33, len(dp.proyectos_de(por_origen["t06"], s)))
+        self.assertEqual("raul", next(t["clave"] for t in s.trabajadores if t["origen"] == "t04"))
+
+    def test_elAutorDeCadaFichaEsElDelManifiesto(self):
+        s = completa()
+        for f in s.fichas:
+            self.assertEqual(f["autor"], dp.autor_de(f, s)["origen"])
+            self.assertIn(f["proyecto"], dp.proyectos_de(dp.autor_de(f, s), s) + ["procedimientos-generales"])
+
+    def test_cadaTipoDeCasoTieneTemas(self):
+        for d in completa().documentos:
+            if dp.es_caso(d["ruta"]):
+                self.assertTrue(dp.temas_de(d["ruta"]), d["ruta"])
+
+    def test_elModoPequenoNoCambia(self):
+        s = seleccion()
+        self.assertFalse(s.completo)
+        self.assertEqual(["marta", "javier", "ignacio"], [t["clave"] for t in s.trabajadores])
+
+
+class EscaneosTest(unittest.TestCase):
+
+    def test_treintaDeRiberaDeUnaATresPaginasYDeterministas(self):
+        docs = completa().documentos
+        a = escaneos.elegir(docs, dp.leer_corpus)
+        self.assertEqual(a, escaneos.elegir(docs, dp.leer_corpus))
+        self.assertEqual(30, len(set(a)))
+        self.assertTrue(all(r.startswith("ribera/") for r in a))
+        self.assertTrue(all(1 <= len(escaneos.paginas(dp.leer_corpus(r))) <= 3 for r in a))
+        self.assertGreaterEqual(len({escaneos.tipo(r) for r in a}), 8)
 
 
 class TrabajadoresTest(unittest.TestCase):
@@ -113,6 +164,16 @@ class MultipartTest(unittest.TestCase):
         self.assertTrue(tipo.startswith("multipart/form-data; boundary="))
         self.assertIn(b'name="file"; filename="acta.txt"', cuerpo)
         self.assertIn("Acta de la junta".encode(), cuerpo)
+
+
+
+class CarpetaDeDatosTest(unittest.TestCase):
+
+    def test_laInstalacionOdinUsaData(self):
+        self.assertEqual(Path("/r/data"), dp.datos_de(Path("/r"), "odin"))
+
+    def test_unaPilaDeEnsayoNoTocaLosDatosDelPropietario(self):
+        self.assertEqual(Path("/r/data/pilas/odin-ensayo"), dp.datos_de(Path("/r"), "odin-ensayo"))
 
 
 if __name__ == "__main__":

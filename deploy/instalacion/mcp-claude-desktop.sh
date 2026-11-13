@@ -8,9 +8,14 @@ cd "$(dirname "$0")/../.."
 PRINCIPAL=$(git rev-parse --path-format=absolute --git-common-dir 2> /dev/null || true)
 PRINCIPAL="${PRINCIPAL:+${PRINCIPAL%/.git}}"
 PRINCIPAL="${PRINCIPAL:-$PWD}"
-CREDENCIALES=$PRINCIPAL/data/datos-prueba/credenciales.local.json
-DESTINO=$PRINCIPAL/data/mcp-claude-desktop
-CONFIG="${CLAUDE_DESKTOP_CONFIG:-$HOME/Library/Application Support/Claude/claude_desktop_config.json}"
+DATOS=$PRINCIPAL/data
+[ "${INSTALACION_PROYECTO:-odin}" = odin ] || DATOS="$PRINCIPAL/data/pilas/$INSTALACION_PROYECTO"
+CREDENCIALES=$DATOS/datos-prueba/credenciales.local.json
+DESTINO=$DATOS/mcp-claude-desktop
+# Solo la instalación «odin» toca el Claude Desktop de verdad; una pila de ensayo usa un fichero suyo.
+CONFIG_REAL="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+[ "${INSTALACION_PROYECTO:-odin}" = odin ] || CONFIG_REAL="$DATOS/claude_desktop_config.json"
+CONFIG="${CLAUDE_DESKTOP_CONFIG:-$CONFIG_REAL}"
 
 [ -f "$CREDENCIALES" ] || { echo "No hay datos de prueba cargados ($CREDENCIALES). Primero: make datos-prueba-cargar" >&2; exit 1; }
 NODE=$(command -v node) || { echo "Falta Node 24 o superior." >&2; exit 1; }
@@ -28,4 +33,4 @@ mv "$DESTINO.nuevo" "$DESTINO"
 rm -rf "$DESTINO.viejo"
 echo "MCP copiado en $DESTINO."
 python3 deploy/instalacion/claude_desktop.py --config "$CONFIG" --credenciales "$CREDENCIALES" \
-  --trabajador "${TRABAJADOR:-marta}" --mcp "$DESTINO" --node "$NODE" --copias "$PRINCIPAL/data/copias"
+  --trabajador "${TRABAJADOR:-marta}" --mcp "$DESTINO" --node "$NODE" --copias "$DATOS/copias"

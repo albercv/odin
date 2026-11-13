@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
+.PHONY: instalacion-desplegar setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -43,7 +43,11 @@ tagging-battery:
 # Instalación del propietario (D-056): datos de prueba, vaciarla, volver a una copia y conector de Claude Desktop.
 # Van con cerrojo (data/instalacion.lock). INSTALACION_PROYECTO e INSTALACION_ENV eligen otra pila.
 datos-prueba-cargar:
-	@deploy/instalacion/cerrojo.sh python3 deploy/instalacion/datos_prueba.py
+	@ARCHIVO="$(ARCHIVO)" deploy/instalacion/cerrojo.sh python3 deploy/instalacion/datos_prueba.py
+
+# Recuento contado en la base, en tablas Markdown. La carga completa es: make datos-prueba-cargar ARCHIVO=completo
+datos-prueba-recuento:
+	@deploy/instalacion/cerrojo.sh deploy/instalacion/recuento.sh
 
 instalacion-reiniciar:
 	@CONFIRMAR="$(CONFIRMAR)" deploy/instalacion/cerrojo.sh deploy/instalacion/reiniciar.sh
@@ -53,3 +57,6 @@ instalacion-restaurar:
 
 mcp-claude-desktop:
 	@TRABAJADOR="$(TRABAJADOR)" deploy/instalacion/cerrojo.sh deploy/instalacion/mcp-claude-desktop.sh
+
+instalacion-desplegar:
+	@CONFIRMAR="$(CONFIRMAR)" TRABAJADOR="$(TRABAJADOR)" CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
