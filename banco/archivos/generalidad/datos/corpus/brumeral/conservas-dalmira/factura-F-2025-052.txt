@@ -1,0 +1,20 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Factura F-2025-052
+Fecha: 07/04/2025 · Cliente: Conservas Dalmira, S.A. · CIF B-00000022 · Página 1 de 1
+
+EMISOR: Brumeral Ingeniería y Consultoría, S.L., CIF B-00000001, Polígono Las Viñas, nave 12, 47999 Valdecerro.
+CLIENTE: Conservas Dalmira, S.A., CIF B-00000022, Camino de los Huertos, Valdecerro.
+Número de factura: F-2025-052
+
+Concepto | Cantidad | Precio unitario | Importe
+Anticipo del 50 % de la auditoría energética. | 1 | 8.450,00 euros | 8.450,00 euros
+
+Base imponible: 8.450,00 euros
+IVA 21 %: 1.774,50 euros
+Total factura: 10.224,50 euros
+
+Forma de pago: transferencia bancaria a la cuenta ES00 0000 0000 00 0000000000.
+Vencimiento: 07/05/2025
+Factura emitida según la norma interna de facturación de Brumeral.

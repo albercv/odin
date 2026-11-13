@@ -1,0 +1,181 @@
+[
+ {
+  "id": "KB01",
+  "tipo": "version",
+  "fuentes": [
+   {
+    "doc": "brumeral/_general/tarifas-honorarios-2024.txt",
+    "pagina": 1,
+    "frase": "Hora de ingeniero sénior: 68 euros."
+   },
+   {
+    "doc": "brumeral/_general/tarifas-honorarios-2025.txt",
+    "pagina": 1,
+    "frase": "Hora de ingeniero sénior: 72 euros."
+   }
+  ],
+  "vigente": {
+   "doc": "brumeral/_general/tarifas-honorarios-2025.txt"
+  },
+  "respuesta_correcta": "72 euros la hora de ingeniero sénior (tarifas 2025, que sustituyen a las de 2024; antes 68 euros).",
+  "preguntas": [
+   "GEN09"
+  ]
+ },
+ {
+  "id": "KB02",
+  "tipo": "version",
+  "fuentes": [
+   {
+    "doc": "brumeral/conservas-dalmira/oferta-auditoria-energetica-v1.txt",
+    "pagina": 1,
+    "frase": "Precio de la auditoría energética: 18.400 euros más IVA."
+   },
+   {
+    "doc": "brumeral/conservas-dalmira/oferta-auditoria-energetica-v2.txt",
+    "pagina": 1,
+    "frase": "Precio de la auditoría energética: 16.900 euros más IVA."
+   }
+  ],
+  "vigente": {
+   "doc": "brumeral/conservas-dalmira/oferta-auditoria-energetica-v2.txt"
+  },
+  "respuesta_correcta": "16.900 euros más IVA (oferta v2, que sustituye a la v1 de 18.400 euros).",
+  "preguntas": [
+   "GEN08"
+  ]
+ },
+ {
+  "id": "KB03",
+  "tipo": "version",
+  "fuentes": [
+   {
+    "doc": "brumeral/bodegas-quintafria/contrato-servicios-2023.txt",
+    "pagina": 1,
+    "frase": "Honorarios anuales: 7.800 euros más IVA."
+   },
+   {
+    "doc": "brumeral/bodegas-quintafria/contrato-servicios-2025.txt",
+    "pagina": 1,
+    "frase": "Este contrato sustituye y deja sin efecto el contrato CS-2023-02."
+   }
+  ],
+  "vigente": {
+   "doc": "brumeral/bodegas-quintafria/contrato-servicios-2025.txt"
+  },
+  "respuesta_correcta": "El contrato CS-2025-07; el CS-2023-02 queda sin efecto.",
+  "preguntas": [
+   "GEN10"
+  ]
+ },
+ {
+  "id": "KB04",
+  "tipo": "anexo",
+  "fuentes": [
+   {
+    "doc": "brumeral/talleres-murcano/contrato-mantenimiento-2024.txt",
+    "pagina": 2,
+    "frase": "La cuota mensual del mantenimiento es de 1.150 euros más IVA."
+   },
+   {
+    "doc": "brumeral/talleres-murcano/adenda-1-contrato-mantenimiento.txt",
+    "pagina": 1,
+    "frase": "Desde el 1 de febrero de 2025, la cuota mensual del mantenimiento pasa a ser de 1.240 euros más IVA."
+   }
+  ],
+  "vigente": {
+   "doc": "brumeral/talleres-murcano/adenda-1-contrato-mantenimiento.txt"
+  },
+  "respuesta_correcta": "1.240 euros más IVA al mes (adenda 1, que modifica el precio del contrato CM-2024-011, que fijaba 1.150).",
+  "preguntas": [
+   "GEN07",
+   "GEN15"
+  ]
+ },
+ {
+  "id": "KB05",
+  "tipo": "anexo",
+  "fuentes": [
+   {
+    "doc": "brumeral/conservas-dalmira/factura-F-2025-052.txt",
+    "pagina": 1,
+    "frase": "Anticipo del 50 % de la auditoría energética."
+   },
+   {
+    "doc": "brumeral/conservas-dalmira/factura-rectificativa-R-2025-003.txt",
+    "pagina": 1,
+    "frase": "Base imponible rectificada: 6.760,00 euros."
+   }
+  ],
+  "vigente": {
+   "doc": "brumeral/conservas-dalmira/factura-rectificativa-R-2025-003.txt"
+  },
+  "respuesta_correcta": "Anticipo de 6.760 euros de base (rectificativa R-2025-003, que rectifica la F-2025-052).",
+  "preguntas": [
+   "GEN11",
+   "GEN17"
+  ]
+ },
+ {
+  "id": "KB06",
+  "tipo": "discrepancia",
+  "fuentes": [
+   {
+    "doc": "brumeral/logistica-penedal/contrato-legalizacion-fotovoltaica.txt",
+    "pagina": 2,
+    "frase": "Plazo de pago: 60 días desde la fecha de la factura."
+   },
+   {
+    "doc": "brumeral/logistica-penedal/correo-2025-03-plazo-pago.txt",
+    "pagina": 1,
+    "frase": "Según lo hablado por teléfono, os pagaremos las facturas a 30 días."
+   }
+  ],
+  "vigente": null,
+  "respuesta_correcta": "No consta un plazo único: el contrato dice 60 días y un correo de marzo de 2025 dice 30. Enseñar los dos.",
+  "preguntas": [
+   "GEN18"
+  ]
+ },
+ {
+  "id": "KB07",
+  "tipo": "discrepancia",
+  "fuentes": [
+   {
+    "doc": "brumeral/alojamientos-cerrolago/presupuesto-climatizacion-2024.txt",
+    "pagina": 2,
+    "frase": "Plazo de ejecución del proyecto: 10 semanas desde la aceptación."
+   },
+   {
+    "doc": "brumeral/alojamientos-cerrolago/correo-2025-01-plazo.txt",
+    "pagina": 1,
+    "frase": "El proyecto de climatización estará listo en 8 semanas desde la aceptación."
+   }
+  ],
+  "vigente": null,
+  "respuesta_correcta": "No consta un plazo único: el presupuesto dice 10 semanas y un correo de enero de 2025 dice 8. Enseñar los dos.",
+  "preguntas": [
+   "GEN19"
+  ]
+ },
+ {
+  "id": "KB08",
+  "tipo": "ficha_contra_documento",
+  "fuentes": [
+   {
+    "doc": "brumeral/bodegas-quintafria/contrato-servicios-2025.txt",
+    "pagina": 1,
+    "frase": "Entrada en vigor: 1 de abril de 2025."
+   },
+   {
+    "ficha": "FB02",
+    "frase": "El contrato nuevo con Bodegas Quintafría empezó el 1 de marzo de 2025."
+   }
+  ],
+  "vigente": null,
+  "respuesta_correcta": "No consta la fecha: el contrato CS-2025-07 dice 1 de abril de 2025 y la ficha FB02 dice 1 de marzo de 2025. Enseñar las dos.",
+  "preguntas": [
+   "GEN20"
+  ]
+ }
+]
