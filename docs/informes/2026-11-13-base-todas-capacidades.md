@@ -21,7 +21,7 @@
 
 - **No hay peor de 3 válida.** Falta la ejecución 2 completa. Con las dos completas, la peor es 202 (93,5 %), por encima del 90 %, pero no se puede dar como umbral nuevo.
 - **Comparación con los textos neutros** (sin `findSimilarCases`, 207/206/207): las dos ejecuciones completas salen 4 o 5 preguntas por debajo. Con tres ejecuciones no se puede distinguir si es ruido (unas 5 a 10 preguntas por ejecución) o un efecto de tener la herramienta. **No es una conclusión.**
-- **«No consta» falsos:** en las dos ejecuciones completas se repiten Q138, Q139, Q153 y Q201. Q153 es la que trata Q153 (`feature/busqueda-general`, sin medir con IA).
+- **«No consta» falsos:** en las dos ejecuciones completas se repiten Q138, Q139, Q153 y Q201. Q153 es la que busca arreglar `feature/busqueda-general`, que aún no se ha medido con IA.
 - **Preguntas del propietario:** «¿Quiénes son nuestros clientes?» sale bien en las tres ejecuciones. «¿Con qué empresas trabajamos?» falla en las tres, también con D-091; no se ha analizado por qué.
 
 ## Por qué se cortó la ejecución 2
