@@ -36,7 +36,7 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: INSTRUCTIONS });
   if (capabilities.has('SEARCH_KNOWLEDGE')) {
     const projects = createProjectNames(me);
-    registerSearchKnowledge(server, api, projects);
+    registerSearchKnowledge(server, api, projects, capabilities.has('CASE_FILES'));
     registerReadPage(server, api);
     registerOpenOriginal(server, api);
     registerListDocuments(server, api, projects);

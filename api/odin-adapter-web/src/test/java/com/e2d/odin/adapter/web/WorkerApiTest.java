@@ -152,7 +152,8 @@ class WorkerApiTest extends WebTestSupport {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"{}", "{\"citations\":[]}", "TWENTY_ONE",
+    @ValueSource(strings = {"{}", "", "{\"citations\":[]}", "TWENTY_ONE",
+        "{\"citations\":[{\"documentId\":\"x\",\"pageNumber\":1,\"quote\":\"q\"}]}",
         "{\"citations\":[{\"documentId\":\"00000000-0000-0000-0000-000000000001\",\"pageNumber\":1}]}"})
     void invalidBatchIs400(String body) throws Exception {
         String one = "{\"documentId\":\"00000000-0000-0000-0000-000000000001\",\"pageNumber\":1,\"quote\":\"q\"}";
