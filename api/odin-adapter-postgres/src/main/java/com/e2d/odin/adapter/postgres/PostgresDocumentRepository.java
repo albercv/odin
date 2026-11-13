@@ -133,7 +133,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
                 .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
-                        + "ORDER BY d.seq LIMIT 1")
+                        + "AND d.withdrawn_at IS NULL ORDER BY d.seq LIMIT 1")
                 .param("company", companyId.value()).param("sha", sha256).query((rs, n) -> document(rs)).optional());
     }
 
@@ -142,7 +142,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
             String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS
                 + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
-                + "AND (d.project_id IS NULL OR d.project_id = :project) ORDER BY d.seq LIMIT 1")
+                + "AND d.withdrawn_at IS NULL AND (d.project_id IS NULL OR d.project_id = :project) ORDER BY d.seq LIMIT 1")
                 .param("company", companyId.value()).param("sha", sha256)
                 .param("project", projectId.map(ProjectId::value).orElse(null)).query((rs, n) -> document(rs))
                 .optional());
