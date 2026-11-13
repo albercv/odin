@@ -39,7 +39,11 @@ class ProcessDocumentsWithReaderTest {
             clock);
 
     private Document pendingReader() {
-        StubFormatDetector detector = new StubFormatDetector(DocumentFormat.IMAGE);
+        return pendingReader(DocumentFormat.IMAGE);
+    }
+
+    private Document pendingReader(DocumentFormat format) {
+        StubFormatDetector detector = new StubFormatDetector(format);
         Document d = new UploadDocument(docs, orgs, store, detector, new UploadSettings(), new SequenceIdGenerator(),
                 clock).execute(Actors.companyAdmin(company), company, Optional.empty(), "Escaneo", "e", "x".getBytes(), false)
                 .document();
@@ -147,8 +151,8 @@ class ProcessDocumentsWithReaderTest {
     }
 
     @Test
-    void allBlankPagesIsFailedWithNoTextFound() {
-        Document d = pendingReader();
+    void scannedDocumentWithAllBlankPagesIsFailedWithNoTextFound() {
+        Document d = pendingReader(DocumentFormat.PDF);
         reader.returns(" ", "");
 
         processor.processNext();
@@ -156,6 +160,28 @@ class ProcessDocumentsWithReaderTest {
         assertThat(after(d).status()).isEqualTo(DocumentStatus.FAILED);
         assertThat(after(d).failureReason()).contains(ProcessDocumentsWithReader.NO_TEXT_FOUND);
         assertThat(docs.pagesOf(d.id())).isEmpty();
+    }
+
+    @Test
+    void imageWithoutTextIsReadyWithItsPagesMarkedWithoutText() {
+        Document d = pendingReader();
+        reader.returns(" ");
+
+        processor.processNext();
+
+        assertThat(after(d).status()).isEqualTo(DocumentStatus.READY);
+        assertThat(after(d).pagesWithoutText()).containsExactly(1);
+        assertThat(docs.pagesOf(d.id())).hasSize(1);
+    }
+
+    @Test
+    void imageWithZeroPagesIsStillFailed() {
+        Document d = pendingReader();
+        reader.returns();
+
+        processor.processNext();
+
+        assertThat(after(d).status()).isEqualTo(DocumentStatus.FAILED);
     }
 
     @Test

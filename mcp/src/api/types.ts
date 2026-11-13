@@ -1470,6 +1470,8 @@ export interface components {
             documents: components["schemas"]["CaseFileDocumentView"][];
             /** Format: int32 */
             pendingDocuments: number;
+            /** Format: int32 */
+            unreadableDocuments: number;
         };
         CaseFileTextPageView: {
             /** Format: uuid */
@@ -1494,6 +1496,8 @@ export interface components {
             pagesTotal: number;
             /** Format: int32 */
             pendingDocuments: number;
+            /** Format: int32 */
+            unreadableDocuments: number;
         };
         AdminMe: {
             /** Format: uuid */

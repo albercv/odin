@@ -9,6 +9,7 @@ import com.e2d.odin.application.port.ReaderUnavailableException;
 import com.e2d.odin.application.port.UnreadableDocumentException;
 import com.e2d.odin.application.shared.ReaderSettings;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import java.time.Clock;
 import java.util.List;
@@ -71,7 +72,8 @@ public class ProcessDocumentsWithReader {
     private void store(Document document, ReadResult result) {
         List<DocumentPage> pages = DocumentPages.from(document, result);
         List<Integer> blank = DocumentPages.withoutText(pages);
-        if (blank.size() == pages.size()) {
+        // una foto sin texto sigue siendo un documento del expediente: se abre con su enlace original
+        if (blank.size() == pages.size() && !(document.format() == DocumentFormat.IMAGE && !pages.isEmpty())) {
             documents.save(document.markFailed(NO_TEXT_FOUND));
             return;
         }

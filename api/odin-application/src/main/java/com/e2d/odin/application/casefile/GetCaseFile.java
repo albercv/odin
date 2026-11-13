@@ -57,14 +57,17 @@ public class GetCaseFile {
         List<CaseFileEntry> relations = caseFiles.entries(access.scope(), access.visibility(), caseId);
         Map<DocumentId, DocumentEntry> readable = new LinkedHashMap<>();
         int pending = 0;
+        int unreadable = 0;
         for (CaseFileEntry relation : relations) {
             Optional<DocumentEntry> seen = access.entry(documents, relation.documentId())
                     .filter(d -> d.document().withdrawnAt().isEmpty());
             if (seen.isEmpty()) {
                 continue;
             }
-            boolean ready = seen.get().document().status() == DocumentStatus.READY;
-            pending += ready ? 0 : 1;
+            DocumentStatus status = seen.get().document().status();
+            boolean ready = status == DocumentStatus.READY;
+            unreadable += status == DocumentStatus.FAILED ? 1 : 0;
+            pending += ready || status == DocumentStatus.FAILED ? 0 : 1;
             if (ready || listUnread) {
                 readable.put(relation.documentId(), seen.get());
             }
@@ -75,7 +78,7 @@ public class GetCaseFile {
         List<CaseFileDocumentView> views = relations.stream().filter(r -> readable.containsKey(r.documentId()))
                 .map(r -> new CaseFileDocumentView(readable.get(r.documentId()),
                         pages.getOrDefault(r.documentId(), 0), r.addedBy(), r.addedAt())).toList();
-        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views, pending, names(caseEntry, views));
+        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views, pending, unreadable, names(caseEntry, views));
     }
 
     private Map<UserId, String> names(DocumentEntry caseEntry, List<CaseFileDocumentView> views) {
