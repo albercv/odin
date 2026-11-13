@@ -379,14 +379,14 @@ public final class Responses {
     /** Un documento del expediente; la ficha del caso va sin quién la añadió ni cuándo. */
     public record CaseFileDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
-            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt) {
+            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status) {
         static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
                 @Nullable Instant addedAt) {
             Document d = entry.document();
             return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
                     d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
-                    addedBy == null ? null : addedBy.value(), addedAt);
+                    addedBy == null ? null : addedBy.value(), addedAt, d.status().name());
         }
     }
 

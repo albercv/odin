@@ -1344,6 +1344,7 @@ export interface components {
             addedBy?: string;
             /** Format: date-time */
             addedAt?: string;
+            status: string;
         };
         CaseFileResponse: {
             caseDocument: components["schemas"]["CaseFileDocumentView"];

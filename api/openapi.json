@@ -3540,9 +3540,12 @@
           "addedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string"
           }
         },
-        "required" : [ "filename", "format", "id", "pageCount", "paginated", "superseded", "title", "uploadedAt", "uploadedBy" ]
+        "required" : [ "filename", "format", "id", "pageCount", "paginated", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
       },
       "CaseFileResponse" : {
         "type" : "object",

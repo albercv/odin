@@ -17,7 +17,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/** La ficha de un caso y los documentos de su expediente que ya se pueden leer, por orden de alta en el expediente. */
+/**
+ * La ficha de un caso y los documentos de su expediente por orden de alta: el trabajador solo ve los ya legibles y
+ * cuántos faltan; el administrador ve también los que aún no lo son, con su estado.
+ */
 public class GetCaseFile {
 
     private final OrganizationRepository organizations;
@@ -34,15 +37,15 @@ public class GetCaseFile {
     }
 
     public CaseFileView execute(Actor actor, DocumentId caseId) {
-        return view(CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers), caseId);
+        return view(CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers), caseId, false);
     }
 
     /** La ruta del administrador, que nombra la empresa. */
     public CaseFileView execute(Actor actor, CompanyId companyId, DocumentId caseId) {
-        return view(CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers), caseId);
+        return view(CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers), caseId, true);
     }
 
-    private CaseFileView view(CaseFileAccess access, DocumentId caseId) {
+    private CaseFileView view(CaseFileAccess access, DocumentId caseId, boolean listUnread) {
         access.caseDocument(documents, caseId);
         DocumentEntry caseEntry = access.entry(documents, caseId).orElseThrow();
         List<CaseFileEntry> relations = caseFiles.entries(access.scope(), access.visibility(), caseId);
@@ -54,10 +57,10 @@ public class GetCaseFile {
             if (seen.isEmpty()) {
                 continue;
             }
-            if (seen.get().document().status() == DocumentStatus.READY) {
+            boolean ready = seen.get().document().status() == DocumentStatus.READY;
+            pending += ready ? 0 : 1;
+            if (ready || listUnread) {
                 readable.put(relation.documentId(), seen.get());
-            } else {
-                pending++;
             }
         }
         Set<DocumentId> toCount = new HashSet<>(readable.keySet());

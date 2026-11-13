@@ -93,6 +93,45 @@ class GetCaseFileTest {
     }
 
     @Test
+    void adminListsUnreadEntriesWithTheirStatusAndWorkerDoesNot() {
+        Document caseDoc = w.caseIn(w.project);
+        Document ready = w.documentIn(w.project);
+        Document received = Fixtures.document(w.docs, w.company, DocumentStatus.RECEIVED);
+        put(caseDoc, ready, w.worker);
+        put(caseDoc, received, w.worker);
+        Actor admin = Actors.companyAdmin(w.company);
+
+        var adminView = w.getCaseFile().execute(admin, w.company, caseDoc.id());
+        var workerView = w.getCaseFile().execute(w.worker, caseDoc.id());
+
+        assertThat(adminView.documents()).extracting(d -> d.document().document().id())
+                .containsExactly(ready.id(), received.id());
+        assertThat(adminView.documents().get(1).document().document().status()).isEqualTo(DocumentStatus.RECEIVED);
+        assertThat(workerView.documents()).extracting(d -> d.document().document().id()).containsExactly(ready.id());
+        assertThat(workerView.pendingDocuments()).isEqualTo(1);
+    }
+
+    @Test
+    void withdrawnEntryIsInNeitherView() {
+        Document caseDoc = w.caseIn(w.project);
+        Document gone = w.documentIn(w.project);
+        Document goneUnread = Fixtures.document(w.docs, w.company, DocumentStatus.RECEIVED);
+        put(caseDoc, gone, w.worker);
+        put(caseDoc, goneUnread, w.worker);
+        for (Document d : new Document[] {gone, goneUnread}) {
+            w.docs.markWithdrawal(d.withWithdrawal(java.util.Optional.of(w.clock.instant()),
+                    java.util.Optional.of(w.worker.userId())));
+        }
+
+        var adminView = w.getCaseFile().execute(Actors.companyAdmin(w.company), w.company, caseDoc.id());
+        var workerView = w.getCaseFile().execute(w.worker, caseDoc.id());
+
+        assertThat(adminView.documents()).isEmpty();
+        assertThat(workerView.documents()).isEmpty();
+        assertThat(workerView.pendingDocuments()).isZero();
+    }
+
+    @Test
     void getCaseFileShowsSupersededWithReplacement() {
         Document caseDoc = w.caseIn(w.project);
         Document old = w.documentIn(w.project);
