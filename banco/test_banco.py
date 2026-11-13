@@ -1455,7 +1455,6 @@ class ComprobacionWiringTest(Harness):
         super().setUp()
         failing = mock.patch("banco.comprobacion.comprobar", return_value={"datos": ["falta la carga de prueba"]})
         self.check = failing.start()
-        self.addCleanup(failing.stop)
         self.responder = mock.patch("banco.medir_path.ejecutar.responder").start()
         self.addCleanup(mock.patch.stopall)
         self.preflight = mock.patch("banco.preflight.run_preflight").start()
@@ -1489,8 +1488,9 @@ class ComprobacionWiringTest(Harness):
         self.responder.assert_not_called()
 
     def test_passing_check_runs_first_and_is_kept_with_the_results(self):
+        mock.patch.stopall()  # sin los dobles de la clase: el experimento corre entero con la IA simulada
         with mock.patch("banco.comprobacion.comprobar", return_value={}) as passing:
-            code = self.run_cli(self.config(), preflight=True)
+            code = self.run_cli(self.config())  # --sin-prueba: la llamada de prueba real no funciona con la IA simulada
         self.assertEqual(code, 0)
         passing.assert_called_once()
         self.assertTrue((self.only_folder() / "COMPROBACION.json").is_file())
