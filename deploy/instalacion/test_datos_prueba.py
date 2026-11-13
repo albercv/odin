@@ -181,6 +181,17 @@ class ExpedientesTest(unittest.TestCase):
         self.assertIn("omitidos: a/caso.txt (no es caso)", r)
         self.assertIn("1 sustituciones sin hacer", r)
 
+    def test_cadaEmpresaRecibeLaCapacidadDeExpedientes(self):
+        llamadas = []
+
+        class Api:
+            def admin(self, *args):
+                llamadas.append(args)
+
+        dp.dar_expedientes(Api(), {"ribera": "c1", "albar": "c2"})
+        self.assertEqual([("PUT", f"/v1/admin/companies/{c}/capabilities", {"capabilities": dp.CAPACIDADES + ["CASE_FILES"]})
+                          for c in ("c1", "c2")], llamadas)
+
     def test_unErrorEnUnExpedienteParaLaCarga(self):
         with self.assertRaises(RuntimeError):
             dp.resumen_expedientes(self.cuentas(errores=[{"caso": "a/caso.txt", "error": "500"}]))
