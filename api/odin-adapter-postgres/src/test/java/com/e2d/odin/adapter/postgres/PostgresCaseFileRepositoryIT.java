@@ -79,6 +79,112 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
         assertThat(files.remove(company, theCase.id(), member.id())).isFalse();
     }
 
+    private CaseFileEvent event(Document theCase, Document member, CaseFileAction action) {
+        return new CaseFileEvent(UUID.randomUUID(), company, theCase.id(), member.id(), action, user, NOW);
+    }
+
+    @Test
+    void addAllWritesEntriesAndEventsTogetherAndSkipsExisting() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document one = document(Optional.of(projectA), false);
+        Document two = document(Optional.empty(), false);
+        files.add(entry(theCase, one));
+
+        int added = files.addAll(java.util.List.of(entry(theCase, one), entry(theCase, two)),
+                e -> event(theCase, docs.findById(CompanyScope.of(company), ProjectVisibility.all(),
+                        e.documentId()).orElseThrow(), CaseFileAction.ADDED));
+
+        assertThat(added).isEqualTo(1);
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id()))
+                .extracting(CaseFileEvent::documentId).containsExactly(two.id());
+    }
+
+    @Test
+    void addAllLeavesNothingWhenOnePairFails() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document good = document(Optional.of(projectA), false);
+        Document foreign = document(Optional.of(projectB), false);
+
+        assertThatThrownBy(() -> files.addAll(java.util.List.of(entry(theCase, good), entry(theCase, foreign)),
+                e -> event(theCase, good, CaseFileAction.ADDED))).isInstanceOf(RuntimeException.class);
+
+        assertThat(files.countEntries(company, theCase.id())).isZero();
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).isEmpty();
+    }
+
+    @Test
+    void removeAndRecordIsOneStepAndSilentWhenNothingToRemove() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document member = document(Optional.of(projectA), false);
+        files.add(entry(theCase, member));
+
+        assertThat(files.removeAndRecord(event(theCase, member, CaseFileAction.REMOVED))).isTrue();
+        assertThat(files.removeAndRecord(event(theCase, member, CaseFileAction.REMOVED))).isFalse();
+
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).hasSize(1);
+    }
+
+    private boolean isCase(Document d) {
+        return docs.findById(CompanyScope.of(company), ProjectVisibility.all(), d.id()).orElseThrow().caseDocument();
+    }
+
+    @Test
+    void unmarkCasesIsAllOrNothingWhenOneCaseHasVisibleEntries() {
+        Document hiddenOnly = document(Optional.of(projectA), true);
+        Document hiddenMember = document(Optional.of(projectA), false);
+        files.add(entry(hiddenOnly, hiddenMember));
+        withdraw(hiddenMember);
+        Document busy = document(Optional.of(projectA), true);
+        files.add(entry(busy, document(Optional.of(projectA), false)));
+
+        assertThatThrownBy(() -> files.unmarkCases(company, Set.of(hiddenOnly.id(), busy.id()), user, NOW))
+                .isInstanceOf(ConflictException.class).hasMessage("Quita antes los documentos del expediente");
+
+        assertThat(isCase(hiddenOnly)).isTrue();
+        assertThat(isCase(busy)).isTrue();
+        assertThat(files.countEntries(company, hiddenOnly.id())).isEqualTo(1);
+        assertThat(owner.sql("SELECT count(*) FROM case_file_event").query(Integer.class).single()).isZero();
+    }
+
+    @Test
+    void unmarkCasesRemovesHiddenRelationsWithTheirEventsAndUnmarks() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document member = document(Optional.of(projectA), false);
+        files.add(entry(theCase, member));
+        withdraw(member);
+
+        assertThat(files.unmarkCases(company, Set.of(theCase.id()), user, NOW)).isEqualTo(1);
+
+        assertThat(isCase(theCase)).isFalse();
+        assertThat(files.countEntries(company, theCase.id())).isZero();
+        assertThat(owner.sql("SELECT count(*) FROM case_file_event WHERE action = 'REMOVED' AND actor_id = :u")
+                .param("u", user.value()).query(Integer.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void unmarkCasesWithAnUnknownDocumentChangesNothing() {
+        Document theCase = document(Optional.of(projectA), true);
+
+        assertThatThrownBy(() -> files.unmarkCases(company,
+                Set.of(theCase.id(), new DocumentId(UUID.randomUUID())), user, NOW))
+                .isInstanceOf(com.e2d.odin.domain.shared.NotFoundException.class);
+
+        assertThat(isCase(theCase)).isTrue();
+    }
+
+    @Test
+    void pageCountsAreOneAggregateForTheVisibleDocuments() {
+        Document two = document(Optional.of(projectA), false);
+        Document none = document(Optional.of(projectA), false);
+        docs.replacePages(two.id(), java.util.List.of(new com.e2d.odin.domain.document.DocumentPage(two.id(), 1, "a",
+                "stub", "1"), new com.e2d.odin.domain.document.DocumentPage(two.id(), 2, "b", "stub", "1")));
+
+        var counts = files.pageCounts(CompanyScope.of(company), ProjectVisibility.all(),
+                java.util.List.of(two.id(), none.id()));
+
+        assertThat(counts).containsEntry(two.id(), 2).doesNotContainKey(none.id());
+    }
+
     @Test
     void triggerRejectsDocumentFromOtherProject() {
         Document theCase = document(Optional.of(projectA), true);

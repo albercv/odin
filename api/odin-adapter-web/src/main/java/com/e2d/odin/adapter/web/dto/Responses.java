@@ -1,5 +1,6 @@
 package com.e2d.odin.adapter.web.dto;
 
+import com.e2d.odin.application.casefile.CaseFileView;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.organization.MeView;
@@ -22,6 +23,7 @@ import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.application.usage.TaggingCounts;
 import com.e2d.odin.application.usage.UsageReport;
+import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentRef;
@@ -41,6 +43,7 @@ import com.e2d.odin.domain.search.SearchResult;
 import com.e2d.odin.domain.search.SourceType;
 import com.e2d.odin.domain.search.SimilarCasesResult;
 import com.e2d.odin.domain.search.SimilarCase;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.topic.DocumentTagging;
 import com.e2d.odin.domain.topic.DocumentTopic;
 import com.e2d.odin.domain.topic.Topic;
@@ -368,6 +371,38 @@ public final class Responses {
                     d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
                     tagged.entry().replacement().map(Replacement::from).orElse(null),
                     tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
+        }
+    }
+
+    /** Un documento del expediente; la ficha del caso va sin quién la añadió ni cuándo. */
+    public record CaseFileDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
+            boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
+            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt) {
+        static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
+                @Nullable Instant addedAt) {
+            Document d = entry.document();
+            return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
+                    d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
+                    d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
+                    addedBy == null ? null : addedBy.value(), addedAt);
+        }
+    }
+
+    public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents) {
+        public static CaseFileResponse from(CaseFileView view) {
+            return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null),
+                    view.documents().stream()
+                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt())).toList());
+        }
+    }
+
+    public record CaseFileAdded(int added) {
+    }
+
+    public record CaseFileEventView(UUID id, UUID documentId, String action, UUID actorId, Instant at) {
+        public static CaseFileEventView from(CaseFileEvent e) {
+            return new CaseFileEventView(e.id(), e.documentId().value(), e.action().name(), e.actorId().value(),
+                    e.at());
         }
     }
 

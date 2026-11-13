@@ -4,6 +4,10 @@ import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
@@ -55,6 +59,7 @@ import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
+import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
 import com.e2d.odin.application.port.IdGenerator;
@@ -417,13 +422,37 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateDocument updateDocument(DocumentRepository documents) {
-        return new UpdateDocument(documents);
+    UpdateDocument updateDocument(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
+        return new UpdateDocument(documents, caseFiles, clock);
     }
 
     @Bean
-    MarkCaseDocuments markCaseDocuments(DocumentRepository documents) {
-        return new MarkCaseDocuments(documents);
+    MarkCaseDocuments markCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
+        return new MarkCaseDocuments(documents, caseFiles, clock);
+    }
+
+    @Bean
+    GetCaseFile getCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles) {
+        return new GetCaseFile(organizations, projectMembers, documents, caseFiles);
+    }
+
+    @Bean
+    AddToCaseFiles addToCaseFiles(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
+        return new AddToCaseFiles(organizations, projectMembers, documents, caseFiles, ids, clock);
+    }
+
+    @Bean
+    RemoveFromCaseFile removeFromCaseFile(OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, DocumentRepository documents, CaseFileRepository caseFiles,
+            IdGenerator ids, Clock clock) {
+        return new RemoveFromCaseFile(organizations, projectMembers, documents, caseFiles, ids, clock);
+    }
+
+    @Bean
+    ListCaseFileEvents listCaseFileEvents(DocumentRepository documents, CaseFileRepository caseFiles) {
+        return new ListCaseFileEvents(documents, caseFiles);
     }
 
     @Bean
