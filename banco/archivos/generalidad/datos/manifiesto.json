@@ -37,6 +37,12 @@
    "empresa": "brumeral",
    "nombre": "Bodegas Quintafría",
    "abierto": false
+  },
+  {
+   "clave": "ceramicas-valtierno",
+   "empresa": "brumeral",
+   "nombre": "Cerámicas Valtierno",
+   "abierto": false
   }
  ],
  "trabajadores": [
@@ -277,6 +283,14 @@
    "proyecto": "bodegas-quintafria",
    "titulo": "Factura F-2025-033",
    "subido": "2025-05-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+   "empresa": "brumeral",
+   "proyecto": "ceramicas-valtierno",
+   "titulo": "Caso 2025-017, ampliación de la línea del horno 2",
+   "subido": "2025-01-15T09:00:00Z",
    "subido_por": "t09"
   }
  ],

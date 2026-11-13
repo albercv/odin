@@ -36,6 +36,8 @@ CLIENTES = {
                                "dom": "Paseo del Cerrolago, Valdecerro", "rep": "Pilar Amorós Serrano"},
     "bodegas-quintafria": {"nombre": "Bodegas Quintafría, S.L.", "cif": "B-00000025",
                            "dom": "Viñedo de Quintafría, Valdecerro", "rep": "Lucía Ferrer Sanz"},
+    "ceramicas-valtierno": {"nombre": "Cerámicas Valtierno, S.A.", "cif": "B-00000026",
+                            "dom": "Camino de la Tejera, 14, Valdecerro", "rep": "Rebeca Quintero Aranda"},
 }
 NOMBRES = {k: v["nombre"].split(",")[0] for k, v in CLIENTES.items()}  # el proyecto, sin la forma jurídica
 TRABAJADORES = [
@@ -662,6 +664,441 @@ def claves():
     return claves_versiones() + claves_discrepancias()
 
 
+# ---------- expediente grande (D-078) ----------
+# Un caso con 60 documentos de una sola página. El caso va en el manifiesto; los documentos, en datos/expedientes/.
+EXP_PROY = "ceramicas-valtierno"
+EXP_DIR = ruta(EXP_PROY, "")
+EXP_PREF = "expte-2025-017"
+FORMAS_EXP = ["expte. 2025/017", "exp. 017/25", "su referencia 017", "expediente nº 17"]
+FRASE_EXP = {"expte. 2025/017": "el expte. 2025/017", "exp. 017/25": "el exp. 017/25",
+             "su referencia 017": "su referencia 017", "expediente nº 17": "el expediente nº 17"}
+CASO_FICHERO = "caso-2025-017-ampliacion-horno.txt"
+CASO = ruta(EXP_PROY, CASO_FICHERO)
+DECOY = ruta("logistica-penedal", "correo-ref-017.txt")  # señuelo: va en datos/expedientes/, fuera del manifiesto
+FACTURA_BASE = 870000  # céntimos: cada pago de honorarios son 8.700 euros
+FACTURA_TOTAL = FACTURA_BASE + FACTURA_BASE * 21 // 100
+# La suma no se escribe en ningún documento: es la cifra que piden GX07 y GX08, y la comprueba `comprobar_claves`.
+SUMA_FACTURAS = (f"Suma de las seis facturas: {eur(6 * FACTURA_BASE)} euros de base y "
+                 f"{eur(6 * FACTURA_TOTAL)} euros con IVA.")
+HECHOS_FIJOS = {  # cadena literal -> único documento del expediente que puede llevarla
+    "48.600": "expte-2025-017-contrato-ingenieria.txt",
+    "Directora facultativa: Irene Salcedo Moya.": "expte-2025-017-contrato-ingenieria.txt",
+    "Plazo de pago: 60 días": "expte-2025-017-contrato-ingenieria.txt",
+    "52.200": "expte-2025-017-adenda-1.txt",
+    "35.400": "expte-2025-017-presupuesto-2.txt",
+    "33.900": "expte-2025-017-presupuesto-2-revisado.txt",
+    "1.180": "expte-2025-017-informe-tecnico-3.txt",
+    "12 de septiembre": "expte-2025-017-acta-obra-5.txt",
+}
+PERSONAS = {  # clave -> (línea «De»/«Para», líneas de firma)
+    "irene": ("Irene Salcedo Moya, de Brumeral", ["Irene Salcedo Moya", NOMBRE_EMPRESA]),
+    "nuria": ("Nuria Baeza Ortiz, de Brumeral", ["Nuria Baeza Ortiz", NOMBRE_EMPRESA]),
+    "rebeca": ("Rebeca Quintero Aranda, de Cerámicas Valtierno, S.A.", ["Rebeca Quintero Aranda", "Cerámicas Valtierno, S.A."]),
+    "julian": ("Julián Mesa Beltrán, de Cerámicas Valtierno, S.A.", ["Julián Mesa Beltrán", "Cerámicas Valtierno, S.A."]),
+    "tomas": ("Tomás Alcalde Varela, de Refractarios Sierra del Mar, S.L.", ["Tomás Alcalde Varela", "Refractarios Sierra del Mar, S.L."]),
+    "ana": ("Ana Belén Ruano Soria, de Montajes Garbea, S.L.", ["Ana Belén Ruano Soria", "Montajes Garbea, S.L."]),
+    "felipe": ("Felipe Ortega Requena, de Electroindustrial Prado Alto, S.L.", ["Felipe Ortega Requena", "Electroindustrial Prado Alto, S.L."]),
+    "rafael": ("Rafael Olmedo Pina, de Aislamientos Térmicos Olmedo, S.A.", ["Rafael Olmedo Pina", "Aislamientos Térmicos Olmedo, S.A."]),
+    "gerardo": ("Gerardo Hidalgo Campos, de Transportes Hidalgo Cruz, S.L.", ["Gerardo Hidalgo Campos", "Transportes Hidalgo Cruz, S.L."]),
+    "elena": ("Elena Ribazo Gil, de Ingeniería Civil Ribazo, S.L.", ["Elena Ribazo Gil", "Ingeniería Civil Ribazo, S.L."]),
+}
+PROVEEDORES = [  # (n, empresa, CIF, representante, objeto, plazo, fecha, importe en euros)
+    (1, "Refractarios Sierra del Mar, S.L.", "B-00000031", "Tomás Alcalde Varela",
+     "el suministro del refractario de la bóveda y de la cámara de cocción", "8 semanas", "2025-02-03", 21750),
+    (2, "Montajes Garbea, S.L.", "B-00000032", "Ana Belén Ruano Soria",
+     "el montaje mecánico de la estructura y de los transportadores", "12 semanas", "2025-02-10", 35400),
+    (3, "Electroindustrial Prado Alto, S.L.", "B-00000033", "Felipe Ortega Requena",
+     "la acometida, el cuadro eléctrico y el control de la línea", "10 semanas", "2025-02-17", 27480),
+    (4, "Aislamientos Térmicos Olmedo, S.A.", "B-00000034", "Rafael Olmedo Pina",
+     "el aislamiento térmico de la cámara de cocción y de los conductos de humos", "6 semanas", "2025-02-19", 12960),
+    (5, "Transportes Hidalgo Cruz, S.L.", "B-00000035", "Gerardo Hidalgo Campos",
+     "el transporte y la descarga de las piezas pesadas", "4 semanas", "2025-02-24", 6240),
+    (6, "Ingeniería Civil Ribazo, S.L.", "B-00000036", "Elena Ribazo Gil",
+     "la cimentación y el soporte de hormigón de la nueva zona del horno", "9 semanas", "2025-02-26", 41300),
+]
+FECHAS_FACTURA = ["2025-02-28", "2025-04-30", "2025-06-30", "2025-08-29", "2025-10-31", "2025-12-15"]
+ACTAS = [  # (n, fecha, orden del día, acuerdos)
+    (1, "2025-02-05", ["Calendario de la obra civil.", "Accesos a la nave de hornos.", "Documentación de los suministradores."],
+     ["Se confirma el calendario de la obra civil y la fecha de inicio de la demolición parcial.",
+      "Cerámicas Valtierno facilitará el acceso a la nave de hornos desde el lunes siguiente."]),
+    (2, "2025-03-20", ["Estado de los presupuestos de los suministradores.", "Montaje mecánico de la línea 2.", "Próximas visitas."],
+     ["Se acepta el presupuesto revisado de Montajes Garbea, S.L. para el montaje mecánico de la línea 2.",
+      "Brumeral comunicará la aceptación por escrito a los suministradores."]),
+    (3, "2025-04-17", ["Avance de la cimentación.", "Estado del refractario."],
+     ["La cimentación de la nueva zona del horno avanza según el calendario.",
+      "Refractarios Sierra del Mar, S.L. enviará los certificados de calidad del lote."]),
+    (4, "2025-05-29", ["Plan de trabajo para la conexión eléctrica.", "Pedidos pendientes."],
+     ["Se aprueba el plan de trabajo para la conexión eléctrica durante la parada de julio.",
+      "Los pedidos pendientes se confirman antes del 15 de junio."]),
+    (5, "2025-07-22", ["Estado de la línea 2 antes de las pruebas.", "Fecha de la prueba en caliente."],
+     ["Se fija la prueba en caliente del horno para el 12 de septiembre de 2025.",
+      "Electroindustrial Prado Alto, S.L. completará las pruebas de los relés antes de esa fecha."]),
+    (6, "2025-08-26", ["Preparación de la prueba en caliente.", "Incidencias abiertas."],
+     ["Quedan abiertas tres incidencias menores de aislamiento, que Aislamientos Térmicos Olmedo corregirá antes de la prueba.",
+      "La preparación de la prueba se ajustará a lo acordado en el acta de obra nº 5."]),
+    (7, "2025-09-23", ["Seguimiento de la prueba preparatoria.", "Documentación final."],
+     ["Se recibe el certificado de conformidad eléctrica.", "Brumeral preparará el informe final de ensayos."]),
+    (8, "2025-10-28", ["Cierre de la obra.", "Entrega de documentación."],
+     ["Se da por cerrada la obra de la línea 2, salvo las incidencias que figuren en el acta de la prueba.",
+      "Brumeral entregará el dossier de la obra antes de fin de año."]),
+]
+INFORMES = [  # (n, fecha, frases)
+    (1, "2025-02-14", ["El terreno de la nueva zona tiene capacidad suficiente para la cimentación prevista, según el estudio geotécnico.",
+                       "La losa de hormigón se arma según el plano de ingeniería de Brumeral.",
+                       "Se recomienda esperar al curado completo antes de montar la estructura."]),
+    (2, "2025-03-07", ["La estructura metálica se fabrica en taller y se monta en obra por fases.",
+                       "Cada fase se recibe con una inspección visual de las uniones y de los apoyos.",
+                       "Los pilares de la nueva zona se anclan a la losa con el par de apriete indicado en el plano."]),
+    (3, "2025-04-09", ["Temperatura máxima de diseño: 1.180 °C.",
+                       "El revestimiento refractario de la cámara de cocción se diseña para las cargas térmicas de la línea 2.",
+                       "Las uniones de dilatación se dimensionan para los ciclos de calentamiento previstos.",
+                       "La rampa de calentamiento se programará en el controlador de la línea."]),
+    (4, "2025-05-12", ["La acometida se dimensiona para la potencia de la línea 2, con un margen de reserva.",
+                       "El cuadro de control se instala en la sala de mandos existente.",
+                       "Las protecciones se coordinan con el centro de transformación de la planta."]),
+    (5, "2025-06-09", ["El espesor de aislamiento previsto reduce de forma apreciable la temperatura exterior de la cámara.",
+                       "Los conductos de humos llevan el mismo sistema de aislamiento en toda su longitud.",
+                       "Las sujeciones se revisan después del primer ciclo de calentamiento."]),
+    (6, "2025-07-14", ["Las piezas pesadas se transportan en dos viajes, con grúa de descarga propia.",
+                       "El acceso al muelle 2 queda libre durante la descarga.",
+                       "La ruta de los camiones se revisa con el responsable de seguridad de la planta."]),
+    (7, "2025-08-11", ["Se instalan detectores de humo en la nave y una boca de incendio equipada adicional.",
+                       "La señalización de evacuación se actualiza con la nueva zona del horno.",
+                       "Los extintores de la nave se revisan antes de la prueba en caliente."]),
+    (8, "2025-09-29", ["Los ensayos de estanqueidad de los conductos dan resultado favorable.",
+                       "Quedan pendientes las pruebas finales del cuadro, que se harán antes del cierre.",
+                       "Las medidas de la chapa de los conductos coinciden con el plano revisado."]),
+]
+CERTIFICADOS = [  # (n, fecha, empresa, representante, objeto, datos)
+    (1, "2025-05-19", "Refractarios Sierra del Mar, S.L.", "Tomás Alcalde Varela", "el refractario de la bóveda y de la cámara de cocción",
+     ["Lote L-25-0412.", "Ensayo de resistencia a la compresión en frío: conforme.", "Ensayo de dilatación térmica: conforme."]),
+    (2, "2025-06-16", "Montajes Garbea, S.L.", "Ana Belén Ruano Soria", "el montaje de la estructura y de los transportadores",
+     ["Soldadores con cualificación vigente en la obra.", "Inspección visual de todas las soldaduras: conforme.",
+      "Pares de apriete revisados en las uniones atornilladas."]),
+    (3, "2025-08-07", "Electroindustrial Prado Alto, S.L.", "Felipe Ortega Requena", "la acometida y el cuadro eléctrico de la línea 2",
+     ["Medida de la resistencia de tierra: conforme.", "Comprobación del aislamiento de los cables: conforme.",
+      "Documentación del cuadro entregada en la obra."]),
+    (4, "2025-10-02", "Aislamientos Térmicos Olmedo, S.A.", "Rafael Olmedo Pina", "el aislamiento térmico de la cámara de cocción y de los conductos",
+     ["Espesor medido en cuatro puntos por zona: conforme.", "Ficha técnica de los materiales entregada.",
+      "Sin incidencias abiertas en la fecha de este certificado."]),
+]
+CASO_PAGINAS = [[
+    "FICHA DE CASO", "", "DATOS DEL CASO", "Caso 2025-017", "Cliente: Cerámicas Valtierno, S.A.",
+    "Tipo de encargo: ingeniería y gestión de obra de la ampliación de la línea del horno 2.",
+    "Fecha de apertura: 13 de enero de 2025.", "Responsable técnica: Irene Salcedo Moya.", "Estado: en curso.", "",
+    "DESCRIPCIÓN DEL ENCARGO",
+    "1. Ampliación de la línea del horno 2 con una nueva zona de cocción, su precalentamiento y su estructura de soporte.",
+    "2. Brumeral redacta el proyecto de ejecución, coordina los presupuestos de los suministradores y dirige la obra.",
+    "3. El contrato de ingeniería y su adenda regulan los honorarios y los pagos.",
+    "4. La prueba en caliente y la puesta en marcha se fijan en las actas de obra.",
+], [
+    "GESTIONES",
+    "1. Visita de replanteo con el jefe de producción del cliente.",
+    "2. Solicitud de presupuestos a seis suministradores para las distintas partidas de la obra.",
+    "3. Seguimiento de la obra con actas periódicas y con informes técnicos de cada fase.", "",
+    "SEGUIMIENTO PREVISTO",
+    "Brumeral comunicará al cliente cada hito por escrito y mantendrá al día el expediente en Odín.", "",
+    "OBSERVACIONES",
+    "El expediente incluye los documentos del contrato, los presupuestos, las facturas, las actas y los certificados de los suministradores.",
+]]
+
+
+def miles(euros):
+    return f"{euros:,}".replace(",", ".")
+
+
+def dmy_iso(texto):
+    return dmy(dt.date.fromisoformat(texto))
+
+
+def forma(n):
+    return FORMAS_EXP[n % len(FORMAS_EXP)]
+
+
+def en(n):
+    """Frase de referencia del expediente para la plantilla n: «en el expte. 2025/017», «en su referencia 017»…"""
+    return FRASE_EXP[forma(n)]
+
+
+def exp_doc(nombre, titulo, fecha, cuerpo):
+    return doc(EXP_PROY, f"{EXP_PREF}-{nombre}", titulo, fecha, [cuerpo])
+
+
+def fx(nombre):
+    """Ruta de un documento del expediente, por su nombre sin el prefijo ni la extensión."""
+    return ruta(EXP_PROY, f"{EXP_PREF}-{nombre}.txt")
+
+
+def cx(nombre, pagina, ancla):
+    return cita(EXP_PROY, f"{EXP_PREF}-{nombre}.txt", pagina, ancla)
+
+
+def contrato_ingenieria():
+    cuerpo = ["CONTRATO DE INGENIERÍA CI-2025-017", "En Valdecerro, a 14 de enero de 2025.", "", *partes(EXP_PROY), "",
+              "ESTIPULACIONES", *numeradas([
+                  ("Objeto", "Brumeral se obliga a dirigir la ingeniería y la gestión de obra de la ampliación de la línea del horno 2 de Cerámicas Valtierno."),
+                  ("Alcance", "Proyecto de ejecución, coordinación de los suministradores, dirección de obra y puesta en marcha del horno."),
+                  ("Honorarios", "Honorarios totales: 48.600 euros más IVA, en seis pagos de 8.100 euros."),
+                  ("Forma de pago", "Plazo de pago: 60 días desde la fecha de la factura."),
+                  ("Dirección facultativa", "Directora facultativa: Irene Salcedo Moya."),
+                  ("Expediente", f"Este contrato se archiva en {en(0)}."),
+              ]), *numeradas(CLAUSULAS_FINALES, inicio=7), "", *firmas(EXP_PROY)]
+    return exp_doc("contrato-ingenieria.txt", "Contrato de ingeniería CI-2025-017", "2025-01-14", cuerpo)
+
+
+def adenda_1():
+    cuerpo = ["ADENDA 1 AL CONTRATO CI-2025-017", "En Valdecerro, a 8 de abril de 2025.", "", *partes(EXP_PROY), "",
+              "EXPONEN", "Que las partes suscribieron el contrato CI-2025-017 y acuerdan modificar una de sus cláusulas.", "",
+              "ESTIPULACIONES", *numeradas([
+                  ("Modificación de la cláusula de precio", "Esta adenda modifica la cláusula de precio del contrato CI-2025-017."),
+                  ("Nuevo precio", "Los honorarios totales pasan a ser de 52.200 euros más IVA, en seis pagos de 8.700 euros."),
+                  ("Resto del contrato", "Se mantienen sin cambios el objeto, la dirección de obra y las demás cláusulas del contrato CI-2025-017."),
+              ]), "", *firmas(EXP_PROY)]
+    return exp_doc("adenda-1.txt", "Adenda 1 al contrato CI-2025-017", "2025-04-08", cuerpo)
+
+
+def presupuesto(n, empresa, cif, rep, objeto, plazo, fecha, euros, nombre, titulo, nota=None):
+    cuerpo = [f"Oferta de {empresa}, con CIF {cif}, para {objeto}.",
+              f"En relación con {en(n)}, la ampliación de la línea del horno 2 de Cerámicas Valtierno, S.A.", "",
+              "Alcance: suministro, montaje y pruebas de lo indicado en esta oferta, según los planos de la ingeniería de Brumeral.",
+              f"Plazo de entrega: {plazo} desde la recepción del pedido.",
+              f"Total del presupuesto: {miles(euros)} euros.",
+              "Forma de pago: 40 % a la aceptación y el resto contra entrega, mediante transferencia.",
+              "Validez de la oferta: 30 días desde la fecha de este documento.",
+              *([nota] if nota else []), "", "Atentamente,", f"{rep}, de {empresa}"]
+    return exp_doc(nombre, titulo, fecha, cuerpo)
+
+
+def presupuestos():
+    docs = []
+    for n, empresa, cif, rep, objeto, plazo, fecha, euros in PROVEEDORES:
+        docs.append(presupuesto(n, empresa, cif, rep, objeto, plazo, fecha, euros, f"presupuesto-{n}.txt", f"Presupuesto de {empresa}"))
+        if n == 2:
+            docs.append(presupuesto(n, empresa, cif, rep, objeto, plazo, "2025-03-12", 33900, "presupuesto-2-revisado.txt",
+                                    f"Presupuesto revisado de {empresa}",
+                                    nota="Esta oferta revisada sustituye al presupuesto de febrero de 2025 para el mismo alcance."))
+    return docs
+
+
+def facturas():
+    docs = []
+    for n, fecha in enumerate(FECHAS_FACTURA, 1):
+        venc = dmy(dt.date.fromisoformat(fecha) + dt.timedelta(days=60))
+        lineas = [(f"Pago {n} de 6 de honorarios del contrato CI-2025-017.", 1, FACTURA_BASE)]
+        docs.append({**factura(EXP_PROY, f"F-2025-{100 + n}", fecha, lineas, venc), "fichero": f"{EXP_PREF}-factura-{n}.txt"})
+    return docs
+
+
+def correo_de(n, fecha, de, para, asunto, cuerpo):
+    return exp_doc(f"correo-{n}.txt", asunto, fecha,
+                   correo(dmy_iso(fecha), PERSONAS[de][0], PERSONAS[para][0], asunto, cuerpo, PERSONAS[de][1]))
+
+
+def correos():
+    return [
+        correo_de(1, "2025-01-20", "irene", "rebeca", "Visita de replanteo de la línea 2",
+                  ["Hola, Rebeca:", "", f"En relación con {en(1)}, te propongo una visita de replanteo a la línea 2 la semana que viene.",
+                   "Necesitamos acceso a la nave de hornos y a la zona donde irá la nueva bóveda.", "", "Un saludo, Irene."]),
+        correo_de(2, "2025-01-27", "rebeca", "irene", "Confirmación de la visita",
+                  ["Hola, Irene:", "", "Confirmo la visita de replanteo. Julián te estará esperando en la portería a las nueve.",
+                   "Te pedimos que avises si hace falta parar alguna línea.", "", "Un saludo, Rebeca."]),
+        correo_de(3, "2025-02-05", "nuria", "julian", "Accesos a la nave de hornos",
+                  ["Hola, Julián:", "", "Te escribo para organizar los accesos a la nave de hornos durante las obras.",
+                   "Los camiones de los suministradores entrarán por la puerta del muelle 2.", "", "Gracias, Nuria."]),
+        correo_de(4, "2025-02-11", "tomas", "irene", "Planos de la bóveda",
+                  ["Hola, Irene:", "", "Te adjunto la propuesta de geometría de la bóveda para revisar antes de la oferta.",
+                   "Necesitamos confirmar el espesor del refractario en la zona de quemadores.", "", "Un saludo, Tomás."]),
+        correo_de(5, "2025-02-14", "irene", "tomas", "Respuesta sobre los planos",
+                  ["Hola, Tomás:", "", "Revisado. La geometría vale, pero el espesor en los quemadores debe ir en el plano de detalle.",
+                   "Haz la oferta con ese espesor y con las piezas especiales que indicaste.", "", "Gracias, Irene."]),
+        correo_de(6, "2025-02-20", "ana", "nuria", "Visita para medir la estructura",
+                  ["Hola, Nuria:", "", "Queremos visitar la línea 2 para medir la estructura antes de presupuestar el montaje.",
+                   "¿Podéis indicarnos la fecha y la persona de contacto?", "", "Un saludo, Ana Belén."]),
+        correo_de(7, "2025-03-03", "felipe", "irene", "Acometida eléctrica",
+                  ["Hola, Irene:", "", "La acometida actual no da para la potencia de la nueva línea sin reforzar el centro de transformación.",
+                   "Te propongo que lo incluyamos en el presupuesto como partida separada.", "", "Un saludo, Felipe."]),
+        correo_de(8, "2025-03-05", "julian", "nuria", "Parada de la línea 1",
+                  ["Hola, Nuria:", "", "La conexión de la nueva línea obliga a parar la línea 1 dos días.",
+                   "Preferimos hacerlo en la semana de mantenimiento programado.", "", "Julián."]),
+        correo_de(9, "2025-03-12", "ana", "irene", "Oferta revisada de montaje",
+                  ["Hola, Irene:", "", f"Te remitimos la oferta revisada para el montaje mecánico, en {en(2)}.",
+                   "Sustituye a la que os enviamos en febrero para el mismo alcance.", "", "Un saludo, Ana Belén."]),
+        correo_de(10, "2025-03-18", "irene", "rebeca", "Propuesta de adjudicación del montaje",
+                  ["Hola, Rebeca:", "", "Te propongo aceptar la oferta revisada de Garbea para el montaje mecánico.",
+                   "Si estáis de acuerdo, lo recogemos en la próxima acta de obra.", "", "Un saludo, Irene."]),
+        correo_de(11, "2025-04-02", "rafael", "nuria", "Espesor del aislamiento",
+                  ["Hola, Nuria:", "", "Para el aislamiento de la cámara proponemos dos espesores según la zona.",
+                   "Te envío la tabla con las pérdidas de calor estimadas por zona.", "", "Un saludo, Rafael."]),
+        correo_de(12, "2025-04-10", "gerardo", "nuria", "Transporte de la bóveda",
+                  ["Hola, Nuria:", "", "Podemos transportar las piezas pesadas la semana del 21 de abril.",
+                   "Necesitamos saber antes el acceso del camión por la puerta del muelle 2.", "", "Un saludo, Gerardo."]),
+        correo_de(13, "2025-04-16", "elena", "irene", "Cimentación del soporte",
+                  ["Hola, Irene:", "", "El soporte del nuevo horno necesita una losa armada con el espesor del estudio geotécnico.",
+                   f"Te envío el cálculo preliminar para revisarlo entre todos, en {en(4)}.", "", "Un saludo, Elena."]),
+        correo_de(14, "2025-05-06", "rebeca", "irene", "Primera factura",
+                  ["Hola, Irene:", "", "Hemos recibido la primera factura de los honorarios y la estamos revisando con administración.",
+                   "Te avisaremos en cuanto tengamos el visto bueno.", "", "Un saludo, Rebeca."]),
+        correo_de(15, "2025-05-13", "irene", "rebeca", "Recepción del pago",
+                  ["Hola, Rebeca:", "", "Confirmo que la documentación de la primera factura está completa.",
+                   "Quedo a la espera de la transferencia en el plazo acordado.", "", "Un saludo, Irene."]),
+        correo_de(16, "2025-05-22", "felipe", "nuria", "Certificado de la acometida",
+                  ["Hola, Nuria:", "", "Adjunto el certificado de la acometida y del cuadro de la línea 2.",
+                   "Quedan pendientes las pruebas de los relés, que haremos en julio.", "", "Un saludo, Felipe."]),
+        correo_de(17, "2025-06-03", "julian", "irene", "Refractario de la cámara 3",
+                  ["Hola, Irene:", "", "Hay una grieta en el refractario de la cámara 3, detectada en la inspección de ayer.",
+                   "Hace falta decidir si se repara o se sustituye la pieza antes del montaje.", "", "Julián."]),
+        correo_de(18, "2025-06-10", "irene", "julian", "Plan para la reparación",
+                  ["Hola, Julián:", "", "Proponemos reparar la grieta con mortero refractario y revisar la cámara después del secado.",
+                   "Refractarios Sierra del Mar revisará la pieza en la próxima visita.", "", "Un saludo, Irene."]),
+        correo_de(19, "2025-06-24", "nuria", "tomas", "Pedido de ladrillos confirmado",
+                  ["Hola, Tomás:", "", "Confirmamos el pedido de ladrillos refractarios para la bóveda.",
+                   "Os pedimos que el lote venga con su certificado de calidad.", "", "Un saludo, Nuria."]),
+        correo_de(20, "2025-07-01", "ana", "nuria", "Retraso en el montaje",
+                  ["Hola, Nuria:", "", "El montaje de la estructura se retrasa una semana por la llegada tardía de un perfil.",
+                   "Lo reprogramaremos en cuanto llegue el material.", "", "Un saludo, Ana Belén."]),
+        correo_de(21, "2025-07-15", "irene", "ana", "Respuesta sobre el retraso",
+                  ["Hola, Ana Belén:", "", "Gracias por avisar. Acordamos reprogramar el montaje sin cambios en el alcance.",
+                   "Nos interesa que el montaje quede terminado antes de la prueba de agosto.", "", "Un saludo, Irene."]),
+        correo_de(22, "2025-08-04", "rebeca", "irene", "Visita antes de la prueba",
+                  ["Hola, Irene:", "", "Queremos una visita de comprobación antes de la prueba en caliente.",
+                   "¿Podéis venir la semana que viene con la lista de pendientes?", "", "Un saludo, Rebeca."]),
+        correo_de(23, "2025-08-18", "irene", "rebeca", "Preparación de la prueba",
+                  ["Hola, Rebeca:", "", "Te envío la lista de pendientes que hay que cerrar antes de la prueba.",
+                   "Las incidencias de aislamiento se corregirán esta semana, como se acordó en la reunión.", "", "Un saludo, Irene."]),
+        correo_de(24, "2025-09-08", "felipe", "nuria", "Pruebas de los relés",
+                  ["Hola, Nuria:", "", "Hemos terminado las pruebas de los relés de protección de la línea 2.",
+                   "Os envío el protocolo firmado para incluirlo en el dossier.", "", "Un saludo, Felipe."]),
+        correo_de(25, "2025-10-14", "irene", "rebeca", "Documentación final",
+                  ["Hola, Rebeca:", "", "Te adelanto el índice del dossier final de la obra.",
+                   "Cuando tengamos los certificados de todos los suministradores, lo cerramos.", "", "Un saludo, Irene."]),
+    ]
+
+
+def actas():
+    return [exp_doc(f"acta-obra-{n}.txt", f"Acta de obra nº {n}", fecha, [
+        f"ACTA DE OBRA Nº {n}", f"Reunión de obra del {dmy_iso(fecha)} en la planta, archivada en {en(n)}.",
+        "Asistentes: Irene Salcedo Moya y Nuria Baeza Ortiz (Brumeral); Julián Mesa Beltrán y Sofía Lorenzo Pardo (Cerámicas Valtierno, S.A.).",
+        "Orden del día:", *[f"{i}. {t}" for i, t in enumerate(orden, 1)], "", "Acuerdos:",
+        *[f"Acuerdo {i}. {t}" for i, t in enumerate(acuerdos, 1)], "",
+        "Y no habiendo más asuntos, se levanta la reunión.",
+        "Firman el acta: Irene Salcedo Moya, por Brumeral; Rebeca Quintero Aranda, por Cerámicas Valtierno, S.A."])
+        for n, fecha, orden, acuerdos in ACTAS]
+
+
+def informes():
+    return [exp_doc(f"informe-tecnico-{n}.txt", f"Informe técnico nº {n}", fecha, [
+        f"INFORME TÉCNICO Nº {n}", f"Fecha del informe: {dmy_iso(fecha)}.", f"Realizado por Brumeral en {en(n + 2)}.", "",
+        "Conclusiones y datos:", *[f"{i}. {t}" for i, t in enumerate(frases, 1)], "",
+        "Firmado: Nuria Baeza Ortiz, de Brumeral."])
+        for n, fecha, frases in INFORMES]
+
+
+def certificados():
+    return [exp_doc(f"certificado-{n}.txt", f"Certificado nº {n}", fecha, [
+        f"CERTIFICADO Nº {n}",
+        f"Se certifica que {empresa} ha suministrado y montado {objeto} para la ampliación de la línea del horno 2 de Cerámicas Valtierno, S.A.",
+        f"Fecha de emisión: {dmy_iso(fecha)}.", f"Documento archivado en {en(n + 4)}.", "", "Datos del certificado:",
+        *[f"{i}. {t}" for i, t in enumerate(datos, 1)], "", f"Firmado: {rep}, por {empresa}"])
+        for n, fecha, empresa, rep, objeto, datos in CERTIFICADOS]
+
+
+def expedientes_documentos():
+    """Los 60 documentos del expediente: 2 contratos, 7 presupuestos, 6 facturas, 25 correos, 8 actas, 8 informes y 4 certificados."""
+    return [contrato_ingenieria(), adenda_1(), *presupuestos(), *facturas(), *correos(), *actas(), *informes(), *certificados()]
+
+
+def correo_ref_017():
+    """Señuelo (ajenos): otro asunto de Logística Penedal que cita «su referencia 017». No lleva importes ni fechas que compitan."""
+    return doc("logistica-penedal", "correo-ref-017.txt", "Reserva del muelle de carga", "2025-11-04", [correo(
+        "04/11/2025", "Ramiro Gallardo Sanz, de Logística Penedal, S.L.", "Gonzalo Robledo Ibáñez, de Logística Penedal, S.L.",
+        "Reserva del muelle de carga",
+        ["Hola, Gonzalo:", "", "Te escribo sobre su referencia 017: el muelle 4 queda reservado el jueves de la semana que viene para la descarga de palés.",
+         "Si necesitáis otro muelle, avisadme antes del martes.", "", "Un saludo, Ramiro."],
+        ["Ramiro Gallardo Sanz", "Logística Penedal, S.L."])])
+
+
+DOCUMENTOS.append(doc(EXP_PROY, CASO_FICHERO, "Caso 2025-017, ampliación de la línea del horno 2", "2025-01-13", CASO_PAGINAS))
+
+
+def expedientes_json(exp):
+    documentos = [ruta(d["proyecto"], d["fichero"]) for d in exp if d["proyecto"] == EXP_PROY]
+    return [{"caso": CASO, "proyecto": EXP_PROY, "documentos": documentos, "compartidos": [], "ajenos": [DECOY],
+             "formas_numero": FORMAS_EXP, "sustituciones": [[fx("presupuesto-2"), fx("presupuesto-2-revisado")]]}]
+
+
+def pregunta_gx(n, subtipo, actor, texto, citas=(), claves=(), esperados=(), concreta=False, todas=False, abstener=False,
+                prohibidas=(), sustituidos=(), docs_prohibidos=(), ausente=None):
+    q = {"id": f"GX{n:02d}", "tipo": "expediente", "origen": "generalidad", "actor": actor, "pregunta": texto,
+         "citas_resueltas": list(citas), "fichas_esperadas": [], "todas_las_citas": todas,
+         "claves": [list(g) for g in claves], "abstener": abstener, "prohibidas": list(prohibidas),
+         "sustituidos": list(sustituidos), "docs_prohibidos": list(docs_prohibidos),
+         "caso": CASO, "esperados": list(esperados), "subtipo": subtipo, "concreta": concreta}
+    if ausente:
+        q["ausente"] = list(ausente)
+    if actor in ("t09", "t10"):
+        q["rol"] = "neutro"
+        if not abstener:
+            q["no_afirmar"] = list(NO_AFIRMAR)
+    return q
+
+
+def preguntas_expediente():
+    con_su_referencia = [ruta(EXP_PROY, d["fichero"]) for d in expedientes_documentos() if "su referencia 017" in paginas_de(d)[0]]
+    vigentes = [("presupuesto-1", 21750, "Refractarios Sierra del Mar"), ("presupuesto-2-revisado", 33900, "Montajes Garbea"),
+                ("presupuesto-3", 27480, "Electroindustrial Prado Alto"), ("presupuesto-4", 12960, "Aislamientos Térmicos Olmedo"),
+                ("presupuesto-5", 6240, "Transportes Hidalgo Cruz"), ("presupuesto-6", 41300, "Ingeniería Civil Ribazo")]
+    return [
+        pregunta_gx(1, "concreta", "t09", "¿Cuál es el total de la factura F-2025-104 de Cerámicas Valtierno?",
+                    citas=[cx("factura-4", 1, "Total factura: 10.527,00 euros")], claves=[["10.527"]],
+                    esperados=[fx("factura-4")], concreta=True),
+        pregunta_gx(2, "concreta", "t09", "¿Quién es la directora facultativa de la ampliación de la línea 2 de Cerámicas Valtierno?",
+                    citas=[cx("contrato-ingenieria", 1, "Directora facultativa: Irene Salcedo Moya.")], claves=[["Irene Salcedo"]],
+                    esperados=[fx("contrato-ingenieria")], concreta=True),
+        pregunta_gx(3, "concreta", "t09", "¿Qué día se fijó en el acta de obra nº 5 para la prueba en caliente del horno?",
+                    citas=[cx("acta-obra-5", 1, "Se fija la prueba en caliente del horno para el 12 de septiembre de 2025.")],
+                    claves=[["12 de septiembre de 2025", "12/09/2025"]], esperados=[fx("acta-obra-5")], concreta=True),
+        pregunta_gx(4, "sustituidos", "t09", "¿Cuánto cuesta ahora el presupuesto de Montajes Garbea para la ampliación de la línea 2?",
+                    citas=[cx("presupuesto-2-revisado", 1, "Total del presupuesto: 33.900 euros.")], claves=[["33.900"]],
+                    prohibidas=["35.400"], sustituidos=[fx("presupuesto-2")], esperados=[fx("presupuesto-2-revisado")], concreta=True),
+        pregunta_gx(5, "concreta", "t09", "¿Cuántos honorarios totales tiene el contrato de ingeniería de Cerámicas Valtierno?",
+                    citas=[cx("adenda-1", 1, "Los honorarios totales pasan a ser de 52.200 euros más IVA, en seis pagos de 8.700 euros.")],
+                    claves=[["52.200"]], prohibidas=["48.600"], esperados=[fx("adenda-1")], concreta=True),
+        pregunta_gx(6, "concreta", "t09", "¿Cuál es la temperatura máxima de diseño del horno según el informe técnico nº 3?",
+                    citas=[cx("informe-tecnico-3", 1, "Temperatura máxima de diseño: 1.180 °C.")], claves=[["1.180"]],
+                    esperados=[fx("informe-tecnico-3")], concreta=True),
+        pregunta_gx(7, "analisis", "t09", "¿Cuánto se ha facturado en total, sin IVA, en el expte. 2025/017 de Cerámicas Valtierno? Cita cada factura.",
+                    citas=[cx(f"factura-{n}", 1, f"Número de factura: F-2025-{100 + n}") for n in range(1, 7)],
+                    claves=[["52.200"]], todas=True, esperados=[fx(f"factura-{n}") for n in range(1, 7)]),
+        pregunta_gx(8, "analisis", "t09", "Resume el expte. 2025/017 de Cerámicas Valtierno: qué se contrató, qué presupuestos hubo, cuál se aceptó y cuánto se ha facturado.",
+                    citas=[cx("contrato-ingenieria", 1, "CONTRATO DE INGENIERÍA CI-2025-017"),
+                           cx("acta-obra-2", 1, "Se acepta el presupuesto revisado de Montajes Garbea, S.L.")],
+                    claves=[["CI-2025-017"], ["Montajes Garbea"], ["52.200", "63.162"]],
+                    esperados=[fx("contrato-ingenieria"), fx("adenda-1"), fx("acta-obra-2"), fx("presupuesto-1"), fx("presupuesto-2"),
+                               fx("presupuesto-2-revisado"), fx("presupuesto-3"), fx("presupuesto-4"), fx("presupuesto-5"),
+                               fx("presupuesto-6"), *[fx(f"factura-{n}") for n in range(1, 7)]]),
+        pregunta_gx(9, "analisis", "t09", "¿Qué presupuestos hemos recibido para la ampliación de la línea 2 y cuál es el importe vigente de cada uno?",
+                    citas=[cx(p, 1, f"Total del presupuesto: {miles(euros)} euros.") for p, euros, _ in vigentes],
+                    claves=[[empresa] for _, _, empresa in vigentes] + [[miles(euros)] for _, euros, _ in vigentes],
+                    prohibidas=["35.400"], sustituidos=[fx("presupuesto-2")],
+                    esperados=[fx(p) for p, _, _ in vigentes] + [fx("presupuesto-2")]),
+        pregunta_gx(10, "contiene", "t09", "¿Qué contratos hay en el expte. 2025/017 de Cerámicas Valtierno?",
+                    citas=[cx("contrato-ingenieria", 1, "CONTRATO DE INGENIERÍA CI-2025-017"),
+                           cx("adenda-1", 1, "ADENDA 1 AL CONTRATO CI-2025-017")],
+                    claves=[["Contrato de ingeniería"], ["adenda"]], todas=True,
+                    esperados=[fx("contrato-ingenieria"), fx("adenda-1")]),
+        pregunta_gx(11, "no_consta", "t09", "¿Qué penalización por retraso tiene el contrato con Cerámicas Valtierno?",
+                    abstener=True, ausente=["penalización"], esperados=[fx("contrato-ingenieria"), fx("adenda-1")]),
+        pregunta_gx(12, "ajenos", "t09", "Busca todo lo que cite «su referencia 017» y dime cuáles de esos documentos forman parte del expte. 2025/017.",
+                    citas=[cx("correo-9", 1, "Te remitimos la oferta revisada para el montaje mecánico, en su referencia 017."),
+                           cx("presupuesto-6", 1, "En relación con su referencia 017, la ampliación de la línea del horno 2 de Cerámicas Valtierno, S.A.")],
+                    todas=True, esperados=con_su_referencia, docs_prohibidos=[DECOY]),
+        pregunta_gx(13, "aislamiento", "t10", "¿Cuánto se ha facturado en el expte. 2025/017 de Cerámicas Valtierno?",
+                    abstener=True, docs_prohibidos=[EXP_DIR]),
+        pregunta_gx(14, "aislamiento", "t01", "¿Qué contrato tiene Brumeral con Cerámicas Valtierno?",
+                    abstener=True, docs_prohibidos=["brumeral/"]),
+    ]
+
+
 # ---------- construcción ----------
 def construir():
     paginas = {ruta(d["proyecto"], d["fichero"]): paginas_de(d) for d in DOCUMENTOS}
@@ -677,25 +1114,35 @@ def construir():
         "fichas": FICHAS,
     }
     corpus = {r: "".join(f"=== Página {n} ===\n{t}\n" for n, t in enumerate(ps, 1)) for r, ps in paginas.items()}
+    exp = expedientes_documentos() + [correo_ref_017()]
+    paginas_exp = {ruta(d["proyecto"], d["fichero"]): paginas_de(d) for d in exp}
+    ficheros_exp = {r: "".join(f"=== Página {n} ===\n{t}\n" for n, t in enumerate(ps, 1)) for r, ps in paginas_exp.items()}
     return {"paginas": paginas, "corpus": corpus, "manifiesto": manifiesto,
-            "bateria": preguntas(), "claves": claves()}
+            "bateria": preguntas(), "claves": claves(),
+            "paginas_expediente": paginas_exp, "expedientes_ficheros": ficheros_exp,
+            "expedientes": expedientes_json(exp), "bateria_expediente": preguntas_expediente()}
 
 
 def escribir(modelo, destino):
     shutil.rmtree(destino / "corpus", ignore_errors=True)
+    shutil.rmtree(destino / "expedientes", ignore_errors=True)
     for r, texto in modelo["corpus"].items():
         fichero = destino / "corpus" / r
         fichero.parent.mkdir(parents=True, exist_ok=True)
         fichero.write_text(texto, encoding="utf-8")
-    for nombre in ("manifiesto", "claves", "bateria"):
+    for r, texto in modelo["expedientes_ficheros"].items():
+        fichero = destino / "expedientes" / r
+        fichero.parent.mkdir(parents=True, exist_ok=True)
+        fichero.write_text(texto, encoding="utf-8")
+    for nombre in ("manifiesto", "claves", "bateria", "expedientes", "bateria_expediente"):
         salida = json.dumps(modelo[nombre], ensure_ascii=False, indent=1) + "\n"
-        (destino / f"{nombre}.json").write_text(salida, encoding="utf-8")
+        (destino / f"{nombre.replace('_', '-')}.json").write_text(salida, encoding="utf-8")
 
 
 # ---------- autocomprobaciones ----------
 def comprobar_ids(modelo):
     ids = [q["id"] for q in modelo["bateria"]] + [k["id"] for k in modelo["claves"]]
-    ids += [f["id"] for f in FICHAS]
+    ids += [f["id"] for f in FICHAS] + [q["id"] for q in modelo["bateria_expediente"]]
     exigir(len(set(ids)) == len(ids), "ids duplicados")
 
 
@@ -711,7 +1158,10 @@ def comprobar_anclas(bateria, paginas):
 def comprobar_claves(bateria, paginas):
     for q in bateria:
         textos = [paginas[c["doc"]][p - 1] for c in q["citas_resueltas"] for p in c["paginas"]]
+        textos += [paginas[d][0] for d in q.get("esperados", [])]
         textos += [FICHAS_POR_ID[f]["texto"] for f in q["fichas_esperadas"]]
+        if q.get("tipo") == "expediente":
+            textos.append(SUMA_FACTURAS)
         for grupo in q["claves"]:
             exigir(any(puntuar.has_key(t, grupo) for t in textos), f"{q['id']}: clave {grupo} no aparece")
 
@@ -738,13 +1188,46 @@ def comprobar_redaccion(paginas):
         exigir(not REDACCION.search(sin_tildes(f["titulo"] + " " + f["texto"])), f"palabra prohibida en {f['id']}")
 
 
+def comprobar_expediente(modelo, destino):
+    e = modelo["expedientes"][0]
+    docs, ajenos = e["documentos"], e["ajenos"]
+    pag = modelo["paginas_expediente"]
+    exigir(len(docs) == 60 and len(set(docs)) == 60, "el expediente no tiene 60 documentos distintos")
+    exigir(ajenos == [DECOY] and DECOY not in docs, "el señuelo está en los documentos del expediente")
+    exigir(e["compartidos"] == [], "el expediente no debe tener compartidos")
+    exigir(e["caso"] in {d["ruta"] for d in modelo["manifiesto"]["documentos"]}, "el caso no está en el manifiesto")
+    for r in docs + ajenos:
+        exigir((destino / "expedientes" / r).is_file(), f"falta {r}")
+        exigir(len(pag[r]) == 1, f"{r}: más de una página")
+        lineas = [x for x in pag[r][0].split("\n") if x.strip()]
+        exigir(10 <= len(lineas) <= 25, f"{r}: {len(lineas)} líneas")
+        exigir(not REDACCION.search(sin_tildes(pag[r][0])) and "penalización" not in pag[r][0].lower(), f"{r}: palabra prohibida")
+    for ant, nue in e["sustituciones"]:
+        exigir(ant in docs and nue in docs, f"sustitución fuera del expediente: {ant}")
+    for cadena, fichero in HECHOS_FIJOS.items():
+        con = [r for r in docs + ajenos if cadena in pag[r][0]]
+        exigir(con == [EXP_DIR + fichero], f"«{cadena}» debe estar solo en {fichero}, está en {con}")
+    for r in docs + ajenos:
+        es_factura = "expte-2025-017-factura-" in r
+        exigir(("10.527,00" in pag[r][0]) == es_factura and ("1.827,00" in pag[r][0]) == es_factura, f"total de factura fuera de su documento: {r}")
+        exigir("63.162" not in pag[r][0], f"63.162 no debe aparecer escrito: {r}")
+    for q in modelo["bateria_expediente"]:
+        exigir(q["caso"] == e["caso"], f"{q['id']}: caso distinto")
+        exigir(all(r in pag for r in q["esperados"]), f"{q['id']}: esperado inexistente")
+        exigir(not any(r.startswith(p) for r in q["esperados"] for p in q["docs_prohibidos"]), f"{q['id']}: esperado prohibido")
+        exigir(all(s in docs for s in q["sustituidos"]), f"{q['id']}: sustituido fuera del expediente")
+
+
 def verificar(modelo, destino):
+    paginas = {**modelo["paginas"], **modelo["paginas_expediente"]}
+    bateria_todas = modelo["bateria"] + modelo["bateria_expediente"]
     comprobar_ids(modelo)
-    comprobar_anclas(modelo["bateria"], modelo["paginas"])
-    comprobar_claves(modelo["bateria"], modelo["paginas"])
-    comprobar_fuentes_claves(modelo["claves"], modelo["bateria"], modelo["paginas"])
+    comprobar_anclas(bateria_todas, paginas)
+    comprobar_claves(bateria_todas, paginas)
+    comprobar_fuentes_claves(modelo["claves"], modelo["bateria"], paginas)
     comprobar_rutas(modelo["manifiesto"], destino)
-    comprobar_redaccion(modelo["paginas"])
+    comprobar_redaccion(paginas)
+    comprobar_expediente(modelo, destino)
 
 
 def generar(destino=DATOS):
