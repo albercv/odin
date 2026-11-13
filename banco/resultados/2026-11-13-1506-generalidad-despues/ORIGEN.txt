@@ -1,0 +1,9 @@
+Configuración: generalidad-despues
+Rama: medicion/d084-generalidad
+Commit: 0d6d9907ee559a0a03827d2d10da590e56304e49
+Modo: explore
+Batería: conector, generalidad
+Archivos: ficticio, generalidad
+Muestra: batería entera
+Preguntas: 34
+Fecha: 2026-11-13T15:06

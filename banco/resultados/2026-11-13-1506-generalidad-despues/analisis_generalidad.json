@@ -1,0 +1,282 @@
+{
+ "2026-11-13-1506-generalidad-despues": {
+  "replicas": {
+   "0": {
+    "correct": 33,
+    "total": 34,
+    "wilson": [
+     0.851,
+     0.995
+    ],
+    "generica": "5/6",
+    "sectorAsserted": 1,
+    "leaks": 0,
+    "traps": "3/3",
+    "isolation": "4/4",
+    "errors": 0,
+    "failed": [
+     "GEN01"
+    ],
+    "usdPerAnswer": 0.00335,
+    "turnsMedian": 7.0
+   },
+   "1": {
+    "correct": 32,
+    "total": 34,
+    "wilson": [
+     0.809,
+     0.984
+    ],
+    "generica": "4/6",
+    "sectorAsserted": 2,
+    "leaks": 0,
+    "traps": "3/3",
+    "isolation": "4/4",
+    "errors": 0,
+    "failed": [
+     "C001",
+     "C002"
+    ],
+    "usdPerAnswer": 0.00336,
+    "turnsMedian": 7.5
+   },
+   "2": {
+    "correct": 32,
+    "total": 34,
+    "wilson": [
+     0.809,
+     0.984
+    ],
+    "generica": "4/6",
+    "sectorAsserted": 2,
+    "leaks": 0,
+    "traps": "3/3",
+    "isolation": "4/4",
+    "errors": 0,
+    "failed": [
+     "C002",
+     "GEN04"
+    ],
+    "usdPerAnswer": 0.0033,
+    "turnsMedian": 7.5
+   }
+  },
+  "examples": [
+   {
+    "id": "C001",
+    "rep": 1,
+    "afirma": [
+     "comunidades de propietarios"
+    ],
+    "fuga": [],
+    "texto": "Odín muestra 11 proyectos con los que la empresa trabaja: Calle Abeto 39, Calle Castaño 42, Calle Fresno 9, Calle Haya 57, Calle Olmo 10, Calle Pino 26, Calle Pino 47, Calle Roble 46, Residencial Las Adelfas 2, Residencial Los Robles 2 y Procedimientos generales. Odín no dice qué son estos proyectos"
+   },
+   {
+    "id": "C002",
+    "rep": 1,
+    "afirma": [
+     "comunidad de propietarios",
+     "administracion de fincas"
+    ],
+    "fuga": [],
+    "texto": "Odín no tiene un listado de clientes como tal. Lo que sí consta es lo siguiente:\n\n- Los contratos de limpieza identifican como cliente a una **Comunidad de Propietarios** (por ejemplo, \"Comunidad de Propietarios Avenida del Puerto 14\"), y la contratista es Limpiezas Brillo S.L. en ese contrato. Cada"
+   },
+   {
+    "id": "C002",
+    "rep": 2,
+    "afirma": [
+     "comunidades de propietarios",
+     "comunidad de propietarios"
+    ],
+    "fuga": [],
+    "texto": "Odín no tiene un listado de clientes, pero sí muestra que los contratos de limpieza están firmados con comunidades de propietarios. En los contratos que he encontrado, la parte contratante es la \"Comunidad de Propietarios\" de cada edificio, y es ella quien paga el servicio. Por ejemplo, el contrato "
+   },
+   {
+    "id": "GEN01",
+    "rep": 0,
+    "afirma": [
+     "comunidad"
+    ],
+    "fuga": [],
+    "texto": "En Odín constan cinco proyectos a los que tienes acceso: Talleres Murcano, Conservas Dalmira, Logística Penedal, Alojamientos Cerrolago y Bodegas Quintafría. En Odín, estos proyectos son las unidades con las que la empresa trabaja (un cliente, un contrato, una obra o una comunidad), pero el listado "
+   },
+   {
+    "id": "GEN04",
+    "rep": 2,
+    "afirma": [
+     "comunidad"
+    ],
+    "fuga": [],
+    "texto": "En Odín constan cinco proyectos a los que tienes acceso: Talleres Murcano, Conservas Dalmira, Logística Penedal, Alojamientos Cerrolago y Bodegas Quintafría. Son las unidades (clientes, contratos, obras o comunidades) con las que la empresa trabaja en Odín; la lista no indica qué es cada una."
+   }
+  ]
+ },
+ "2026-11-13-1515-generalidad-antes": {
+  "replicas": {
+   "0": {
+    "correct": 30,
+    "total": 34,
+    "wilson": [
+     0.734,
+     0.953
+    ],
+    "generica": "2/6",
+    "sectorAsserted": 4,
+    "leaks": 0,
+    "traps": "3/3",
+    "isolation": "4/4",
+    "errors": 0,
+    "failed": [
+     "C001",
+     "C002",
+     "GEN03",
+     "GEN04"
+    ],
+    "usdPerAnswer": 0.00349,
+    "turnsMedian": 8.0
+   },
+   "1": {
+    "correct": 30,
+    "total": 34,
+    "wilson": [
+     0.734,
+     0.953
+    ],
+    "generica": "3/6",
+    "sectorAsserted": 3,
+    "leaks": 0,
+    "traps": "3/3",
+    "isolation": "4/4",
+    "errors": 0,
+    "failed": [
+     "C001",
+     "C002",
+     "GEN04",
+     "GEN20"
+    ],
+    "usdPerAnswer": 0.00353,
+    "turnsMedian": 7.5
+   },
+   "2": {
+    "correct": 31,
+    "total": 34,
+    "wilson": [
+     0.77,
+     0.97
+    ],
+    "generica": "3/6",
+    "sectorAsserted": 3,
+    "leaks": 0,
+    "traps": "3/3",
+    "isolation": "4/4",
+    "errors": 0,
+    "failed": [
+     "C001",
+     "C002",
+     "GEN04"
+    ],
+    "usdPerAnswer": 0.00346,
+    "turnsMedian": 7.0
+   }
+  },
+  "examples": [
+   {
+    "id": "C001",
+    "rep": 0,
+    "afirma": [
+     "comunidades de propietarios",
+     "administracion de fincas"
+    ],
+    "fuga": [],
+    "texto": "En Odín constan dos empresas proveedoras con contrato escrito, ambas con sus documentos vigentes:\n\n1. **Limpiezas Brillo S.L.**: presta el servicio de limpieza de zonas comunes en varias comunidades. Por ejemplo, en Calle Abeto 39 y en Calle Castaño 42, según el contrato de limpieza de 1 de septiemb"
+   },
+   {
+    "id": "C001",
+    "rep": 1,
+    "afirma": [
+     "comunidades de propietarios",
+     "administracion de fincas"
+    ],
+    "fuga": [],
+    "texto": "Según los documentos de Odín, trabajamos con (o hay contratos con) al menos estas empresas proveedoras:\n\n1. **Ascensores Norte S.L.**: empresa conservadora (mantenimiento) de ascensores. Aparece en los contratos y anexos de mantenimiento de ascensor de varias comunidades: Calle Abeto 39, Calle Casta"
+   },
+   {
+    "id": "C001",
+    "rep": 2,
+    "afirma": [
+     "comunidades de propietarios"
+    ],
+    "fuga": [],
+    "texto": "Según los documentos de Odín, trabajamos con dos empresas de servicios, que aparecen como proveedoras en los contratos de las comunidades de propietarios de Puerto Albar:\n\n1. **Limpiezas Brillo S.L.** — servicio de limpieza de zonas comunes. Aparece en los contratos de limpieza de varias comunidades"
+   },
+   {
+    "id": "C002",
+    "rep": 0,
+    "afirma": [
+     "son comunidades",
+     "comunidades de propietarios"
+    ],
+    "fuga": [],
+    "texto": "Según Odín, vuestros clientes son comunidades de propietarios de Puerto Albar. Cada una aparece como proyecto y tiene un contrato de prestación de servicios de limpieza. Los contratos que he encontrado son de: Avenida del Puerto 28, Avenida del Puerto 377, Avenida del Faro 31, Avenida del Puerto 10,"
+   },
+   {
+    "id": "C002",
+    "rep": 1,
+    "afirma": [
+     "son comunidades",
+     "comunidades de propietarios",
+     "comunidad de propietarios"
+    ],
+    "fuga": [],
+    "texto": "Según Odín, los clientes de la empresa son comunidades de propietarios. Cada comunidad aparece como un proyecto propio. Hay 32 proyectos en tu acceso, y casi todos tienen unos Estatutos de comunidad de propietarios vigentes, redactados por Gestión Albar.\n\nLos proyectos son (nombre tal cual figura en"
+   },
+   {
+    "id": "C002",
+    "rep": 2,
+    "afirma": [
+     "son comunidades",
+     "comunidades de propietarios",
+     "comunidad de propietarios"
+    ],
+    "fuga": [],
+    "texto": "Según los contratos de limpieza que constan en Odín, vuestros clientes son comunidades de propietarios. Cada contrato enfrenta a una \"Comunidad de Propietarios\" (el cliente) con la empresa de limpieza, que es Limpiezas Brillo S.L. (figura como \"Contratista\"). Doy por hecho que Limpiezas Brillo S.L. "
+   },
+   {
+    "id": "GEN03",
+    "rep": 0,
+    "afirma": [
+     "comunidad"
+    ],
+    "fuga": [],
+    "texto": "Según Odín, tienes acceso a tres proyectos, y los documentos los identifican como clientes:\n\n1. **Talleres Murcano, S.L.** (CIF B-00000021). Contrato de mantenimiento CM-2024-011 y su adenda 1; facturas como la F-2025-014.\n2. **Bodegas Quintafría, S.L.** (CIF B-00000025). Contrato de servicios de in"
+   },
+   {
+    "id": "GEN04",
+    "rep": 0,
+    "afirma": [
+     "comunidad"
+    ],
+    "fuga": [],
+    "texto": "En Odín hay 5 proyectos (comunidades, clientes u obras): Talleres Murcano, Conservas Dalmira, Logística Penedal, Alojamientos Cerrolago y Bodegas Quintafría. La cita es el listado de proyectos de Odín, que no tiene documento ni página."
+   },
+   {
+    "id": "GEN04",
+    "rep": 1,
+    "afirma": [
+     "comunidad"
+    ],
+    "fuga": [],
+    "texto": "En Odín hay 5 proyectos (comunidades, clientes u obras) a los que tienes acceso:\n\n1. Talleres Murcano\n2. Conservas Dalmira\n3. Logística Penedal\n4. Alojamientos Cerrolago\n5. Bodegas Quintafría\n\nEsta lista viene del listado de proyectos de Odín, no de un documento, así que no tiene cita de página. Si "
+   },
+   {
+    "id": "GEN04",
+    "rep": 2,
+    "afirma": [
+     "comunidad"
+    ],
+    "fuga": [],
+    "texto": "En Odín constan 5 proyectos (comunidades, clientes u obras) a los que tienes acceso:\n\n1. Talleres Murcano\n2. Conservas Dalmira\n3. Logística Penedal\n4. Alojamientos Cerrolago\n5. Bodegas Quintafría\n\nEsta lista viene de la consulta de proyectos de Odín, no de un documento concreto, así que no tiene cit"
+   }
+  ]
+ }
+}
