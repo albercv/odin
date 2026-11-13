@@ -32,5 +32,7 @@ if [ -d "$DESTINO" ]; then mv "$DESTINO" "$DESTINO.viejo"; fi
 mv "$DESTINO.nuevo" "$DESTINO"
 rm -rf "$DESTINO.viejo"
 echo "MCP copiado en $DESTINO."
+# SOLO_COPIA=si (al actualizar): Claude Desktop ya apunta a esta copia; no se cambia su trabajador ni su clave
+[ "${SOLO_COPIA:-}" = si ] && { echo "Conector de Claude Desktop sin cambios: sigue con el mismo trabajador."; exit 0; }
 python3 deploy/instalacion/claude_desktop.py --config "$CONFIG" --credenciales "$CREDENCIALES" \
   --trabajador "${TRABAJADOR:-marta}" --mcp "$DESTINO" --node "$NODE" --copias "$DATOS/copias"
