@@ -107,7 +107,7 @@ describe('buildServer', () => {
   it('instructionsTellToFilterByProject', async () => {
     const client = await connect(() => meWith(ALL));
     expect(client.getInstructions()).toContain(
-      'Si la pregunta nombra un proyecto (un cliente, un contrato, una obra…), búscalo con listProjects y filtra la búsqueda con su projectId.');
+      'Si la pregunta nombra un proyecto (el nombre de un cliente, un contrato, una obra…), búscalo con listProjects y filtra la búsqueda con su projectId.');
   });
 
   it('searchMapsSupersededAndReplacementForDocumentsOnly', async () => {
