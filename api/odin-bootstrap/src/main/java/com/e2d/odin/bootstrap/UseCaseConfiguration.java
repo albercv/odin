@@ -422,13 +422,13 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateDocument updateDocument(DocumentRepository documents, CaseFileRepository caseFiles) {
-        return new UpdateDocument(documents, caseFiles);
+    UpdateDocument updateDocument(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
+        return new UpdateDocument(documents, caseFiles, clock);
     }
 
     @Bean
-    MarkCaseDocuments markCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles) {
-        return new MarkCaseDocuments(documents, caseFiles);
+    MarkCaseDocuments markCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
+        return new MarkCaseDocuments(documents, caseFiles, clock);
     }
 
     @Bean

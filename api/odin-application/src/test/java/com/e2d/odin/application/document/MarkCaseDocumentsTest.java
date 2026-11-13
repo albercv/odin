@@ -8,6 +8,8 @@ import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.domain.casefile.CaseFileAction;
 import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -27,8 +29,8 @@ class MarkCaseDocumentsTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
-    private final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository();
-    private final MarkCaseDocuments mark = new MarkCaseDocuments(docs, files);
+    private final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository(docs);
+    private final MarkCaseDocuments mark = new MarkCaseDocuments(docs, files, new MutableClock());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 
@@ -109,5 +111,25 @@ class MarkCaseDocumentsTest {
         assertThatThrownBy(() -> mark.execute(Actors.companyAdmin(companyA), companyA, Set.of(caseDoc.id()), false))
                 .isInstanceOf(ConflictException.class).hasMessage("Quita antes los documentos del expediente");
         assertThat(isCase(caseDoc)).isTrue();
+    }
+
+    @Test
+    void unmarkCaseWhoseOnlyEntryIsHiddenProceedsAndRecordsRemoval() {
+        Document caseDoc = Fixtures.readyDocument(docs, companyA, "caso");
+        Document member = Fixtures.readyDocument(docs, companyA, "x");
+        mark.execute(Actors.companyAdmin(companyA), companyA, Set.of(caseDoc.id()), true);
+        files.add(new CaseFileEntry(companyA, caseDoc.id(), member.id(), new UserId(UUID.randomUUID()), Fixtures.NOW));
+        docs.save(member.withWithdrawal(java.util.Optional.of(Fixtures.NOW), java.util.Optional.of(new UserId(UUID.randomUUID()))));
+        var admin = Actors.companyAdmin(companyA);
+
+        mark.execute(admin, companyA, Set.of(caseDoc.id()), false);
+
+        assertThat(isCase(caseDoc)).isFalse();
+        assertThat(files.countEntries(companyA, caseDoc.id())).isZero();
+        assertThat(files.allEvents()).singleElement().satisfies(e -> {
+            assertThat(e.action()).isEqualTo(CaseFileAction.REMOVED);
+            assertThat(e.actorId()).isEqualTo(admin.userId());
+            assertThat(e.documentId()).isEqualTo(member.id());
+        });
     }
 }

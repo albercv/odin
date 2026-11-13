@@ -1,21 +1,39 @@
 package com.e2d.odin.application.fake;
 
 import com.e2d.odin.application.port.CaseFileRepository;
+import com.e2d.odin.domain.casefile.CaseFileAction;
 import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.shared.UserId;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.function.Function;
 
 /** Guarda relaciones y eventos en memoria; la visibilidad de los documentos la comprueba el caso de uso. */
 public class InMemoryCaseFileRepository implements CaseFileRepository {
 
+    private final InMemoryDocumentRepository documents;
     private final List<CaseFileEntry> entries = new ArrayList<>();
     private final List<CaseFileEvent> events = new ArrayList<>();
+
+    public InMemoryCaseFileRepository() {
+        this(new InMemoryDocumentRepository());
+    }
+
+    /** Con los documentos, sabe contar páginas y qué relaciones quedan ocultas por un documento retirado. */
+    public InMemoryCaseFileRepository(InMemoryDocumentRepository documents) {
+        this.documents = documents;
+    }
 
     @Override
     public boolean add(CaseFileEntry entry) {
@@ -56,7 +74,31 @@ public class InMemoryCaseFileRepository implements CaseFileRepository {
 
     @Override
     public List<CaseFileEntry> entries(CompanyScope scope, ProjectVisibility visibility, DocumentId caseId) {
-        return entries.stream().filter(e -> scope.includes(e.companyId()) && e.caseId().equals(caseId)).toList();
+        return entries.stream().filter(e -> scope.includes(e.companyId()) && e.caseId().equals(caseId)
+                && !hidden(e)).toList();
+    }
+
+    private boolean hidden(CaseFileEntry e) {
+        return documents.get(e.caseId()).filter(Document::withdrawn).isPresent()
+                || documents.get(e.documentId()).filter(Document::withdrawn).isPresent();
+    }
+
+    @Override
+    public int removeHiddenEntries(CompanyId companyId, DocumentId caseId, UserId actor, Instant at) {
+        List<CaseFileEntry> hidden = entries.stream()
+                .filter(e -> e.companyId().equals(companyId) && e.caseId().equals(caseId) && hidden(e)).toList();
+        hidden.forEach(e -> {
+            entries.remove(e);
+            events.add(new CaseFileEvent(UUID.randomUUID(), companyId, caseId, e.documentId(),
+                    CaseFileAction.REMOVED, actor, at));
+        });
+        return hidden.size();
+    }
+
+    @Override
+    public Map<DocumentId, Integer> pageCounts(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> ids) {
+        return ids.stream().collect(Collectors.toMap(id -> id, id -> documents.pagesOf(id).size(), (a, b) -> a));
     }
 
     @Override

@@ -8,7 +8,6 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
-import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.util.List;
 
@@ -26,8 +25,7 @@ public class ListCaseFileEvents {
     public List<CaseFileEvent> execute(Actor actor, CompanyId companyId, DocumentId caseId) {
         AccessPolicy.requireAdminOf(actor, companyId);
         CompanyScope scope = CompanyScope.of(companyId);
-        documents.findById(scope, ProjectVisibility.all(), caseId)
-                .orElseThrow(() -> new NotFoundException("Caso no encontrado"));
+        new CaseFileAccess(scope, ProjectVisibility.all()).caseDocument(documents, caseId);
         return caseFiles.events(scope, ProjectVisibility.all(), caseId);
     }
 }

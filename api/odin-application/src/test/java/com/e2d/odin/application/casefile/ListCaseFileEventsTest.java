@@ -41,6 +41,23 @@ class ListCaseFileEventsTest {
     }
 
     @Test
+    void notACaseIsNotFound() {
+        Document plain = w.documentIn(w.project);
+
+        assertThatThrownBy(() -> list.execute(Actors.companyAdmin(w.company), w.company, plain.id()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void withdrawnCaseIsNotFound() {
+        Document caseDoc = w.caseIn(w.project);
+        w.docs.save(caseDoc.withWithdrawal(java.util.Optional.of(Fixtures.NOW), java.util.Optional.of(w.worker.userId())));
+
+        assertThatThrownBy(() -> list.execute(Actors.companyAdmin(w.company), w.company, caseDoc.id()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
     void unknownCaseIsNotFound() {
         assertThatThrownBy(() -> list.execute(Actors.companyAdmin(w.company), w.company,
                 new DocumentId(UUID.randomUUID()))).isInstanceOf(NotFoundException.class);

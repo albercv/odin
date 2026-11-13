@@ -125,6 +125,38 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
+    void removeHiddenEntriesDeletesRelationsOfWithdrawnDocumentsAndRecordsRemoved() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document member = document(Optional.of(projectA), false);
+        files.add(entry(theCase, member));
+        owner.sql("UPDATE document SET withdrawn_at = now(), withdrawn_by = :u WHERE id = :id")
+                .param("u", user.value()).param("id", member.id().value()).update();
+        assertThat(files.countEntries(company, theCase.id())).isEqualTo(1);
+        assertThat(files.entries(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).isEmpty();
+
+        int removed = files.removeHiddenEntries(company, theCase.id(), user, NOW);
+
+        assertThat(removed).isEqualTo(1);
+        assertThat(files.countEntries(company, theCase.id())).isZero();
+        assertThat(owner.sql("SELECT count(*) FROM case_file_event WHERE case_document_id = :c AND action = 'REMOVED'"
+                + " AND actor_id = :u").param("c", theCase.id().value()).param("u", user.value())
+                .query(Integer.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void pageCountsAreOneAggregateForTheVisibleDocuments() {
+        Document two = document(Optional.of(projectA), false);
+        Document none = document(Optional.of(projectA), false);
+        docs.replacePages(two.id(), java.util.List.of(new com.e2d.odin.domain.document.DocumentPage(two.id(), 1, "a",
+                "stub", "1"), new com.e2d.odin.domain.document.DocumentPage(two.id(), 2, "b", "stub", "1")));
+
+        var counts = files.pageCounts(CompanyScope.of(company), ProjectVisibility.all(),
+                java.util.List.of(two.id(), none.id()));
+
+        assertThat(counts).containsEntry(two.id(), 2).doesNotContainKey(none.id());
+    }
+
+    @Test
     void triggerRejectsDocumentFromOtherProject() {
         Document theCase = document(Optional.of(projectA), true);
         Document foreign = document(Optional.of(projectB), false);

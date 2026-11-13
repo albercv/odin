@@ -3412,6 +3412,10 @@
           "paginated" : {
             "type" : "boolean"
           },
+          "pageCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "uploadedBy" : {
             "type" : "string",
             "format" : "uuid"
@@ -3435,7 +3439,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "uploadedAt", "uploadedBy" ]
+        "required" : [ "filename", "format", "id", "pageCount", "paginated", "superseded", "title", "uploadedAt", "uploadedBy" ]
       },
       "CaseFileResponse" : {
         "type" : "object",

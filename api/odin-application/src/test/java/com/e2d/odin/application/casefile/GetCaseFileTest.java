@@ -42,6 +42,23 @@ class GetCaseFileTest {
     }
 
     @Test
+    void getCaseFileCarriesThePageCount() {
+        Document caseDoc = w.caseIn(w.project);
+        Document doc = w.documentIn(w.project);
+        w.docs.replacePages(doc.id(), java.util.List.of(page(doc, 1), page(doc, 2), page(doc, 3)));
+        put(caseDoc, doc, w.worker);
+
+        var view = w.getCaseFile().execute(w.worker, caseDoc.id());
+
+        assertThat(view.documents().get(0).pageCount()).isEqualTo(3);
+        assertThat(view.casePageCount()).isEqualTo(1);
+    }
+
+    private static com.e2d.odin.domain.document.DocumentPage page(Document d, int n) {
+        return new com.e2d.odin.domain.document.DocumentPage(d.id(), n, "texto " + n, "stub", "1");
+    }
+
+    @Test
     void getCaseFileHidesUnreadDocuments() {
         Document caseDoc = w.caseIn(w.project);
         Document unread = Fixtures.document(w.docs, w.company, DocumentStatus.PENDING_READER);

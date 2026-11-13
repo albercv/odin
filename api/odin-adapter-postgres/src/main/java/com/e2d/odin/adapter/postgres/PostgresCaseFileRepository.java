@@ -9,7 +9,10 @@ import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -124,6 +127,34 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
             RowMapper<T> mapper) {
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql.formatted(VISIBLE)), scope),
                 visibility).param("case", caseId.value()).query(mapper).list());
+    }
+
+    @Override
+    public int removeHiddenEntries(CompanyId companyId, DocumentId caseId, UserId actor, Instant at) {
+        // con lo retirado a la vista, lo único que le queda al caso sin verse es lo de documentos retirados
+        return tx.includeWithdrawn(true).inScope(CompanyScope.of(companyId), ProjectVisibility.all(),
+                jdbc -> jdbc.sql("""
+                WITH removed AS (DELETE FROM case_file_entry WHERE company_id = :company AND case_document_id = :case
+                    AND (EXISTS (SELECT 1 FROM document m WHERE m.id = document_id AND m.withdrawn_at IS NOT NULL)
+                        OR EXISTS (SELECT 1 FROM document c WHERE c.id = case_document_id AND c.withdrawn_at IS NOT NULL))
+                    RETURNING document_id)
+                INSERT INTO case_file_event (id, company_id, case_document_id, document_id, action, actor_id, at)
+                SELECT gen_random_uuid(), :company, :case, document_id, 'REMOVED', :actor, :at FROM removed""")
+                .param("company", companyId.value()).param("case", caseId.value()).param("actor", actor.value())
+                .param("at", Sql.ts(at)).update());
+    }
+
+    @Override
+    public Map<DocumentId, Integer> pageCounts(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return tx.inScope(scope, visibility, jdbc -> jdbc.sql("""
+                SELECT document_id, count(*) AS pages FROM document_page WHERE document_id IN (:ids)
+                GROUP BY document_id""").param("ids", ids.stream().map(DocumentId::value).toList())
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("pages"))).list())
+                .stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override

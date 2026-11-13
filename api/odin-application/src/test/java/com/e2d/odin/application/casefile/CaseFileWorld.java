@@ -20,7 +20,7 @@ final class CaseFileWorld {
     final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(orgs);
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
-    final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository();
+    final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository(docs);
     final MutableClock clock = new MutableClock();
     final SequenceIdGenerator ids = new SequenceIdGenerator();
     final CompanyId company = Fixtures.company(orgs);

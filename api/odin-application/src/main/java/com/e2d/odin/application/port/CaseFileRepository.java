@@ -6,7 +6,11 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.shared.UserId;
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public interface CaseFileRepository {
@@ -33,4 +37,13 @@ public interface CaseFileRepository {
     List<CaseFileEvent> events(CompanyScope scope, ProjectVisibility visibility, DocumentId caseId);
 
     int countEntries(CompanyId companyId, DocumentId caseId);
+
+    /**
+     * Quita las relaciones del caso que ya no se ven (por un documento retirado) y deja un REMOVED de cada una, a
+     * nombre de {@code actor}, en una transacción. Devuelve cuántas quitó.
+     */
+    int removeHiddenEntries(CompanyId companyId, DocumentId caseId, UserId actor, Instant at);
+
+    /** Páginas guardadas de cada documento visible, en una sola consulta; los que no tienen páginas no salen. */
+    Map<DocumentId, Integer> pageCounts(CompanyScope scope, ProjectVisibility visibility, Collection<DocumentId> ids);
 }

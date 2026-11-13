@@ -112,7 +112,7 @@ public class TestWiring {
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
-    final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository();
+    final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository(docs);
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
     final InMemoryQuestionLog questions = new InMemoryQuestionLog();
     final InMemoryTopicRepository topics = new InMemoryTopicRepository();
@@ -282,11 +282,11 @@ public class TestWiring {
     }
 
     @Bean UpdateDocument updateDocument() {
-        return new UpdateDocument(docs, caseFiles);
+        return new UpdateDocument(docs, caseFiles, clock);
     }
 
     @Bean MarkCaseDocuments markCaseDocuments() {
-        return new MarkCaseDocuments(docs, caseFiles);
+        return new MarkCaseDocuments(docs, caseFiles, clock);
     }
 
     @Bean GetCaseFile getCaseFile() {

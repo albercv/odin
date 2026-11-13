@@ -8,6 +8,7 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ValidationException;
+import java.time.Clock;
 import java.util.Set;
 
 /** Marca o desmarca un lote de documentos como fichas de caso, todo o nada. */
@@ -17,10 +18,12 @@ public class MarkCaseDocuments {
 
     private final DocumentRepository documents;
     private final CaseFileRepository caseFiles;
+    private final Clock clock;
 
-    public MarkCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles) {
+    public MarkCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
         this.documents = documents;
         this.caseFiles = caseFiles;
+        this.clock = clock;
     }
 
     public int execute(Actor actor, CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument) {
@@ -29,8 +32,12 @@ public class MarkCaseDocuments {
             throw new ValidationException("Elige entre 1 y " + MAX_DOCUMENTS + " documentos");
         }
         if (!caseDocument) {
-            CaseFileGuard.requireEmptyCaseFiles(caseFiles, companyId, documentIds);
+            CaseFileGuard.requireNoVisibleEntries(caseFiles, companyId, documentIds);
         }
-        return documents.markCaseDocuments(companyId, documentIds, caseDocument);
+        int updated = documents.markCaseDocuments(companyId, documentIds, caseDocument);
+        if (!caseDocument) {
+            CaseFileGuard.removeHiddenEntries(caseFiles, companyId, documentIds, actor, clock.instant());
+        }
+        return updated;
     }
 }

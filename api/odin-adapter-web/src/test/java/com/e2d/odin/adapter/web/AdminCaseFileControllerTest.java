@@ -72,6 +72,30 @@ class AdminCaseFileControllerTest extends WebTestSupport {
     }
 
     @Test
+    void eventsOfANonCaseOrAWithdrawnCaseAre404() throws Exception {
+        Document plain = Fixtures.documentIn(w.docs, company, project, "suelto");
+        Document c = caseDoc();
+        w.docs.save(c.withWithdrawal(Optional.of(Fixtures.NOW), Optional.of(c.uploadedBy())));
+
+        mvc.perform(get(base(plain) + "/events").cookie(admin)).andExpect(status().isNotFound());
+        mvc.perform(get(base(c) + "/events").cookie(admin)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void fileCarriesThePageCount() throws Exception {
+        Document c = caseDoc();
+        Document doc = Fixtures.documentIn(w.docs, company, project, "anexo");
+        w.docs.replacePages(doc.id(), java.util.List.of(
+                new com.e2d.odin.domain.document.DocumentPage(doc.id(), 1, "a", "stub", "1"),
+                new com.e2d.odin.domain.document.DocumentPage(doc.id(), 2, "b", "stub", "1")));
+        mvc.perform(post(base(c) + "/file/documents").cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentIds\":[\"" + doc.id().value() + "\"]}")).andExpect(status().isOk());
+
+        mvc.perform(get(base(c) + "/file").cookie(admin)).andExpect(jsonPath("$.documents[0].pageCount").value(2))
+                .andExpect(jsonPath("$.caseDocument.pageCount").value(1));
+    }
+
+    @Test
     void unmarkingACaseWithDocumentsIs409() throws Exception {
         Document c = caseDoc();
         Document doc = Fixtures.documentIn(w.docs, company, project, "anexo");

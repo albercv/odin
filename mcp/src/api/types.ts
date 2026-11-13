@@ -1296,6 +1296,8 @@ export interface components {
             filename: string;
             format: string;
             paginated: boolean;
+            /** Format: int32 */
+            pageCount: number;
             /** Format: uuid */
             uploadedBy: string;
             /** Format: date-time */
