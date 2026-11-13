@@ -1,0 +1,79 @@
+{
+ "byApproach": {
+  "main": {
+   "recall": 0.9677,
+   "accuracy": 0.8947,
+   "errors": 1
+  },
+  "synonyms": {
+   "recall": 0.9565,
+   "accuracy": 0.9419,
+   "errors": 0
+  },
+  "topic": {
+   "recall": 1.0,
+   "accuracy": 0.915,
+   "errors": 0
+  }
+ },
+ "cost": {
+  "notifiedUsd": 5.546,
+  "notifiedUsdFromRecords": 4.7681,
+  "unknownCostRecords": 0,
+  "strategyUsdPerAnswer": null,
+  "tokensPerAnswer": null,
+  "searchers": {
+   "usdPerAnswer": 0.1192,
+   "tokensPerAnswer": 1862945.6
+  },
+  "combiner": {
+   "usdPerAnswer": null,
+   "tokensPerAnswer": null
+  },
+  "judges": {
+   "usdPerAnswer": null,
+   "tokensPerAnswer": null
+  }
+ },
+ "agreementRuns": {
+  "inMajority": {
+   "runs": 619,
+   "accuracy": 0.9725
+  },
+  "outsideMajority": {
+   "runs": 135,
+   "accuracy": 0.6222
+  },
+  "failuresOutsideMajority": 0.75,
+  "byLevel": {
+   "atLeast60": {
+    "questions": 34,
+    "accuracy": 1.0
+   },
+   "below60": {
+    "questions": 6,
+    "accuracy": 0.6667
+   }
+  }
+ },
+ "origen": {
+  "Configuración": "barrido-40",
+  "Rama": "feature/calidad-recuperacion",
+  "Commit": "a3e4b2d8a086075037aa219e111d715d530b462d",
+  "Modo": "explore",
+  "Batería": "desarrollo",
+  "Archivos": "ficticio",
+  "Muestra": "40 (estrato tipo, semilla 7)",
+  "Preguntas": "40",
+  "Fecha": "2026-11-12T23:05"
+ },
+ "stopped": "Tope de gasto alcanzado: gastado 5.5460 USD de un tope de 5.5000 USD; 45 ejecuciones sin lanzar.",
+ "batches": [
+  {
+   "inicio": "2026-11-12T23:05:00",
+   "fin": "2026-11-12T23:55:12",
+   "motivo": "Tope de gasto alcanzado: gastado 5.5460 USD de un tope de 5.5000 USD; 45 ejecuciones sin lanzar.",
+   "llamadas_pago": 756
+  }
+ ]
+}

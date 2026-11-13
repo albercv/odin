@@ -1,0 +1,392 @@
+{
+ "byApproach": {
+  "main": {
+   "recall": 0.9677,
+   "accuracy": 0.895,
+   "errors": 0
+  },
+  "synonyms": {
+   "recall": 0.9677,
+   "accuracy": 0.94,
+   "errors": 0
+  },
+  "topic": {
+   "recall": 1.0,
+   "accuracy": 0.915,
+   "errors": 0
+  }
+ },
+ "cost": {
+  "notifiedUsd": 6.5633,
+  "notifiedUsdFromRecords": 1.0167,
+  "unknownCostRecords": 0,
+  "strategyUsdPerAnswer": null,
+  "tokensPerAnswer": null,
+  "searchers": {
+   "usdPerAnswer": 0.1445,
+   "tokensPerAnswer": 2259817.15
+  },
+  "combiner": {
+   "usdPerAnswer": null,
+   "tokensPerAnswer": null
+  },
+  "judges": {
+   "usdPerAnswer": null,
+   "tokensPerAnswer": null
+  }
+ },
+ "agreementRuns": {
+  "inMajority": {
+   "runs": 663,
+   "accuracy": 0.9698
+  },
+  "outsideMajority": {
+   "runs": 137,
+   "accuracy": 0.6277
+  },
+  "failuresOutsideMajority": 0.7183,
+  "byLevel": {
+   "atLeast60": {
+    "questions": 35,
+    "accuracy": 1.0
+   },
+   "below60": {
+    "questions": 5,
+    "accuracy": 0.6
+   }
+  }
+ },
+ "origen": {
+  "Configuración": "barrido-40",
+  "Rama": "feature/calidad-recuperacion",
+  "Commit": "a3e4b2d8a086075037aa219e111d715d530b462d",
+  "Modo": "explore",
+  "Batería": "desarrollo",
+  "Archivos": "ficticio",
+  "Muestra": "40 (estrato tipo, semilla 7)",
+  "Preguntas": "40",
+  "Fecha": "2026-11-13T03:12"
+ },
+ "stopped": null,
+ "batches": [
+  {
+   "inicio": "2026-11-13T03:12:15",
+   "fin": "2026-11-13T03:24:09",
+   "motivo": "completa",
+   "llamadas_pago": 167
+  }
+ ],
+ "curvas": {
+  "variacion": 0.0625,
+  "mezclas": [
+   {
+    "mix": {
+     "main": 2
+    },
+    "n": 2,
+    "accuracy_mean": 0.79125,
+    "accuracy_min": 0.675,
+    "accuracy_max": 0.85,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 167722.99,
+    "cost_mean": 0.0102075714625,
+    "latency_p50": 13.6,
+    "latency_p95": 24.0,
+    "tokens_by_class_mean": {
+     "entrada": 19.0925,
+     "salida": 3976.25,
+     "cache_lectura": 129094.69625,
+     "cache_creacion": 34632.95125
+    },
+    "supera_single": false
+   },
+   {
+    "mix": {
+     "main": 3
+    },
+    "n": 3,
+    "accuracy_mean": 0.8975,
+    "accuracy_min": 0.85,
+    "accuracy_max": 0.95,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 252750.445,
+    "cost_mean": 0.015395221137500002,
+    "latency_p50": 14.75,
+    "latency_p95": 26.2,
+    "tokens_by_class_mean": {
+     "entrada": 28.7975,
+     "salida": 6023.07125,
+     "cache_lectura": 194520.57625,
+     "cache_creacion": 52178.0
+    },
+    "supera_single": false
+   },
+   {
+    "mix": {
+     "main": 4
+    },
+    "n": 4,
+    "accuracy_mean": 0.8887499999999999,
+    "accuracy_min": 0.85,
+    "accuracy_max": 0.925,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 337094.4425,
+    "cost_mean": 0.02051476505,
+    "latency_p50": 15.3,
+    "latency_p95": 26.2,
+    "tokens_by_class_mean": {
+     "entrada": 38.38,
+     "salida": 8046.435,
+     "cache_lectura": 259548.505,
+     "cache_creacion": 69461.1225
+    },
+    "supera_single": false
+   },
+   {
+    "mix": {
+     "main": 5
+    },
+    "n": 5,
+    "accuracy_mean": 0.91375,
+    "accuracy_min": 0.85,
+    "accuracy_max": 0.95,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 421379.07,
+    "cost_mean": 0.025632423525,
+    "latency_p50": 15.6,
+    "latency_p95": 27.1,
+    "tokens_by_class_mean": {
+     "entrada": 47.985,
+     "salida": 10012.39625,
+     "cache_lectura": 324433.215,
+     "cache_creacion": 86885.47375
+    },
+    "supera_single": false
+   },
+   {
+    "mix": {
+     "main": 1,
+     "topic": 1,
+     "synonyms": 1
+    },
+    "n": 3,
+    "accuracy_mean": 0.89375,
+    "accuracy_min": 0.825,
+    "accuracy_max": 0.95,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 316440.0275,
+    "cost_mean": 0.020466807400000002,
+    "latency_p50": 18.0,
+    "latency_p95": 32.1,
+    "tokens_by_class_mean": {
+     "entrada": 29.0025,
+     "salida": 7615.22875,
+     "cache_lectura": 238535.6525,
+     "cache_creacion": 70260.14375
+    },
+    "supera_single": false
+   },
+   {
+    "mix": {
+     "main": 2,
+     "topic": 1,
+     "synonyms": 1
+    },
+    "n": 4,
+    "accuracy_mean": 0.90625,
+    "accuracy_min": 0.85,
+    "accuracy_max": 0.95,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 399097.0775,
+    "cost_mean": 0.0257865403125,
+    "latency_p50": 18.0,
+    "latency_p95": 31.8,
+    "tokens_by_class_mean": {
+     "entrada": 38.605,
+     "salida": 9667.95,
+     "cache_lectura": 302508.78125,
+     "cache_creacion": 86881.74125
+    },
+    "supera_single": false
+   },
+   {
+    "mix": {
+     "main": 3,
+     "topic": 1,
+     "synonyms": 1
+    },
+    "n": 5,
+    "accuracy_mean": 0.925,
+    "accuracy_min": 0.875,
+    "accuracy_max": 0.975,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 486719.9625,
+    "cost_mean": 0.030949979075,
+    "latency_p50": 18.1,
+    "latency_p95": 30.61,
+    "tokens_by_class_mean": {
+     "entrada": 48.385,
+     "salida": 11662.94125,
+     "cache_lectura": 370136.17,
+     "cache_creacion": 104872.46625
+    },
+    "supera_single": false
+   },
+   {
+    "mix": {
+     "main": 10,
+     "topic": 5,
+     "synonyms": 5
+    },
+    "n": 20,
+    "accuracy_mean": 0.95,
+    "accuracy_min": 0.95,
+    "accuracy_max": 0.95,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 2008101.325,
+    "cost_mean": 0.12907873225000002,
+    "latency_p50": 20.9,
+    "latency_p95": 39.945,
+    "tokens_by_class_mean": {
+     "entrada": 193.35,
+     "salida": 48235.25,
+     "cache_lectura": 1522009.725,
+     "cache_creacion": 437663.0
+    },
+    "supera_single": true
+   },
+   {
+    "mix": {
+     "main": 1
+    },
+    "n": 1,
+    "accuracy_mean": 0.8887499999999999,
+    "accuracy_min": 0.825,
+    "accuracy_max": 0.95,
+    "invalidDraws": 0,
+    "measuredPairs": 800,
+    "valid": true,
+    "tokens_mean": 84617.9125,
+    "cost_mean": 0.005132281675,
+    "latency_p50": 12.7,
+    "latency_p95": 23.1,
+    "tokens_by_class_mean": {
+     "entrada": 9.63,
+     "salida": 2021.43875,
+     "cache_lectura": 65246.155,
+     "cache_creacion": 17340.68875
+    },
+    "supera_single": null
+   }
+  ],
+  "single": [
+   {
+    "mix": {
+     "main": 1
+    },
+    "n": 1,
+    "accuracy_mean": 0.925,
+    "accuracy_min": 0.925,
+    "accuracy_max": 0.925,
+    "invalidDraws": 0,
+    "measuredPairs": 40,
+    "valid": true,
+    "tokens_mean": 80554.65,
+    "cost_mean": 0.0049993615,
+    "latency_p50": 12.4,
+    "latency_p95": 18.815,
+    "tokens_by_class_mean": {
+     "entrada": 9.35,
+     "salida": 1970.225,
+     "cache_lectura": 61587.9,
+     "cache_creacion": 16987.175
+    },
+    "max_turns": 10
+   },
+   {
+    "mix": {
+     "main": 1
+    },
+    "n": 1,
+    "accuracy_mean": 0.8717948717948718,
+    "accuracy_min": 0.8717948717948718,
+    "accuracy_max": 0.8717948717948718,
+    "invalidDraws": 1,
+    "measuredPairs": 39,
+    "valid": true,
+    "tokens_mean": 82760.56410256411,
+    "cost_mean": 0.005041378974358975,
+    "latency_p50": 12.6,
+    "latency_p95": 21.74,
+    "tokens_by_class_mean": {
+     "entrada": 9.64102564102564,
+     "salida": 2010.2051282051282,
+     "cache_lectura": 63751.743589743586,
+     "cache_creacion": 16988.97435897436
+    },
+    "max_turns": 20
+   },
+   {
+    "mix": {
+     "main": 1
+    },
+    "n": 1,
+    "accuracy_mean": 0.875,
+    "accuracy_min": 0.875,
+    "accuracy_max": 0.875,
+    "invalidDraws": 0,
+    "measuredPairs": 40,
+    "valid": true,
+    "tokens_mean": 84500.4,
+    "cost_mean": 0.00518324525,
+    "latency_p50": 11.95,
+    "latency_p95": 24.79,
+    "tokens_by_class_mean": {
+     "entrada": 9.55,
+     "salida": 2050.575,
+     "cache_lectura": 64900.275,
+     "cache_creacion": 17540.0
+    },
+    "max_turns": 40
+   }
+  ],
+  "single_por_defecto": {
+   "mix": {
+    "main": 1
+   },
+   "n": 1,
+   "accuracy_mean": 0.8887499999999999,
+   "accuracy_min": 0.825,
+   "accuracy_max": 0.95,
+   "invalidDraws": 0,
+   "measuredPairs": 800,
+   "valid": true,
+   "tokens_mean": 84617.9125,
+   "cost_mean": 0.005132281675,
+   "latency_p50": 12.7,
+   "latency_p95": 23.1,
+   "tokens_by_class_mean": {
+    "entrada": 9.63,
+    "salida": 2021.43875,
+    "cache_lectura": 65246.155,
+    "cache_creacion": 17340.68875
+   }
+  }
+ }
+}

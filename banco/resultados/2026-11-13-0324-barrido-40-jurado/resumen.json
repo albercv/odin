@@ -1,0 +1,204 @@
+{
+ "byApproach": {
+  "main": {
+   "recall": 0.9677,
+   "accuracy": 0.895,
+   "errors": 0
+  },
+  "synonyms": {
+   "recall": 0.9677,
+   "accuracy": 0.94,
+   "errors": 0
+  },
+  "topic": {
+   "recall": 1.0,
+   "accuracy": 0.915,
+   "errors": 0
+  }
+ },
+ "cost": {
+  "notifiedUsd": 0.4325,
+  "notifiedUsdFromRecords": 0.4324,
+  "unknownCostRecords": 0,
+  "strategyUsdPerAnswer": 0.1357,
+  "tokensPerAnswer": 2122675.675,
+  "searchers": {
+   "usdPerAnswer": 0.1291,
+   "tokensPerAnswer": 2008101.325
+  },
+  "combiner": {
+   "usdPerAnswer": 0.0067,
+   "tokensPerAnswer": 90367.9
+  },
+  "judges": {
+   "usdPerAnswer": 0.0041,
+   "tokensPerAnswer": 24206.45
+  }
+ },
+ "agreementRuns": {
+  "inMajority": {
+   "runs": 663,
+   "accuracy": 0.9698
+  },
+  "outsideMajority": {
+   "runs": 137,
+   "accuracy": 0.6277
+  },
+  "failuresOutsideMajority": 0.7183,
+  "byLevel": {
+   "atLeast60": {
+    "questions": 35,
+    "accuracy": 1.0
+   },
+   "below60": {
+    "questions": 5,
+    "accuracy": 0.6
+   }
+  }
+ },
+ "notMeasured": 0,
+ "accuracy": {
+  "correct": 38,
+  "total": 40,
+  "rate": 0.95,
+  "wilson": [
+   0.835,
+   0.9862
+  ]
+ },
+ "byType": {
+  "dato_concreto": {
+   "correct": 6,
+   "total": 6
+  },
+  "version": {
+   "correct": 4,
+   "total": 4
+  },
+  "aislamiento": {
+   "correct": 4,
+   "total": 4
+  },
+  "casos_parecidos": {
+   "correct": 4,
+   "total": 4
+  },
+  "contradiccion": {
+   "correct": 3,
+   "total": 4
+  },
+  "ficha": {
+   "correct": 3,
+   "total": 4
+  },
+  "identificador": {
+   "correct": 4,
+   "total": 4
+  },
+  "lista_completa": {
+   "correct": 4,
+   "total": 4
+  },
+  "sin_fuente": {
+   "correct": 3,
+   "total": 3
+  },
+  "vocabulario": {
+   "correct": 3,
+   "total": 3
+  }
+ },
+ "graveFailures": {
+  "leaks": 0,
+  "inventedCitations": 0,
+  "falseNoConsta": 0,
+  "supersededAsCurrent": 0
+ },
+ "agreement": {
+  "20": {
+   "questions": 17,
+   "accuracy": 1.0
+  },
+  "19": {
+   "questions": 4,
+   "accuracy": 1.0
+  },
+  "18": {
+   "questions": 1,
+   "accuracy": 0.0
+  },
+  "17": {
+   "questions": 2,
+   "accuracy": 1.0
+  },
+  "16": {
+   "questions": 4,
+   "accuracy": 1.0
+  },
+  "15": {
+   "questions": 1,
+   "accuracy": 1.0
+  },
+  "14": {
+   "questions": 3,
+   "accuracy": 0.6667
+  },
+  "13": {
+   "questions": 3,
+   "accuracy": 1.0
+  },
+  "11": {
+   "questions": 1,
+   "accuracy": 1.0
+  },
+  "9": {
+   "questions": 1,
+   "accuracy": 1.0
+  },
+  "8": {
+   "questions": 1,
+   "accuracy": 1.0
+  },
+  "7": {
+   "questions": 1,
+   "accuracy": 1.0
+  },
+  "4": {
+   "questions": 1,
+   "accuracy": 1.0
+  }
+ },
+ "judges": {
+  "kappa": -0.1041,
+  "falseAcceptRate": 1.0,
+  "falseRejectRate": 0.2258,
+  "undecided": 7,
+  "ppi": null,
+  "notJudgedNoConsta": 7,
+  "manualReview": []
+ },
+ "latency": {
+  "p50": 61.9,
+  "p95": 144.9
+ },
+ "origen": {
+  "Configuración": "barrido-40-jurado",
+  "Rama": "feature/calidad-recuperacion",
+  "Commit": "a3e4b2d8a086075037aa219e111d715d530b462d",
+  "Modo": "explore",
+  "Batería": "desarrollo",
+  "Archivos": "ficticio",
+  "Muestra": "40 (estrato tipo, semilla 7)",
+  "Preguntas": "40",
+  "Fecha": "2026-11-13T03:24"
+ },
+ "stopped": null,
+ "batches": [
+  {
+   "inicio": "2026-11-13T03:24:16",
+   "fin": "2026-11-13T03:48:18",
+   "motivo": "completa",
+   "llamadas_pago": 140
+  }
+ ]
+}
