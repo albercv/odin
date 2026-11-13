@@ -32,6 +32,25 @@ describe('conector neutro (D-084)', () => {
     expect(d).toContain('sin decir qué son');
   });
 
+  it('listProjects no trae ejemplos entre paréntesis de qué son los proyectos', async () => {
+    const { tools } = await descriptions();
+    const d = tools.find((t) => t.name === 'listProjects')!.description!;
+    expect(d).not.toContain('(un cliente');
+    expect(d).not.toMatch(/comunidad/i);
+    expect(d).not.toMatch(/\(/);
+    expect(d).toContain('no pongas ejemplos de qué pueden ser');
+  });
+
+  it('ninguna descripción de proyecto trae ejemplos de tipo ni «comunidad» (D-091)', async () => {
+    const { tools } = await descriptions();
+    for (const name of ['listProjects', 'searchKnowledge', 'listDocuments']) {
+      const d = tools.find((t) => t.name === name)!.description!;
+      expect(d, name).not.toMatch(/comunidad/i);
+      expect(d, name).not.toMatch(/\(un cliente/);
+      expect(d, name).toContain('una de las unidades con las que la empresa organiza su trabajo en Odín');
+    }
+  });
+
   it('INSTRUCTIONS cabe en 2.200 caracteres', () => {
     expect(INSTRUCTIONS.length).toBeLessThanOrEqual(2200);
   });
