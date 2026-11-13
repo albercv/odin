@@ -125,6 +125,10 @@ Para probar Odín desde Claude Desktop con datos ficticios. Las órdenes actúan
 | `make mcp-claude-desktop [TRABAJADOR=marta\|javier\|ignacio]` | Compila `mcp/` de la copia desde la que se lanza y lo copia en `data/mcp-claude-desktop/`. Añade o actualiza solo la entrada `odin` de `~/Library/Application Support/Claude/claude_desktop_config.json`, con copia previa en `data/copias/`, apuntando a esa copia del MCP: recompilar o cambiar de rama no cambia el MCP de Claude Desktop. Usa la clave de ese trabajador sin mostrarla (por defecto, `marta`). Después hay que reiniciar Claude Desktop |
 | `make instalacion-restaurar COPIA=data/copias/odin-….sql CONFIRMAR=BORRAR` | Vuelve a una copia, con sus originales. Antes copia lo que hay |
 
+**Carga completa:** `make datos-prueba-cargar ARCHIVO=completo` carga todo el archivo ficticio: 2 empresas, 94 proyectos, 1.236 documentos, 300 fichas con su estado, las parejas de sustitución, los 8 trabajadores con sus proyectos y un administrador de Ribera con contraseña (en el panel solo ve su empresa). 30 documentos de Ribera (semilla 13) se suben como PDF escaneado, fabricado con ImageMagick en `data/datos-prueba/escaneos/` y reutilizado después; sin lector OCR esperan, y sin `magick` se cargan los `.txt` con un aviso. Deja también el mapa ruta → `documentId` en `data/datos-prueba/mapa-ids.local.json` (600). Sin `ARCHIVO`, la carga es la pequeña de siempre.
+
+**Recuento:** `make datos-prueba-recuento` cuenta en la base (SQL con el dueño) y escribe tablas Markdown: empresas, proyectos, personas por papel, proyectos que ve cada trabajador, documentos por formato y estado, páginas por lector, fichas, casos, sustituidos, temas y, si existe `case_file_entry`, expedientes. Las contradicciones sembradas las cuenta de `claves.json`: no están en la base.
+
 Orden habitual: reiniciar, cargar y registrar. Para probar el aislamiento, vuelve a registrar con otro trabajador y reinicia Claude Desktop.
 
 **Qué se carga** (sale del archivo ficticio de `experimentos/2026-11-12-archivo-ficticio/`):
