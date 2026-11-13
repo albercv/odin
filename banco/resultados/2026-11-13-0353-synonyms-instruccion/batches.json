@@ -1,0 +1,14 @@
+[
+ {
+  "inicio": "2026-11-13T03:53:47",
+  "fin": "2026-11-13T04:24:12",
+  "motivo": "cuota o límite en Q153: You've hit your 5-hour limit · resets 8am (Europe/Madrid)",
+  "llamadas_pago": 460
+ },
+ {
+  "inicio": "2026-11-13T08:02:39",
+  "fin": "2026-11-13T09:29:58",
+  "motivo": "completa",
+  "llamadas_pago": 840
+ }
+]
