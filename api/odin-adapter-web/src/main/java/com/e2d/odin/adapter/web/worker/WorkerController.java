@@ -4,6 +4,7 @@ import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
+import com.e2d.odin.application.link.IssueOriginalLink;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.organization.DescribeMe;
 import com.e2d.odin.application.search.ListDocuments;
@@ -48,10 +49,12 @@ public class WorkerController {
     private final SaveKnowledgeCard saveCard;
     private final ListMyKnowledgeCards listMyCards;
     private final ListMyQuestions listMyQuestions;
+    private final IssueOriginalLink issueOriginalLink;
 
     public WorkerController(DescribeMe describeMe, SearchKnowledge search, FindSimilarCases findSimilarCases,
             ListDocuments listDocuments, ReadPage readPage, VerifyCitation verifyCitation,
-            SaveKnowledgeCard saveCard, ListMyKnowledgeCards listMyCards, ListMyQuestions listMyQuestions) {
+            SaveKnowledgeCard saveCard, ListMyKnowledgeCards listMyCards, ListMyQuestions listMyQuestions,
+            IssueOriginalLink issueOriginalLink) {
         this.describeMe = describeMe;
         this.search = search;
         this.findSimilarCases = findSimilarCases;
@@ -61,6 +64,7 @@ public class WorkerController {
         this.saveCard = saveCard;
         this.listMyCards = listMyCards;
         this.listMyQuestions = listMyQuestions;
+        this.issueOriginalLink = issueOriginalLink;
     }
 
     @GetMapping("/v1/me")
@@ -99,6 +103,14 @@ public class WorkerController {
     public Responses.Page page(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID documentId,
             @PathVariable int pageNumber) {
         return Responses.Page.from(readPage.execute(actor, new DocumentId(documentId), pageNumber));
+    }
+
+    @PostMapping("/v1/documents/{documentId}/original-links")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Responses.IssuedLink originalLink(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId, @RequestBody(required = false) Requests.OriginalLinkRequest request) {
+        Optional<Integer> page = Optional.ofNullable(request).map(Requests.OriginalLinkRequest::page);
+        return Responses.IssuedLink.from(issueOriginalLink.execute(actor, new DocumentId(documentId), page));
     }
 
     @PostMapping("/v1/citations/verify")

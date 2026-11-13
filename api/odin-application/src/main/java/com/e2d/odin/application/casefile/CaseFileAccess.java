@@ -21,9 +21,9 @@ import java.util.Optional;
  * Qué ve quien toca un expediente: el trabajador, los proyectos que ve de su empresa; el administrador, todos los de
  * su empresa. Un documento que no se ve es un 404, igual que uno que no existe.
  */
-record CaseFileAccess(CompanyScope scope, ProjectVisibility visibility) {
+public record CaseFileAccess(CompanyScope scope, ProjectVisibility visibility) {
 
-    static CaseFileAccess of(Actor actor, Optional<CompanyId> adminCompany, OrganizationRepository organizations,
+    public static CaseFileAccess of(Actor actor, Optional<CompanyId> adminCompany, OrganizationRepository organizations,
             ProjectMemberRepository projectMembers) {
         if (actor.role() == Role.WORKER) {
             var granted = WorkerAccess.require(actor, organizations, projectMembers, Capability.CASE_FILES);
@@ -35,12 +35,12 @@ record CaseFileAccess(CompanyScope scope, ProjectVisibility visibility) {
                 ProjectVisibility.all());
     }
 
-    Document document(DocumentRepository documents, DocumentId id) {
+    public Document document(DocumentRepository documents, DocumentId id) {
         return documents.findById(scope, visibility, id).filter(d -> d.withdrawnAt().isEmpty())
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
     }
 
-    Document caseDocument(DocumentRepository documents, DocumentId id) {
+    public Document caseDocument(DocumentRepository documents, DocumentId id) {
         return documents.findById(scope, visibility, id).filter(d -> d.caseDocument() && d.withdrawnAt().isEmpty())
                 .orElseThrow(() -> new NotFoundException("Caso no encontrado"));
     }

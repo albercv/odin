@@ -4,6 +4,7 @@ import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.domain.casefile.CaseFileAction;
 import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.casefile.CaseFileEvent;
+import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -59,6 +60,15 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
                 }
             }
             return added;
+        });
+    }
+
+    @Override
+    public void addNewDocument(Document document, CaseFileEntry entry, CaseFileEvent event) {
+        tx.runInScope(CompanyScope.of(document.companyId()), ProjectVisibility.all(), jdbc -> {
+            PostgresDocumentRepository.upsert(jdbc, document);
+            insertEntry(jdbc, entry);
+            insertEvent(jdbc, event);
         });
     }
 
