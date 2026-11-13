@@ -4303,7 +4303,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "action", "actorId", "at", "documentId", "documentTitle", "id" ]
+        "required" : [ "action", "actorId", "at", "documentId", "id" ]
       }
     }
   }

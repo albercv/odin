@@ -432,7 +432,7 @@ public final class Responses {
     public record UploadReceipt(String filename) {
     }
 
-    public record CaseFileEventView(UUID id, UUID documentId, String documentTitle, String action, UUID actorId,
+    public record CaseFileEventView(UUID id, UUID documentId, @Nullable String documentTitle, String action, UUID actorId,
             Instant at) {
         public static CaseFileEventView from(ListCaseFileEvents.Line line) {
             CaseFileEvent e = line.event();

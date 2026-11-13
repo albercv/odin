@@ -279,3 +279,12 @@ test('detailOffersTheOriginalDownload', async () => {
   const dialog = screen.getByRole('dialog', { name: 'Póliza 2022' });
   expect(within(dialog).getByRole('link', { name: 'Descargar original' })).toHaveAttribute('href', '/v1/admin/documents/d1/original');
 });
+
+test('withdrawnViewHasNoSelectionNorCaseLink', async () => {
+  const gone = { ...old, caseDocument: true, withdrawnAt: '2026-11-13T10:00:00Z' };
+  show(routes([], { [withdrawnList]: () => [gone] }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Retirados' }));
+  await screen.findByText('Póliza 2022');
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  expect(screen.queryByRole('link', { name: /Ver expediente/ })).toBeNull();
+});

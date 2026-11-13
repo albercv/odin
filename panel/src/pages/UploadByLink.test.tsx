@@ -45,3 +45,10 @@ test('invalidOrExpiredLinkShowsOnlyAMessage', async () => {
   expect(screen.queryByText('Caso')).toBeNull();
   expect(screen.queryByLabelText('Elegir ficheros')).toBeNull();
 });
+
+test('tokenIsEncodedInThePaths', async () => {
+  const calls = mockFetch({ 'GET /v1/upload-links/a%2Fb%3Fc': () => ok });
+  render(<UploadByLink token="a/b?c" />);
+  expect(await screen.findByText('Expte 2024/017')).toBeInTheDocument();
+  expect(calls[0]?.key).toBe('GET /v1/upload-links/a%2Fb%3Fc');
+});

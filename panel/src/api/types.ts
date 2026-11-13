@@ -1651,7 +1651,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             documentId: string;
-            documentTitle: string;
+            documentTitle?: string;
             action: string;
             /** Format: uuid */
             actorId: string;

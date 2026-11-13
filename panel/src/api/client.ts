@@ -50,11 +50,11 @@ async function allDocuments(companyId: string, withdrawn = false) {
 export const originalUrl = (documentId: string) => `${a}/documents/${documentId}/original`;
 
 export const uploadLinks = {
-  info: (token: string) => request<S['UploadLinkInfo']>('GET', `/v1/upload-links/${token}`, undefined, true),
+  info: (token: string) => request<S['UploadLinkInfo']>('GET', `/v1/upload-links/${encodeURIComponent(token)}`, undefined, true),
   upload: (token: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    return request<S['UploadReceipt']>('POST', `/v1/upload-links/${token}/documents`, form, true);
+    return request<S['UploadReceipt']>('POST', `/v1/upload-links/${encodeURIComponent(token)}/documents`, form, true);
   },
 };
 

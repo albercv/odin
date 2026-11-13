@@ -51,9 +51,9 @@ function DocRow({ d, scannedDocumentsSupported, selected, onSelect, ...handlers 
   return (
     <Tr>
       <Td label="Título">
-        <input type="checkbox" className={styles.select} aria-label={`Seleccionar ${d.title}`} checked={selected} onChange={onSelect} />
+        {!d.withdrawnAt && <input type="checkbox" className={styles.select} aria-label={`Seleccionar ${d.title}`} checked={selected} onChange={onSelect} />}
         {d.title}
-        {d.caseDocument && <> <StatusPill tone="ok">Caso</StatusPill> <a href={`/casos/${d.id}?empresa=${d.companyId}`} aria-label={`Ver expediente de ${d.title}`}>Ver expediente</a></>}
+        {d.caseDocument && <> <StatusPill tone="ok">Caso</StatusPill> {!d.withdrawnAt && <a href={`/casos/${d.id}?empresa=${d.companyId}`} aria-label={`Ver expediente de ${d.title}`}>Ver expediente</a>}</>}
         {d.supersededBy && <div className={styles.superseded}><StatusPill tone="off">Sustituido</StatusPill><span>{`por ${d.supersededBy.title}`}</span></div>}
       </Td>
       <Td label="Estado">
