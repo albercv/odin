@@ -35,6 +35,17 @@ def write_archive(datos, empresa, **overrides):
     (datos / "bateria.json").write_text(json.dumps([{"id": f"{empresa}-Q1"}]), encoding="utf-8")
 
 
+def write_expedientes(datos, caso, documentos):
+    """Expediente falso: un caso con sus documentos, en expedientes.json y en la carpeta expedientes/ de la capa."""
+    case = {"caso": caso, "proyecto": None, "documentos": documentos, "compartidos": [], "ajenos": [],
+            "formas_numero": [], "sustituciones": []}
+    (datos / "expedientes.json").write_text(json.dumps([case], ensure_ascii=False), encoding="utf-8")
+    for ruta in documentos:
+        fichero = datos / "expedientes" / ruta
+        fichero.parent.mkdir(parents=True, exist_ok=True)
+        fichero.write_text("=== Página 1 ===\nTexto del expediente\n", encoding="utf-8")
+
+
 def make_layout(root):
     return Layout(banco=root / "banco", exp=root / "exp", state_dir=root / "estado", results_dir=root / "resultados",
                   cache=root / "cache", repo=root, claude_bin="x", claude_judge_bin="x", ollama_url="", timeout=1)
@@ -168,6 +179,55 @@ class ArchivesTest(unittest.TestCase):
             code = capas.main(["fusionar", "--archivos", "publico"], layout=self.layout)
         self.assertEqual(code, 1)
         self.assertIn("capa no disponible todavía: publico", errors.getvalue())
+
+
+class ExpedientesMergeTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.ficticio = self.root / "ficticio"
+        self.generalidad = self.root / "generalidad"
+        write_archive(self.ficticio, "ribera")
+        write_archive(self.generalidad, "brumeral")
+        self.out = self.root / "fusion"
+
+    def test_expedientes_are_concatenated_and_copied(self):
+        write_expedientes(self.ficticio, "ribera-C1", ["ribera/proyecto/c1.txt"])
+        write_expedientes(self.generalidad, "brumeral-C1", ["brumeral/proyecto/c1.txt"])
+        capas.merge([self.ficticio, self.generalidad], self.out)
+        cases = json.loads((self.out / "expedientes.json").read_text(encoding="utf-8"))
+        self.assertEqual([c["caso"] for c in cases], ["ribera-C1", "brumeral-C1"])
+        copied = self.out / "expedientes" / "brumeral" / "proyecto" / "c1.txt"
+        self.assertTrue(copied.is_file())
+        self.assertFalse(copied.is_symlink())
+
+    def test_layers_without_expedientes_write_nothing(self):
+        capas.merge([self.ficticio, self.generalidad], self.out)
+        self.assertFalse((self.out / "expedientes.json").exists())
+        self.assertFalse((self.out / "expedientes").exists())
+
+    def test_repeated_caso_is_refused(self):
+        write_expedientes(self.ficticio, "ribera-C1", ["ribera/proyecto/c1.txt"])
+        write_expedientes(self.generalidad, "ribera-C1", ["brumeral/proyecto/c1.txt"])
+        with self.assertRaisesRegex(ArchivoError, "clave repetida en expedientes: ribera-C1"):
+            capas.merge([self.ficticio, self.generalidad], self.out)
+
+    def test_repeated_expediente_file_is_refused(self):
+        write_expedientes(self.ficticio, "ribera-C1", ["ribera/proyecto/c1.txt"])
+        write_expedientes(self.generalidad, "brumeral-C1", ["ribera/proyecto/c1.txt"])
+        with self.assertRaisesRegex(ArchivoError, re.escape("fichero repetido en los expedientes: ribera/proyecto/c1.txt")):
+            capas.merge([self.ficticio, self.generalidad], self.out)
+
+
+class ExpedienteBatteryTest(unittest.TestCase):
+    def test_expediente_battery_is_in_generalidad_and_needs_both_archives(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        layout = make_layout(Path(tmp.name))
+        self.assertEqual(capas.battery_file(layout, "generalidad-expediente"),
+                         layout.banco / "archivos" / "generalidad" / "datos" / "bateria-expediente.json")
+        self.assertEqual(capas.BATTERIES["generalidad-expediente"].requires, ("ficticio", "generalidad"))
 
 
 if __name__ == "__main__":

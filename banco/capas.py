@@ -45,6 +45,7 @@ BATTERIES = {
     "desarrollo": Battery("ficticio", "bateria.json", ("ficticio",)),
     "conector": Battery("ficticio", "bateria-conector.json", ("ficticio",)),
     "generalidad": Battery("generalidad", "bateria.json", ("ficticio", "generalidad")),
+    "generalidad-expediente": Battery("generalidad", "bateria-expediente.json", ("ficticio", "generalidad")),
 }
 
 
@@ -96,17 +97,31 @@ def _check_unique(rows, field, section):
         seen.add(row[field])
 
 
-def _copy_corpus(source, target):
-    source = Path(source)
-    if not source.is_dir():
-        raise ArchivoError(f"falta el corpus: {source}")
-    for path in sorted(source.rglob("*")):
+def _copy_tree(source, target, label):
+    for path in sorted(Path(source).rglob("*")):
         if path.is_file():
             dest = target / path.relative_to(source)
             if dest.exists():
-                raise ArchivoError(f"fichero repetido en el corpus: {dest.relative_to(target)}")
+                raise ArchivoError(f"fichero repetido en {label}: {dest.relative_to(target)}")
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(path, dest)
+
+
+def _copy_corpus(source, target):
+    if not Path(source).is_dir():
+        raise ArchivoError(f"falta el corpus: {source}")
+    _copy_tree(source, target, "el corpus")
+
+
+def _build_expedientes(data_dirs, target):
+    files = [Path(d) / "expedientes.json" for d in data_dirs if (Path(d) / "expedientes.json").is_file()]
+    if files:
+        cases = [case for f in files for case in _read_json(f)]
+        _check_unique(cases, "caso", "expedientes")
+        _write_json(target / "expedientes.json", cases)
+    for d in data_dirs:
+        if (Path(d) / "expedientes").is_dir():
+            _copy_tree(Path(d) / "expedientes", target / "expedientes", "los expedientes")
 
 
 def _check_corpus(documents, corpus):
@@ -127,6 +142,7 @@ def _build(data_dirs, target):
     for d in data_dirs:
         _copy_corpus(Path(d) / "corpus", target / "corpus")
     _check_corpus(rows["documentos"], target / "corpus")
+    _build_expedientes(data_dirs, target)
 
 
 def merge(data_dirs, out_dir):

@@ -9,13 +9,25 @@ NOT_FOUND = "(no encontrado)"
 
 
 def build_context(data_dir, stack):
-    """Contexto del puntuador como puntuar.main: corpus, manifiesto y mapas de ids (de carga.json o de ids.json)."""
+    """Contexto del puntuador como puntuar.main: corpus, manifiesto y mapas de ids (de carga.json o de ids.json).
+    Los expedientes (si los hay) suman sus páginas al corpus y sus documentos sustituidos a los superados."""
     data_dir = Path(data_dir)
     corpus = puntuar.load_corpus(data_dir / "corpus")
+    if (data_dir / "expedientes").is_dir():
+        corpus |= puntuar.load_corpus(data_dir / "expedientes")
     manifest = json.loads((data_dir / "manifiesto.json").read_text(encoding="utf-8"))
     key_rows = json.loads((data_dir / "claves.json").read_text(encoding="utf-8"))
     superseded = {old for old, _ in sustituciones.parejas(key_rows, manifest)}
+    superseded |= _expediente_superseded(data_dir)
     return puntuar.Contexto(corpus, manifest, stack["doc_ruta"], stack["ficha_f"], superseded)
+
+
+def _expediente_superseded(data_dir):
+    path = data_dir / "expedientes.json"
+    if not path.is_file():
+        return set()
+    cases = json.loads(path.read_text(encoding="utf-8"))
+    return {old for case in cases for old, _ in case.get("sustituciones", [])}
 
 
 def ids_by_path(doc_paths):

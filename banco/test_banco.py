@@ -762,6 +762,41 @@ class SeveralArchivesTest(Harness):
         self.assertIn("bateria-conector.json", errors.getvalue())
 
 
+class ExpedientesCheckTest(unittest.TestCase):
+    """La batería de expedientes exige sus documentos cargados en la pila; las partes ajenas no cuentan."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.folder = Path(tmp.name)
+        (self.folder / "manifiesto.json").write_text(json.dumps({"documentos": [], "fichas": []}), encoding="utf-8")
+        self.cfg = SimpleNamespace(archives=("ficticio", "generalidad"), batteries=("desarrollo", "generalidad-expediente"))
+        self.stack = {"doc_ruta": {"doc-1": "a/x.txt"}, "ficha_f": {}}
+
+    def write_expedientes(self, documentos, ajenos=()):
+        case = {"caso": "a-C1", "proyecto": None, "documentos": list(documentos), "compartidos": [], "ajenos": list(ajenos),
+                "formas_numero": [], "sustituciones": []}
+        (self.folder / "expedientes.json").write_text(json.dumps([case]), encoding="utf-8")
+
+    def test_expediente_documents_loaded_pass(self):
+        self.write_expedientes(["a/x.txt"])
+        run._check_loaded(self.folder, self.stack, self.cfg)
+
+    def test_expediente_document_not_loaded_is_refused_with_loader_hint(self):
+        self.write_expedientes(["a/y.txt"])
+        with self.assertRaisesRegex(ConfigError, re.escape("ARCHIVOS=ficticio,generalidad EXPEDIENTES=1")):
+            run._check_loaded(self.folder, self.stack, self.cfg)
+
+    def test_ajenos_are_not_required(self):
+        self.write_expedientes(["a/x.txt"], ajenos=["b/senuelo.txt"])
+        run._check_loaded(self.folder, self.stack, self.cfg)
+
+    def test_expediente_documents_are_not_required_without_their_battery(self):
+        self.write_expedientes(["a/y.txt"])
+        cfg = SimpleNamespace(archives=("ficticio",), batteries=("desarrollo",))
+        run._check_loaded(self.folder, self.stack, cfg)
+
+
 TURNO = str(BANCO / "fakes" / "fake_claude_turno.py")
 
 
