@@ -167,6 +167,25 @@ class MultipartTest(unittest.TestCase):
 
 
 
+class ExpedientesTest(unittest.TestCase):
+
+    def cuentas(self, **cambios):
+        return {"subidos": 118, "añadidos": 134, "omitidos": 0, "omitidos_casos": [], "errores": [], "pendientes": []} | cambios
+
+    def test_resumenConLasCuentas(self):
+        self.assertEqual("Expedientes: 134 documentos asignados (118 subidos).", dp.resumen_expedientes(self.cuentas()))
+
+    def test_resumenConOmitidosYPendientes(self):
+        r = dp.resumen_expedientes(self.cuentas(omitidos_casos=[{"caso": "a/caso.txt", "motivo": "no es caso"}],
+                                                pendientes=[{"viejo": "v", "nuevo": "n"}]))
+        self.assertIn("omitidos: a/caso.txt (no es caso)", r)
+        self.assertIn("1 sustituciones sin hacer", r)
+
+    def test_unErrorEnUnExpedienteParaLaCarga(self):
+        with self.assertRaises(RuntimeError):
+            dp.resumen_expedientes(self.cuentas(errores=[{"caso": "a/caso.txt", "error": "500"}]))
+
+
 class CarpetaDeDatosTest(unittest.TestCase):
 
     def test_laInstalacionOdinUsaData(self):
