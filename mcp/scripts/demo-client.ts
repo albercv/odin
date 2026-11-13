@@ -107,10 +107,12 @@ async function searchAsA(key: string, docId: string): Promise<{ hit: Hit; verifi
     if (!hit) throw new Error('ningún resultado es del PDF subido con texto de la póliza');
     // el extracto puede traer elipsis de recorte; se cita lo que hay entre ellas
     const quote = hit.excerpt.replace(/[…[\]]|\.\.\./g, ' ').split(/\s{2,}/).sort((a, b) => b.length - a.length)[0]!.trim();
-    const v = JSON.parse(await call('verifyCitation', { documentId: hit.documentId, pageNumber: hit.pageNumber, quote })) as { verified: boolean };
-    return { hit, verified: v.verified === true };
+    const v = JSON.parse(await call('verifyCitation', { citations: [{ documentId: hit.documentId, pageNumber: hit.pageNumber, quote }] })) as Verified;
+    return { hit, verified: v.results[0]?.verified === true };
   });
 }
+
+type Verified = { results: { verified: boolean }[] };
 
 async function closedProjectStep(): Promise<void> {
   const c = await createCompany('Empresa C', 'EC');
@@ -263,8 +265,8 @@ async function readCitedStep(key: string, caseId: string, ids: Record<string, st
     const text = JSON.parse(await call('readCaseFile', { caseId })) as CaseFileText;
     const page = text.pages.find((p) => p.documentId === ids['Informe del perito'] && p.text.includes('Mario Ficticio Lorente'));
     check(!!page, 'Paso 14b: readCaseFile devuelve el texto del informe del perito');
-    const v = JSON.parse(await call('verifyCitation', { documentId: page!.documentId, pageNumber: page!.pageNumber, quote: 'Mario Ficticio Lorente' })) as { verified: boolean };
-    check(v.verified === true, 'Paso 14c: verifyCitation confirma una cita tomada de la lectura del expediente');
+    const v = JSON.parse(await call('verifyCitation', { citations: [{ documentId: page!.documentId, pageNumber: page!.pageNumber, quote: 'Mario Ficticio Lorente' }] })) as Verified;
+    check(v.results[0]?.verified === true, 'Paso 14c: verifyCitation confirma una cita tomada de la lectura del expediente');
   });
 }
 
