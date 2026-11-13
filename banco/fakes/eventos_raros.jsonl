@@ -12,3 +12,5 @@
 {"_caso": "un evento result con coste", "type": "result", "subtype": "success", "total_cost_usd": 0.01}
 no es JSON, salida truncada {"type": "assistant"
 
+{"_caso": "una llamada a herramienta sin nombre", "type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t2", "input": {}}]}}
+{"_caso": "un content con bloques que no son objetos", "type": "assistant", "message": {"content": ["texto suelto", 3]}}

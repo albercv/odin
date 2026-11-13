@@ -245,6 +245,15 @@ def _batteries(raw: dict, mode: str, archives: tuple[str, ...]) -> tuple[str, ..
     return tuple(names)
 
 
+def _owner_approval(raw: dict) -> str | None:
+    if "ownerApproval" not in raw:
+        return None
+    value = _text(raw, "ownerApproval", ROOT)
+    if not re.fullmatch(r"D-\d{3}", value):
+        raise ConfigError("«ownerApproval» debe ser la decisión del propietario que lo autoriza, como «D-094»")
+    return value
+
+
 def _capabilities(raw: dict) -> tuple[str, ...]:
     if "capabilities" not in raw:
         return CAPABILITIES
@@ -280,6 +289,6 @@ def load_config(path: Path, base_dir: Path) -> ExperimentConfig:
         combiner=_combiner(raw),
         judges=judges,
         aggregation=aggregation,
-        owner_approval=_text(raw, "ownerApproval", ROOT) if "ownerApproval" in raw else None,
+        owner_approval=_owner_approval(raw),
         capabilities=_capabilities(raw),
     )

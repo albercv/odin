@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from banco import capas
-from banco.config import ConfigError, load_config
+from banco.config import CAPABILITIES, ConfigError, load_config
 from banco.medir_path import carga_mod, ejecutar
 
 TOPE_USD = 5.0
@@ -40,6 +40,16 @@ class ComprobacionError(Exception):
     """La comprobación previa no pasó: ninguna medición se lanza."""
 
 
+class _SinRedirecciones(urllib.request.HTTPRedirectHandler):
+    """No sigue redirecciones: la clave de API nunca sale hacia otro host."""
+
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+_ABRIR = urllib.request.build_opener(_SinRedirecciones()).open
+
+
 def _http(metodo, url, cabeceras, cuerpo=None):
     """Petición HTTP a localhost. Devuelve (estado, cabeceras en minúscula, texto); fuera de localhost, OSError."""
     if urlsplit(url).hostname not in LOCALES:
@@ -47,7 +57,7 @@ def _http(metodo, url, cabeceras, cuerpo=None):
     data = None if cuerpo is None else json.dumps(cuerpo).encode("utf-8")
     peticion = urllib.request.Request(url, method=metodo, data=data, headers=cabeceras)
     try:
-        respuesta = urllib.request.urlopen(peticion, timeout=30)
+        respuesta = _ABRIR(peticion, timeout=30)
     except urllib.error.HTTPError as error:
         respuesta = error
     texto = respuesta.read().decode("utf-8")
@@ -92,10 +102,13 @@ def herramientas_esperadas(capacidades):
 
 
 def reglas(cfg):
+    fallos = []
     if cfg.budget_usd > TOPE_USD and not cfg.owner_approval:
-        return [f"presupuesto de {cfg.budget_usd:g} USD por encima del tope de {TOPE_USD:g} USD sin «ownerApproval» "
-                "en la configuración (D-094)"]
-    return []
+        fallos.append(f"presupuesto de {cfg.budget_usd:g} USD por encima del tope de {TOPE_USD:g} USD sin «ownerApproval» "
+                      "en la configuración (D-094)")
+    if set(cfg.capabilities) != set(CAPABILITIES) and not cfg.owner_approval:
+        fallos.append(f"se piden menos capacidades que las del producto ({', '.join(cfg.capabilities)}) sin «ownerApproval» (D-094)")
+    return fallos
 
 
 def _carga(layout):
@@ -188,6 +201,8 @@ def capacidades(cfg, actores, stack, http):
 
 def herramientas(cfg, actores, stack, mcp):
     esperadas = herramientas_esperadas(cfg.capabilities)
+    if not esperadas:
+        return [f"no se espera ninguna herramienta con las capacidades {', '.join(cfg.capabilities)}: revisa «capabilities»"]
     return [m for a in actores for m in _seguro(_herramientas_de, a, esperadas, stack["claves"][a], stack["url_mcp"], mcp)]
 
 

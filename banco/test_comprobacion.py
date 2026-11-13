@@ -118,6 +118,17 @@ class ReglasTest(Base):
         cfg = self.cfg(budget=11.4, extra='ownerApproval = "D-077"\n')
         self.assertEqual(comprobacion.comprobar(cfg, self.layout, http=FakeOdin())["reglas"], [])
 
+    def test_owner_approval_must_name_a_decision(self):
+        from banco.config import ConfigError
+        with self.assertRaisesRegex(ConfigError, "ownerApproval"):
+            self.cfg(budget=11.4, extra='ownerApproval = "x"\n')
+
+    def test_fewer_capabilities_need_owner_approval(self):
+        sin = self.cfg(extra='capabilities = ["SEARCH_KNOWLEDGE"]\n')
+        con = self.cfg(extra='capabilities = ["SEARCH_KNOWLEDGE"]\nownerApproval = "D-094"\n')
+        self.assertTrue(any("capacidades" in m for m in comprobacion.reglas(sin)))
+        self.assertEqual(comprobacion.reglas(con), [])
+
     def test_real_config_over_the_cap_is_refused(self):
         cfg = load_config(BANCO / "configs" / "barrido-40.toml", BANCO)
         self.assertTrue(comprobacion.comprobar(cfg, self.layout, http=FakeOdin())["reglas"])
@@ -205,6 +216,11 @@ class HerramientasTest(Base):
         mensajes = self.herramientas(FakeOdin(herramientas=herramientas), extra='capabilities = ["SEARCH_KNOWLEDGE"]\n')
         self.assertEqual(mensajes, [])
 
+    def test_no_expected_tool_fails(self):
+        mensajes = self.herramientas(FakeOdin(), extra='capabilities = ["SIMILAR_CASES"]\nownerApproval = "D-094"\n')
+        self.assertEqual(len(mensajes), 1)
+        self.assertIn("ninguna herramienta", mensajes[0])
+
     def test_session_is_opened_with_header_and_closed(self):
         http = FakeOdin()
         self.herramientas(http)
@@ -220,9 +236,11 @@ class HerramientasTest(Base):
 
 
 class EjecutorTest(unittest.TestCase):
-    def test_current_executor_reports_only_the_message_as_string_case(self):
-        self.assertEqual(comprobacion.fallos_ejecutor(), [
-            "el ejecutor falla con un evento cuyo message es texto: 'str' object has no attribute 'get'"])
+    def test_current_executor_reports_the_cases_it_cannot_read(self):
+        fallos = comprobacion.fallos_ejecutor()
+        self.assertIn("el ejecutor falla con un evento cuyo message es texto: 'str' object has no attribute 'get'", fallos)
+        self.assertTrue(any("una llamada a herramienta sin nombre" in f for f in fallos))
+        self.assertTrue(any("bloques que no son objetos" in f for f in fallos))
 
     def test_passing_executor_has_no_failures(self):
         with mock.patch("banco.medir_path.ejecutar.leer_consultas", return_value=[]):
@@ -235,6 +253,34 @@ class EjecutorTest(unittest.TestCase):
         with mock.patch("banco.medir_path.ejecutar.leer_consultas", side_effect=KeyError("name")):
             self.assertEqual(comprobacion.fallos_ejecutor(['{"type": "x"}']),
                              ["el ejecutor falla con la línea 1: 'name'"])
+
+
+class RedireccionTest(unittest.TestCase):
+    def test_redirect_is_not_followed_so_the_key_never_leaves(self):
+        import http.server, threading
+        visitas = []
+
+        class Destino(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                visitas.append(self.headers.get("Authorization"))
+                self.send_response(200); self.end_headers(); self.wfile.write(b"{}")
+
+            def log_message(self, *a):
+                pass
+
+        destino = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Destino)
+
+        class Origen(Destino):
+            def do_GET(self):
+                self.send_response(302); self.send_header("Location", f"http://127.0.0.1:{destino.server_port}/"); self.end_headers()
+
+        origen = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Origen)
+        for s in (origen, destino):
+            threading.Thread(target=s.serve_forever, daemon=True).start()
+        self.addCleanup(lambda: [s.shutdown() for s in (origen, destino)])
+        estado, _, _ = comprobacion._http("GET", f"http://127.0.0.1:{origen.server_port}/v1/me", {"Authorization": "Bearer k"})
+        self.assertEqual(estado, 302)
+        self.assertEqual(visitas, [])
 
 
 class CheckAndReportTest(Base):
@@ -272,8 +318,8 @@ class CheckAndReportTest(Base):
 
     def test_whole_check_on_real_data_fails_only_on_the_executor_bug(self):
         mensajes = comprobacion.check(self.cfg(), self.layout, http=FakeOdin())
-        self.assertEqual(len(mensajes), 1)
-        self.assertIn("el ejecutor falla", mensajes[0])
+        self.assertTrue(mensajes)
+        self.assertTrue(all("el ejecutor falla" in m for m in mensajes))
 
     def test_cli_comprobar_exits_one_with_the_report(self):
         from banco import banco
