@@ -7,11 +7,21 @@ import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import java.util.List;
+import java.util.function.Function;
 
 public interface CaseFileRepository {
 
     /** Devuelve {@code false} si el documento ya estaba en el expediente. */
     boolean add(CaseFileEntry entry);
+
+    /**
+     * Añade las relaciones nuevas y, de cada una, su evento, todo en una transacción: si algo falla no queda nada.
+     * Devuelve cuántas eran nuevas; las que ya estaban no dejan evento.
+     */
+    int addAll(List<CaseFileEntry> entries, Function<CaseFileEntry, CaseFileEvent> eventFor);
+
+    /** Quita la relación del evento y lo registra, juntos; {@code false} si la relación no existía. */
+    boolean removeAndRecord(CaseFileEvent event);
 
     boolean remove(CompanyId companyId, DocumentId caseId, DocumentId documentId);
 

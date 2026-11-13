@@ -79,6 +79,51 @@ class PostgresCaseFileRepositoryIT extends AbstractPostgresIT {
         assertThat(files.remove(company, theCase.id(), member.id())).isFalse();
     }
 
+    private CaseFileEvent event(Document theCase, Document member, CaseFileAction action) {
+        return new CaseFileEvent(UUID.randomUUID(), company, theCase.id(), member.id(), action, user, NOW);
+    }
+
+    @Test
+    void addAllWritesEntriesAndEventsTogetherAndSkipsExisting() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document one = document(Optional.of(projectA), false);
+        Document two = document(Optional.empty(), false);
+        files.add(entry(theCase, one));
+
+        int added = files.addAll(java.util.List.of(entry(theCase, one), entry(theCase, two)),
+                e -> event(theCase, docs.findById(CompanyScope.of(company), ProjectVisibility.all(),
+                        e.documentId()).orElseThrow(), CaseFileAction.ADDED));
+
+        assertThat(added).isEqualTo(1);
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id()))
+                .extracting(CaseFileEvent::documentId).containsExactly(two.id());
+    }
+
+    @Test
+    void addAllLeavesNothingWhenOnePairFails() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document good = document(Optional.of(projectA), false);
+        Document foreign = document(Optional.of(projectB), false);
+
+        assertThatThrownBy(() -> files.addAll(java.util.List.of(entry(theCase, good), entry(theCase, foreign)),
+                e -> event(theCase, good, CaseFileAction.ADDED))).isInstanceOf(RuntimeException.class);
+
+        assertThat(files.countEntries(company, theCase.id())).isZero();
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).isEmpty();
+    }
+
+    @Test
+    void removeAndRecordIsOneStepAndSilentWhenNothingToRemove() {
+        Document theCase = document(Optional.of(projectA), true);
+        Document member = document(Optional.of(projectA), false);
+        files.add(entry(theCase, member));
+
+        assertThat(files.removeAndRecord(event(theCase, member, CaseFileAction.REMOVED))).isTrue();
+        assertThat(files.removeAndRecord(event(theCase, member, CaseFileAction.REMOVED))).isFalse();
+
+        assertThat(files.events(CompanyScope.of(company), ProjectVisibility.all(), theCase.id())).hasSize(1);
+    }
+
     @Test
     void triggerRejectsDocumentFromOtherProject() {
         Document theCase = document(Optional.of(projectA), true);

@@ -1,12 +1,16 @@
 package com.e2d.odin.adapter.web.dto;
 
+import com.e2d.odin.application.casefile.CaseFileAssignment;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.organization.Capability;
+import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.ValidationException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public final class Requests {
 
@@ -27,6 +31,19 @@ public final class Requests {
 
     public record UpdateDocumentRequest(@Schema(description = "Si el documento es la ficha de un caso resuelto.",
             requiredMode = Schema.RequiredMode.REQUIRED) Boolean caseDocument) {
+    }
+
+    public record CaseFileDocumentsRequest(
+            @Schema(description = "De 1 a 500 documentos que ya están en Odín.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) List<UUID> documentIds) {
+
+        public CaseFileAssignment assignment(UUID caseId) {
+            if (documentIds == null || documentIds.isEmpty() || documentIds.contains(null)) {
+                throw new ValidationException("Elige al menos un documento");
+            }
+            return new CaseFileAssignment(new DocumentId(caseId),
+                    documentIds.stream().map(DocumentId::new).collect(Collectors.toSet()));
+        }
     }
 
     public record CaseMarksRequest(

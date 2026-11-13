@@ -5,11 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -23,7 +27,8 @@ class MarkCaseDocumentsTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
-    private final MarkCaseDocuments mark = new MarkCaseDocuments(docs);
+    private final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository();
+    private final MarkCaseDocuments mark = new MarkCaseDocuments(docs, files);
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 
@@ -92,5 +97,17 @@ class MarkCaseDocumentsTest {
         assertThatThrownBy(() -> mark.execute(Actors.worker(companyA), companyA, Set.of(own.id()), true))
                 .isInstanceOf(ForbiddenException.class);
         assertThat(isCase(own)).isFalse();
+    }
+
+    @Test
+    void unmarkCaseWithEntriesConflicts() {
+        Document caseDoc = Fixtures.readyDocument(docs, companyA, "caso");
+        mark.execute(Actors.companyAdmin(companyA), companyA, Set.of(caseDoc.id()), true);
+        files.add(new CaseFileEntry(companyA, caseDoc.id(), Fixtures.readyDocument(docs, companyA, "x").id(),
+                new UserId(UUID.randomUUID()), Fixtures.NOW));
+
+        assertThatThrownBy(() -> mark.execute(Actors.companyAdmin(companyA), companyA, Set.of(caseDoc.id()), false))
+                .isInstanceOf(ConflictException.class).hasMessage("Quita antes los documentos del expediente");
+        assertThat(isCase(caseDoc)).isTrue();
     }
 }

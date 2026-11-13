@@ -1,5 +1,9 @@
 package com.e2d.odin.adapter.web;
 
+import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.RetryDocument;
@@ -12,6 +16,7 @@ import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryDeliveryMeter;
+import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
@@ -107,6 +112,7 @@ public class TestWiring {
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
+    final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository();
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
     final InMemoryQuestionLog questions = new InMemoryQuestionLog();
     final InMemoryTopicRepository topics = new InMemoryTopicRepository();
@@ -276,11 +282,27 @@ public class TestWiring {
     }
 
     @Bean UpdateDocument updateDocument() {
-        return new UpdateDocument(docs);
+        return new UpdateDocument(docs, caseFiles);
     }
 
     @Bean MarkCaseDocuments markCaseDocuments() {
-        return new MarkCaseDocuments(docs);
+        return new MarkCaseDocuments(docs, caseFiles);
+    }
+
+    @Bean GetCaseFile getCaseFile() {
+        return new GetCaseFile(orgs, projectMembers, docs, caseFiles);
+    }
+
+    @Bean AddToCaseFiles addToCaseFiles() {
+        return new AddToCaseFiles(orgs, projectMembers, docs, caseFiles, ids, clock);
+    }
+
+    @Bean RemoveFromCaseFile removeFromCaseFile() {
+        return new RemoveFromCaseFile(orgs, projectMembers, docs, caseFiles, ids, clock);
+    }
+
+    @Bean ListCaseFileEvents listCaseFileEvents() {
+        return new ListCaseFileEvents(docs, caseFiles);
     }
 
     @Bean SupersedeDocument supersedeDocument() {

@@ -10,6 +10,10 @@ import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.core.RowMapper;
 
 public class PostgresCaseFileRepository implements CaseFileRepository {
@@ -29,30 +33,70 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
 
     @Override
     public boolean add(CaseFileEntry e) {
-        return tx.inScope(CompanyScope.of(e.companyId()), ProjectVisibility.all(), jdbc -> jdbc.sql("""
-                INSERT INTO case_file_entry (company_id, case_document_id, document_id, added_by, added_at)
-                VALUES (:company, :case, :document, :by, :at) ON CONFLICT DO NOTHING""")
-                .param("company", e.companyId().value()).param("case", e.caseId().value())
-                .param("document", e.documentId().value()).param("by", e.addedBy().value())
-                .param("at", Sql.ts(e.addedAt())).update()) == 1;
+        return tx.inScope(CompanyScope.of(e.companyId()), ProjectVisibility.all(), jdbc -> insertEntry(jdbc, e));
+    }
+
+    @Override
+    public int addAll(List<CaseFileEntry> entries, Function<CaseFileEntry, CaseFileEvent> eventFor) {
+        Set<CompanyId> companies = entries.stream().map(CaseFileEntry::companyId).collect(Collectors.toSet());
+        return tx.inScope(new CompanyScope(companies, false), ProjectVisibility.all(), jdbc -> {
+            int added = 0;
+            for (CaseFileEntry e : entries) {
+                if (insertEntry(jdbc, e)) {
+                    insertEvent(jdbc, eventFor.apply(e));
+                    added++;
+                }
+            }
+            return added;
+        });
     }
 
     @Override
     public boolean remove(CompanyId companyId, DocumentId caseId, DocumentId documentId) {
-        return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
-                DELETE FROM case_file_entry WHERE company_id = :company AND case_document_id = :case
-                AND document_id = :document""").param("company", companyId.value()).param("case", caseId.value())
-                .param("document", documentId.value()).update()) == 1;
+        return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(),
+                jdbc -> deleteEntry(jdbc, companyId, caseId, documentId));
+    }
+
+    @Override
+    public boolean removeAndRecord(CaseFileEvent e) {
+        return tx.inScope(CompanyScope.of(e.companyId()), ProjectVisibility.all(), jdbc -> {
+            boolean removed = deleteEntry(jdbc, e.companyId(), e.caseId(), e.documentId());
+            if (removed) {
+                insertEvent(jdbc, e);
+            }
+            return removed;
+        });
     }
 
     @Override
     public void record(CaseFileEvent e) {
-        tx.runInScope(CompanyScope.of(e.companyId()), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+        tx.runInScope(CompanyScope.of(e.companyId()), ProjectVisibility.all(), jdbc -> insertEvent(jdbc, e));
+    }
+
+    private static boolean insertEntry(JdbcClient jdbc, CaseFileEntry e) {
+        return jdbc.sql("""
+                INSERT INTO case_file_entry (company_id, case_document_id, document_id, added_by, added_at)
+                VALUES (:company, :case, :document, :by, :at) ON CONFLICT DO NOTHING""")
+                .param("company", e.companyId().value()).param("case", e.caseId().value())
+                .param("document", e.documentId().value()).param("by", e.addedBy().value())
+                .param("at", Sql.ts(e.addedAt())).update() == 1;
+    }
+
+    private static boolean deleteEntry(JdbcClient jdbc, CompanyId companyId, DocumentId caseId,
+            DocumentId documentId) {
+        return jdbc.sql("""
+                DELETE FROM case_file_entry WHERE company_id = :company AND case_document_id = :case
+                AND document_id = :document""").param("company", companyId.value()).param("case", caseId.value())
+                .param("document", documentId.value()).update() == 1;
+    }
+
+    private static void insertEvent(JdbcClient jdbc, CaseFileEvent e) {
+        jdbc.sql("""
                 INSERT INTO case_file_event (id, company_id, case_document_id, document_id, action, actor_id, at)
                 VALUES (:id, :company, :case, :document, :action, :actor, :at)""")
                 .param("id", e.id()).param("company", e.companyId().value()).param("case", e.caseId().value())
                 .param("document", e.documentId().value()).param("action", e.action().name())
-                .param("actor", e.actorId().value()).param("at", Sql.ts(e.at())).update());
+                .param("actor", e.actorId().value()).param("at", Sql.ts(e.at())).update();
     }
 
     @Override

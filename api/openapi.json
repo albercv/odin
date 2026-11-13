@@ -384,6 +384,43 @@
         }
       }
     },
+    "/v1/cases/{caseId}/file/documents" : {
+      "post" : {
+        "tags" : [ "case-file-controller" ],
+        "operationId" : "add_1",
+        "parameters" : [ {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CaseFileDocumentsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseFileAdded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cards" : {
       "post" : {
         "tags" : [ "worker-controller" ],
@@ -479,7 +516,7 @@
       },
       "post" : {
         "tags" : [ "group-admin-controller" ],
-        "operationId" : "add_1",
+        "operationId" : "add_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -759,7 +796,7 @@
       },
       "post" : {
         "tags" : [ "member-controller" ],
-        "operationId" : "add_2",
+        "operationId" : "add_3",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -1026,6 +1063,51 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CaseMarksResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents" : {
+      "post" : {
+        "tags" : [ "admin-case-file-controller" ],
+        "operationId" : "add_4",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CaseFileDocumentsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseFileAdded"
                 }
               }
             }
@@ -1630,6 +1712,33 @@
         }
       }
     },
+    "/v1/cases/{caseId}/file" : {
+      "get" : {
+        "tags" : [ "case-file-controller" ],
+        "operationId" : "file",
+        "parameters" : [ {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseFileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/me" : {
       "get" : {
         "tags" : [ "session-controller" ],
@@ -1880,6 +1989,79 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file" : {
+      "get" : {
+        "tags" : [ "admin-case-file-controller" ],
+        "operationId" : "file_1",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseFileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/cases/{caseId}/events" : {
+      "get" : {
+        "tags" : [ "admin-case-file-controller" ],
+        "operationId" : "events",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CaseFileEventView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/cards" : {
       "get" : {
         "tags" : [ "admin-card-controller" ],
@@ -1919,6 +2101,34 @@
         }
       }
     },
+    "/v1/cases/{caseId}/file/documents/{documentId}" : {
+      "delete" : {
+        "tags" : [ "case-file-controller" ],
+        "operationId" : "remove_2",
+        "parameters" : [ {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/keys/{keyId}" : {
       "delete" : {
         "tags" : [ "user-controller" ],
@@ -1945,6 +2155,42 @@
         "operationId" : "revoke_1",
         "parameters" : [ {
           "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}" : {
+      "delete" : {
+        "tags" : [ "admin-case-file-controller" ],
+        "operationId" : "remove_3",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "documentId",
           "in" : "path",
           "required" : true,
           "schema" : {
@@ -2393,6 +2639,30 @@
           }
         },
         "required" : [ "verified" ]
+      },
+      "CaseFileDocumentsRequest" : {
+        "type" : "object",
+        "properties" : {
+          "documentIds" : {
+            "type" : "array",
+            "description" : "De 1 a 500 documentos que ya están en Odín.",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          }
+        },
+        "required" : [ "documentIds" ]
+      },
+      "CaseFileAdded" : {
+        "type" : "object",
+        "properties" : {
+          "added" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "added" ]
       },
       "SaveCard" : {
         "type" : "object",
@@ -3119,6 +3389,69 @@
         },
         "required" : [ "documentId", "pageNumber", "paginated", "readerName", "superseded", "text", "title" ]
       },
+      "CaseFileDocumentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "format" : {
+            "type" : "string"
+          },
+          "paginated" : {
+            "type" : "boolean"
+          },
+          "uploadedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "uploadedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "addedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "addedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "filename", "format", "id", "paginated", "superseded", "title", "uploadedAt", "uploadedBy" ]
+      },
+      "CaseFileResponse" : {
+        "type" : "object",
+        "properties" : {
+          "caseDocument" : {
+            "$ref" : "#/components/schemas/CaseFileDocumentView"
+          },
+          "documents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CaseFileDocumentView"
+            }
+          }
+        },
+        "required" : [ "caseDocument", "documents" ]
+      },
       "AdminMe" : {
         "type" : "object",
         "properties" : {
@@ -3524,6 +3857,31 @@
           }
         },
         "required" : [ "bytes", "calls", "tool" ]
+      },
+      "CaseFileEventView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "action" : {
+            "type" : "string"
+          },
+          "actorId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "at" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "action", "actorId", "at", "documentId", "id" ]
       }
     }
   }

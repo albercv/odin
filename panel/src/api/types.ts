@@ -164,6 +164,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cases/{caseId}/file/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards": {
         parameters: {
             query?: never;
@@ -205,7 +221,7 @@ export interface paths {
         };
         get: operations["list"];
         put?: never;
-        post: operations["add_1"];
+        post: operations["add_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -301,7 +317,7 @@ export interface paths {
         };
         get: operations["list_2"];
         put?: never;
-        post: operations["add_2"];
+        post: operations["add_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -350,6 +366,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["markCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -564,6 +596,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cases/{caseId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/me": {
         parameters: {
             query?: never;
@@ -692,6 +740,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["file_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/cards": {
         parameters: {
             query?: never;
@@ -703,6 +783,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/file/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -735,6 +831,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["revoke_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_3"];
         options?: never;
         head?: never;
         patch?: never;
@@ -901,6 +1013,14 @@ export interface components {
         };
         Verification: {
             verified: boolean;
+        };
+        CaseFileDocumentsRequest: {
+            /** @description De 1 a 500 documentos que ya están en Odín. */
+            documentIds: string[];
+        };
+        CaseFileAdded: {
+            /** Format: int32 */
+            added: number;
         };
         SaveCard: {
             title?: string;
@@ -1167,6 +1287,30 @@ export interface components {
             replacement?: components["schemas"]["Replacement"];
             readerName: string;
         };
+        CaseFileDocumentView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId?: string;
+            title: string;
+            filename: string;
+            format: string;
+            paginated: boolean;
+            /** Format: uuid */
+            uploadedBy: string;
+            /** Format: date-time */
+            uploadedAt: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+            /** Format: uuid */
+            addedBy?: string;
+            /** Format: date-time */
+            addedAt?: string;
+        };
+        CaseFileResponse: {
+            caseDocument: components["schemas"]["CaseFileDocumentView"];
+            documents: components["schemas"]["CaseFileDocumentView"][];
+        };
         AdminMe: {
             /** Format: uuid */
             userId: string;
@@ -1319,6 +1463,17 @@ export interface components {
             calls: number;
             /** Format: int64 */
             bytes: number;
+        };
+        CaseFileEventView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            documentId: string;
+            action: string;
+            /** Format: uuid */
+            actorId: string;
+            /** Format: date-time */
+            at: string;
         };
     };
     responses: never;
@@ -1629,6 +1784,32 @@ export interface operations {
             };
         };
     };
+    add_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseFileDocumentsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileAdded"];
+                };
+            };
+        };
+    };
     saveCard: {
         parameters: {
             query?: never;
@@ -1717,7 +1898,7 @@ export interface operations {
             };
         };
     };
-    add_1: {
+    add_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1945,7 +2126,7 @@ export interface operations {
             };
         };
     };
-    add_2: {
+    add_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -2110,6 +2291,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseMarksResult"];
+                };
+            };
+        };
+    };
+    add_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseFileDocumentsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileAdded"];
                 };
             };
         };
@@ -2537,6 +2745,28 @@ export interface operations {
             };
         };
     };
+    file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
     me_1: {
         parameters: {
             query?: never;
@@ -2719,6 +2949,52 @@ export interface operations {
             };
         };
     };
+    file_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
+    events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileEventView"][];
+                };
+            };
+        };
+    };
     list_5: {
         parameters: {
             query?: {
@@ -2740,6 +3016,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CardView"][];
                 };
+            };
+        };
+    };
+    remove_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2769,6 +3066,28 @@ export interface operations {
             header?: never;
             path: {
                 userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+                documentId: string;
             };
             cookie?: never;
         };
