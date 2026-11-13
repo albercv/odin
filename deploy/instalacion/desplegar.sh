@@ -96,4 +96,6 @@ TRABAJADOR="$TRABAJADOR" "$AQUI/mcp-claude-desktop.sh" | tee -a "$REGISTRO"
 comprobar
 trap - ERR
 echo "Desplegado $(git rev-parse --short HEAD) en «$PROYECTO». Ahora tiene: $(recuento)."
-echo "Recuento en $DATOS/recuento-*.md. Reinicia Claude Desktop para que cargue el MCP nuevo."
+echo "Recuento en $DATOS/recuento-*.md."
+echo "IMPORTANTE: el MCP ha cambiado. Cierra Claude Desktop del todo (Cmd+Q) y vuelve a abrirlo para que cargue las"
+echo "herramientas nuevas; cerrar solo la ventana no basta."
