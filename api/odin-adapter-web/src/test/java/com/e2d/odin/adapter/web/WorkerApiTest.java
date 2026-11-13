@@ -49,7 +49,7 @@ class WorkerApiTest extends WebTestSupport {
     void searchReturnsHitsAndNoSource() throws Exception {
         String key = workerKey(newCompany());
         w.search.returns(new SearchResult(List.of(new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(),
-                "Manual", Optional.of(3), true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty(), Optional.empty()))));
+                "Manual", Optional.of(3), true, false, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty(), Optional.empty()))));
         mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"queries\":[\"vacaciones\"]}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.noSource").value(false))
@@ -210,10 +210,10 @@ class WorkerApiTest extends WebTestSupport {
     void searchHitCarriesReviewStatus() throws Exception {
         String key = workerKey(newCompany());
         w.search.returns(new SearchResult(List.of(
-                new SearchHit(SourceType.KNOWLEDGE_CARD, UUID.randomUUID(), "Mi ficha", Optional.empty(), false,
+                new SearchHit(SourceType.KNOWLEDGE_CARD, UUID.randomUUID(), "Mi ficha", Optional.empty(), false, false,
                         Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false, Optional.empty(),
                         Optional.of(ReviewStatus.PENDING)),
-                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Doc", Optional.of(1), true,
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Doc", Optional.of(1), true, false,
                         Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.4, false, Optional.empty(),
                         Optional.empty()))));
         mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
@@ -223,13 +223,24 @@ class WorkerApiTest extends WebTestSupport {
     }
 
     @Test
+    void searchHitCarriesCaseDocument() throws Exception {
+        String key = workerKey(newCompany());
+        w.search.returns(new SearchResult(List.of(new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(),
+                "Ficha", Optional.of(1), true, true, Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, false,
+                Optional.empty(), Optional.empty()))));
+        mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queries\":[\"x\"]}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.hits[0].caseDocument").value(true));
+    }
+
+    @Test
     void searchHitCarriesSupersededAndReplacement() throws Exception {
         String key = workerKey(newCompany());
         Document current = Fixtures.readyDocument(w.docs, newCompany(), "vigente");
         w.search.returns(new SearchResult(List.of(
-                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Viejo", Optional.of(1), true,
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Viejo", Optional.of(1), true, false,
                         Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.5, true, Optional.of(DocumentRef.of(current)), Optional.empty()),
-                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Sin ver", Optional.of(1), true,
+                new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), "Sin ver", Optional.of(1), true, false,
                         Optional.empty(), "Ana", Fixtures.NOW, "texto", 0.4, true, Optional.empty(), Optional.empty()))));
         mvc.perform(post("/v1/search").header(AUTH, key).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"queries\":[\"x\"]}")).andExpect(status().isOk())

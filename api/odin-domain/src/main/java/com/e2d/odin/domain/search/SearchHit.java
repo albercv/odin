@@ -13,6 +13,7 @@ public record SearchHit(
         String title,
         Optional<Integer> pageNumber,
         boolean paginated,
+        boolean caseDocument,
         Optional<ProjectId> projectId,
         String authorName,
         Instant date,
