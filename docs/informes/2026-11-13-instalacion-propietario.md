@@ -83,7 +83,7 @@ Las contradicciones no están en la base. Se cuentan en el archivo ficticio para
 
 - **Panel:** http://127.0.0.1:8088, con el administrador del grupo. Las credenciales y las claves de cada trabajador están en `odin/data/datos-prueba/credenciales.local.md`. Ese fichero solo lo puede leer tu usuario y no se copia en ningún otro sitio.
 - **Claude Desktop:** ciérralo del todo y vuelve a abrirlo. El conector «odin» entra como Marta.
-- **Cambiar de trabajador:** tras el despliegue, tu copia principal ya tiene la orden. Lanza esto y reinicia Claude Desktop:
+- **Cambiar de trabajador:** cierra Claude Desktop del todo (Cmd+Q), lanza esto desde Terminal y vuelve a abrirlo. Con Claude Desktop abierto, puede deshacer el cambio al guardar sus preferencias:
 
 ```bash
 make -C /Users/albercv/Documents/personalProjects/odin mcp-claude-desktop TRABAJADOR=javier
@@ -134,9 +134,22 @@ Las respuestas esperadas salen de las claves del archivo ficticio. Odín debe ci
 | En Albar, ¿en cuántas horas como máximo hay que contestar un aviso urgente de un vecino? | 3 horas, del procedimiento vigente. |
 | ¿Dónde se guardan las llaves de los cuartos técnicos y de las azoteas en la oficina de Ribera? | No consta. Es de Ribera y Albar no debe verlo. |
 
+## Actualización de las 13:05 (sin vaciar)
+
+- **Qué entró:** el arreglo de las fotos y el conector con textos neutros (D-084), en el código e227925, con `make instalacion-actualizar CONFIRMAR=ACTUALIZAR`.
+  - La lanzó el CEO con tu permiso; terminó con salida 0 a las 13:06.
+  - Copia previa: `odin-v24-antes-despliegue-actualizar-2026-11-13-130521.sql`.
+- **Tu base no cambió:** antes y después hay 300 fichas, 134 documentos en expedientes, 3.426 asignaciones de tema, 1.354 documentos, 10 personas y 94 proyectos.
+- **Las 20 fotos ya están en «Listo»,** con su página sin texto. Solo se añadieron esas 20 páginas.
+  - El expediente 2024/176 de Calle Roble 46 lista sus 3 fotos, sin pendientes ni ilegibles, y el original de cada foto se abre.
+- **Lo que tienes que hacer tú:** tu Claude Desktop volvió a su configuración anterior a las 13:01, antes de la actualización.
+  - Ahora apunta al conector viejo y usa una clave que ya no existe, así que el conector «odin» no te responde.
+  - Lo más probable es que lo causara el propio Claude Desktop, que no se había reiniciado tras el despliegue y guardó lo que tenía en memoria.
+  - Para arreglarlo: ciérralo del todo (Cmd+Q), lanza en Terminal `make -C /Users/albercv/Documents/personalProjects/odin mcp-claude-desktop TRABAJADOR=marta` y vuelve a abrirlo.
+
 ## Lo que todavía no está bien
 
-- **Las fotos de los expedientes salen como «Fallido».** Son 20 fotos sin texto, y el lector OCR las marca como «no encontró texto» en vez de dejarlas como página sin texto.
+- **Corregido a las 13:05: las fotos de los expedientes salían como «Fallido».** Son 20 fotos sin texto, y el lector OCR las marca como «no encontró texto» en vez de dejarlas como página sin texto.
   - Dentro del expediente no aparecen y cuentan como pendientes: el del caso 2024/176 de Calle Roble 46 dice «3 pendientes» y nunca se resuelven.
   - El CTO 2 lo está corrigiendo, sin migración: una foto sin texto pasará a «Listo» con su página marcada como sin texto.
   - Llegará con la orden de actualizar sin vaciar, que reintenta los fallidos sola. El CEO te avisará antes de lanzarla.
