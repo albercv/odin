@@ -160,6 +160,47 @@ Las respuestas esperadas salen de las claves del archivo ficticio. Odín debe ci
   - La ventana queda abierta todo el día. Para volver a la nocturna, se quita la línea `ODIN_TAGGER_WINDOW=always` de `deploy/.env` y se reinicia la API.
 - **Solo en este Mac.** Los enlaces de subida y los del original usan http://127.0.0.1:8088, así que solo abren en este equipo. Instalar en un cliente con varios equipos necesitará publicar el panel en la red local. Está anotado para entonces.
 
+## Residencial Mirador del Puerto, añadido a las 23:24 sin vaciar (encargo 14)
+
+- **Qué se añadió:** el proyecto «Residencial Mirador del Puerto» en Administraciones Ribera, con datos ficticios del CTO 3 (`feature/caso-mirador`, b9be3f2):
+  - 270 documentos: 216 del proyecto y 54 de expedientes;
+  - 12 fichas: 8 aprobadas, 1 corregida por el administrador, 2 pendientes y 1 rechazada;
+  - 7 casos con su expediente;
+  - 3 pólizas encadenadas como sustituidas, de 2016 a 2025.
+- **Cómo:** con `make instalacion-anadir-proyecto … CONFIRMAR=ANADIR`, ensayada antes en `odin-ensayo` sobre una copia de tu base. Tardó 11 s, sin contar la lectura OCR. Copia previa: la de `2026-11-13-232428`.
+- **Lo que ya tenías no cambió:** la huella de las 13 tablas es idéntica antes y después, también tras el OCR y el etiquetado.
+- **Quién lo ve:**
+  - solo Marta entre los trabajadores, y los administradores en el panel;
+  - Javier, Ignacio y los otros 5 trabajadores de prueba no lo ven en su lista ni buscando. Comprobado por la API y por el MCP.
+- **Lector OCR:** leyó 89 páginas escaneadas (18 PDF con 78 páginas y 11 imágenes) en 19 minutos, a unos 13 s por página, sin fallos. 8 de las imágenes son fotos y quedan como página sin texto.
+- **Etiquetado:** los 270 documentos tienen temas.
+- **El PDF mixto a propósito** («Acta de la junta ordinaria telemática del 22 de octubre de 2020») sale en el panel con el aviso «Páginas sin texto, no leídas: 4».
+- **Preguntas para probar:** en `experimentos/2026-11-14-caso-mirador/entrega/`, de `feature/caso-mirador`.
+- **Para quitar Mirador y volver a como estaba a las 23:24:**
+
+```bash
+make -C /Users/albercv/Documents/personalProjects/odin instalacion-restaurar COPIA=data/copias/odin-v24-antes-anadir-proyecto-2026-11-13-232428.sql CONFIRMAR=BORRAR
+```
+
+## Gestión Albar perdió «casos parecidos» a las 21:26 (pendiente de tu decisión)
+
+- **Qué pasó:**
+  - con un clic en la página de empresas del panel, se quitó a Gestión Albar la capacidad «casos parecidos» (`SIMILAR_CASES`);
+  - fue a las 21:26, desde el navegador integrado de Claude Desktop, en la sesión de administrador abierta a las 18:31;
+  - no lo hizo ningún guion ni ninguna orden. Las sesiones de Claude no usaron ese navegador, y no se puede saber quién hizo el clic: ni la API ni la base guardan quién cambia una capacidad.
+- **Efecto:** Ignacio, Paula y Gonzalo no tienen `findSimilarCases`.
+- **Para devolverla** a como quedó a las 09:41 (copia previa, cerrojo y la API del administrador):
+
+```bash
+bash /Users/albercv/Documents/personalProjects/odin/data/restaurar-casos-parecidos-albar.sh
+```
+
+- **Propuesto para que no vuelva a pasar:**
+  - confirmación en el panel antes de quitar una capacidad;
+  - registro de quién cambia qué;
+  - que la sesión del panel caduque;
+  - que los guiones de prueba se nieguen a usar los puertos de tu instalación.
+
 ## El lector OCR, tras reiniciar el Mac
 
 - **Qué es:** el lector OCR (Unlimited-OCR 2) no va en Docker. Corre en este Mac como un programa aparte, el puente OCR, en `127.0.0.1:8077`, sin red.
