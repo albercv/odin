@@ -5,7 +5,7 @@ import { createApiClient } from '../src/api/client.js';
 import { buildServer } from '../src/server.js';
 import { meWith, startFakeApi, type FakeApi, type Handler } from './fakeApi.js';
 
-const ALL = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'];
+const ALL = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES'];
 let fake: FakeApi;
 
 async function connect(handler: Handler, key = 'clave-secreta-1') {

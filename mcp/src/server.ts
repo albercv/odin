@@ -41,9 +41,9 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
     registerListProjects(server, api);
     registerVerifyCitation(server, api);
     registerListMyQuestions(server, api);
-    registerCaseFileTools(server, api);
     if (capabilities.has('SIMILAR_CASES')) registerFindSimilarCases(server, api, projects);
   }
+  if (capabilities.has('CASE_FILES')) registerCaseFileTools(server, api);
   if (capabilities.has('SAVE_KNOWLEDGE_CARD')) {
     registerSaveKnowledgeCard(server, api);
     registerListMyKnowledgeCards(server, api, createProjectNames(me));

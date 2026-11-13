@@ -9,7 +9,7 @@ let fake: FakeApi;
 const CASE = '11111111-1111-1111-1111-111111111111';
 
 async function connect(handler: Handler) {
-  fake = await startFakeApi((r) => (r.url === '/v1/me' ? meWith(['SEARCH_KNOWLEDGE']) : handler(r)));
+  fake = await startFakeApi((r) => (r.url === '/v1/me' ? meWith(['SEARCH_KNOWLEDGE', 'CASE_FILES']) : handler(r)));
   const server = await buildServer(createApiClient(fake.url, 'clave'));
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '1' });
@@ -94,6 +94,21 @@ describe('case file tools', () => {
     expect(description).toContain('resumir');
     expect(description).toContain('pendientes de lectura');
     expect(description).toContain('pendingDocuments');
+  });
+
+  it('caseFileToolsNeedCaseFilesCapability', async () => {
+    const client = await connect(() => ({ status: 200, body: {} }));
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    expect(names).toContain('getCaseFile');
+    await fake.close();
+    fake = await startFakeApi(() => meWith(['SEARCH_KNOWLEDGE']));
+    const server = await buildServer(createApiClient(fake.url, 'clave'));
+    const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
+    const plain = new Client({ name: 'test', version: '1' });
+    await Promise.all([server.connect(serverSide), plain.connect(clientSide)]);
+    const plainNames = (await plain.listTools()).tools.map((t) => t.name);
+    expect(plainNames).toContain('searchKnowledge');
+    for (const n of ['getCaseFile', 'readCaseFile', 'addToCaseFile', 'removeFromCaseFile']) expect(plainNames).not.toContain(n);
   });
 
   it('instructionsStayWithinBudget', () => {
