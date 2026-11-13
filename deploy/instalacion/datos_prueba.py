@@ -460,7 +460,8 @@ def credenciales(entorno, api, s, admin, trabajadores, admin_empresa=None):
 
 
 def cargar_expedientes_si_hay(api, s, empresas, documentos):
-    """Paso opcional: si existe pila/cargar_expedientes.py y la API tiene expedientes, los carga."""
+    """Paso opcional: si existe pila/cargar_expedientes.py y la API tiene expedientes, los carga. Lo subido queda en el
+    mapa de ids; un error en un expediente para la carga."""
     if importlib.util.find_spec("cargar_expedientes") is None or not (ARCHIVO / "expedientes.json").exists():
         return "Expedientes: no hay módulo cargar_expedientes (o datos/expedientes.json): no se cargan."
     caso = next(d for d in s.documentos if es_caso(d["ruta"]))
@@ -468,8 +469,19 @@ def cargar_expedientes_si_hay(api, s, empresas, documentos):
     if api.pedir("GET", ruta, esperado=range(100, 600))[0].status == 404:
         return "Expedientes: esta API no los tiene (404): no se cargan."
     import cargar_expedientes
-    cargar_expedientes.cargar_expedientes(api, documentos, leer_json(ARCHIVO / "expedientes.json"), ARCHIVO)
-    return "Expedientes cargados."
+    cuentas = cargar_expedientes.cargar_expedientes(api, documentos, leer_json(ARCHIVO / "expedientes.json"), ARCHIVO,
+                                                   guardar=lambda mapa: escribir_mapa(CREDENCIALES, mapa))
+    return resumen_expedientes(cuentas)
+
+
+def resumen_expedientes(cuentas):
+    if cuentas["errores"]:
+        raise RuntimeError(f"Expedientes con errores: {cuentas['errores'][:3]}")
+    omitidos = "; ".join(f"{o['caso']} ({o['motivo']})" for o in cuentas["omitidos_casos"])
+    pendientes = len(cuentas["pendientes"])
+    return (f"Expedientes: {cuentas['añadidos']} documentos asignados ({cuentas['subidos']} subidos)"
+            + (f"; omitidos: {omitidos}" if omitidos else "")
+            + (f"; {pendientes} sustituciones sin hacer porque sus documentos no estaban listos" if pendientes else "") + ".")
 
 
 def cargar(api, entorno, s):
