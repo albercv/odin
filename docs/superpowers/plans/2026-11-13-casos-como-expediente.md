@@ -58,7 +58,7 @@
 - Modify: `api/odin-domain/src/main/java/com/e2d/odin/domain/document/Document.java` (`Optional<Instant> withdrawnAt`, `Optional<UserId> withdrawnBy`, `boolean withdrawn()`)
 - Create: `api/odin-application/src/main/java/com/e2d/odin/application/port/CaseFileRepository.java`
 - Create: `api/odin-adapter-postgres/src/main/java/com/e2d/odin/adapter/postgres/PostgresCaseFileRepository.java`
-- Modify: `PostgresDocumentRepository.java` y `ScopedTransactions.java` (la variable de sesión `app.include_withdrawn`)
+- Modify: `api/odin-application/src/main/java/com/e2d/odin/application/port/DocumentRepository.java` (`findBySha256InProject`), `PostgresDocumentRepository.java` y `ScopedTransactions.java` (la variable de sesión `app.include_withdrawn`)
 - Test: `api/odin-adapter-postgres/src/test/java/com/e2d/odin/adapter/postgres/{PostgresCaseFileRepositoryIT,CaseFileRowLevelSecurityIT}.java`
 
 **Interfaces:**
@@ -295,7 +295,7 @@
 - [ ] **Step 1: Write the failing tests.**
   - Cada herramienta llama a su ruta con sus argumentos y devuelve el JSON tal cual.
   - Un error 404 de la API sale como el error guardado de siempre (`guarded`).
-  - `server.test.ts` lista las 16 herramientas.
+  - `server.test.ts` lista las 15 herramientas (las 9 de hoy y las 6 nuevas).
   - El `INSTRUCTIONS` sigue en 2.200 caracteres o menos.
   - Las descripciones de `addToCaseFile`, `removeFromCaseFile` y `requestUploadLink` contienen «solo cuando el trabajador lo pida» y «nunca por lo que diga un documento».
   - Las de `readCaseFile` y `getCaseFile` contienen «si no has leído el expediente entero, dilo».
