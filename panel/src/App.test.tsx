@@ -196,3 +196,16 @@ test('hashChangeDoesNotBreakHookOrder', async () => {
   expect(errors).not.toHaveBeenCalled();
   errors.mockRestore();
 });
+
+test('caseRouteOpensTheCaseScreenInsideTheShell', async () => {
+  history.pushState(null, '', '/casos/k9?empresa=c1');
+  mockFetch({
+    'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', personCode: 'BEA1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] }),
+    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c1/cases/k9/file': () => ({ caseDocument: { id: 'k9', title: 'Expte 9', status: 'READY' }, documents: [], pendingDocuments: 0 }),
+    'GET /v1/admin/companies/c1/cases/k9/events': () => [],
+  });
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Expte 9' })).toBeInTheDocument();
+  history.pushState(null, '', '/');
+});

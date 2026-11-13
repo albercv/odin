@@ -9,3 +9,8 @@ test('showsSimilarCasesCapability', () => {
   rerender(<Capabilities company={company} onChange={() => undefined} />);
   expect(screen.getByRole('switch', { name: 'Casos parecidos' })).toBeChecked();
 });
+
+test('showsCaseFilesCapabilityAsExpedientes', () => {
+  render(<Capabilities company={company} />);
+  expect(screen.getByText('Expedientes · desactivada')).toBeInTheDocument();
+});

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 
 const state = JSON.parse(readFileSync(process.env.DEMO_STATE ?? '', 'utf8')) as { admin: { email: string; password: string }; sessionCookie: string };
@@ -332,6 +333,35 @@ async function uploadCaseFilesAndMarkSelection(page: Page): Promise<void> {
   console.log('✓ Admin 17: dos ficheros subidos a la vez como fichas de caso; la selección se desmarca y se vuelve a marcar por lotes');
 }
 
+async function caseScreenAndWithdrawal(page: Page): Promise<void> {
+  const [caseName, other] = [CASE_FILES[1] ?? '', CASE_FILES[0] ?? ''];
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await page.getByRole('link', { name: `Ver expediente de ${caseName}`, exact: true }).click();
+  await expect(page.getByRole('heading', { name: caseName, level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Añadir documentos', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Añadir documentos' });
+  await picker.getByRole('checkbox', { name: other, exact: true }).check();
+  await picker.getByRole('button', { name: 'Añadir', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Historial' })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await page.getByRole('button', { name: `Quitar del expediente ${other}`, exact: true }).click();
+  await confirmDialog(page, `¿Quitar «${other}» del expediente? El documento sigue en Odín; solo deja de formar parte de este caso.`, 'Quitar');
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await openActions(page.locator('main'), other);
+  await page.getByRole('button', { name: `Retirar ${other}`, exact: true }).click();
+  await page.getByRole('dialog', { name: new RegExp(`Retirar «${other}»`) }).getByRole('button', { name: 'Retirar', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retirados', exact: true }).click();
+  await page.getByRole('button', { name: `Recuperar ${other}`, exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retirados', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toBeVisible();
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 17b: pantalla del caso (añadir, historial, quitar con confirmación, axe) y retirar y recuperar un documento');
+}
+
 const groupAdminsSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Administradores del grupo' }) });
 
 async function openGroupAdmins(page: Page, email: string, password: string): Promise<void> {
@@ -526,6 +556,7 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await promoteWorkerWithoutPassword(page, browser);
   await deleteProjectMember(page);
   await uploadCaseFilesAndMarkSelection(page);
+  await caseScreenAndWithdrawal(page);
   await createAndEditTopics(page);
   await removeAndRecoverDocumentTopic(page);
   await workersAskAndSaveCard(page);

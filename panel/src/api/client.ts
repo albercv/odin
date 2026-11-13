@@ -37,10 +37,10 @@ const PAGE_SIZE = 500;
 export const MAX_DOCUMENTS = 2000;
 
 // Recorre las páginas de la API con offset, como collectDocuments en el MCP.
-async function allDocuments(companyId: string) {
+async function allDocuments(companyId: string, withdrawn = false) {
   const documents: S['DocumentView'][] = [];
   while (documents.length <= MAX_DOCUMENTS) {
-    const page = await request<S['DocumentView'][]>('GET', `${co(companyId)}/documents?offset=${documents.length}&limit=${PAGE_SIZE}`);
+    const page = await request<S['DocumentView'][]>('GET', `${co(companyId)}/documents?offset=${documents.length}&limit=${PAGE_SIZE}${withdrawn ? '&withdrawn=true' : ''}`);
     documents.push(...page);
     if (page.length < PAGE_SIZE) break;
   }
@@ -84,6 +84,14 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
+  withdraw: (documentId: string) => request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/withdrawal`),
+  restore: (documentId: string) => request<S['DocumentView']>('DELETE', `${a}/documents/${documentId}/withdrawal`),
+  caseFile: (id: string, caseId: string) => request<S['CaseFileResponse']>('GET', `${co(id)}/cases/${caseId}/file`),
+  caseEvents: (id: string, caseId: string) => request<S['CaseFileEventView'][]>('GET', `${co(id)}/cases/${caseId}/events`),
+  addToCase: (id: string, caseId: string, documentIds: string[]) =>
+    request<S['CaseFileAdded']>('POST', `${co(id)}/cases/${caseId}/file/documents`, { documentIds }),
+  removeFromCase: (id: string, caseId: string, documentId: string) =>
+    request<void>('DELETE', `${co(id)}/cases/${caseId}/file/documents/${documentId}`),
   upload: (id: string, file: File, title: string, projectId: string, caseDocument = false) => {
     const q = new URLSearchParams();
     if (title) q.set('title', title);
