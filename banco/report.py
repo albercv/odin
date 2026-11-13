@@ -38,11 +38,11 @@ def rebuild(folder, layout):
     """Recalcula el resumen desde los ficheros de la carpeta y reescribe resumen.json e informe.md."""
     folder = Path(folder)
     data = read_folder(folder)
-    archives = _names(data["origin"]["Archivos"])
+    archives = _names(data["origin"].get("Archivos", "ficticio"))  # carpetas anteriores a las capas
     ctx = scoring.build_context(archivos.data_dir(layout, archives),
                                 {"doc_ruta": data["ids"]["documentos"], "ficha_f": data["ids"]["fichas"]})
     wanted = set(data["ids"]["preguntas"])
-    items = [i for i in archivos.load_items(layout, _names(data["origin"]["Batería"])) if i["id"] in wanted]
+    items = [i for i in archivos.load_items(layout, _names(data["origin"].get("Batería", "desarrollo"))) if i["id"] in wanted]
     summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"],
                                     ledger=data["ledger"])
     summary.update(origen=data["origin"], stopped=data["stopped"], batches=data["batches"])

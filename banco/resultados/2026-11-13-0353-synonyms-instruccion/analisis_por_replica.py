@@ -3,16 +3,16 @@ import json, sys, statistics
 from collections import defaultdict
 from pathlib import Path
 
-REPO = Path("/Users/albercv/Documents/personalProjects/odin/.worktrees/calidad")
+REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
-from banco import scoring, stats, layout as layout_mod
+from banco import archivos, scoring, stats, layout as layout_mod
 from banco.medir_path import puntuar
 
 folder = REPO / "banco/resultados/2026-11-13-0353-synonyms-instruccion"
 lay = layout_mod.default_layout()
 ids = json.loads((folder / "ids.json").read_text())
-ctx = scoring.build_context(lay.exp, {"doc_ruta": ids["documentos"], "ficha_f": ids["fichas"]})
-items = {i["id"]: i for i in json.loads(lay.battery_file.read_text()) if i["id"] in set(ids["preguntas"])}
+ctx = scoring.build_context(archivos.data_dir(lay, ("ficticio",)), {"doc_ruta": ids["documentos"], "ficha_f": ids["fichas"]})
+items = {i["id"]: i for i in json.loads(archivos.battery_file(lay, "desarrollo").read_text()) if i["id"] in set(ids["preguntas"])}
 runs = [json.loads(l) for l in (folder / "buscadores.jsonl").read_text().splitlines() if l.strip()]
 
 cell = defaultdict(dict)          # (approach, replica) -> {qid: row}

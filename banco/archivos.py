@@ -3,6 +3,7 @@ formato que la de una sola; con «ficticio» solo, todo sigue como antes. No imp
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from dataclasses import dataclass
@@ -58,6 +59,10 @@ def battery_file(layout, name):
     return archive_dir(layout, battery.archive) / battery.file
 
 
+def missing_archives(name, archives):
+    return [a for a in BATTERIES[name].requires if a not in archives]
+
+
 def merged_dir(layout, archives):
     return layout.state_dir / ("archivo-" + "+".join(archives))
 
@@ -68,7 +73,7 @@ def data_dir(layout, archives):
     if archives == ("ficticio",):
         return archive_dir(layout, "ficticio")
     out = merged_dir(layout, archives)
-    if not out.exists():
+    if not (out / "manifiesto.json").is_file():
         merge([archive_dir(layout, name) for name in archives], out)
     return out
 
@@ -92,7 +97,10 @@ def _check_unique(rows, field, section):
 
 
 def _copy_corpus(source, target):
-    for path in sorted(Path(source).rglob("*")):
+    source = Path(source)
+    if not source.is_dir():
+        raise ArchivoError(f"falta el corpus: {source}")
+    for path in sorted(source.rglob("*")):
         if path.is_file():
             dest = target / path.relative_to(source)
             if dest.exists():
@@ -101,21 +109,41 @@ def _copy_corpus(source, target):
             shutil.copyfile(path, dest)
 
 
-def merge(data_dirs, out_dir):
-    """Escribe out_dir desde cero con la unión de las carpetas de datos (manifiesto, claves y copia del corpus)."""
-    out_dir = Path(out_dir)
+def _check_corpus(documents, corpus):
+    for doc in documents:
+        if not (corpus / doc["ruta"]).is_file():
+            raise ArchivoError(f"falta en el corpus: {doc['ruta']}")
+
+
+def _build(data_dirs, target):
     manifests = [_read_json(Path(d) / "manifiesto.json") for d in data_dirs]
     rows = {key: [row for m in manifests for row in m.get(key, [])] for key in LIST_KEYS}
     rows["claves"] = [row for d in data_dirs for row in _read_json(Path(d) / "claves.json")]
     for section, field in UNIQUE_KEYS.items():
         _check_unique(rows[section], field, section)
+    (target / "corpus").mkdir(parents=True)
+    _write_json(target / "manifiesto.json", {"semilla": manifests[0]["semilla"], **{k: rows[k] for k in LIST_KEYS}})
+    _write_json(target / "claves.json", rows["claves"])
+    for d in data_dirs:
+        _copy_corpus(Path(d) / "corpus", target / "corpus")
+    _check_corpus(rows["documentos"], target / "corpus")
+
+
+def merge(data_dirs, out_dir):
+    """Escribe out_dir (desde cero) con la unión de las carpetas de datos. Se construye al lado y se cambia de
+    nombre al final: una fusión interrumpida no deja una carpeta a medias."""
+    out_dir = Path(out_dir)
+    staging = out_dir.with_name(out_dir.name + ".nueva")
+    if staging.exists():
+        shutil.rmtree(staging)
+    try:
+        _build(data_dirs, staging)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
     if out_dir.exists():
         shutil.rmtree(out_dir)
-    (out_dir / "corpus").mkdir(parents=True)
-    _write_json(out_dir / "manifiesto.json", {"semilla": manifests[0]["semilla"], **{k: rows[k] for k in LIST_KEYS}})
-    _write_json(out_dir / "claves.json", rows["claves"])
-    for d in data_dirs:
-        _copy_corpus(Path(d) / "corpus", out_dir / "corpus")
+    os.replace(staging, out_dir)
     return out_dir
 
 

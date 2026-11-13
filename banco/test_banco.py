@@ -100,8 +100,9 @@ class Harness(unittest.TestCase):
         doc_ruta = {f"doc-{n}": item["citas_resueltas"][0]["doc"] for n, item in enumerate(self.items, start=1)}
         known = set(doc_ruta.values())  # la pila carga todos los documentos del manifiesto, no solo los de las preguntas
         doc_ruta.update({f"doc-r{n}": d["ruta"] for n, d in enumerate(manifest["documentos"]) if d["ruta"] not in known})
+        ficha_f = {f"card-{n}": f["id"] for n, f in enumerate(manifest["fichas"], start=1)}
         keys_by_actor = {item["actor"]: "clave-de-prueba" for item in self.items}
-        stack = {"url_mcp": "http://127.0.0.1:1/", "claves": keys_by_actor, "doc_ruta": doc_ruta, "ficha_f": {}}
+        stack = {"url_mcp": "http://127.0.0.1:1/", "claves": keys_by_actor, "doc_ruta": doc_ruta, "ficha_f": ficha_f}
         (self.state_dir / "carga.json").write_text(json.dumps(stack), encoding="utf-8")
         banco = self.tmp / "banco"
         banco.mkdir()
@@ -180,6 +181,16 @@ class RunTest(Harness):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8")), before)
         self.assertIn("Acierto", (folder / "informe.md").read_text(encoding="utf-8"))
+
+    def test_legacy_origin_without_archives_still_rebuilds(self):
+        self.run_cli(self.config())
+        folder = self.only_folder()
+        origin = folder / "ORIGEN.txt"
+        origin.write_text("".join(line for line in origin.read_text(encoding="utf-8").splitlines(True)
+                                  if not line.startswith(("Archivos:", "Batería:"))), encoding="utf-8")
+        (folder / "resumen.json").unlink()
+        self.assertEqual(banco.main(["report", "--results", str(folder)], layout=self.layout), 0)
+        self.assertEqual(json.loads((folder / "resumen.json").read_text(encoding="utf-8"))["accuracy"]["total"], 3)
 
     def test_broken_isolation_stops_with_code_2(self):
         code = self.run_cli(self.config(), env={"FAKE_MODO": "tools_extra"})
@@ -666,7 +677,7 @@ class SampleAndConfigTest(Harness):
         self.assertEqual({i["tipo"] for i in picked}, {"a", "b", "c"})
 
     def test_unsupported_archive_is_clear_error(self):
-        text = self.config().read_text(encoding="utf-8").replace('archives = ["ficticio"]', 'archives = ["ficticio", "publico"]')
+        text = self.config().read_text(encoding="utf-8").replace('archives = ["ficticio"]', 'archives = ["publico"]')
         path = self.tmp / "publico.toml"
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(ConfigError, "capa no disponible todavía: publico"):
@@ -732,6 +743,13 @@ class SeveralArchivesTest(Harness):
     def test_stack_without_the_archive_asks_to_load_it(self):
         with self.assertRaisesRegex(ConfigError, re.escape("make banco-cargar ARCHIVOS=ficticio,generalidad")):
             prepare(self.several_config(), self.layout)
+
+    def test_card_not_loaded_is_refused(self):
+        stack = json.loads((self.state_dir / "carga.json").read_text(encoding="utf-8"))
+        stack["ficha_f"] = {}
+        (self.state_dir / "carga.json").write_text(json.dumps(stack), encoding="utf-8")
+        with self.assertRaisesRegex(ConfigError, re.escape("make banco-cargar ARCHIVOS=ficticio")):
+            prepare(self.config(), self.layout)
 
     def test_missing_battery_file_is_a_clear_cli_error(self):
         path = self.config()

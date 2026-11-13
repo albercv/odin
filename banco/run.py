@@ -79,13 +79,16 @@ def _check_supported(cfg):
         if name not in archivos.BATTERIES:
             known = ", ".join(archivos.BATTERIES)
             raise ConfigError(f"la batería «{name}» no existe todavía: en esta fase solo están: {known}")
+        missing = archivos.missing_archives(name, cfg.archives)
+        if missing:
+            raise ConfigError(f"la batería «{name}» necesita el archivo «{missing[0]}» en «archives»")
 
 
 def _check_loaded(folder, stack, archives):
-    """Las citas solo se resuelven si la pila tiene cargados todos los documentos del manifiesto que se usa."""
+    """Las citas y las fichas solo se resuelven si la pila tiene cargados los documentos y fichas del manifiesto."""
     manifest = json.loads((folder / "manifiesto.json").read_text(encoding="utf-8"))
-    loaded = set(stack["doc_ruta"].values())
-    if any(doc["ruta"] not in loaded for doc in manifest["documentos"]):
+    docs, cards = set(stack["doc_ruta"].values()), set(stack["ficha_f"].values())
+    if any(d["ruta"] not in docs for d in manifest["documentos"]) or any(f["id"] not in cards for f in manifest["fichas"]):
         arg = ",".join(archives)
         raise ConfigError(f"la pila no tiene cargados los documentos de {', '.join(archives)}: "
                           f"ejecuta antes «make banco-cargar ARCHIVOS={arg}»")

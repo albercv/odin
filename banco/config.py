@@ -6,7 +6,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from banco.archivos import BATTERIES
+from banco.archivos import ARCHIVES, BATTERIES, missing_archives
 
 MODES = ("explore", "closing")
 COMBINER_KINDS = ("single", "majorityVote", "pageFusion", "composer")
@@ -223,7 +223,8 @@ def _check_battery(name: str, mode: str, archives: tuple[str, ...]) -> None:
         return
     if name not in BATTERIES:
         raise ConfigError(f"batería desconocida «{name}»")
-    missing = [a for a in BATTERIES[name].requires if a not in archives]
+    # Con una capa desconocida (configs/ejemplo.toml las admite) la orden da el error de capa, antes que este.
+    missing = missing_archives(name, archives) if all(a in ARCHIVES for a in archives) else []
     if missing:
         raise ConfigError(f"la batería «{name}» necesita el archivo «{missing[0]}» en «archives»")
 

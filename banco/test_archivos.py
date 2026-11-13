@@ -3,8 +3,10 @@ import contextlib
 import io
 import json
 import re
+import shutil
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from banco import archivos
@@ -107,6 +109,31 @@ class ArchivesTest(unittest.TestCase):
     def test_unknown_archive_is_refused(self):
         with self.assertRaisesRegex(ArchivoError, "capa no disponible todavía: publico"):
             archivos.data_dir(self.layout, ("ficticio", "publico"))
+
+    def test_missing_corpus_dir_is_refused(self):
+        shutil.rmtree(self.generalidad / "corpus")
+        with self.assertRaisesRegex(ArchivoError, "falta el corpus"):
+            self.merge_both()
+
+    def test_document_missing_from_corpus_is_refused(self):
+        (self.generalidad / "corpus" / "brumeral" / "_general" / "doc.txt").unlink()
+        with self.assertRaisesRegex(ArchivoError, re.escape("falta en el corpus: brumeral/_general/doc.txt")):
+            self.merge_both()
+
+    def test_interrupted_merge_leaves_no_partial_dir(self):
+        with mock.patch("banco.archivos.shutil.copyfile", side_effect=OSError("corte")):
+            with self.assertRaises(OSError):
+                archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+        self.assertFalse(self.merged.exists())
+        self.assertEqual(archivos.data_dir(self.layout, ("ficticio", "generalidad")), self.merged)
+        self.assertTrue((self.merged / "manifiesto.json").is_file())
+
+    def test_data_dir_rebuilds_when_manifest_is_missing(self):
+        self.merged.mkdir(parents=True)
+        (self.merged / "restos.txt").write_text("x", encoding="utf-8")
+        archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+        self.assertTrue((self.merged / "manifiesto.json").is_file())
+        self.assertFalse((self.merged / "restos.txt").exists())
 
     def test_battery_files_and_required_archives(self):
         self.assertEqual(archivos.battery_file(self.layout, "desarrollo"), self.ficticio / "bateria.json")
