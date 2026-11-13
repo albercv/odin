@@ -47,9 +47,18 @@ public class GetCaseFile {
         DocumentEntry caseEntry = access.entry(documents, caseId).orElseThrow();
         List<CaseFileEntry> relations = caseFiles.entries(access.scope(), access.visibility(), caseId);
         Map<DocumentId, DocumentEntry> readable = new LinkedHashMap<>();
+        int pending = 0;
         for (CaseFileEntry relation : relations) {
-            access.entry(documents, relation.documentId()).filter(d -> d.document().status() == DocumentStatus.READY)
-                    .ifPresent(d -> readable.put(relation.documentId(), d));
+            Optional<DocumentEntry> seen = access.entry(documents, relation.documentId())
+                    .filter(d -> d.document().withdrawnAt().isEmpty());
+            if (seen.isEmpty()) {
+                continue;
+            }
+            if (seen.get().document().status() == DocumentStatus.READY) {
+                readable.put(relation.documentId(), seen.get());
+            } else {
+                pending++;
+            }
         }
         Set<DocumentId> toCount = new HashSet<>(readable.keySet());
         toCount.add(caseId);
@@ -57,6 +66,6 @@ public class GetCaseFile {
         List<CaseFileDocumentView> views = relations.stream().filter(r -> readable.containsKey(r.documentId()))
                 .map(r -> new CaseFileDocumentView(readable.get(r.documentId()),
                         pages.getOrDefault(r.documentId(), 0), r.addedBy(), r.addedAt())).toList();
-        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views);
+        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views, pending);
     }
 }

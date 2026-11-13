@@ -7,8 +7,10 @@ import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.MarkCaseDocuments;
+import com.e2d.odin.application.shared.CaseFileSettings;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
@@ -435,6 +437,12 @@ public class UseCaseConfiguration {
     GetCaseFile getCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
             DocumentRepository documents, CaseFileRepository caseFiles) {
         return new GetCaseFile(organizations, projectMembers, documents, caseFiles);
+    }
+
+    @Bean
+    ReadCaseFile readCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, CaseFileSettings settings) {
+        return new ReadCaseFile(organizations, projectMembers, documents, caseFiles, settings);
     }
 
     @Bean

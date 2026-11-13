@@ -1,5 +1,6 @@
 package com.e2d.odin.bootstrap;
 
+import com.e2d.odin.application.shared.CaseFileSettings;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
@@ -29,6 +30,11 @@ public class SettingsConfiguration {
     @Bean
     UploadSettings uploadSettings(@Value("${odin.upload-max-bytes}") long maxBytes) {
         return new UploadSettings(maxBytes);
+    }
+
+    @Bean
+    CaseFileSettings caseFileSettings(@Value("${odin.case-file-chunk-chars}") int chunkChars) {
+        return new CaseFileSettings(chunkChars);
     }
 
     /** La ventana del etiquetado la lee el estado del panel aunque no haya etiquetador. */

@@ -68,6 +68,31 @@ class GetCaseFileTest {
     }
 
     @Test
+    void pendingDocumentsCountsUnreadEntriesWithoutListingThem() {
+        Document caseDoc = w.caseIn(w.project);
+        put(caseDoc, w.documentIn(w.project), w.worker);
+        put(caseDoc, Fixtures.document(w.docs, w.company, DocumentStatus.RECEIVED), w.worker);
+
+        var view = w.getCaseFile().execute(w.worker, caseDoc.id());
+
+        assertThat(view.pendingDocuments()).isEqualTo(1);
+        assertThat(view.documents()).hasSize(1);
+    }
+
+    @Test
+    void pendingDocumentsNeverCountsDocumentsOfProjectsThePersonDoesNotSee() {
+        Document caseDoc = w.caseIn(w.project);
+        Document other = Fixtures.documentIn(w.docs, w.company, Fixtures.project(w.orgs, w.company), "otro");
+        w.docs.save(new Document(other.id(), w.company, other.projectId(), other.title(), other.filename(),
+                other.format(), other.sha256(), DocumentStatus.RECEIVED, other.failureReason(), other.paginated(),
+                other.uploadedBy(), other.uploadedAt(), other.processingStartedAt(), other.attemptCount(),
+                other.supersededBy(), other.withdrawnAt()));
+        put(caseDoc, other, w.worker);
+
+        assertThat(w.getCaseFile().execute(w.worker, caseDoc.id()).pendingDocuments()).isZero();
+    }
+
+    @Test
     void getCaseFileShowsSupersededWithReplacement() {
         Document caseDoc = w.caseIn(w.project);
         Document old = w.documentIn(w.project);

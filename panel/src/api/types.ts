@@ -612,6 +612,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cases/{caseId}/file/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["text"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/me": {
         parameters: {
             query?: never;
@@ -979,6 +995,8 @@ export interface components {
             projectId?: string;
             /** Format: int32 */
             limit?: number;
+            /** Format: uuid */
+            caseId?: string;
         };
         Hit: {
             sourceType: string;
@@ -1312,6 +1330,32 @@ export interface components {
         CaseFileResponse: {
             caseDocument: components["schemas"]["CaseFileDocumentView"];
             documents: components["schemas"]["CaseFileDocumentView"][];
+            /** Format: int32 */
+            pendingDocuments: number;
+        };
+        CaseFileTextPageView: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+            /** Format: int32 */
+            pageNumber: number;
+            text: string;
+            unread: boolean;
+        };
+        CaseFileTextResponse: {
+            pages: components["schemas"]["CaseFileTextPageView"][];
+            nextCursor?: string;
+            complete: boolean;
+            /** Format: int32 */
+            documentsRead: number;
+            /** Format: int32 */
+            documentsTotal: number;
+            /** Format: int32 */
+            pagesRead: number;
+            /** Format: int32 */
+            pagesTotal: number;
+            /** Format: int32 */
+            pendingDocuments: number;
         };
         AdminMe: {
             /** Format: uuid */
@@ -2765,6 +2809,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
+    text: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileTextResponse"];
                 };
             };
         };

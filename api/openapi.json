@@ -1739,6 +1739,40 @@
         }
       }
     },
+    "/v1/cases/{caseId}/file/text" : {
+      "get" : {
+        "tags" : [ "case-file-controller" ],
+        "operationId" : "text",
+        "parameters" : [ {
+          "name" : "caseId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CaseFileTextResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/me" : {
       "get" : {
         "tags" : [ "session-controller" ],
@@ -2547,6 +2581,10 @@
           "limit" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "caseId" : {
+            "type" : "string",
+            "format" : "uuid"
           }
         }
       },
@@ -3452,9 +3490,74 @@
             "items" : {
               "$ref" : "#/components/schemas/CaseFileDocumentView"
             }
+          },
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         },
-        "required" : [ "caseDocument", "documents" ]
+        "required" : [ "caseDocument", "documents", "pendingDocuments" ]
+      },
+      "CaseFileTextPageView" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "pageNumber" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "unread" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "documentId", "pageNumber", "text", "title", "unread" ]
+      },
+      "CaseFileTextResponse" : {
+        "type" : "object",
+        "properties" : {
+          "pages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CaseFileTextPageView"
+            }
+          },
+          "nextCursor" : {
+            "type" : "string"
+          },
+          "complete" : {
+            "type" : "boolean"
+          },
+          "documentsRead" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "documentsTotal" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pagesRead" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pagesTotal" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pendingDocuments" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "complete", "documentsRead", "documentsTotal", "pages", "pagesRead", "pagesTotal", "pendingDocuments" ]
       },
       "AdminMe" : {
         "type" : "object",

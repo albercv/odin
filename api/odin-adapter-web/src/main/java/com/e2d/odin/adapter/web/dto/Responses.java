@@ -1,5 +1,6 @@
 package com.e2d.odin.adapter.web.dto;
 
+import com.e2d.odin.application.casefile.CaseFileText;
 import com.e2d.odin.application.casefile.CaseFileView;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
@@ -388,11 +389,26 @@ public final class Responses {
         }
     }
 
-    public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents) {
+    public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents,
+            int pendingDocuments) {
         public static CaseFileResponse from(CaseFileView view) {
             return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null),
                     view.documents().stream()
-                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt())).toList());
+                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt())).toList(),
+                    view.pendingDocuments());
+        }
+    }
+
+    public record CaseFileTextPageView(UUID documentId, String title, int pageNumber, String text, boolean unread) {
+    }
+
+    public record CaseFileTextResponse(List<CaseFileTextPageView> pages, @Nullable String nextCursor, boolean complete,
+            int documentsRead, int documentsTotal, int pagesRead, int pagesTotal, int pendingDocuments) {
+        public static CaseFileTextResponse from(CaseFileText t) {
+            return new CaseFileTextResponse(t.pages().stream().map(p -> new CaseFileTextPageView(p.documentId().value(),
+                    p.title(), p.pageNumber(), p.text(), p.unread())).toList(), t.nextCursor().orElse(null),
+                    t.complete(), t.documentsRead(), t.documentsTotal(), t.pagesRead(), t.pagesTotal(),
+                    t.pendingDocuments());
         }
     }
 
