@@ -197,6 +197,18 @@ class ExpedientesTest(unittest.TestCase):
             dp.resumen_expedientes(self.cuentas(errores=[{"caso": "a/caso.txt", "error": "500"}]))
 
 
+class LectoresTest(unittest.TestCase):
+
+    def lineas(self, entorno):
+        return dp.estado_lectores(None, entorno, {}, [{"id": "a", "status": "PENDING_READER"}], {"a"})
+
+    def test_escaneosEnColaConLectorConfiguradoNoDiceSinConfigurar(self):
+        self.assertIn("en cola del lector OCR", self.lineas({"ODIN_READER_URL": "http://host.docker.internal:8077"})[0])
+
+    def test_sinLectorDiceSinConfigurar(self):
+        self.assertTrue(self.lineas({})[0].startswith("Lector OCR sin configurar"))
+
+
 class CarpetaDeDatosTest(unittest.TestCase):
 
     def test_laInstalacionOdinUsaData(self):
