@@ -51,6 +51,7 @@ Rama `task/primera-carga/lote`, que sale de la tarea 1. Spec, apartado 4, pasos 
 - [ ] **Paso 1:** pruebas que fallan:
   - el documento nace pendiente, sin proyecto y con `intake_path`;
   - un SHA-256 que ya está en la empresa no crea nada, cuenta como «ya estaba» y devuelve el documento que existe;
+  - un fichero retirado en este lote no vuelve a entrar al reanudar; uno retirado fuera del lote sí entra como nuevo (V24 del encargo 13);
   - el mismo fichero dos veces da el mismo documento (idempotente);
   - `GET files?sha256=` responde qué huellas ya están;
   - un administrador de otra empresa recibe 404;

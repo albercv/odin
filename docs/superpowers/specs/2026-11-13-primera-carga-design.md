@@ -84,9 +84,10 @@ Va por encima de la V24 del encargo 13. Se renumera al integrar si hace falta (T
 1. **`StartIntake(admin, channel)`** abre el lote en estado `OPEN`.
 2. **`AddFileToIntake(admin, batchId, path, file)`** reutiliza `UploadDocument` con estas diferencias:
    - el documento nace con `intake_pending`, sin proyecto y con `intake_path`;
-   - si el SHA-256 ya está en la empresa, no crea nada. Lo cuenta como «ya estaba» y devuelve el documento que existe;
-   - es idempotente, así que reintentar un fichero no duplica nada (reanudable).
-   - `GET .../intake-batches/{id}/files?sha256=…` responde qué huellas ya están, para que el cliente no vuelva a subirlas.
+   - si el SHA-256 ya está en la empresa (`findBySha256` del encargo 13: el más antiguo, sin contar lo retirado), no crea nada. Lo cuenta como «ya estaba» y devuelve el documento que existe;
+   - **dentro del mismo lote, la huella cuenta aunque el documento esté retirado.** Si el administrador descartó un fichero en la bandeja y la subida se reanuda, ese fichero no vuelve a entrar: se cuenta como «descartado en este lote». Fuera del lote vale la regla del encargo 13: subir un fichero retirado lo hace entrar como documento nuevo (V24, índice único parcial `WHERE withdrawn_at IS NULL`);
+   - es idempotente, así que reintentar un fichero no duplica nada (reanudable);
+   - `GET .../intake-batches/{id}/files?sha256=…` responde qué huellas ya están en la empresa o en el lote, retiradas incluidas, para que el cliente no vuelva a subirlas.
 3. **`CloseIntakeUpload`** pasa el lote a `READING`.
    - La lectura es la de siempre: `ProcessPendingDocuments` y `ProcessDocumentsWithReader`.
    - Los escaneos esperan al OCR si no hay lector, y lo dice la bandeja.
