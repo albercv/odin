@@ -312,7 +312,7 @@ DOCUMENTOS += [
                ["Mónica Vega Rubio", "Administración, Logística Penedal, S.L."]),
     ]),
     factura("logistica-penedal", "F-2025-061", "2025-04-30",
-            [("Primer pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/06/2025 (29 de junio de 2025)"),
+            [("Primer pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/06/2025"),
     factura("logistica-penedal", "F-2025-075", "2025-06-30",
             [("Segundo pago de honorarios del contrato CI-2025-004.", 1, 320000)], "29/08/2025"),
     factura("logistica-penedal", "F-2025-098", "2025-09-30",
@@ -325,7 +325,6 @@ DOCUMENTOS += [
         "Acuerdos:",
         "Punto 3. Legalización de la instalación fotovoltaica: la distribuidora pidió más documentación.",
         "Fecha prevista de la inspección: 15 de julio de 2025.",
-        "Inspección programada para el 15/07/2025, según confirmó la distribuidora.",
         "Brumeral enviará la memoria técnica completada y el certificado de los equipos antes de la inspección.",
         "Logística Penedal aportará los planos actualizados de la cubierta.", "",
         "Y no habiendo más asuntos, se levanta la reunión.",
@@ -405,7 +404,7 @@ def ficha(id_, proyecto, estado, titulo, texto, creada, error=False):
 
 FICHAS = [
     ficha("FB01", "talleres-murcano", "APPROVED", "Contacto de mantenimiento en Talleres Murcano",
-          "El jefe de mantenimiento de Talleres Murcano prefiere que le llamen antes de las 8:30, porque luego está en el taller y no coge el teléfono. En la agenda figura como 08:30; en otros documentos, como 8.30 u 8,30.",
+          "El jefe de mantenimiento de Talleres Murcano prefiere que le llamen antes de las 8:30, porque luego está en el taller y no coge el teléfono.",
           "2025-02-03T10:00:00Z"),
     ficha("FB02", "bodegas-quintafria", "APPROVED", "Entrada en vigor del contrato con Bodegas Quintafría",
           "El contrato nuevo con Bodegas Quintafría empezó el 1 de marzo de 2025.",
@@ -714,8 +713,7 @@ def comprobar_claves(bateria, paginas):
         textos = [paginas[c["doc"]][p - 1] for c in q["citas_resueltas"] for p in c["paginas"]]
         textos += [FICHAS_POR_ID[f]["texto"] for f in q["fichas_esperadas"]]
         for grupo in q["claves"]:
-            for alternativa in grupo:
-                exigir(any(puntuar.has_key(t, [alternativa]) for t in textos), f"{q['id']}: «{alternativa}» no aparece")
+            exigir(any(puntuar.has_key(t, grupo) for t in textos), f"{q['id']}: clave {grupo} no aparece")
 
 
 def comprobar_fuentes_claves(claves_kb, bateria, paginas):

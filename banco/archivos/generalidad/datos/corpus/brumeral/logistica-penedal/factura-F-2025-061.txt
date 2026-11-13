@@ -16,5 +16,5 @@ IVA 21 %: 672,00 euros
 Total factura: 3.872,00 euros
 
 Forma de pago: transferencia bancaria a la cuenta ES00 0000 0000 00 0000000000.
-Vencimiento: 29/06/2025 (29 de junio de 2025)
+Vencimiento: 29/06/2025
 Factura emitida según la norma interna de facturación de Brumeral.
