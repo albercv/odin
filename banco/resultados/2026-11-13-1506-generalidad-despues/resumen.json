@@ -1,0 +1,163 @@
+{
+ "byApproach": {
+  "main": {
+   "recall": 1.0,
+   "accuracy": 0.951,
+   "errors": 0
+  }
+ },
+ "cost": {
+  "notifiedUsd": 0.3413,
+  "notifiedUsdFromRecords": 0.3408,
+  "unknownCostRecords": 0,
+  "strategyUsdPerAnswer": 0.01,
+  "tokensPerAnswer": 182598.4706,
+  "searchers": {
+   "usdPerAnswer": 0.01,
+   "tokensPerAnswer": 181733.7353
+  },
+  "combiner": {
+   "usdPerAnswer": 0.0,
+   "tokensPerAnswer": 0.0
+  },
+  "judges": {
+   "usdPerAnswer": 0.0,
+   "tokensPerAnswer": 864.7353
+  }
+ },
+ "agreementRuns": {
+  "inMajority": {
+   "runs": 88,
+   "accuracy": 0.9773
+  },
+  "outsideMajority": {
+   "runs": 14,
+   "accuracy": 0.7857
+  },
+  "failuresOutsideMajority": 0.6,
+  "byLevel": {
+   "atLeast60": {
+    "questions": 32,
+    "accuracy": 1.0
+   },
+   "below60": {
+    "questions": 2,
+    "accuracy": 0.0
+   }
+  }
+ },
+ "notMeasured": 0,
+ "accuracy": {
+  "correct": 33,
+  "total": 34,
+  "rate": 0.9706,
+  "wilson": [
+   0.8508,
+   0.9948
+  ]
+ },
+ "byType": {
+  "generica": {
+   "correct": 5,
+   "total": 6
+  },
+  "dato_concreto": {
+   "correct": 5,
+   "total": 5
+  },
+  "version": {
+   "correct": 5,
+   "total": 5
+  },
+  "identificador": {
+   "correct": 1,
+   "total": 1
+  },
+  "vocabulario": {
+   "correct": 2,
+   "total": 2
+  },
+  "contradiccion": {
+   "correct": 3,
+   "total": 3
+  },
+  "lista_completa": {
+   "correct": 2,
+   "total": 2
+  },
+  "ficha": {
+   "correct": 1,
+   "total": 1
+  },
+  "sin_fuente": {
+   "correct": 5,
+   "total": 5
+  },
+  "aislamiento": {
+   "correct": 4,
+   "total": 4
+  }
+ },
+ "graveFailures": {
+  "leaks": 0,
+  "inventedCitations": 0,
+  "falseNoConsta": 0,
+  "supersededAsCurrent": 0
+ },
+ "agreement": {
+  "3": {
+   "questions": 24,
+   "accuracy": 0.9583
+  },
+  "2": {
+   "questions": 8,
+   "accuracy": 1.0
+  },
+  "1": {
+   "questions": 2,
+   "accuracy": 1.0
+  }
+ },
+ "judges": {
+  "kappa": null,
+  "falseAcceptRate": null,
+  "falseRejectRate": null,
+  "undecided": 13,
+  "ppi": {
+   "estimacion": 0.3684,
+   "inferior": 0.1515,
+   "superior": 0.5853
+  },
+  "notJudgedNoConsta": 13,
+  "manualReview": [
+   "C001",
+   "GEN01",
+   "GEN02",
+   "GEN03"
+  ]
+ },
+ "latency": {
+  "p50": 35.1,
+  "p95": 58.6
+ },
+ "origen": {
+  "Configuración": "generalidad-despues",
+  "Rama": "medicion/d084-generalidad",
+  "Commit": "0d6d9907ee559a0a03827d2d10da590e56304e49",
+  "Modo": "explore",
+  "Batería": "conector, generalidad",
+  "Archivos": "ficticio, generalidad",
+  "Muestra": "batería entera",
+  "Preguntas": "34",
+  "Fecha": "2026-11-13T15:06"
+ },
+ "stopped": null,
+ "batches": [
+  {
+   "inicio": "2026-11-13T15:06:20",
+   "fin": "2026-11-13T15:14:30",
+   "motivo": "completa",
+   "llamadas_pago": 103
+  }
+ ]
+}
