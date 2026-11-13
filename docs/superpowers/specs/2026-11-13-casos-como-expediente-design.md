@@ -1,7 +1,7 @@
 # Diseño técnico: casos como expediente (encargo 13)
 
 - Fecha: 2026-11-13. Autor: CTO 2. Para: CEO (valida que encaja con el negocio) y propietario.
-- **Diseño de negocio:** `docs/business-digital-mind/encargos/2026-11-12-casos-como-expediente.md` (repositorio OCR), aprobado con D-075. Se basa en D-074 (camino A: Odín lee y el programa de gestión escribe) y D-076 (página de subida, enlaces de 15 minutos, solo red local). Incluye B-011 (ver el original).
+- **Diseño de negocio:** `docs/business-digital-mind/encargos/2026-11-12-casos-como-expediente.md` (repositorio OCR), aprobado con D-075. Diseño técnico validado por el CEO con D-078, con sus precisiones ya incorporadas. Se basa en D-074 (camino A: Odín lee y el programa de gestión escribe) y D-076 (página de subida, enlaces de 15 minutos, solo red local). Incluye B-011 (ver el original).
 - **Rama:** `feature/casos-expediente`, que sale de `develop` (94819a5). Cada tarea en `task/casos-expediente/<tarea>`, con merge `--no-ff`.
 - **Dependencia de otros:** la primera carga del CTO (`feature/estudio-primera-carga`) usará el caso de uso «añadir al expediente» de este diseño (apartado 5.2).
 
@@ -80,7 +80,11 @@ V24 queda por encima de la última desplegada, V23 (D-058, T-021). Si otra featu
   - Devuelve `nextCursor` y `complete` y cuenta los documentos y páginas leídos y los que faltan.
   - Las páginas vacías salen marcadas como no leídas, como en `readPage`.
 - **Buscar dentro del expediente:** `SearchKnowledge` admite un `caseId` opcional que limita la búsqueda a la ficha y sus documentos. Se combina con el filtro por proyecto, que ya incluye lo general (D-053).
-- **Cómo lee la IA el expediente:** primero `getCaseFile`. Si es pequeño, `readCaseFile` hasta `complete: true`; si no, busca dentro con `caseId`. Si no lo ha leído entero, lo dice (D-049, fuente parcial). La medición decide el tope de partida (apartado 10).
+- **Cómo lee la IA el expediente (D-078):** primero `getCaseFile`.
+  - **Pregunta concreta** (un dato, un importe, una fecha): busca dentro del expediente con `caseId` y no lo lee entero.
+  - **Pregunta sobre el conjunto** (resumirlo, analizarlo todo, qué falta): lo lee con `readCaseFile` hasta `complete: true`.
+  - Así solo llegan a la IA externa los fragmentos necesarios (D-016).
+  - Si no lo ha leído entero, lo dice (D-049, fuente parcial). La medición decide el tope de partida (apartado 10).
 
 ### 5.2 Ordenar
 
@@ -153,9 +157,11 @@ Todas las rutas se documentan en `api/openapi.json`.
   - crea el documento en el proyecto del caso, con la persona como autora y la fecha;
   - lo añade al expediente (`ADDED`).
 - **Lectura:** el documento pasa por la lectura de siempre (OCR y etiquetado) y se ve cuando está `READY`.
-- **Si el fichero ya está en Odín** (mismo hash en la empresa):
-  - si la persona lo ve y es del proyecto o general, se añade al expediente el que ya existe, sin copia;
-  - si no, sale el error genérico «No se ha podido añadir este fichero; avisa al administrador», sin revelar dónde está.
+- **Si el fichero ya está en Odín** (D-078). Los duplicados se buscan solo dentro del proyecto del caso y de lo general.
+  - Si ya existe ahí, se añade al expediente el que ya existe, sin copia.
+  - Si no, entra como documento nuevo en el proyecto del caso, aunque el mismo fichero esté en otro proyecto, sea visible o no para la persona. No da error y no revela que existe en otra parte.
+  - Para permitirlo, V24 cambia la restricción única `(company_id, sha256)` por `UNIQUE NULLS NOT DISTINCT (company_id, project_id, sha256)`.
+  - La subida del administrador sigue buscando el duplicado en toda la empresa, como hoy. Si hay varios, se queda con el más antiguo.
 - **Formatos:** los de hoy (PDF, DOCX, texto, Markdown e imagen) y el mismo tamaño máximo.
   - **El correo entra impreso a PDF,** que funciona con cualquier programa de correo, o guardado como texto.
   - **`.eml` y `.msg` quedan fuera de este encargo.** `.eml` necesita un lector de MIME nuevo y `.msg` es un formato binario de Outlook. Se añaden si las entrevistas dicen que hacen falta.
@@ -176,8 +182,9 @@ Todas las rutas se documentan en `api/openapi.json`.
 ### 7.3 Red local y algo más estricto
 
 - **Solo red local:** las rutas con token rechazan con 404 las peticiones cuyo origen no es loopback ni una dirección privada (IPv4 privada o de enlace local, IPv6 local única).
-  - Si la petición llega directa desde una dirección privada, se toma la de `X-Forwarded-For`, que pone el nginx del panel.
-  - Si llega de una dirección pública, se toma esa y se ignora la cabecera.
+  - **`X-Forwarded-For` solo se usa si la petición viene de un proxy de confianza** (D-078): la lista `ODIN_TRUSTED_PROXIES`, con nombres o direcciones que se resuelven al usarlos. En Compose vale `panel`, el nginx del panel, que reescribe la cabecera con `$remote_addr`.
+  - De cualquier otra dirección, también privada, se toma la dirección de la conexión y se ignora la cabecera. Así nadie de la oficina puede hacerse pasar por el equipo al que está atado un enlace.
+  - La revisión de aislamiento con Opus lo comprueba expresamente.
   - El acceso desde fuera de la oficina es el encargo 7.
 - **Un solo uso no lo propongo para el original:** el visor de PDF hace varias peticiones (por rangos o al recargar), y un enlace de un solo uso fallaría al abrirlo.
 - **Lo que propongo, para los dos tipos de enlace:**
@@ -238,6 +245,7 @@ Todas las rutas se documentan en `api/openapi.json`.
     - sustituidos dentro del expediente;
     - documentos que no deben salir.
   - **El puntuador** añade la cobertura: qué parte de los documentos del expediente cita la respuesta. No cambia lo que ya puntúa.
+- **Preguntas concretas sobre expedientes grandes:** la medición cuenta si la IA lee el expediente entero cuando no hacía falta (llamadas a `readCaseFile` en una pregunta concreta) (D-078).
 - **Medición con el banco del CTO 3,** cuando esté libre. Se acuerda con él para no pisar su barrido.
   - **Mínimo:** 90 % de respuestas correctas, ninguna cita inventada y ninguna fuga (D-049).
   - **Consumo:** tokens y coste notificado de una pregunta de expediente frente a una suelta, con el mismo modelo y el mismo equipo.
