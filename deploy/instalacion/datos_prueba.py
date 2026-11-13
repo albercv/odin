@@ -433,11 +433,13 @@ def estado_lectores(api, entorno, empresas, docs, escaneados):
     lineas = []
     if not estados:
         lineas.append("Sin documentos escaneados en esta carga.")
-    elif estados == {"PENDING_READER"}:
+    elif estados == {"PENDING_READER"} and not entorno.get("ODIN_READER_URL"):
         lineas.append(f"Lector OCR sin configurar: {len(escaneados)} escaneos se quedan «Esperando al lector OCR» "
                       "y se leerán solos cuando llegue el lector (README, «Lector OCR»).")
     else:
-        lineas.append(f"Lector OCR: los escaneados están en {sorted(estados)}.")
+        cola = sum(d["status"] == "PENDING_READER" for d in docs if d["id"] in escaneados)
+        lineas.append(f"Lector OCR: los escaneados están en {sorted(estados)}"
+                      + (f"; {cola} en cola del lector OCR, que los lee solo en los próximos minutos." if cola else "."))
     if not entorno.get("ODIN_TAGGER_URL"):
         lineas.append("Etiquetado sin configurar: los documentos no llevan temas de la IA. Los casos llevan los "
                       "temas puestos por el administrador de prueba (README, «Etiquetado por tema»).")
