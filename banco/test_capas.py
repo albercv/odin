@@ -9,8 +9,8 @@ import unittest
 from unittest import mock
 from pathlib import Path
 
-from banco import archivos
-from banco.archivos import ArchivoError
+from banco import capas
+from banco.capas import ArchivoError
 from banco.layout import Layout
 
 
@@ -52,13 +52,13 @@ class ArchivesTest(unittest.TestCase):
         self.merged = self.layout.state_dir / "archivo-ficticio+generalidad"
 
     def merge_both(self, out=None):
-        return archivos.merge([self.ficticio, self.generalidad], out or self.layout.state_dir / "fusion")
+        return capas.merge([self.ficticio, self.generalidad], out or self.layout.state_dir / "fusion")
 
     def test_ficticio_alone_keeps_its_own_data_dir(self):
-        self.assertEqual(archivos.data_dir(self.layout, ("ficticio",)), self.ficticio)
+        self.assertEqual(capas.data_dir(self.layout, ("ficticio",)), self.ficticio)
 
     def test_several_archives_are_merged_into_state_dir(self):
-        out = archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+        out = capas.data_dir(self.layout, ("ficticio", "generalidad"))
         self.assertEqual(out, self.merged)
         manifest = json.loads((out / "manifiesto.json").read_text(encoding="utf-8"))
         self.assertEqual([e["clave"] for e in manifest["empresas"]], ["ribera", "brumeral"])
@@ -67,22 +67,22 @@ class ArchivesTest(unittest.TestCase):
         self.assertEqual([c["id"] for c in claves], ["K001", "brumeral-K"])
 
     def test_corpus_is_copied_not_linked(self):
-        out = archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+        out = capas.data_dir(self.layout, ("ficticio", "generalidad"))
         copied = out / "corpus" / "brumeral" / "_general" / "doc.txt"
         self.assertTrue(copied.is_file())
         self.assertFalse(copied.is_symlink())
         self.assertTrue((out / "corpus" / "ribera" / "_general" / "doc.txt").is_file())
 
     def test_existing_merged_dir_is_not_rebuilt_by_data_dir(self):
-        out = archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+        out = capas.data_dir(self.layout, ("ficticio", "generalidad"))
         (out / "sentinela.txt").write_text("x", encoding="utf-8")
-        archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+        capas.data_dir(self.layout, ("ficticio", "generalidad"))
         self.assertTrue((out / "sentinela.txt").exists())
 
     def test_merge_rewrites_from_scratch(self):
         out = self.merge_both()
         (out / "sobrante.txt").write_text("x", encoding="utf-8")
-        archivos.merge([self.ficticio, self.generalidad], out)
+        capas.merge([self.ficticio, self.generalidad], out)
         self.assertFalse((out / "sobrante.txt").exists())
 
     def test_merge_is_deterministic(self):
@@ -104,11 +104,11 @@ class ArchivesTest(unittest.TestCase):
                 other = self.layout.state_dir / f"otra-{section}"
                 write_archive(other, empresa, **overrides)
                 with self.assertRaisesRegex(ArchivoError, re.escape(f"repetida en {section}: {value}")):
-                    archivos.merge([self.ficticio, other], self.layout.state_dir / f"fusion-{section}")
+                    capas.merge([self.ficticio, other], self.layout.state_dir / f"fusion-{section}")
 
     def test_unknown_archive_is_refused(self):
         with self.assertRaisesRegex(ArchivoError, "capa no disponible todavía: publico"):
-            archivos.data_dir(self.layout, ("ficticio", "publico"))
+            capas.data_dir(self.layout, ("ficticio", "publico"))
 
     def test_missing_corpus_dir_is_refused(self):
         shutil.rmtree(self.generalidad / "corpus")
@@ -121,51 +121,51 @@ class ArchivesTest(unittest.TestCase):
             self.merge_both()
 
     def test_interrupted_merge_leaves_no_partial_dir(self):
-        with mock.patch("banco.archivos.shutil.copyfile", side_effect=OSError("corte")):
+        with mock.patch("banco.capas.shutil.copyfile", side_effect=OSError("corte")):
             with self.assertRaises(OSError):
-                archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+                capas.data_dir(self.layout, ("ficticio", "generalidad"))
         self.assertFalse(self.merged.exists())
-        self.assertEqual(archivos.data_dir(self.layout, ("ficticio", "generalidad")), self.merged)
+        self.assertEqual(capas.data_dir(self.layout, ("ficticio", "generalidad")), self.merged)
         self.assertTrue((self.merged / "manifiesto.json").is_file())
 
     def test_data_dir_rebuilds_when_manifest_is_missing(self):
         self.merged.mkdir(parents=True)
         (self.merged / "restos.txt").write_text("x", encoding="utf-8")
-        archivos.data_dir(self.layout, ("ficticio", "generalidad"))
+        capas.data_dir(self.layout, ("ficticio", "generalidad"))
         self.assertTrue((self.merged / "manifiesto.json").is_file())
         self.assertFalse((self.merged / "restos.txt").exists())
 
     def test_battery_files_and_required_archives(self):
-        self.assertEqual(archivos.battery_file(self.layout, "desarrollo"), self.ficticio / "bateria.json")
-        self.assertEqual(archivos.battery_file(self.layout, "conector"), self.ficticio / "bateria-conector.json")
-        self.assertEqual(archivos.battery_file(self.layout, "generalidad"), self.generalidad / "bateria.json")
-        self.assertEqual(archivos.BATTERIES["generalidad"].requires, ("ficticio", "generalidad"))
-        self.assertEqual(archivos.BATTERIES["desarrollo"].requires, ("ficticio",))
+        self.assertEqual(capas.battery_file(self.layout, "desarrollo"), self.ficticio / "bateria.json")
+        self.assertEqual(capas.battery_file(self.layout, "conector"), self.ficticio / "bateria-conector.json")
+        self.assertEqual(capas.battery_file(self.layout, "generalidad"), self.generalidad / "bateria.json")
+        self.assertEqual(capas.BATTERIES["generalidad"].requires, ("ficticio", "generalidad"))
+        self.assertEqual(capas.BATTERIES["desarrollo"].requires, ("ficticio",))
 
     def test_items_are_concatenated_in_battery_order(self):
-        items = archivos.load_items(self.layout, ("generalidad", "desarrollo"))
+        items = capas.load_items(self.layout, ("generalidad", "desarrollo"))
         self.assertEqual([i["id"] for i in items], ["brumeral-Q1", "ribera-Q1"])
 
     def test_missing_battery_file_is_named_in_spanish(self):
         with self.assertRaisesRegex(ArchivoError, "bateria-conector.json"):
-            archivos.load_items(self.layout, ("desarrollo", "conector"))
+            capas.load_items(self.layout, ("desarrollo", "conector"))
 
     def test_question_ids_repeated_across_batteries_are_refused(self):
         (self.generalidad / "bateria.json").write_text(json.dumps([{"id": "ribera-Q1"}]), encoding="utf-8")
         with self.assertRaisesRegex(ArchivoError, "ribera-Q1"):
-            archivos.load_items(self.layout, ("desarrollo", "generalidad"))
+            capas.load_items(self.layout, ("desarrollo", "generalidad"))
 
     def test_cli_prints_the_merged_dir(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = archivos.main(["fusionar", "--archivos", "ficticio,generalidad"], layout=self.layout)
+            code = capas.main(["fusionar", "--archivos", "ficticio,generalidad"], layout=self.layout)
         self.assertEqual(code, 0)
         self.assertEqual(out.getvalue().strip(), str(self.merged))
 
     def test_cli_unknown_archive_is_an_error(self):
         errors = io.StringIO()
         with contextlib.redirect_stderr(errors):
-            code = archivos.main(["fusionar", "--archivos", "publico"], layout=self.layout)
+            code = capas.main(["fusionar", "--archivos", "publico"], layout=self.layout)
         self.assertEqual(code, 1)
         self.assertIn("capa no disponible todavía: publico", errors.getvalue())
 
