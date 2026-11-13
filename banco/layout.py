@@ -9,7 +9,6 @@ from pathlib import Path
 class Layout:
     banco: Path
     exp: Path
-    battery_file: Path
     state_dir: Path
     results_dir: Path
     cache: Path
@@ -26,7 +25,7 @@ def default_layout() -> Layout:
     exp = repo / "experimentos" / "2026-11-12-archivo-ficticio"
     claude = os.environ.get("ODIN_BANCO_CLAUDE", "claude")
     return Layout(
-        banco=banco, exp=exp, battery_file=exp / "datos" / "bateria.json",
+        banco=banco, exp=exp,
         state_dir=Path(os.environ.get("PILA_ESTADO") or banco / "estado"),
         results_dir=banco / "resultados", cache=banco / "cache", repo=repo,
         claude_bin=claude, claude_judge_bin=os.environ.get("ODIN_BANCO_CLAUDE_JUEZ", claude),

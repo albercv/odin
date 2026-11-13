@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from banco import metrics, scoring, tanda
+from banco import archivos, metrics, scoring, tanda
 
 
 def _read_jsonl(path):
@@ -30,13 +30,19 @@ def read_folder(folder):
             "batches": tanda.read_batches(folder)}
 
 
+def _names(text):
+    return [name.strip() for name in text.split(",")]
+
+
 def rebuild(folder, layout):
     """Recalcula el resumen desde los ficheros de la carpeta y reescribe resumen.json e informe.md."""
     folder = Path(folder)
     data = read_folder(folder)
-    ctx = scoring.build_context(layout.exp, {"doc_ruta": data["ids"]["documentos"], "ficha_f": data["ids"]["fichas"]})
+    archives = _names(data["origin"]["Archivos"])
+    ctx = scoring.build_context(archivos.data_dir(layout, archives),
+                                {"doc_ruta": data["ids"]["documentos"], "ficha_f": data["ids"]["fichas"]})
     wanted = set(data["ids"]["preguntas"])
-    items = [i for i in json.loads(layout.battery_file.read_text(encoding="utf-8")) if i["id"] in wanted]
+    items = [i for i in archivos.load_items(layout, _names(data["origin"]["Batería"])) if i["id"] in wanted]
     summary = metrics.build_summary(items, ctx, data["runs"], data["finals"], data["verdicts"], data["turn_runs"],
                                     ledger=data["ledger"])
     summary.update(origen=data["origin"], stopped=data["stopped"], batches=data["batches"])

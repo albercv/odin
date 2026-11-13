@@ -4,13 +4,13 @@ from pathlib import Path
 
 from banco import scoring
 
-EXP = Path(__file__).resolve().parent.parent / "experimentos" / "2026-11-12-archivo-ficticio"
+DATA = Path(__file__).resolve().parent.parent / "experimentos" / "2026-11-12-archivo-ficticio" / "datos"
 DOC = "ribera/c2-almendros/poliza-seguro-2024.txt"
 
 
 class PageTextTest(unittest.TestCase):
     def setUp(self):
-        self.ctx = scoring.build_context(EXP, {"doc_ruta": {"doc-1": DOC}, "ficha_f": {"card-1": "F001"}})
+        self.ctx = scoring.build_context(DATA, {"doc_ruta": {"doc-1": DOC}, "ficha_f": {"card-1": "F001"}})
 
     def test_document_returns_cited_page(self):
         self.assertIn("150", scoring.page_text("doc-1", 2, self.ctx))
@@ -36,7 +36,7 @@ class PagesTest(unittest.TestCase):
         self.assertEqual(scoring.observed_pages({"respuesta": None, "consultas": []}), set())
 
     def test_no_answer_is_not_correct(self):
-        ctx = scoring.build_context(EXP, {"doc_ruta": {}, "ficha_f": {}})
+        ctx = scoring.build_context(DATA, {"doc_ruta": {}, "ficha_f": {}})
         self.assertFalse(scoring.is_correct({"id": "Q1", "pregunta": "?", "claves": [["x"]]}, None, ctx))
 
 

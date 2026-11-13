@@ -6,6 +6,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from banco.archivos import BATTERIES
+
 MODES = ("explore", "closing")
 COMBINER_KINDS = ("single", "majorityVote", "pageFusion", "composer")
 AI_COMBINER_KINDS = ("pageFusion", "composer")
@@ -55,7 +57,7 @@ class CombinerSpec:
 class ExperimentConfig:
     name: str
     archives: tuple[str, ...]
-    battery: str
+    batteries: tuple[str, ...]
     mode: str
     sample: SampleSpec | None
     repetitions: int
@@ -214,9 +216,29 @@ def _include(table, size):
     return tuple(include)
 
 
-def _check_battery(battery: str, mode: str) -> None:
-    if battery == "reserva" and mode != "closing":
-        raise ConfigError("la reserva solo se usa en modo closing")
+def _check_battery(name: str, mode: str, archives: tuple[str, ...]) -> None:
+    if name == "reserva":
+        if mode != "closing":
+            raise ConfigError("la reserva solo se usa en modo closing")
+        return
+    if name not in BATTERIES:
+        raise ConfigError(f"batería desconocida «{name}»")
+    missing = [a for a in BATTERIES[name].requires if a not in archives]
+    if missing:
+        raise ConfigError(f"la batería «{name}» necesita el archivo «{missing[0]}» en «archives»")
+
+
+def _batteries(raw: dict, mode: str, archives: tuple[str, ...]) -> tuple[str, ...]:
+    """«battery» es un nombre o una lista de nombres; cada batería pide sus capas y la reserva solo va en closing."""
+    value = _need(raw, "battery", ROOT)
+    names = [value] if isinstance(value, str) else value
+    if not isinstance(names, list) or not names or not all(isinstance(n, str) and n for n in names):
+        raise ConfigError("«battery» debe ser un nombre de batería o una lista con al menos una batería")
+    if len(set(names)) != len(names):
+        raise ConfigError("«battery» repite alguna batería")
+    for name in names:
+        _check_battery(name, mode, archives)
+    return tuple(names)
 
 
 def load_config(path: Path, base_dir: Path) -> ExperimentConfig:
@@ -225,16 +247,16 @@ def load_config(path: Path, base_dir: Path) -> ExperimentConfig:
     except tomllib.TOMLDecodeError as error:
         raise ConfigError(f"TOML no válido en {path}: {error}") from error
     mode = _choice(raw, "mode", ROOT, MODES)
-    battery = _text(raw, "battery", ROOT)
-    _check_battery(battery, mode)
+    archives = _archives(raw)
+    batteries = _batteries(raw, mode, archives)
     judges = _judges(raw, base_dir)
     judging = _table(raw, "judging", ROOT)
     aggregation = _aggregation(_text(judging, "aggregation", "[judging]"), sum(j.count for j in judges))
     max_turns = _positive(raw, "maxTurns", ROOT, int) if "maxTurns" in raw else None
     return ExperimentConfig(
         name=_text(raw, "name", ROOT),
-        archives=_archives(raw),
-        battery=battery,
+        archives=archives,
+        batteries=batteries,
         mode=mode,
         sample=_sample(raw, mode),
         repetitions=_positive(raw, "repetitions", ROOT, int),

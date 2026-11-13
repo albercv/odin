@@ -11,7 +11,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
-from banco import combine, judge, preflight, report, scoring, tanda
+from banco import archivos, combine, judge, preflight, report, scoring, tanda
 from banco.cache import RunCache, final_key, verdict_key
 from banco.compose import compose
 from banco.config import ConfigError, SearcherSpec, load_config
@@ -73,10 +73,22 @@ class Session:
 # ---------- preparación ----------
 def _check_supported(cfg):
     for archive in cfg.archives:
-        if archive != "ficticio":
+        if archive not in archivos.ARCHIVES:
             raise ConfigError(f"capa no disponible todavía: {archive}")
-    if cfg.battery != "desarrollo":
-        raise ConfigError(f"la batería «{cfg.battery}» no existe todavía: en esta fase solo está «desarrollo»")
+    for name in cfg.batteries:
+        if name not in archivos.BATTERIES:
+            known = ", ".join(archivos.BATTERIES)
+            raise ConfigError(f"la batería «{name}» no existe todavía: en esta fase solo están: {known}")
+
+
+def _check_loaded(folder, stack, archives):
+    """Las citas solo se resuelven si la pila tiene cargados todos los documentos del manifiesto que se usa."""
+    manifest = json.loads((folder / "manifiesto.json").read_text(encoding="utf-8"))
+    loaded = set(stack["doc_ruta"].values())
+    if any(doc["ruta"] not in loaded for doc in manifest["documentos"]):
+        arg = ",".join(archives)
+        raise ConfigError(f"la pila no tiene cargados los documentos de {', '.join(archives)}: "
+                          f"ejecuta antes «make banco-cargar ARCHIVOS={arg}»")
 
 
 def _check_main(cfg, sweep):
@@ -145,7 +157,7 @@ def _round_robin(items, strata, size, seed):
 
 
 def _select_items(layout, cfg):
-    items = json.loads(layout.battery_file.read_text(encoding="utf-8"))
+    items = archivos.load_items(layout, cfg.batteries)
     if cfg.sample is None:
         return items
     return draw_sample(items, cfg.sample.strata, cfg.sample.size, cfg.sample.seed, cfg.sample.include)
@@ -188,8 +200,9 @@ def _write_start(sess, branch, commit):
     cfg = sess.cfg
     sample_text = (f"{cfg.sample.size} (estrato {cfg.sample.strata}, semilla {cfg.sample.seed})" if cfg.sample
                    else "batería entera")
-    origin = {"Configuración": cfg.name, "Rama": branch, "Commit": commit, "Modo": cfg.mode, "Batería": cfg.battery,
-              "Archivos": ", ".join(cfg.archives), "Muestra": sample_text, "Preguntas": str(len(sess.items)),
+    origin = {"Configuración": cfg.name, "Rama": branch, "Commit": commit, "Modo": cfg.mode,
+              "Batería": ", ".join(cfg.batteries), "Archivos": ", ".join(cfg.archives), "Muestra": sample_text,
+              "Preguntas": str(len(sess.items)),
               "Fecha": datetime.now().isoformat(timespec="minutes")}
     (sess.folder / "ORIGEN.txt").write_text("".join(f"{k}: {v}\n" for k, v in origin.items()), encoding="utf-8")
     ids = {"documentos": sess.stack["doc_ruta"], "fichas": sess.stack["ficha_f"],
@@ -245,8 +258,10 @@ def prepare(config_path, layout, sweep=False, reset_budget=False, resume=None):
     _check_main(cfg, sweep)
     spec = load_sweep(config_path, cfg) if sweep else None
     stack = _load_stack(layout)
+    folder = archivos.data_dir(layout, cfg.archives)
+    _check_loaded(folder, stack, cfg.archives)
     items = _select_items(layout, cfg)
-    ctx = scoring.build_context(layout.exp, stack)
+    ctx = scoring.build_context(folder, stack)
     commit, branch = code_fingerprint(layout.repo)
     settings = PoolSettings(claude_bin=layout.claude_bin, timeout=layout.timeout, concurrency=cfg.concurrency,
                             budget_usd=cfg.budget_usd, max_turns=cfg.max_turns, odin_commit=commit,

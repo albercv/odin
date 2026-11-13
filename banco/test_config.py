@@ -70,7 +70,7 @@ class ConfigTest(unittest.TestCase):
     def test_loads_piloto(self):
         cfg = load_config(CONFIGS / "piloto.toml", BANCO)
         self.assertEqual(cfg.sample.size, 5)
-        self.assertEqual(cfg.battery, "desarrollo")
+        self.assertEqual(cfg.batteries, ("desarrollo",))
         self.assertEqual(sum(j.count for j in cfg.judges), 5)
 
     def test_max_turns_is_read_when_present(self):
@@ -89,6 +89,28 @@ class ConfigTest(unittest.TestCase):
         text = variant('mode = "explore"', 'mode = "closing"')
         text = text.replace('sample = { size = 5, strata = "tipo", seed = 7 }\n', "")
         self.assertIsNone(load_text(text).sample)
+
+    def test_battery_list_loads_in_order(self):
+        text = VALID.replace('archives = ["ficticio"]', 'archives = ["ficticio", "generalidad"]').replace(
+            'battery = "desarrollo"', 'battery = ["generalidad", "desarrollo"]')
+        self.assertEqual(load_text(text).batteries, ("generalidad", "desarrollo"))
+
+    def test_battery_list_needs_its_archives(self):
+        text = VALID.replace('battery = "desarrollo"', 'battery = ["generalidad"]')
+        with self.assertRaisesRegex(ConfigError, "necesita el archivo «generalidad»"):
+            load_text(text)
+
+    def test_battery_list_rejects_duplicates_and_unknown_names(self):
+        with self.assertRaisesRegex(ConfigError, "repite"):
+            load_text(VALID.replace('battery = "desarrollo"', 'battery = ["desarrollo", "desarrollo"]'))
+        with self.assertRaisesRegex(ConfigError, "desconocida «nada»"):
+            load_text(VALID.replace('battery = "desarrollo"', 'battery = ["nada"]'))
+        with self.assertRaisesRegex(ConfigError, "al menos una batería"):
+            load_text(VALID.replace('battery = "desarrollo"', 'battery = []'))
+
+    def test_reserve_in_a_list_requires_closing(self):
+        with self.assertRaisesRegex(ConfigError, "la reserva solo se usa en modo closing"):
+            load_text(VALID.replace('battery = "desarrollo"', 'battery = ["desarrollo", "reserva"]'))
 
     def test_unknown_approach_file(self):
         with self.assertRaises(ConfigError):
