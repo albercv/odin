@@ -4,10 +4,28 @@ import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.link.DescribeUploadLink;
+import com.e2d.odin.application.link.IssueOriginalLink;
+import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.LinkIssuer;
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.link.ResolveLink;
+import com.e2d.odin.application.link.UploadByLink;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.port.AccessLinkRepository;
+import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.ReadCaseFile;
+import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.MarkCaseDocuments;
+import com.e2d.odin.application.shared.CaseFileSettings;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ListGroupAdmins;
@@ -55,6 +73,7 @@ import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
+import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
 import com.e2d.odin.application.port.IdGenerator;
@@ -384,8 +403,54 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    RevokeAccessKey revokeAccessKey(AccessKeyRepository keys, UserRepository users, Clock clock) {
-        return new RevokeAccessKey(keys, users, clock);
+    RevokeAccessKey revokeAccessKey(AccessKeyRepository keys, UserRepository users, AccessLinkRepository links,
+            Clock clock) {
+        return new RevokeAccessKey(keys, users, links, clock);
+    }
+
+    @Bean
+    LinkIssuer linkIssuer(AccessLinkRepository links, TokenGenerator tokens, SecretHasher secrets, IdGenerator ids,
+            Clock clock, LinkSettings settings) {
+        return new LinkIssuer(links, tokens, secrets, ids, clock, settings);
+    }
+
+    @Bean
+    IssueUploadLink issueUploadLink(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, LinkIssuer issuer) {
+        return new IssueUploadLink(organizations, projectMembers, documents, issuer);
+    }
+
+    @Bean
+    IssueOriginalLink issueOriginalLink(OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, DocumentRepository documents, LinkIssuer issuer) {
+        return new IssueOriginalLink(organizations, projectMembers, documents, issuer);
+    }
+
+    @Bean
+    ResolveLink resolveLink(AccessLinkRepository links, ResolveActor actors, OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, DocumentRepository documents, SecretHasher secrets, Clock clock) {
+        return new ResolveLink(links, actors, organizations, projectMembers, documents, secrets, clock);
+    }
+
+    @Bean
+    DescribeUploadLink describeUploadLink(ResolveLink resolve, OrganizationRepository organizations) {
+        return new DescribeUploadLink(resolve, organizations);
+    }
+
+    @Bean
+    UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile) {
+        return new UploadByLink(resolve, links, uploadToCaseFile);
+    }
+
+    @Bean
+    UploadToCaseFile uploadToCaseFile(UploadDocument upload, AddToCaseFiles addToCaseFiles,
+            CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
+        return new UploadToCaseFile(upload, addToCaseFiles, caseFiles, ids, clock);
+    }
+
+    @Bean
+    OpenOriginal openOriginal(ResolveLink resolve, OriginalFileStore files, DocumentRepository documents) {
+        return new OpenOriginal(resolve, files, documents);
     }
 
     @Bean
@@ -417,13 +482,54 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateDocument updateDocument(DocumentRepository documents) {
-        return new UpdateDocument(documents);
+    UpdateDocument updateDocument(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
+        return new UpdateDocument(documents, caseFiles, clock);
     }
 
     @Bean
-    MarkCaseDocuments markCaseDocuments(DocumentRepository documents) {
-        return new MarkCaseDocuments(documents);
+    WithdrawDocument withdrawDocument(DocumentRepository documents, Clock clock) {
+        return new WithdrawDocument(documents, clock);
+    }
+
+    @Bean
+    RestoreDocument restoreDocument(DocumentRepository documents) {
+        return new RestoreDocument(documents);
+    }
+
+    @Bean
+    MarkCaseDocuments markCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
+        return new MarkCaseDocuments(documents, caseFiles, clock);
+    }
+
+    @Bean
+    GetCaseFile getCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users) {
+        return new GetCaseFile(organizations, projectMembers, documents, caseFiles, users);
+    }
+
+    @Bean
+    ReadCaseFile readCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
+            CaseFileSettings settings) {
+        return new ReadCaseFile(organizations, projectMembers, documents, caseFiles, users, settings);
+    }
+
+    @Bean
+    AddToCaseFiles addToCaseFiles(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
+        return new AddToCaseFiles(organizations, projectMembers, documents, caseFiles, ids, clock);
+    }
+
+    @Bean
+    RemoveFromCaseFile removeFromCaseFile(OrganizationRepository organizations,
+            ProjectMemberRepository projectMembers, DocumentRepository documents, CaseFileRepository caseFiles,
+            IdGenerator ids, Clock clock) {
+        return new RemoveFromCaseFile(organizations, projectMembers, documents, caseFiles, ids, clock);
+    }
+
+    @Bean
+    ListCaseFileEvents listCaseFileEvents(DocumentRepository documents, CaseFileRepository caseFiles) {
+        return new ListCaseFileEvents(documents, caseFiles);
     }
 
     @Bean

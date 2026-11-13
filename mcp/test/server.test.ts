@@ -5,7 +5,7 @@ import { createApiClient } from '../src/api/client.js';
 import { buildServer } from '../src/server.js';
 import { meWith, startFakeApi, type FakeApi, type Handler } from './fakeApi.js';
 
-const ALL = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'];
+const ALL = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES', 'SIMILAR_CASES'];
 let fake: FakeApi;
 
 async function connect(handler: Handler, key = 'clave-secreta-1') {
@@ -28,7 +28,8 @@ describe('buildServer', () => {
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['addToCaseFile', 'findSimilarCases', 'getCaseFile', 'listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'openOriginal', 'readCaseFile', 'readPage',
+        'removeFromCaseFile', 'requestUploadLink', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
   });

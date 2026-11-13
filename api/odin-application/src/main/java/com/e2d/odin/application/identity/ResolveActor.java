@@ -12,6 +12,7 @@ import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
+import com.e2d.odin.domain.shared.UserId;
 import java.util.Set;
 
 public class ResolveActor {
@@ -39,10 +40,15 @@ public class ResolveActor {
 
     public Actor fromAccessKey(String plainKey) {
         AccessKey key = findKey(plainKey);
-        User user = users.findById(key.userId()).filter(User::active).orElseThrow(ResolveActor::unauthorized);
-        memberships.find(key.userId(), key.companyId()).filter(m -> m.active() && m.isWorker())
+        return worker(key.userId(), key.companyId());
+    }
+
+    /** El trabajador activo de una empresa, para quien llega con un enlace en vez de con su clave. */
+    public Actor worker(UserId userId, CompanyId companyId) {
+        User user = users.findById(userId).filter(User::active).orElseThrow(ResolveActor::unauthorized);
+        memberships.find(userId, companyId).filter(m -> m.active() && m.isWorker())
                 .orElseThrow(ResolveActor::unauthorized);
-        return new Actor(user.id(), user.displayName(), Role.WORKER, Set.of(key.companyId()));
+        return new Actor(user.id(), user.displayName(), Role.WORKER, Set.of(companyId));
     }
 
     public Actor fromSessionToken(String token) {

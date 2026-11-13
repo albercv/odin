@@ -16,9 +16,23 @@ public class ScopedTransactions {
     private final JdbcClient jdbc;
     private final TransactionTemplate transaction;
 
+    private final boolean includeWithdrawn;
+
     public ScopedTransactions(DataSource dataSource) {
         this.jdbc = JdbcClient.create(dataSource);
         this.transaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+        this.includeWithdrawn = false;
+    }
+
+    private ScopedTransactions(JdbcClient jdbc, TransactionTemplate transaction, boolean includeWithdrawn) {
+        this.jdbc = jdbc;
+        this.transaction = transaction;
+        this.includeWithdrawn = includeWithdrawn;
+    }
+
+    /** Las mismas transacciones, pero con lo retirado a la vista (pantalla de documentos del administrador). */
+    public ScopedTransactions includeWithdrawn(boolean include) {
+        return new ScopedTransactions(jdbc, transaction, include);
     }
 
     /** Sin visibilidad de proyectos solo se ve lo que no tiene proyecto. */
@@ -40,6 +54,8 @@ public class ScopedTransactions {
                     .param("ids", Sql.companyIds(scope))
                     .param("group", scope.allCompanies() ? "on" : "off")
                     .query().singleRow();
+            jdbc.sql("SELECT set_config('app.include_withdrawn', :on, true)")
+                    .param("on", includeWithdrawn ? "on" : "off").query().singleRow();
             if (visibility != null) {
                 setProjectVariables(visibility);
             }

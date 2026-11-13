@@ -1,11 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiClient } from './api/client.js';
 import { createProjectNames } from './projects.js';
+import { registerCaseFileTools } from './tools/caseFile.js';
 import { registerFindSimilarCases } from './tools/findSimilarCases.js';
 import { registerListDocuments } from './tools/listDocuments.js';
 import { registerListMyKnowledgeCards } from './tools/listMyKnowledgeCards.js';
 import { registerListMyQuestions } from './tools/listMyQuestions.js';
 import { registerListProjects } from './tools/listProjects.js';
+import { registerOpenOriginal } from './tools/openOriginal.js';
 import { registerReadPage } from './tools/readPage.js';
 import { registerSaveKnowledgeCard } from './tools/saveKnowledgeCard.js';
 import { registerSearchKnowledge } from './tools/searchKnowledge.js';
@@ -36,12 +38,14 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
     const projects = createProjectNames(me);
     registerSearchKnowledge(server, api, projects);
     registerReadPage(server, api);
+    registerOpenOriginal(server, api);
     registerListDocuments(server, api, projects);
     registerListProjects(server, api);
     registerVerifyCitation(server, api);
     registerListMyQuestions(server, api);
     if (capabilities.has('SIMILAR_CASES')) registerFindSimilarCases(server, api, projects);
   }
+  if (capabilities.has('CASE_FILES')) registerCaseFileTools(server, api);
   if (capabilities.has('SAVE_KNOWLEDGE_CARD')) {
     registerSaveKnowledgeCard(server, api);
     registerListMyKnowledgeCards(server, api, createProjectNames(me));

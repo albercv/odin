@@ -27,6 +27,17 @@ public interface DocumentRepository {
 
     Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id);
 
+    /** Como {@link #findEntry}, pero también encuentra los retirados: solo para retirarlos y recuperarlos. */
+    Optional<DocumentEntry> findEntryIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility,
+            DocumentId id);
+
+    /** Escribe solo la retirada del documento. Al recuperar, si hay otro igual sin retirar en su proyecto, 409. */
+    void markWithdrawal(Document document);
+
+    /** Solo los retirados, para la vista «Retirados» del administrador, con su paginación. */
+    List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
+            int limit);
+
     /** Pone la marca de sustituido con su propia orden: {@link #save} no la escribe ni la borra. */
     void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at);
 
@@ -41,7 +52,11 @@ public interface DocumentRepository {
     /** Marca o desmarca la ficha de caso de todos los documentos de la empresa en una transacción; si falta alguno, 404 y no cambia ninguno. */
     int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument);
 
+    /** Si el mismo fichero está varias veces en la empresa, el más antiguo. */
     Optional<Document> findBySha256(CompanyId companyId, String sha256);
+
+    /** Busca solo en ese proyecto y entre los documentos sin proyecto; si hay varios, el más antiguo. */
+    Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId, String sha256);
 
     /**
      * Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. Con {@code caseDocument}, solo los

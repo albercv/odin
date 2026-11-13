@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["withdraw"];
+        post?: never;
+        delete: operations["restore"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/documents/{documentId}/topics/{topicId}": {
         parameters: {
             query?: never;
@@ -78,6 +94,22 @@ export interface paths {
         get?: never;
         put: operations["capabilities"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/upload-links/{token}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadByLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -148,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/documents/{documentId}/original-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["originalLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/citations/verify": {
         parameters: {
             query?: never;
@@ -158,6 +206,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/upload-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/file/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -205,7 +285,7 @@ export interface paths {
         };
         get: operations["list"];
         put?: never;
-        post: operations["add_1"];
+        post: operations["add_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -301,7 +381,7 @@ export interface paths {
         };
         get: operations["list_2"];
         put?: never;
-        post: operations["add_2"];
+        post: operations["add_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -350,6 +430,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["markCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -468,6 +564,38 @@ export interface paths {
         patch: operations["update_3"];
         trace?: never;
     };
+    "/v1/upload-links/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["describeUploadLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/originals/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openOriginalByLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -564,6 +692,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cases/{caseId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/file/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["text"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/me": {
         parameters: {
             query?: never;
@@ -588,6 +748,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["documentTopics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/documents/{documentId}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadOriginal"];
         put?: never;
         post?: never;
         delete?: never;
@@ -692,6 +868,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["file_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/cards": {
         parameters: {
             query?: never;
@@ -703,6 +911,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/file/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -740,6 +964,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -747,13 +987,6 @@ export interface components {
         SetPassword: {
             currentPassword?: string;
             newPassword?: string;
-        };
-        SupersedeRequest: {
-            /**
-             * Format: uuid
-             * @description El documento que lo sustituye entero.
-             */
-            replacementId?: string;
         };
         DocumentLink: {
             /** Format: uuid */
@@ -784,6 +1017,8 @@ export interface components {
             taggingStatus?: string;
             topics: components["schemas"]["TopicLabelView"][];
             caseDocument: boolean;
+            /** Format: date-time */
+            withdrawnAt?: string;
         };
         TopicLabelView: {
             /** Format: uuid */
@@ -791,16 +1026,26 @@ export interface components {
             name: string;
             source: string;
         };
+        SupersedeRequest: {
+            /**
+             * Format: uuid
+             * @description El documento que lo sustituye entero.
+             */
+            replacementId?: string;
+        };
         Capabilities: {
-            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
         };
         CompanyView: {
             /** Format: uuid */
             id: string;
             name: string;
             code: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
             codeReviewed: boolean;
+        };
+        UploadReceipt: {
+            filename: string;
         };
         SimilarCasesRequestBody: {
             queries?: string[];
@@ -867,6 +1112,8 @@ export interface components {
             projectId?: string;
             /** Format: int32 */
             limit?: number;
+            /** Format: uuid */
+            caseId?: string;
         };
         Hit: {
             sourceType: string;
@@ -892,6 +1139,18 @@ export interface components {
             hits: components["schemas"]["Hit"][];
             noSource: boolean;
         };
+        OriginalLinkRequest: {
+            /**
+             * Format: int32
+             * @description Página en la que abre el visor de PDF; si falta, abre por la primera.
+             */
+            page?: number;
+        };
+        IssuedLink: {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         VerifyCitation: {
             /** Format: uuid */
             documentId?: string;
@@ -901,6 +1160,14 @@ export interface components {
         };
         Verification: {
             verified: boolean;
+        };
+        CaseFileDocumentsRequest: {
+            /** @description De 1 a 500 documentos que ya están en Odín. */
+            documentIds: string[];
+        };
+        CaseFileAdded: {
+            /** Format: int32 */
+            added: number;
         };
         SaveCard: {
             title?: string;
@@ -1083,6 +1350,12 @@ export interface components {
             active?: boolean;
             password?: string;
         };
+        UploadLinkInfo: {
+            caseTitle: string;
+            projectName: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         Me: {
             /** Format: uuid */
             userId: string;
@@ -1098,7 +1371,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
         };
         MeProject: {
             /** Format: uuid */
@@ -1166,6 +1439,61 @@ export interface components {
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
             readerName: string;
+        };
+        CaseFileDocumentView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId?: string;
+            title: string;
+            filename: string;
+            format: string;
+            paginated: boolean;
+            /** Format: int32 */
+            pageCount: number;
+            /** Format: uuid */
+            uploadedBy: string;
+            /** Format: date-time */
+            uploadedAt: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+            /** Format: uuid */
+            addedBy?: string;
+            /** Format: date-time */
+            addedAt?: string;
+            status: string;
+            uploadedByName?: string;
+            addedByName?: string;
+        };
+        CaseFileResponse: {
+            caseDocument: components["schemas"]["CaseFileDocumentView"];
+            documents: components["schemas"]["CaseFileDocumentView"][];
+            /** Format: int32 */
+            pendingDocuments: number;
+        };
+        CaseFileTextPageView: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+            /** Format: int32 */
+            pageNumber: number;
+            text: string;
+            unread: boolean;
+        };
+        CaseFileTextResponse: {
+            pages: components["schemas"]["CaseFileTextPageView"][];
+            nextCursor?: string;
+            complete: boolean;
+            /** Format: int32 */
+            documentsRead: number;
+            /** Format: int32 */
+            documentsTotal: number;
+            /** Format: int32 */
+            pagesRead: number;
+            /** Format: int32 */
+            pagesTotal: number;
+            /** Format: int32 */
+            pendingDocuments: number;
         };
         AdminMe: {
             /** Format: uuid */
@@ -1320,6 +1648,18 @@ export interface components {
             /** Format: int64 */
             bytes: number;
         };
+        CaseFileEventView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            documentId: string;
+            documentTitle?: string;
+            action: string;
+            /** Format: uuid */
+            actorId: string;
+            /** Format: date-time */
+            at: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1350,6 +1690,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    withdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+        };
+    };
+    restore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
             };
         };
     };
@@ -1511,6 +1895,35 @@ export interface operations {
             };
         };
     };
+    uploadByLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadReceipt"];
+                };
+            };
+        };
+    };
     similarCases: {
         parameters: {
             query?: never;
@@ -1605,6 +2018,32 @@ export interface operations {
             };
         };
     };
+    originalLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OriginalLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
+                };
+            };
+        };
+    };
     verify: {
         parameters: {
             query?: never;
@@ -1625,6 +2064,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Verification"];
+                };
+            };
+        };
+    };
+    uploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
+                };
+            };
+        };
+    };
+    add_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseFileDocumentsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileAdded"];
                 };
             };
         };
@@ -1717,7 +2204,7 @@ export interface operations {
             };
         };
     };
-    add_1: {
+    add_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1945,7 +2432,7 @@ export interface operations {
             };
         };
     };
-    add_2: {
+    add_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -2026,6 +2513,8 @@ export interface operations {
             query?: {
                 offset?: number;
                 limit?: number;
+                /** @description Si es true, devuelve solo los documentos retirados (con su paginación) */
+                withdrawn?: boolean;
             };
             header?: never;
             path: {
@@ -2052,6 +2541,8 @@ export interface operations {
                 title?: string;
                 projectId?: string;
                 caseDocument?: boolean;
+                /** @description Caso a cuyo expediente se añade el documento. */
+                caseId?: string;
             };
             header?: never;
             path: {
@@ -2110,6 +2601,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseMarksResult"];
+                };
+            };
+        };
+    };
+    add_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseFileDocumentsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileAdded"];
                 };
             };
         };
@@ -2404,6 +2922,50 @@ export interface operations {
             };
         };
     };
+    describeUploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadLinkInfo"];
+                };
+            };
+        };
+    };
+    openOriginalByLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -2537,6 +3099,52 @@ export interface operations {
             };
         };
     };
+    file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
+    text: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileTextResponse"];
+                };
+            };
+        };
+    };
     me_1: {
         parameters: {
             query?: never;
@@ -2575,6 +3183,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentTopicsResponse"];
+                };
+            };
+        };
+    };
+    downloadOriginal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };
@@ -2719,6 +3349,52 @@ export interface operations {
             };
         };
     };
+    file_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
+    events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileEventView"][];
+                };
+            };
+        };
+    };
     list_5: {
         parameters: {
             query?: {
@@ -2740,6 +3416,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CardView"][];
                 };
+            };
+        };
+    };
+    remove_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2769,6 +3466,28 @@ export interface operations {
             header?: never;
             path: {
                 userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+                documentId: string;
             };
             cookie?: never;
         };

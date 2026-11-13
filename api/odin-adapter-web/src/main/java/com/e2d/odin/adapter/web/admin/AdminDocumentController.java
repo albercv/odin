@@ -5,17 +5,25 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
+import com.e2d.odin.adapter.web.link.OriginalResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
 import java.util.List;
@@ -23,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -49,9 +58,16 @@ public class AdminDocumentController {
     private final SupersedeDocument supersede;
     private final UpdateDocument update;
     private final MarkCaseDocuments markCases;
+    private final AddToCaseFiles addToCaseFiles;
+    private final UploadToCaseFile uploadToCaseFile;
+    private final OpenOriginal openOriginal;
+    private final WithdrawDocument withdraw;
+    private final RestoreDocument restore;
 
     public AdminDocumentController(UploadDocument upload, ListCompanyDocuments list, GetDocument get,
-            RetryDocument retry, SupersedeDocument supersede, UpdateDocument update, MarkCaseDocuments markCases) {
+            RetryDocument retry, SupersedeDocument supersede, UpdateDocument update, MarkCaseDocuments markCases,
+            AddToCaseFiles addToCaseFiles, UploadToCaseFile uploadToCaseFile, OpenOriginal openOriginal,
+            WithdrawDocument withdraw, RestoreDocument restore) {
         this.upload = upload;
         this.list = list;
         this.get = get;
@@ -59,13 +75,19 @@ public class AdminDocumentController {
         this.supersede = supersede;
         this.update = update;
         this.markCases = markCases;
+        this.addToCaseFiles = addToCaseFiles;
+        this.uploadToCaseFile = uploadToCaseFile;
+        this.openOriginal = openOriginal;
+        this.withdraw = withdraw;
+        this.restore = restore;
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/documents")
     public List<Responses.DocumentView> list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "100") int limit) {
-        return list.execute(actor, new CompanyId(companyId), offset, limit).stream()
+            @RequestParam(defaultValue = "100") int limit, @Parameter(description = "Si es true, devuelve solo los documentos retirados (con su paginación)")
+            @RequestParam(defaultValue = "false") boolean withdrawn) {
+        return list.execute(actor, new CompanyId(companyId), offset, limit, withdrawn).stream()
                 .map(Responses.DocumentView::from).toList();
     }
 
@@ -75,11 +97,17 @@ public class AdminDocumentController {
     public ResponseEntity<Responses.Upload> upload(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) String title, @RequestParam(required = false) UUID projectId,
-            @RequestParam(defaultValue = "false") boolean caseDocument) throws IOException {
+            @RequestParam(defaultValue = "false") boolean caseDocument,
+            @RequestParam(required = false) @Schema(description = "Caso a cuyo expediente se añade el documento.")
+            UUID caseId) throws IOException {
         String name = title == null || title.isBlank() ? file.getOriginalFilename() : title;
-        UploadOutcome outcome = upload.execute(actor, new CompanyId(companyId),
-                Optional.ofNullable(projectId).map(ProjectId::new), name, file.getOriginalFilename(),
-                file.getBytes(), caseDocument);
+        Optional<ProjectId> project = Optional.ofNullable(projectId).map(ProjectId::new);
+        UploadOutcome outcome = caseId == null
+                ? upload.execute(actor, new CompanyId(companyId), project, name, file.getOriginalFilename(),
+                        file.getBytes(), caseDocument)
+                : uploadToCaseFile.execute(actor,
+                        addToCaseFiles.requireTarget(actor, new CompanyId(companyId), new DocumentId(caseId), project),
+                        name, file.getOriginalFilename(), file.getBytes());
         return ResponseEntity.status(outcome.duplicate() ? HttpStatus.OK : HttpStatus.CREATED)
                 .body(Responses.Upload.from(outcome));
     }
@@ -88,6 +116,12 @@ public class AdminDocumentController {
     public Responses.DocumentView get(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID documentId) {
         return Responses.DocumentView.from(get.execute(actor, new DocumentId(documentId)));
+    }
+
+    @GetMapping("/v1/admin/documents/{documentId}/original")
+    public ResponseEntity<Resource> downloadOriginal(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId) {
+        return OriginalResponse.of(openOriginal.execute(actor, new DocumentId(documentId)));
     }
 
     @PatchMapping("/v1/admin/documents/{documentId}")
@@ -133,5 +167,17 @@ public class AdminDocumentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unsupersede(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID documentId) {
         supersede.unmark(actor, new DocumentId(documentId));
+    }
+
+    @PutMapping("/v1/admin/documents/{documentId}/withdrawal")
+    public Responses.DocumentView withdraw(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId) {
+        return Responses.DocumentView.from(withdraw.execute(actor, new DocumentId(documentId)));
+    }
+
+    @DeleteMapping("/v1/admin/documents/{documentId}/withdrawal")
+    public Responses.DocumentView restore(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId) {
+        return Responses.DocumentView.from(restore.execute(actor, new DocumentId(documentId)));
     }
 }

@@ -22,6 +22,7 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
         projectId: z.string().optional().describe('Limita la búsqueda a un proyecto; también incluye lo que no tiene proyecto'),
+        caseId: z.string().optional().describe('Busca solo dentro de los documentos del expediente de este caso'),
         limit: z.number().int().positive().optional().describe('Máximo de resultados'),
       },
     },

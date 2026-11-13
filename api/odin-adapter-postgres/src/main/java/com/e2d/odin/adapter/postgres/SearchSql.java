@@ -57,6 +57,21 @@ final class SearchSql {
                 + " IS NULL)";
     }
 
+    /**
+     * Filtro opcional por un expediente (:caseId): su ficha y los documentos que se le han añadido. La ficha tiene que
+     * ser de la empresa, de un proyecto visible y no estar retirada; si no, no sale nada del expediente.
+     */
+    static String inCaseFile(String alias) {
+        return "(CAST(:caseId AS uuid) IS NULL OR (" + alias + ".id = :caseId AND " + alias + ".case_document) OR"
+                + " (EXISTS (SELECT 1 FROM document k WHERE k.id = :caseId AND k.case_document AND "
+                + Sql.inScope("k.company_id") + " AND " + Sql.inVisibleProjects("k.project_id") + " AND "
+                + Sql.notWithdrawn("k.withdrawn_at") + ") AND EXISTS (SELECT 1 FROM case_file_entry e"
+                + " WHERE e.case_document_id = :caseId AND e.document_id = " + alias + ".id)))";
+    }
+
+    /** Las fichas de conocimiento no son del expediente: con un :caseId no salen. */
+    static final String NO_CASE_FILE = "CAST(:caseId AS uuid) IS NULL";
+
     /** Las fichas que puede ver quien busca (:searcher): las aprobadas y sus propias pendientes. Las rechazadas, nunca. */
     static String visibleCards(String alias) {
         return "(" + alias + ".status = 'APPROVED' OR (" + alias + ".status = 'PENDING' AND " + alias

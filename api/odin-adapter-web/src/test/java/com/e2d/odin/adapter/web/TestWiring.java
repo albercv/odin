@@ -1,17 +1,35 @@
 package com.e2d.odin.adapter.web;
 
+import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
+import com.e2d.odin.application.link.DescribeUploadLink;
+import com.e2d.odin.application.link.IssueOriginalLink;
+import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.LinkIssuer;
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.link.ResolveLink;
+import com.e2d.odin.application.link.UploadByLink;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.casefile.ReadCaseFile;
+import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.UpdateDocument;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryDeliveryMeter;
+import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
@@ -105,8 +123,10 @@ public class TestWiring {
     final InMemoryUserRepository users = new InMemoryUserRepository();
     final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
+    final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
+    final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository(docs);
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
     final InMemoryQuestionLog questions = new InMemoryQuestionLog();
     final InMemoryTopicRepository topics = new InMemoryTopicRepository();
@@ -256,7 +276,43 @@ public class TestWiring {
     }
 
     @Bean RevokeAccessKey revokeAccessKey() {
-        return new RevokeAccessKey(keys, users, clock);
+        return new RevokeAccessKey(keys, users, links, clock);
+    }
+
+    @Bean LinkSettings linkSettings() {
+        return new LinkSettings("http://odin.test", java.time.Duration.ofMinutes(15));
+    }
+
+    @Bean LinkIssuer linkIssuer() {
+        return new LinkIssuer(links, tokens, secrets, ids, clock, linkSettings());
+    }
+
+    @Bean IssueUploadLink issueUploadLink() {
+        return new IssueUploadLink(orgs, projectMembers, docs, linkIssuer());
+    }
+
+    @Bean IssueOriginalLink issueOriginalLink() {
+        return new IssueOriginalLink(orgs, projectMembers, docs, linkIssuer());
+    }
+
+    @Bean ResolveLink resolveLink() {
+        return new ResolveLink(links, resolveActor(), orgs, projectMembers, docs, secrets, clock);
+    }
+
+    @Bean DescribeUploadLink describeUploadLink() {
+        return new DescribeUploadLink(resolveLink(), orgs);
+    }
+
+    @Bean UploadByLink uploadByLink() {
+        return new UploadByLink(resolveLink(), links, uploadToCaseFile());
+    }
+
+    @Bean UploadToCaseFile uploadToCaseFile() {
+        return new UploadToCaseFile(uploadDocument(), addToCaseFiles(), caseFiles, ids, clock);
+    }
+
+    @Bean OpenOriginal openOriginal() {
+        return new OpenOriginal(resolveLink(), files, docs);
     }
 
     @Bean UploadDocument uploadDocument() {
@@ -276,11 +332,40 @@ public class TestWiring {
     }
 
     @Bean UpdateDocument updateDocument() {
-        return new UpdateDocument(docs);
+        return new UpdateDocument(docs, caseFiles, clock);
+    }
+
+    @Bean WithdrawDocument withdrawDocument() {
+        return new WithdrawDocument(docs, clock);
+    }
+
+    @Bean RestoreDocument restoreDocument() {
+        return new RestoreDocument(docs);
     }
 
     @Bean MarkCaseDocuments markCaseDocuments() {
-        return new MarkCaseDocuments(docs);
+        return new MarkCaseDocuments(docs, caseFiles, clock);
+    }
+
+    @Bean ReadCaseFile readCaseFile() {
+        return new ReadCaseFile(orgs, projectMembers, docs, caseFiles, users,
+                new com.e2d.odin.application.shared.CaseFileSettings());
+    }
+
+    @Bean GetCaseFile getCaseFile() {
+        return new GetCaseFile(orgs, projectMembers, docs, caseFiles, users);
+    }
+
+    @Bean AddToCaseFiles addToCaseFiles() {
+        return new AddToCaseFiles(orgs, projectMembers, docs, caseFiles, ids, clock);
+    }
+
+    @Bean RemoveFromCaseFile removeFromCaseFile() {
+        return new RemoveFromCaseFile(orgs, projectMembers, docs, caseFiles, ids, clock);
+    }
+
+    @Bean ListCaseFileEvents listCaseFileEvents() {
+        return new ListCaseFileEvents(docs, caseFiles);
     }
 
     @Bean SupersedeDocument supersedeDocument() {

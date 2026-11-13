@@ -1,5 +1,7 @@
 package com.e2d.odin.adapter.web.dto;
 
+import com.e2d.odin.application.casefile.CaseFileText;
+import com.e2d.odin.application.casefile.CaseFileView;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.organization.MeView;
@@ -22,6 +24,8 @@ import com.e2d.odin.application.usage.PersonUsage;
 import com.e2d.odin.application.usage.QuestionCounts;
 import com.e2d.odin.application.usage.TaggingCounts;
 import com.e2d.odin.application.usage.UsageReport;
+import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.domain.casefile.CaseFileEvent;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentRef;
@@ -41,6 +45,7 @@ import com.e2d.odin.domain.search.SearchResult;
 import com.e2d.odin.domain.search.SourceType;
 import com.e2d.odin.domain.search.SimilarCasesResult;
 import com.e2d.odin.domain.search.SimilarCase;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.topic.DocumentTagging;
 import com.e2d.odin.domain.topic.DocumentTopic;
 import com.e2d.odin.domain.topic.Topic;
@@ -49,6 +54,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -210,7 +216,7 @@ public final class Responses {
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
             int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt,
             List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics,
-            boolean caseDocument) {
+            boolean caseDocument, @Nullable Instant withdrawnAt) {
         public static DocumentView from(DocumentEntry entry) {
             return from(new TaggedDocument(entry, Optional.empty(), List.of()));
         }
@@ -224,7 +230,8 @@ public final class Responses {
                     d.attemptCount(), entry.supersededBy().map(DocumentLink::from).orElse(null),
                     d.supersededAt().orElse(null), d.pagesWithoutText(),
                     tagged.tagging().map(t -> t.status().name()).orElse(null),
-                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
+                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
+                    d.withdrawnAt().orElse(null));
         }
     }
 
@@ -368,6 +375,74 @@ public final class Responses {
                     d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
                     tagged.entry().replacement().map(Replacement::from).orElse(null),
                     tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
+        }
+    }
+
+    /** Un documento del expediente; la ficha del caso va sin quién la añadió ni cuándo. */
+    public record CaseFileDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
+            boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
+            @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status,
+            @Nullable String uploadedByName, @Nullable String addedByName) {
+        static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
+                @Nullable Instant addedAt, Map<UserId, String> names) {
+            Document d = entry.document();
+            return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
+                    d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
+                    d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
+                    addedBy == null ? null : addedBy.value(), addedAt, d.status().name(), names.get(d.uploadedBy()),
+                    addedBy == null ? null : names.get(addedBy));
+        }
+    }
+
+    public record CaseFileResponse(CaseFileDocumentView caseDocument, List<CaseFileDocumentView> documents,
+            int pendingDocuments) {
+        public static CaseFileResponse from(CaseFileView view) {
+            return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null,
+                    view.names()),
+                    view.documents().stream()
+                            .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt(),
+                                    view.names())).toList(),
+                    view.pendingDocuments());
+        }
+    }
+
+    public record CaseFileTextPageView(UUID documentId, String title, int pageNumber, String text, boolean unread) {
+    }
+
+    public record CaseFileTextResponse(List<CaseFileTextPageView> pages, @Nullable String nextCursor, boolean complete,
+            int documentsRead, int documentsTotal, int pagesRead, int pagesTotal, int pendingDocuments) {
+        public static CaseFileTextResponse from(CaseFileText t) {
+            return new CaseFileTextResponse(t.pages().stream().map(p -> new CaseFileTextPageView(p.documentId().value(),
+                    p.title(), p.pageNumber(), p.text(), p.unread())).toList(), t.nextCursor().orElse(null),
+                    t.complete(), t.documentsRead(), t.documentsTotal(), t.pagesRead(), t.pagesTotal(),
+                    t.pendingDocuments());
+        }
+    }
+
+    public record CaseFileAdded(int added) {
+    }
+
+    public record IssuedLink(String url, Instant expiresAt) {
+        public static IssuedLink from(com.e2d.odin.application.link.IssuedLink link) {
+            return new IssuedLink(link.url(), link.expiresAt());
+        }
+    }
+
+    public record UploadLinkInfo(String caseTitle, String projectName, Instant expiresAt) {
+        public static UploadLinkInfo from(com.e2d.odin.application.link.UploadLinkInfo info) {
+            return new UploadLinkInfo(info.caseTitle(), info.projectName(), info.expiresAt());
+        }
+    }
+
+    public record UploadReceipt(String filename) {
+    }
+
+    public record CaseFileEventView(UUID id, UUID documentId, @Nullable String documentTitle, String action, UUID actorId,
+            Instant at) {
+        public static CaseFileEventView from(ListCaseFileEvents.Line line) {
+            CaseFileEvent e = line.event();
+            return new CaseFileEventView(e.id(), e.documentId().value(), line.documentTitle(), e.action().name(),
+                    e.actorId().value(), e.at());
         }
     }
 

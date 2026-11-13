@@ -26,19 +26,20 @@ final class SupersessionSql {
      */
     static String joins(String supersededByColumn, String companyColumn) {
         return """
-                LEFT JOIN document sd ON sd.id = %s AND sd.company_id = %s AND %s AND %s
+                LEFT JOIN document sd ON sd.id = %s AND sd.company_id = %s AND %s AND %s AND %s
                 LEFT JOIN LATERAL (
                     WITH RECURSIVE chain(id, title, superseded_by, company_id, hops) AS (
                         SELECT sd.id, sd.title, sd.superseded_by, sd.company_id, 1 WHERE sd.id IS NOT NULL
                         UNION ALL
                         SELECT n.id, n.title, n.superseded_by, n.company_id, c.hops + 1
-                        FROM chain c JOIN document n ON n.id = c.superseded_by AND n.company_id = c.company_id AND %s AND %s
+                        FROM chain c JOIN document n ON n.id = c.superseded_by AND n.company_id = c.company_id AND %s AND %s AND %s
                         WHERE c.hops < %d
                     )
                     SELECT id AS current_id, title AS current_title FROM chain WHERE superseded_by IS NULL
                 ) sc ON true""".formatted(supersededByColumn, companyColumn, Sql.inScope("sd.company_id"),
-                Sql.inVisibleProjects("sd.project_id"), Sql.inScope("n.company_id"),
-                Sql.inVisibleProjects("n.project_id"), Document.MAX_SUPERSESSION_CHAIN);
+                Sql.inVisibleProjects("sd.project_id"), Sql.notWithdrawn("sd.withdrawn_at"),
+                Sql.inScope("n.company_id"), Sql.inVisibleProjects("n.project_id"), Sql.notWithdrawn("n.withdrawn_at"),
+                Document.MAX_SUPERSESSION_CHAIN);
     }
 
     static Optional<DocumentRef> direct(ResultSet rs) throws SQLException {
