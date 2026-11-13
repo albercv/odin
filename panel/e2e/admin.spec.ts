@@ -507,7 +507,8 @@ async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<vo
   const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${worker}/keys`, { label: 'enlace e2e' });
   const link = await apiJson<{ url: string }>(page, 'post', `/v1/cases/${caseId}/upload-links`, undefined, { Authorization: `Bearer ${key}` });
   const token = link.url.split('/').pop() ?? '';
-  const visitor = await browser.newPage();
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
   await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/${token}`);
   await expect(visitor.getByText('Caso', { exact: true })).toBeVisible();
   await expect(visitor.getByText(CASE_FILES[1] ?? '')).toBeVisible();
@@ -518,7 +519,7 @@ async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<vo
   await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/token-que-no-existe`);
   await expect(visitor.getByRole('alert')).toBeVisible();
   await expect(visitor.getByText(CASE_FILES[1] ?? '')).toHaveCount(0);
-  await visitor.close();
+  await visitorContext.close();
   console.log('✓ Admin 20b: página pública de subida por enlace, sin sesión: caso y proyecto, recibido y enlace no válido sin datos del caso');
 }
 

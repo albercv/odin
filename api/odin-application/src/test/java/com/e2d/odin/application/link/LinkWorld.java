@@ -1,6 +1,7 @@
 package com.e2d.odin.application.link;
 
 import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
@@ -80,7 +81,7 @@ final class LinkWorld {
     UploadByLink uploadByLink() {
         var upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(1000), ids, clock);
         var add = new AddToCaseFiles(orgs, members, docs, caseFiles, ids, clock);
-        return new UploadByLink(resolve(), links, upload, add, caseFiles, ids, clock);
+        return new UploadByLink(resolve(), links, new UploadToCaseFile(upload, add, caseFiles, ids, clock));
     }
 
     OpenOriginal openOriginal() {

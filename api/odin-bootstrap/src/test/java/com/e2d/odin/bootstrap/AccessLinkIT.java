@@ -115,6 +115,8 @@ class AccessLinkIT {
             assertThat(d.get("projectId").asString()).isEqualTo(project);
             assertThat(d.get("uploadedBy").asString()).isEqualTo(marta.userId());
             assertThat(d.get("addedBy").asString()).isEqualTo(marta.userId());
+            assertThat(d.get("uploadedByName").asString()).isEqualTo("Marta Gil");
+            assertThat(d.get("addedByName").asString()).isEqualTo("Marta Gil");
         });
         var events = api.get("/v1/admin/companies/" + company + "/cases/" + caseId + "/events", "Cookie", adminCookie)
                 .json();
@@ -435,6 +437,46 @@ class AccessLinkIT {
 
         assertThat(reply.status()).isEqualTo(201);
         assertThat(entries(caseId)).containsExactly(reply.json().get("document").get("id").asString());
+    }
+
+    @Test
+    void administratorUploadOfAFileThatIsInAnotherProjectCreatesANewDocumentInTheCaseProject() {
+        String caseProject = project();
+        String elsewhere = project();
+        String caseId = adminUpload("ficha.txt", caseProject, true, unique("Ficha")).json().get("document").get("id")
+                .asString();
+        String same = unique("mismo fichero");
+        String other = adminUpload("ajeno.txt", elsewhere, false, same).json().get("document").get("id").asString();
+
+        Reply reply = api.upload("/v1/admin/companies/" + company + "/documents?caseId=" + caseId, "propio.txt",
+                same.getBytes(StandardCharsets.UTF_8), "Cookie", adminCookie);
+
+        String created = reply.json().get("document").get("id").asString();
+        assertThat(reply.status()).isEqualTo(201);
+        assertThat(created).isNotEqualTo(other);
+        assertThat(strings("SELECT project_id FROM document WHERE id = '" + created + "'")).containsExactly(caseProject);
+        assertThat(entries(caseId)).containsExactly(created);
+    }
+
+    @Test
+    void aCaseInADeletedProjectIsReadableButNotWritable() {
+        String project = project();
+        Worker marta = worker(List.of(project));
+        String caseId = adminUpload("ficha.txt", project, true, unique("Ficha")).json().get("document").get("id")
+                .asString();
+        String docId = adminUpload("anexo.txt", project, false, unique("Anexo")).json().get("document").get("id")
+                .asString();
+        String token = tokenOf(requestUploadLink(marta, caseId));
+        assertThat(api.delete("/v1/admin/companies/" + company + "/projects/" + project, "Cookie", adminCookie)
+                .status()).isEqualTo(204);
+
+        assertThat(api.get("/v1/cases/" + caseId + "/file", "Authorization", marta.bearer()).status()).isEqualTo(200);
+        assertThat(api.post("/v1/cases/" + caseId + "/upload-links", map(), "Authorization", marta.bearer())
+                .status()).isEqualTo(404);
+        assertThat(upload(token, "a.txt", "a", OFFICE).status()).isEqualTo(404);
+        assertThat(api.get("/v1/upload-links/" + token, "X-Forwarded-For", OFFICE).status()).isEqualTo(404);
+        assertThat(api.post("/v1/cases/" + caseId + "/file/documents", map("documentIds", List.of(docId)),
+                "Authorization", marta.bearer()).status()).isEqualTo(404);
     }
 
     @Test

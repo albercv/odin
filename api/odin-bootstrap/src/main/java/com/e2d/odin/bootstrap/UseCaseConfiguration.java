@@ -13,6 +13,7 @@ import com.e2d.odin.application.link.LinkSettings;
 import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.link.ResolveLink;
 import com.e2d.odin.application.link.UploadByLink;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
 import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
@@ -437,9 +438,14 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadDocument upload,
-            AddToCaseFiles addToCaseFiles, CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
-        return new UploadByLink(resolve, links, upload, addToCaseFiles, caseFiles, ids, clock);
+    UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile) {
+        return new UploadByLink(resolve, links, uploadToCaseFile);
+    }
+
+    @Bean
+    UploadToCaseFile uploadToCaseFile(UploadDocument upload, AddToCaseFiles addToCaseFiles,
+            CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
+        return new UploadToCaseFile(upload, addToCaseFiles, caseFiles, ids, clock);
     }
 
     @Bean
@@ -497,14 +503,15 @@ public class UseCaseConfiguration {
 
     @Bean
     GetCaseFile getCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            DocumentRepository documents, CaseFileRepository caseFiles) {
-        return new GetCaseFile(organizations, projectMembers, documents, caseFiles);
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users) {
+        return new GetCaseFile(organizations, projectMembers, documents, caseFiles, users);
     }
 
     @Bean
     ReadCaseFile readCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            DocumentRepository documents, CaseFileRepository caseFiles, CaseFileSettings settings) {
-        return new ReadCaseFile(organizations, projectMembers, documents, caseFiles, settings);
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
+            CaseFileSettings settings) {
+        return new ReadCaseFile(organizations, projectMembers, documents, caseFiles, users, settings);
     }
 
     @Bean

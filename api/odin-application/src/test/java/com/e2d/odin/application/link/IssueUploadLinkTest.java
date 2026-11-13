@@ -88,4 +88,12 @@ class IssueUploadLinkTest {
         assertThatThrownBy(() -> w.issueOriginal().execute(w.worker, hidden.id(), java.util.Optional.empty()))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void caseInADeletedProjectIsNotFound() {
+        Document caseDoc = w.caseIn(w.project);
+        w.orgs.deleteProject(w.company, w.project, w.clock.instant());
+
+        assertThatThrownBy(() -> w.issueUpload().execute(w.worker, caseDoc.id())).isInstanceOf(NotFoundException.class);
+    }
 }

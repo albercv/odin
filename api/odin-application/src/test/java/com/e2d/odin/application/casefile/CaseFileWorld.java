@@ -6,6 +6,7 @@ import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
+import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.shared.CaseFileSettings;
@@ -22,6 +23,7 @@ final class CaseFileWorld {
     final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(orgs);
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository(docs);
+    final InMemoryUserRepository users = new InMemoryUserRepository();
     final MutableClock clock = new MutableClock();
     final SequenceIdGenerator ids = new SequenceIdGenerator();
     final CompanyId company = Fixtures.company(orgs);
@@ -43,7 +45,7 @@ final class CaseFileWorld {
     }
 
     GetCaseFile getCaseFile() {
-        return new GetCaseFile(orgs, members, docs, files);
+        return new GetCaseFile(orgs, members, docs, files, users);
     }
 
     AddToCaseFiles addToCaseFiles() {
@@ -55,6 +57,6 @@ final class CaseFileWorld {
     }
 
     ReadCaseFile readCaseFile(int chunkChars) {
-        return new ReadCaseFile(orgs, members, docs, files, new CaseFileSettings(chunkChars));
+        return new ReadCaseFile(orgs, members, docs, files, users, new CaseFileSettings(chunkChars));
     }
 }

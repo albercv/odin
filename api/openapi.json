@@ -3787,6 +3787,12 @@
           },
           "status" : {
             "type" : "string"
+          },
+          "uploadedByName" : {
+            "type" : "string"
+          },
+          "addedByName" : {
+            "type" : "string"
           }
         },
         "required" : [ "filename", "format", "id", "pageCount", "paginated", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]

@@ -163,7 +163,7 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
         List<UUID> ids = caseIds.stream().map(DocumentId::value).toList();
         return tx.includeWithdrawn(true).inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> {
             int found = jdbc.sql("SELECT count(*) FROM (SELECT id FROM document WHERE company_id = :company "
-                    + "AND id IN (:ids) ORDER BY id FOR UPDATE) locked").param("company", companyId.value())
+                    + "AND id IN (:ids) AND withdrawn_at IS NULL ORDER BY id FOR UPDATE) locked").param("company", companyId.value())
                     .param("ids", ids).query(Integer.class).single();
             if (found != ids.size()) {
                 throw new NotFoundException("Documento no encontrado");

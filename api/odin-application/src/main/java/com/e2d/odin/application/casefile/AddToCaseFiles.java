@@ -45,7 +45,7 @@ public class AddToCaseFiles {
     }
 
     public int execute(Actor actor, List<CaseFileAssignment> assignments) {
-        return add(actor, CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers), assignments);
+        return add(actor, CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers), assignments);
     }
 
     /** La ruta del administrador, que nombra la empresa. */
@@ -55,12 +55,13 @@ public class AddToCaseFiles {
     }
 
     /** Antes de guardar un documento para un caso: el caso existe, lo es, y el documento irá en su proyecto o en lo general. */
-    public void requireTarget(Actor actor, CompanyId companyId, DocumentId caseId, Optional<ProjectId> projectId) {
+    public Document requireTarget(Actor actor, CompanyId companyId, DocumentId caseId, Optional<ProjectId> projectId) {
         Document caseDocument = CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers)
                 .caseDocument(documents, caseId);
         if (projectId.isPresent() && !projectId.equals(caseDocument.projectId())) {
             throw new NotFoundException("Caso no encontrado");
         }
+        return caseDocument;
     }
 
     private int add(Actor actor, CaseFileAccess access, List<CaseFileAssignment> assignments) {

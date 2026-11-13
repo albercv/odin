@@ -326,9 +326,9 @@ async function caseFileStep(): Promise<void> {
   await searchAndRemoveStep(s.worker.key, s.caseId, s.ids);
   await openOriginalStep(s.worker.key, s.ids['Informe del perito']!);
   await uploadLinkStep(s);
-  // errorMessage de mcp/src/tools/result.ts: 404 «No se ha encontrado…», 403 «No tienes permiso…»
+  // errorMessage de mcp/src/tools/result.ts: 404 «No se ha encontrado…»; el ajeno tiene la capacidad, así que la API responde 404
   const denied = await caseFile(s.outsider.key, s.caseId).then(() => '', (e: Error) => e.message);
-  check(/no encontrad|no tienes permiso|\b40[34]\b/i.test(denied), 'Paso 17: un trabajador de otro proyecto recibe un 404 o 403 de getCaseFile para ese caso');
+  check(/no (se ha )?encontrad/i.test(denied), 'Paso 17: un trabajador de otro proyecto recibe un 404 de getCaseFile para ese caso');
 }
 
 async function prepare(): Promise<void> {

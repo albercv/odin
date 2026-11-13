@@ -148,4 +148,17 @@ class AddToCaseFilesTest {
         assertThat(added).isEqualTo(1);
         assertThat(w.files.allEvents().get(0).actorId()).isEqualTo(admin.userId());
     }
+
+    @Test
+    void workerCannotAddIntoACaseOfADeletedProjectButStillReadsIt() {
+        Document caseDoc = w.caseIn(w.project);
+        Document doc = w.documentIn(w.project);
+        w.orgs.deleteProject(w.company, w.project, w.clock.instant());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> w.addToCaseFiles().execute(w.worker,
+                List.of(new CaseFileAssignment(caseDoc.id(), Set.of(doc.id())))))
+                .isInstanceOf(NotFoundException.class);
+        org.assertj.core.api.Assertions.assertThatCode(() -> w.getCaseFile().execute(w.worker, caseDoc.id()))
+                .doesNotThrowAnyException();
+    }
 }

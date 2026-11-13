@@ -14,7 +14,7 @@ import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
-import com.e2d.odin.application.casefile.CaseFileAssignment;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
 import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -59,14 +59,15 @@ public class AdminDocumentController {
     private final UpdateDocument update;
     private final MarkCaseDocuments markCases;
     private final AddToCaseFiles addToCaseFiles;
+    private final UploadToCaseFile uploadToCaseFile;
     private final OpenOriginal openOriginal;
     private final WithdrawDocument withdraw;
     private final RestoreDocument restore;
 
     public AdminDocumentController(UploadDocument upload, ListCompanyDocuments list, GetDocument get,
             RetryDocument retry, SupersedeDocument supersede, UpdateDocument update, MarkCaseDocuments markCases,
-            AddToCaseFiles addToCaseFiles, OpenOriginal openOriginal, WithdrawDocument withdraw,
-            RestoreDocument restore) {
+            AddToCaseFiles addToCaseFiles, UploadToCaseFile uploadToCaseFile, OpenOriginal openOriginal,
+            WithdrawDocument withdraw, RestoreDocument restore) {
         this.upload = upload;
         this.list = list;
         this.get = get;
@@ -75,6 +76,7 @@ public class AdminDocumentController {
         this.update = update;
         this.markCases = markCases;
         this.addToCaseFiles = addToCaseFiles;
+        this.uploadToCaseFile = uploadToCaseFile;
         this.openOriginal = openOriginal;
         this.withdraw = withdraw;
         this.restore = restore;
@@ -100,15 +102,12 @@ public class AdminDocumentController {
             UUID caseId) throws IOException {
         String name = title == null || title.isBlank() ? file.getOriginalFilename() : title;
         Optional<ProjectId> project = Optional.ofNullable(projectId).map(ProjectId::new);
-        if (caseId != null) {
-            addToCaseFiles.requireTarget(actor, new CompanyId(companyId), new DocumentId(caseId), project);
-        }
-        UploadOutcome outcome = upload.execute(actor, new CompanyId(companyId),
-                project, name, file.getOriginalFilename(), file.getBytes(), caseDocument);
-        if (caseId != null) {
-            addToCaseFiles.execute(actor, new CompanyId(companyId),
-                    List.of(new CaseFileAssignment(new DocumentId(caseId), Set.of(outcome.document().id()))));
-        }
+        UploadOutcome outcome = caseId == null
+                ? upload.execute(actor, new CompanyId(companyId), project, name, file.getOriginalFilename(),
+                        file.getBytes(), caseDocument)
+                : uploadToCaseFile.execute(actor,
+                        addToCaseFiles.requireTarget(actor, new CompanyId(companyId), new DocumentId(caseId), project),
+                        name, file.getOriginalFilename(), file.getBytes());
         return ResponseEntity.status(outcome.duplicate() ? HttpStatus.OK : HttpStatus.CREATED)
                 .body(Responses.Upload.from(outcome));
     }
