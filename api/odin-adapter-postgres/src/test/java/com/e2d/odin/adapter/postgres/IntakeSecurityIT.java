@@ -152,4 +152,45 @@ class IntakeSecurityIT extends AbstractPostgresIT {
                 ProposalConfidence.LOW, ProposalSource.MODEL, "cita", DecisionState.PROPOSED, Optional.empty(),
                 Optional.empty()))).isInstanceOf(DataAccessException.class);
     }
+
+    @Test
+    void guardOfTheProjectConstraintIsIdempotent() throws Exception {
+        String migration = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/resources/db/migration/V25__intake.sql"));
+        var m = java.util.regex.Pattern.compile("DO \\$\\$.*?END \\$\\$;", java.util.regex.Pattern.DOTALL).matcher(migration);
+        assertThat(m.find()).isTrue();
+
+        // La restricción ya existe (la creó la V25 o el otro encargo): volver a aplicar la guarda no falla ni duplica.
+        owner(m.group());
+        assertThat(JdbcClient.create(Db.owner()).sql("SELECT count(*) FROM pg_constraint WHERE conname = "
+                + "'project_id_company_unique'").query(Integer.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void searchNeverReturnsPendingDocumentsNorLinkedScans() {
+        Document digital = searchable("Digital", "baliza");
+        Document scan = searchable("Escaneo", "baliza");
+        owner("UPDATE document SET scan_of = '" + digital.id().value() + "' WHERE id = '" + scan.id().value() + "'");
+        docs.replacePages(pending.id(), List.of(new DocumentPage(pending.id(), 1, "baliza", "lector", "1")));
+
+        assertThat(searchTitles()).containsExactly("Digital");
+
+        owner("UPDATE document SET scan_of = NULL WHERE id = '" + scan.id().value() + "'");
+        owner("UPDATE document SET intake_pending = false WHERE id = '" + pending.id().value() + "'");
+        assertThat(searchTitles()).containsExactlyInAnyOrder("Digital", "Escaneo", "Pendiente");
+    }
+
+    private Document searchable(String title, String text) {
+        Document d = newDocument(company, user, title, DocumentStatus.READY);
+        docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, text, "lector", "1")));
+        return d;
+    }
+
+    /** Con la conexión del propietario, sin RLS: solo el filtro SQL de la búsqueda separa lo oculto. */
+    private List<String> searchTitles() {
+        var search = new PostgresKnowledgeSearch(new ScopedTransactions(Db.owner()));
+        return search.search(new com.e2d.odin.domain.search.SearchQuery(List.of("baliza"), CompanyScope.of(company),
+                ProjectVisibility.all(), Optional.empty(), 10, user, Optional.empty())).hits().stream()
+                .map(h -> h.title()).toList();
+    }
 }

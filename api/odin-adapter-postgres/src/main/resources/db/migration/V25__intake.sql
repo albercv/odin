@@ -1,7 +1,8 @@
 -- Primera carga: lotes, candidatos a proyecto y propuestas. Los documentos de un lote nacen pendientes (D1):
 -- la RLS los oculta a quien no activa app.include_intake (solo las rutas de la bandeja).
 
-ALTER TABLE project ADD CONSTRAINT project_id_company_unique UNIQUE (id, company_id);
+-- Otro encargo crea la misma restricción: solo si no existe.
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'project_id_company_unique') THEN ALTER TABLE project ADD CONSTRAINT project_id_company_unique UNIQUE (id, company_id); END IF; END $$;
 
 CREATE TABLE intake_batch (
     id         uuid PRIMARY KEY,
