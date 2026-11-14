@@ -55,6 +55,13 @@ test('tokenIsEncodedInThePaths', async () => {
 
 const project = { target: 'PROJECT', projectName: 'Los Almendros', expiresAt: '2026-11-14T10:00:00Z' };
 
+test('titleIsNeutralWhileLoadingAndOnError', async () => {
+  show({ [info]: () => ({ status: 404, body: { detail: 'Este enlace ha caducado o no es válido' } }) });
+  expect(screen.getByRole('heading', { level: 1, name: 'Subir documentos' })).toBeInTheDocument();
+  await screen.findByRole('alert');
+  expect(screen.getByRole('heading', { level: 1, name: 'Subir documentos' })).toBeInTheDocument();
+});
+
 test('caseTargetKeepsTheCaseTitle', async () => {
   show({ [info]: () => ok });
   expect(await screen.findByRole('heading', { level: 1, name: 'Subir documentos al caso' })).toBeInTheDocument();

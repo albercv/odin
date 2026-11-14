@@ -1,6 +1,7 @@
 package com.e2d.odin.bootstrap;
 
 import com.e2d.odin.application.document.GetDocument;
+import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
@@ -470,6 +471,11 @@ public class UseCaseConfiguration {
             IdGenerator ids,
             Clock clock) {
         return new UploadDocument(documents, organizations, files, detector, uploadSettings, ids, clock);
+    }
+
+    @Bean
+    UserNames userNames(UserRepository users) {
+        return new UserNames(users);
     }
 
     @Bean

@@ -18,6 +18,7 @@ import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
+import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
@@ -322,6 +323,10 @@ public class TestWiring {
 
     @Bean UploadDocument uploadDocument() {
         return new UploadDocument(docs, orgs, files, detector, new UploadSettings(MAX_UPLOAD), ids, clock);
+    }
+
+    @Bean UserNames userNames() {
+        return new UserNames(users);
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {

@@ -40,13 +40,15 @@ function Facts({ info }: { info: S['UploadLinkInfo'] }) {
   );
 }
 
+const TITLES: Record<string, string> = { PROJECT: 'Subir documentos al proyecto', CASE: 'Subir documentos al caso' };
+
 /** Public page: only the token travels in the URL, and nothing here lists or links to any document. */
 export function UploadByLink({ token }: { token: string }) {
   const info = useLoad(() => uploadLinks.info(token), [token]);
   const { results, send } = useSending(token, info.data?.target === 'PROJECT');
   return (
     <main className={styles.page}>
-      <h1>{info.data?.target === 'PROJECT' ? 'Subir documentos al proyecto' : 'Subir documentos al caso'}</h1>
+      <h1>{TITLES[info.data?.target ?? ''] ?? 'Subir documentos'}</h1>
       <Notice message={info.error} />
       {info.data && (
         <>

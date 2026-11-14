@@ -1051,6 +1051,7 @@ export interface components {
             caseDocument: boolean;
             /** Format: date-time */
             withdrawnAt?: string;
+            uploadedByName?: string;
         };
         TopicLabelView: {
             /** Format: uuid */

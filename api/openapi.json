@@ -2648,6 +2648,9 @@
           "withdrawnAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "uploadedByName" : {
+            "type" : "string"
           }
         },
         "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
