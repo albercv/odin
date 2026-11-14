@@ -66,6 +66,9 @@ public interface DocumentRepository {
             Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
             int limit);
 
+    /** Todos los documentos de la empresa para el administrador: a diferencia de {@code list}, con los escaneos enlazados. */
+    List<DocumentEntry> listForAdmin(CompanyScope scope, int offset, int limit);
+
     default List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<TopicId> topicId, Optional<DocumentStatus> status, int offset, int limit) {
         return list(scope, visibility, projectId, topicId, Optional.empty(), status, offset, limit);

@@ -107,8 +107,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
     @Override
     public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
             int limit) {
-        return list(pipeline, true, scope, visibility, Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), offset, limit);
+        // Lo pendiente descartado en la bandeja se gestiona en la bandeja, no en la pestaña de retirados.
+        return list(pipeline, true, Sql.visibleDocument("d") + " AND NOT d.intake_pending", scope, visibility,
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), offset, limit);
     }
 
     @Override
@@ -186,11 +187,19 @@ public class PostgresDocumentRepository implements DocumentRepository {
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
             int limit) {
-        return list(tx, false, scope, visibility, projectId, topicId, caseDocument, status, offset, limit);
+        return list(tx, false, Sql.listable("d"), scope, visibility, projectId, topicId, caseDocument, status, offset,
+                limit);
     }
 
-    private static List<DocumentEntry> list(ScopedTransactions transactions, boolean withdrawnOnly, CompanyScope scope,
-            ProjectVisibility visibility, Optional<ProjectId> projectId, Optional<TopicId> topicId,
+    /** La lista del administrador: como la del trabajador, pero con los escaneos enlazados (D3). */
+    @Override
+    public List<DocumentEntry> listForAdmin(CompanyScope scope, int offset, int limit) {
+        return list(tx, false, Sql.visibleDocument("d"), scope, ProjectVisibility.all(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), offset, limit);
+    }
+
+    private static List<DocumentEntry> list(ScopedTransactions transactions, boolean withdrawnOnly, String visibleFilter,
+            CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId, Optional<TopicId> topicId,
             Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
@@ -203,7 +212,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
                   AND (CAST(:status AS text) IS NULL OR d.status = :status) AND (NOT :withdrawnOnly OR d.withdrawn_at IS NOT NULL)
                   AND %s AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
-                Sql.inVisibleProjects("d.project_id"), Sql.listable("d"));
+                Sql.inVisibleProjects("d.project_id"), visibleFilter);
         return transactions.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("withdrawnOnly", withdrawnOnly).param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
                 .param("caseDocument", caseDocument.orElse(null))

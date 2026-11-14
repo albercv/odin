@@ -16,6 +16,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -30,6 +31,9 @@ public class PostgresIntakeRepository implements IntakeRepository {
     private static final String PROPOSAL_COLUMNS = "id, company_id, batch_id, document_id, kind, target_project_id, "
             + "target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at";
 
+    /** Sin visibilidad de proyectos, la RLS de las propuestas solo vería documentos sin proyecto. */
+    private static final ProjectVisibility ALL = ProjectVisibility.all();
+
     private final ScopedTransactions tx;
 
     public PostgresIntakeRepository(ScopedTransactions tx) {
@@ -38,7 +42,7 @@ public class PostgresIntakeRepository implements IntakeRepository {
 
     @Override
     public void save(IntakeBatch b) {
-        tx.runInScope(CompanyScope.of(b.companyId()), jdbc -> jdbc.sql("""
+        tx.runInScope(CompanyScope.of(b.companyId()), ALL, jdbc -> jdbc.sql("""
                 INSERT INTO intake_batch (id, company_id, started_by, channel, state, created_at, closed_at)
                 VALUES (:id, :company, :by, :channel, :state, :created, :closed)
                 ON CONFLICT (id) DO UPDATE SET state = EXCLUDED.state, closed_at = EXCLUDED.closed_at""")
@@ -49,21 +53,21 @@ public class PostgresIntakeRepository implements IntakeRepository {
 
     @Override
     public Optional<IntakeBatch> find(CompanyId companyId, IntakeBatchId id) {
-        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
                 + " FROM intake_batch WHERE id = :id AND company_id = :company").param("id", id.value())
                 .param("company", companyId.value()).query((rs, n) -> batch(rs)).optional());
     }
 
     @Override
     public Optional<IntakeBatch> findActive(CompanyId companyId) {
-        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
                 + " FROM intake_batch WHERE company_id = :company AND state IN ('OPEN', 'READING')")
                 .param("company", companyId.value()).query((rs, n) -> batch(rs)).optional());
     }
 
     @Override
     public void save(ProjectCandidate c) {
-        tx.runInScope(CompanyScope.of(c.companyId()), jdbc -> jdbc.sql("""
+        tx.runInScope(CompanyScope.of(c.companyId()), ALL, jdbc -> jdbc.sql("""
                 INSERT INTO intake_project_candidate (company_id, batch_id, name, origin, document_count, state, project_id)
                 VALUES (:company, :batch, :name, :origin, :count, :state, :project)
                 ON CONFLICT (batch_id, name) DO UPDATE SET document_count = EXCLUDED.document_count,
@@ -75,7 +79,7 @@ public class PostgresIntakeRepository implements IntakeRepository {
 
     @Override
     public List<ProjectCandidate> candidates(CompanyId companyId, IntakeBatchId batchId) {
-        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("""
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("""
                 SELECT company_id, batch_id, name, origin, document_count, state, project_id
                 FROM intake_project_candidate WHERE company_id = :company AND batch_id = :batch ORDER BY name""")
                 .param("company", companyId.value()).param("batch", batchId.value())
@@ -84,7 +88,7 @@ public class PostgresIntakeRepository implements IntakeRepository {
 
     @Override
     public void save(IntakeProposal p) {
-        tx.runInScope(CompanyScope.of(p.companyId()), jdbc -> jdbc.sql("""
+        tx.runInScope(CompanyScope.of(p.companyId()), ALL, jdbc -> jdbc.sql("""
                 INSERT INTO intake_proposal (id, company_id, batch_id, document_id, kind, target_project_id,
                     target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at)
                 VALUES (:id, :company, :batch, :document, :kind, :targetProject, :targetDocument, :caseNumber,
@@ -103,7 +107,7 @@ public class PostgresIntakeRepository implements IntakeRepository {
 
     @Override
     public List<IntakeProposal> proposals(CompanyId companyId, IntakeBatchId batchId) {
-        return tx.inScope(CompanyScope.of(companyId), jdbc -> jdbc.sql("SELECT " + PROPOSAL_COLUMNS
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("SELECT " + PROPOSAL_COLUMNS
                 + " FROM intake_proposal WHERE company_id = :company AND batch_id = :batch ORDER BY id")
                 .param("company", companyId.value()).param("batch", batchId.value())
                 .query((rs, n) -> proposal(rs)).list());

@@ -17,6 +17,7 @@ import com.e2d.odin.domain.intake.ProposalSource;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
@@ -192,5 +193,45 @@ class IntakeSecurityIT extends AbstractPostgresIT {
         return search.search(new com.e2d.odin.domain.search.SearchQuery(List.of("baliza"), CompanyScope.of(company),
                 ProjectVisibility.all(), Optional.empty(), 10, user, Optional.empty())).hits().stream()
                 .map(h -> h.title()).toList();
+    }
+
+    @Test
+    void proposalOfADocumentWithAProjectIsListedAndUpdated() {
+        ProjectId project = newProject(company, "A");
+        owner("UPDATE document SET project_id = '" + project.value() + "' WHERE id = '" + pending.id().value() + "'");
+        IntakeProposal proposal = new IntakeProposal(UUID.randomUUID(), company, batch.id(), pending.id(),
+                ProposalKind.CASE_MARK, Optional.empty(), Optional.empty(), Optional.of("1/2026"),
+                ProposalConfidence.HIGH, ProposalSource.RULES, "cita", DecisionState.PROPOSED, Optional.empty(),
+                Optional.empty());
+        intake.save(proposal);
+        assertThat(intake.proposals(company, batch.id())).containsExactly(proposal);
+
+        IntakeProposal confirmed = proposal.confirm(user, NOW);
+        intake.save(confirmed);
+        assertThat(intake.proposals(company, batch.id())).containsExactly(confirmed);
+    }
+
+    @Test
+    void adminListShowsLinkedScansAndWorkerListDoesNot() {
+        Document digital = newDocument(company, user, "Digital", DocumentStatus.READY);
+        Document scan = newDocument(company, user, "Escaneo", DocumentStatus.READY);
+        owner("UPDATE document SET scan_of = '" + digital.id().value() + "' WHERE id = '" + scan.id().value() + "'");
+        CompanyScope scope = CompanyScope.of(company);
+
+        assertThat(docs.list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10))
+                .extracting(e -> e.document().id()).containsExactly(digital.id());
+        assertThat(docs.listForAdmin(scope, 0, 10)).extracting(e -> e.document().id())
+                .containsExactlyInAnyOrder(digital.id(), scan.id());
+    }
+
+    @Test
+    void withdrawnTabNeverListsPendingDocuments() {
+        Document withdrawn = newDocument(company, user, "Retirado", DocumentStatus.READY);
+        owner("UPDATE document SET withdrawn_at = now(), withdrawn_by = '" + user.value() + "' WHERE id IN ('"
+                + withdrawn.id().value() + "', '" + pending.id().value() + "')");
+        CompanyScope scope = CompanyScope.of(company);
+
+        assertThat(docs.listWithdrawn(scope, ProjectVisibility.all(), 0, 10)).extracting(e -> e.document().id())
+                .containsExactly(withdrawn.id());
     }
 }
