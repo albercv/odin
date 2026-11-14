@@ -5,7 +5,7 @@ import { Documents } from './Documents';
 import { mockFetch, type Routes } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 const list = 'GET /v1/admin/companies/c1/documents?offset=0&limit=25';
 const projects = 'GET /v1/admin/companies/c1/projects';
@@ -65,12 +65,23 @@ test('supersedeDialogFindsACandidateThatIsNotOnThePage', async () => {
   expect(await within(dialog).findByRole('radio', { name: /Póliza 2030/ })).toBeInTheDocument();
 });
 
-test('supersedeDialogShowsFirstTenReadyBeyondNonReadyOnesWithHint', async () => {
+test('supersedeDialogShowsAReadyCandidateBeyondNonReadyOnesWithoutAFalseHint', async () => {
   const failed = Array.from({ length: 10 }, (_, i) => ({ ...draft, id: `f${i}`, title: `Fallido ${i}` }));
   show(routes([old, ...failed, renewed]));
   const dialog = await openDialog('Póliza 2022');
   expect(await within(dialog).findByRole('radio', { name: /Póliza 2024/ })).toBeInTheDocument();
-  expect(within(dialog).getByText('Escribe al menos 3 letras del título para afinar')).toBeInTheDocument();
+  expect(within(dialog).queryByText('Escribe al menos 3 letras del título para afinar')).toBeNull();
+});
+
+test('supersedeDialogHintsOnlyWhenReadyCandidatesAreHiddenAndNoSearchIsActive', async () => {
+  const ready = Array.from({ length: 11 }, (_, i) => ({ ...renewed, id: `r${i}`, title: `Póliza ${2030 + i}` }));
+  const q = `${candidatesUrl}&q=2031`;
+  show(routes([old, ...ready], { [q]: () => ({ documents: [ready[1]], total: 1 }) }));
+  const dialog = await openDialog('Póliza 2022');
+  expect(await within(dialog).findByText('Escribe al menos 3 letras del título para afinar')).toBeInTheDocument();
+  fireEvent.change(within(dialog).getByRole('searchbox', { name: 'Buscar por título' }), { target: { value: '2031' } });
+  await waitFor(() => expect(within(dialog).getAllByRole('radio')).toHaveLength(1)); // ya llegó la búsqueda
+  expect(within(dialog).queryByText('Escribe al menos 3 letras del título para afinar')).toBeNull();
 });
 
 test('supersedeDialogShowsSearchErrorAndNoFalseEmptyMessage', async () => {

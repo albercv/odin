@@ -38,7 +38,10 @@ function useCandidates(old: S['DocumentView']) {
       return { items: r.documents, total: r.total };
     }, [old.companyId], FETCHED);
   const candidates = found.items.filter((d) => d.status === 'READY' && d.id !== old.id).slice(0, SHOWN);
-  return { found, candidates, hint: !found.loading && !found.error && found.total > candidates.length };
+  const ready = found.items.filter((d) => d.status === 'READY' && d.id !== old.id).length;
+  // La pista solo si hay candidatos listos que no se ven (más en el servidor o más de SHOWN) y no se está buscando ya.
+  const hidden = found.items.length < found.total || ready > candidates.length;
+  return { found, candidates, hint: !found.loading && !found.error && !found.query && hidden };
 }
 
 export function SupersedeDialog({ document: old, projects, onClose, onDone }: Props) {
