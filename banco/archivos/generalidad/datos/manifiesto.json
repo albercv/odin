@@ -1,0 +1,354 @@
+{
+ "semilla": 7,
+ "empresas": [
+  {
+   "clave": "brumeral",
+   "nombre": "Brumeral Ingeniería y Consultoría, S.L.",
+   "codigo": "BRM"
+  }
+ ],
+ "proyectos": [
+  {
+   "clave": "talleres-murcano",
+   "empresa": "brumeral",
+   "nombre": "Talleres Murcano",
+   "abierto": false
+  },
+  {
+   "clave": "conservas-dalmira",
+   "empresa": "brumeral",
+   "nombre": "Conservas Dalmira",
+   "abierto": false
+  },
+  {
+   "clave": "logistica-penedal",
+   "empresa": "brumeral",
+   "nombre": "Logística Penedal",
+   "abierto": false
+  },
+  {
+   "clave": "alojamientos-cerrolago",
+   "empresa": "brumeral",
+   "nombre": "Alojamientos Cerrolago",
+   "abierto": false
+  },
+  {
+   "clave": "bodegas-quintafria",
+   "empresa": "brumeral",
+   "nombre": "Bodegas Quintafría",
+   "abierto": false
+  },
+  {
+   "clave": "ceramicas-valtierno",
+   "empresa": "brumeral",
+   "nombre": "Cerámicas Valtierno",
+   "abierto": false
+  }
+ ],
+ "trabajadores": [
+  {
+   "clave": "t09",
+   "empresa": "brumeral",
+   "nombre": "Irene",
+   "apellidos": "Salcedo Moya",
+   "proyectos": [
+    "*"
+   ]
+  },
+  {
+   "clave": "t10",
+   "empresa": "brumeral",
+   "nombre": "Óscar",
+   "apellidos": "Leiva Durán",
+   "proyectos": [
+    "talleres-murcano",
+    "conservas-dalmira",
+    "bodegas-quintafria"
+   ]
+  },
+  {
+   "clave": "t11",
+   "empresa": "brumeral",
+   "nombre": "Nuria",
+   "apellidos": "Baeza Ortiz",
+   "proyectos": [
+    "*"
+   ]
+  }
+ ],
+ "documentos": [
+  {
+   "ruta": "brumeral/_general/norma-facturacion.txt",
+   "empresa": "brumeral",
+   "proyecto": null,
+   "titulo": "Norma interna de facturación",
+   "subido": "2024-11-22T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/_general/tarifas-honorarios-2024.txt",
+   "empresa": "brumeral",
+   "proyecto": null,
+   "titulo": "Tarifas de honorarios 2024",
+   "subido": "2024-12-04T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/_general/tarifas-honorarios-2025.txt",
+   "empresa": "brumeral",
+   "proyecto": null,
+   "titulo": "Tarifas de honorarios 2025",
+   "subido": "2024-12-20T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/_general/procedimiento-alta-clientes.txt",
+   "empresa": "brumeral",
+   "proyecto": null,
+   "titulo": "Procedimiento de alta de clientes",
+   "subido": "2024-11-27T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/talleres-murcano/contrato-mantenimiento-2024.txt",
+   "empresa": "brumeral",
+   "proyecto": "talleres-murcano",
+   "titulo": "Contrato de mantenimiento CM-2024-011",
+   "subido": "2024-12-12T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/talleres-murcano/adenda-1-contrato-mantenimiento.txt",
+   "empresa": "brumeral",
+   "proyecto": "talleres-murcano",
+   "titulo": "Adenda 1 al contrato CM-2024-011",
+   "subido": "2025-01-17T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/talleres-murcano/factura-F-2025-014.txt",
+   "empresa": "brumeral",
+   "proyecto": "talleres-murcano",
+   "titulo": "Factura F-2025-014",
+   "subido": "2025-02-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/talleres-murcano/factura-F-2025-047.txt",
+   "empresa": "brumeral",
+   "proyecto": "talleres-murcano",
+   "titulo": "Factura F-2025-047",
+   "subido": "2025-04-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/talleres-murcano/factura-F-2025-089.txt",
+   "empresa": "brumeral",
+   "proyecto": "talleres-murcano",
+   "titulo": "Factura F-2025-089",
+   "subido": "2025-07-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/conservas-dalmira/oferta-auditoria-energetica-v1.txt",
+   "empresa": "brumeral",
+   "proyecto": "conservas-dalmira",
+   "titulo": "Oferta de auditoría energética (versión 1)",
+   "subido": "2025-02-12T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/conservas-dalmira/oferta-auditoria-energetica-v2.txt",
+   "empresa": "brumeral",
+   "proyecto": "conservas-dalmira",
+   "titulo": "Oferta de auditoría energética (versión 2)",
+   "subido": "2025-03-05T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/conservas-dalmira/factura-F-2025-052.txt",
+   "empresa": "brumeral",
+   "proyecto": "conservas-dalmira",
+   "titulo": "Factura F-2025-052",
+   "subido": "2025-04-09T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/conservas-dalmira/factura-rectificativa-R-2025-003.txt",
+   "empresa": "brumeral",
+   "proyecto": "conservas-dalmira",
+   "titulo": "Factura rectificativa R-2025-003",
+   "subido": "2025-04-24T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/conservas-dalmira/informe-auditoria-energetica.txt",
+   "empresa": "brumeral",
+   "proyecto": "conservas-dalmira",
+   "titulo": "Informe de auditoría energética",
+   "subido": "2025-07-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/logistica-penedal/contrato-legalizacion-fotovoltaica.txt",
+   "empresa": "brumeral",
+   "proyecto": "logistica-penedal",
+   "titulo": "Contrato de ingeniería CI-2025-004",
+   "subido": "2025-02-14T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/logistica-penedal/correo-2025-03-plazo-pago.txt",
+   "empresa": "brumeral",
+   "proyecto": "logistica-penedal",
+   "titulo": "Correo de Logística Penedal sobre el plazo de pago",
+   "subido": "2025-03-20T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/logistica-penedal/factura-F-2025-061.txt",
+   "empresa": "brumeral",
+   "proyecto": "logistica-penedal",
+   "titulo": "Factura F-2025-061",
+   "subido": "2025-05-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/logistica-penedal/factura-F-2025-075.txt",
+   "empresa": "brumeral",
+   "proyecto": "logistica-penedal",
+   "titulo": "Factura F-2025-075",
+   "subido": "2025-07-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/logistica-penedal/factura-F-2025-098.txt",
+   "empresa": "brumeral",
+   "proyecto": "logistica-penedal",
+   "titulo": "Factura F-2025-098",
+   "subido": "2025-10-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/logistica-penedal/acta-reunion-seguimiento-2025-05.txt",
+   "empresa": "brumeral",
+   "proyecto": "logistica-penedal",
+   "titulo": "Acta de la reunión de seguimiento de mayo de 2025",
+   "subido": "2025-05-22T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/alojamientos-cerrolago/presupuesto-climatizacion-2024.txt",
+   "empresa": "brumeral",
+   "proyecto": "alojamientos-cerrolago",
+   "titulo": "Presupuesto P-2024-031, reforma de la climatización",
+   "subido": "2024-11-07T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/alojamientos-cerrolago/correo-2025-01-plazo.txt",
+   "empresa": "brumeral",
+   "proyecto": "alojamientos-cerrolago",
+   "titulo": "Correo de Brumeral a Alojamientos Cerrolago sobre el plazo",
+   "subido": "2025-01-16T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/alojamientos-cerrolago/aceptacion-presupuesto.txt",
+   "empresa": "brumeral",
+   "proyecto": "alojamientos-cerrolago",
+   "titulo": "Aceptación del presupuesto P-2024-031",
+   "subido": "2025-01-22T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/bodegas-quintafria/contrato-servicios-2023.txt",
+   "empresa": "brumeral",
+   "proyecto": "bodegas-quintafria",
+   "titulo": "Contrato de servicios de ingeniería CS-2023-02",
+   "subido": "2024-11-03T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/bodegas-quintafria/contrato-servicios-2025.txt",
+   "empresa": "brumeral",
+   "proyecto": "bodegas-quintafria",
+   "titulo": "Contrato de servicios de ingeniería CS-2025-07",
+   "subido": "2025-03-27T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/bodegas-quintafria/factura-F-2025-033.txt",
+   "empresa": "brumeral",
+   "proyecto": "bodegas-quintafria",
+   "titulo": "Factura F-2025-033",
+   "subido": "2025-05-02T09:00:00Z",
+   "subido_por": "t09"
+  },
+  {
+   "ruta": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+   "empresa": "brumeral",
+   "proyecto": "ceramicas-valtierno",
+   "titulo": "Caso 2025-017, ampliación de la línea del horno 2",
+   "subido": "2025-01-15T09:00:00Z",
+   "subido_por": "t09"
+  }
+ ],
+ "fichas": [
+  {
+   "id": "FB01",
+   "empresa": "brumeral",
+   "proyecto": "talleres-murcano",
+   "autor": "t11",
+   "estado": "APPROVED",
+   "titulo": "Contacto de mantenimiento en Talleres Murcano",
+   "texto": "El jefe de mantenimiento de Talleres Murcano prefiere que le llamen antes de las 8:30, porque luego está en el taller y no coge el teléfono.",
+   "creada": "2025-02-03T10:00:00Z",
+   "error_a_proposito": false
+  },
+  {
+   "id": "FB02",
+   "empresa": "brumeral",
+   "proyecto": "bodegas-quintafria",
+   "autor": "t11",
+   "estado": "APPROVED",
+   "titulo": "Entrada en vigor del contrato con Bodegas Quintafría",
+   "texto": "El contrato nuevo con Bodegas Quintafría empezó el 1 de marzo de 2025.",
+   "creada": "2025-03-27T10:00:00Z",
+   "error_a_proposito": true
+  },
+  {
+   "id": "FB03",
+   "empresa": "brumeral",
+   "proyecto": "logistica-penedal",
+   "autor": "t11",
+   "estado": "PENDING",
+   "titulo": "Acceso a la nave de Logística Penedal",
+   "texto": "Para entrar en la nave hay que usar la puerta 3 y pedir la tarjeta en recepción.",
+   "creada": "2025-05-21T10:00:00Z",
+   "error_a_proposito": false
+  },
+  {
+   "id": "FB04",
+   "empresa": "brumeral",
+   "proyecto": "conservas-dalmira",
+   "autor": "t11",
+   "estado": "APPROVED",
+   "titulo": "Rectificativa del anticipo de Conservas Dalmira",
+   "texto": "La factura F-2025-052 cobró el 50 % de anticipo por error; se corrigió con la rectificativa R-2025-003 al 40 %.",
+   "creada": "2025-04-28T10:00:00Z",
+   "error_a_proposito": false
+  },
+  {
+   "id": "FB05",
+   "empresa": "brumeral",
+   "proyecto": "alojamientos-cerrolago",
+   "autor": "t11",
+   "estado": "REJECTED",
+   "titulo": "Plazo de la climatización de Cerrolago",
+   "texto": "El proyecto de Cerrolago se entrega en 6 semanas.",
+   "creada": "2025-06-02T10:00:00Z",
+   "error_a_proposito": false
+  }
+ ]
+}

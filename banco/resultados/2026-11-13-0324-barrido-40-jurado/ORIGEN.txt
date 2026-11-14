@@ -1,0 +1,9 @@
+Configuración: barrido-40-jurado
+Rama: feature/calidad-recuperacion
+Commit: a3e4b2d8a086075037aa219e111d715d530b462d
+Modo: explore
+Batería: desarrollo
+Archivos: ficticio
+Muestra: 40 (estrato tipo, semilla 7)
+Preguntas: 40
+Fecha: 2026-11-13T03:24

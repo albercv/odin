@@ -1,0 +1,3 @@
+Localiza primero el documento candidato que mejor encaja con la pregunta.
+Lee ese documento entero antes de responder.
+No respondas con fragmentos sueltos de búsquedas.

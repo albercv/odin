@@ -1,0 +1,44 @@
+# Tarea 12 (D-067): redactor y jurado sobre las mismas ejecuciones del barrido (salen de la caché), con la misma carga de la pila.
+name = "barrido-40-jurado"
+archives = ["ficticio"]
+battery = "desarrollo"
+mode = "explore"
+sample = { size = 40, strata = "tipo", seed = 7, include = ["Q138", "Q147", "Q153"] }
+repetitions = 1
+budgetUsd = 0.6
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 10
+model = "haiku"
+
+[[searchers]]
+approach = "topic"
+count = 5
+model = "haiku"
+
+[[searchers]]
+approach = "synonyms"
+count = 5
+model = "haiku"
+
+[combiner]
+kind = "composer"
+model = "haiku"
+
+[judging]
+aggregation = "majority"
+
+
+[[judges]]
+rubric = "strict"
+count = 3
+model = "haiku"
+
+[[judges]]
+rubric = "strict"
+count = 2
+model = "ollama:qwen3.5:9b"
+think = false
+timeoutS = 120

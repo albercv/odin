@@ -1,0 +1,40 @@
+name = "piloto"
+archives = ["ficticio"]
+battery = "desarrollo"
+mode = "explore"
+sample = { size = 5, strata = "tipo", seed = 7 }
+repetitions = 1
+budgetUsd = 1.5
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 10
+model = "haiku"
+
+[[searchers]]
+approach = "topic"
+count = 5
+model = "haiku"
+
+[[searchers]]
+approach = "synonyms"
+count = 5
+model = "haiku"
+
+[combiner]
+kind = "composer"
+model = "haiku"
+
+[[judges]]
+rubric = "strict"
+count = 3
+model = "haiku"
+
+[[judges]]
+rubric = "strict"
+count = 2
+model = "ollama:qwen3.5:9b"
+
+[judging]
+aggregation = "majority"

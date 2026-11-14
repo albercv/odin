@@ -19,3 +19,6 @@ playwright-report/
 .worktrees/
 api/odin-adapter-web/.m2/
 __pycache__/
+# banco de pruebas: caché de ejecuciones y estado de la pila (carga.json con claves)
+banco/cache/
+banco/estado/

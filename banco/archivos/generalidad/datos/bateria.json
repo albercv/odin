@@ -1,0 +1,1035 @@
+[
+ {
+  "id": "GEN01",
+  "tipo": "generica",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Con qué empresas trabajamos?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "ribera/",
+   "albar/"
+  ],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN02",
+  "tipo": "generica",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Quiénes son nuestros clientes?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "ribera/",
+   "albar/"
+  ],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN03",
+  "tipo": "generica",
+  "origen": "generalidad",
+  "actor": "t10",
+  "pregunta": "¿Con qué clientes trabajo yo?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "ribera/",
+   "albar/",
+   "brumeral/logistica-penedal/",
+   "brumeral/alojamientos-cerrolago/"
+  ],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN04",
+  "tipo": "generica",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué proyectos tenemos en Odín?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "ribera/",
+   "albar/"
+  ],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN05",
+  "tipo": "dato_concreto",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué importe total tiene la factura F-2025-047 de Talleres Murcano?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/talleres-murcano/factura-F-2025-047.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total factura: 1.500,40 euros"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "1.500,40"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN06",
+  "tipo": "dato_concreto",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuándo vence la factura F-2025-061 de Logística Penedal?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/logistica-penedal/factura-F-2025-061.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Vencimiento: 29/06/2025"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "29/06/2025",
+    "29 de junio de 2025"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN07",
+  "tipo": "version",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuál es la cuota mensual actual del mantenimiento de Talleres Murcano?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/talleres-murcano/adenda-1-contrato-mantenimiento.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Desde el 1 de febrero de 2025, la cuota mensual del mantenimiento pasa a ser de 1.240 euros más IVA."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "1.240"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "1.150"
+  ],
+  "sustituidos": [
+   "brumeral/talleres-murcano/contrato-mantenimiento-2024.txt"
+  ],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN08",
+  "tipo": "version",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué precio tiene la auditoría energética de Conservas Dalmira?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/conservas-dalmira/oferta-auditoria-energetica-v2.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Precio de la auditoría energética: 16.900 euros más IVA."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "16.900"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "18.400"
+  ],
+  "sustituidos": [
+   "brumeral/conservas-dalmira/oferta-auditoria-energetica-v1.txt"
+  ],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN09",
+  "tipo": "version",
+  "origen": "generalidad",
+  "actor": "t10",
+  "pregunta": "¿Cuánto cobramos por hora de ingeniero sénior?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/_general/tarifas-honorarios-2025.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Hora de ingeniero sénior: 72 euros."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "72 euros"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "68"
+  ],
+  "sustituidos": [
+   "brumeral/_general/tarifas-honorarios-2024.txt"
+  ],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN10",
+  "tipo": "version",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué contrato tenemos en vigor con Bodegas Quintafría?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/bodegas-quintafria/contrato-servicios-2025.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Este contrato sustituye y deja sin efecto el contrato CS-2023-02."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "CS-2025-07"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [
+   "brumeral/bodegas-quintafria/contrato-servicios-2023.txt"
+  ],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN11",
+  "tipo": "identificador",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué número tiene la factura que rectificó el anticipo de Conservas Dalmira?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/conservas-dalmira/factura-rectificativa-R-2025-003.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Rectifica la factura F-2025-052."
+   }
+  ],
+  "fichas_esperadas": [
+   "FB04"
+  ],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "R-2025-003"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN12",
+  "tipo": "dato_concreto",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuál es el ahorro anual estimado en la auditoría energética de Conservas Dalmira?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/conservas-dalmira/informe-auditoria-energetica.txt",
+    "paginas": [
+     3
+    ],
+    "ancla": "Ahorro anual estimado con las medidas propuestas: 186.500 kWh, unos 27.900 euros al año."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "186.500",
+    "27.900"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN13",
+  "tipo": "dato_concreto",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué plazo de pago aplicamos por defecto a los clientes?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/_general/norma-facturacion.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "El plazo de pago por defecto con los clientes es de 45 días desde la fecha de la factura."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "45 días"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN14",
+  "tipo": "dato_concreto",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué potencia tiene la instalación fotovoltaica de Logística Penedal?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/logistica-penedal/contrato-legalizacion-fotovoltaica.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "instalación fotovoltaica de autoconsumo de 380 kWp en la cubierta de la nave principal"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "380"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN15",
+  "tipo": "vocabulario",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuánto nos paga al mes Talleres Murcano por revisarle las máquinas?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/talleres-murcano/adenda-1-contrato-mantenimiento.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Desde el 1 de febrero de 2025, la cuota mensual del mantenimiento pasa a ser de 1.240 euros más IVA."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "1.240"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "1.150"
+  ],
+  "sustituidos": [
+   "brumeral/talleres-murcano/contrato-mantenimiento-2024.txt"
+  ],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN16",
+  "tipo": "vocabulario",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Para cuándo esperaban al inspector por lo de las placas solares de Penedal?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/logistica-penedal/acta-reunion-seguimiento-2025-05.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Fecha prevista de la inspección: 15 de julio de 2025."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "15 de julio de 2025",
+    "15/07/2025"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN17",
+  "tipo": "version",
+  "origen": "generalidad",
+  "actor": "t10",
+  "pregunta": "¿Cuánto se cobró finalmente de anticipo por la auditoría de Conservas Dalmira?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/conservas-dalmira/factura-rectificativa-R-2025-003.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Base imponible rectificada: 6.760,00 euros."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "6.760",
+    "8.179,60"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "8.450"
+  ],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN18",
+  "tipo": "contradiccion",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué plazo de pago tiene Logística Penedal?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/logistica-penedal/contrato-legalizacion-fotovoltaica.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "Plazo de pago: 60 días desde la fecha de la factura."
+   },
+   {
+    "doc": "brumeral/logistica-penedal/correo-2025-03-plazo-pago.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Según lo hablado por teléfono, os pagaremos las facturas a 30 días."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": true,
+  "claves": [
+   [
+    "60 días"
+   ],
+   [
+    "30 días"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN19",
+  "tipo": "contradiccion",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿En cuántas semanas se entrega el proyecto de climatización de Alojamientos Cerrolago?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/alojamientos-cerrolago/presupuesto-climatizacion-2024.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "Plazo de ejecución del proyecto: 10 semanas desde la aceptación."
+   },
+   {
+    "doc": "brumeral/alojamientos-cerrolago/correo-2025-01-plazo.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "El proyecto de climatización estará listo en 8 semanas desde la aceptación."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": true,
+  "claves": [
+   [
+    "10 semanas"
+   ],
+   [
+    "8 semanas"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN20",
+  "tipo": "contradiccion",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Desde cuándo está en vigor el contrato con Bodegas Quintafría?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/bodegas-quintafria/contrato-servicios-2025.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Entrada en vigor: 1 de abril de 2025."
+   }
+  ],
+  "fichas_esperadas": [
+   "FB02"
+  ],
+  "todas_las_citas": true,
+  "claves": [
+   [
+    "1 de abril"
+   ],
+   [
+    "1 de marzo"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN21",
+  "tipo": "lista_completa",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué facturas hemos emitido a Logística Penedal?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/logistica-penedal/factura-F-2025-061.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Factura F-2025-061"
+   },
+   {
+    "doc": "brumeral/logistica-penedal/factura-F-2025-075.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Factura F-2025-075"
+   },
+   {
+    "doc": "brumeral/logistica-penedal/factura-F-2025-098.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Factura F-2025-098"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": true,
+  "claves": [
+   [
+    "F-2025-061"
+   ],
+   [
+    "F-2025-075"
+   ],
+   [
+    "F-2025-098"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN22",
+  "tipo": "lista_completa",
+  "origen": "generalidad",
+  "actor": "t10",
+  "pregunta": "Enumera las facturas de Talleres Murcano.",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/talleres-murcano/factura-F-2025-014.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Factura F-2025-014"
+   },
+   {
+    "doc": "brumeral/talleres-murcano/factura-F-2025-047.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Factura F-2025-047"
+   },
+   {
+    "doc": "brumeral/talleres-murcano/factura-F-2025-089.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Factura F-2025-089"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": true,
+  "claves": [
+   [
+    "F-2025-014"
+   ],
+   [
+    "F-2025-047"
+   ],
+   [
+    "F-2025-089"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN23",
+  "tipo": "ficha",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿A qué hora conviene llamar al jefe de mantenimiento de Talleres Murcano?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [
+   "FB01"
+  ],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "8:30",
+    "08:30",
+    "8.30",
+    "8,30"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GEN24",
+  "tipo": "sin_fuente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué comunidades de propietarios gestionamos?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro"
+ },
+ {
+  "id": "GEN25",
+  "tipo": "sin_fuente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuándo es la próxima junta de propietarios de Bodegas Quintafría?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro"
+ },
+ {
+  "id": "GEN26",
+  "tipo": "sin_fuente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué derrama se aprobó para Alojamientos Cerrolago?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro"
+ },
+ {
+  "id": "GEN27",
+  "tipo": "sin_fuente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Por qué puerta se entra en la nave de Logística Penedal?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro"
+ },
+ {
+  "id": "GEN28",
+  "tipo": "sin_fuente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuántos trabajadores tiene Conservas Dalmira?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "rol": "neutro"
+ },
+ {
+  "id": "GEN29",
+  "tipo": "aislamiento",
+  "origen": "generalidad",
+  "actor": "t10",
+  "pregunta": "¿Qué importe tiene la última factura de Logística Penedal?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "brumeral/logistica-penedal/"
+  ],
+  "rol": "neutro"
+ },
+ {
+  "id": "GEN30",
+  "tipo": "aislamiento",
+  "origen": "generalidad",
+  "actor": "t01",
+  "pregunta": "¿Cuánto le facturamos a Talleres Murcano en marzo de 2025?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "brumeral/"
+  ]
+ },
+ {
+  "id": "GEN31",
+  "tipo": "aislamiento",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué franquicia tiene la póliza de seguro de Calle Olmo 14?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "ribera/",
+   "albar/"
+  ],
+  "rol": "neutro"
+ },
+ {
+  "id": "GEN32",
+  "tipo": "aislamiento",
+  "origen": "generalidad",
+  "actor": "t06",
+  "pregunta": "¿Qué contratos tenemos con Bodegas Quintafría?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "brumeral/"
+  ]
+ }
+]

@@ -1,0 +1,3 @@
+Busca si hay versiones más nuevas del documento, sustituciones o normas que lo modifiquen.
+Busca de forma explícita lo que contradiga lo que has encontrado.
+Responde solo después de haber comprobado esas contradicciones.

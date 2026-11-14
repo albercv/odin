@@ -1,0 +1,16 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Procedimiento de alta de clientes
+Fecha: 25/11/2024 · Uso interno · Página 1 de 1
+
+Procedimiento de alta de clientes, de uso para todo el equipo de Brumeral.
+Cuatro pasos:
+1. Pedir el CIF y los datos de facturación de la empresa cliente.
+2. Firmar el contrato o aceptar la oferta.
+3. Crear el proyecto del cliente en Odín.
+4. Asignar un ingeniero responsable.
+Responsable del procedimiento: la dirección de Brumeral.
+El alta no se da por completa hasta que el proyecto figura en Odín con su ingeniero responsable.
+Los datos de facturación se comprueban antes de emitir la primera factura.
+Cualquier cambio de titularidad del cliente se trata como una nueva alta.

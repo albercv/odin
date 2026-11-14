@@ -1,0 +1,17 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Informe técnico nº 3
+Fecha: 09/04/2025 · Cliente: Cerámicas Valtierno, S.A. · CIF B-00000026 · Página 1 de 1
+
+INFORME TÉCNICO Nº 3
+Fecha del informe: 09/04/2025.
+Realizado por Brumeral en el exp. 017/25.
+
+Conclusiones y datos:
+1. Temperatura máxima de diseño: 1.180 °C.
+2. El revestimiento refractario de la cámara de cocción se diseña para las cargas térmicas de la línea 2.
+3. Las uniones de dilatación se dimensionan para los ciclos de calentamiento previstos.
+4. La rampa de calentamiento se programará en el controlador de la línea.
+
+Firmado: Nuria Baeza Ortiz, de Brumeral.

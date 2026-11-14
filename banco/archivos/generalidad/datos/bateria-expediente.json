@@ -1,0 +1,711 @@
+[
+ {
+  "id": "GX01",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuál es el total de la factura F-2025-104 de Cerámicas Valtierno?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-4.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total factura: 10.527,00 euros"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "10.527"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-4.txt"
+  ],
+  "subtipo": "concreta",
+  "concreta": true,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX02",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Quién es la directora facultativa de la ampliación de la línea 2 de Cerámicas Valtierno?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Directora facultativa: Irene Salcedo Moya."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "Irene Salcedo"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt"
+  ],
+  "subtipo": "concreta",
+  "concreta": true,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX03",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué día se fijó en el acta de obra nº 5 para la prueba en caliente del horno?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-5.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Se fija la prueba en caliente del horno para el 12 de septiembre de 2025."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "12 de septiembre de 2025",
+    "12/09/2025"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-5.txt"
+  ],
+  "subtipo": "concreta",
+  "concreta": true,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX04",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuánto cuesta ahora el presupuesto de Montajes Garbea para la ampliación de la línea 2?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2-revisado.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total del presupuesto: 33.900 euros."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "33.900"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "35.400"
+  ],
+  "sustituidos": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2.txt"
+  ],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2-revisado.txt"
+  ],
+  "subtipo": "sustituidos",
+  "concreta": true,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX05",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuántos honorarios totales tiene el contrato de ingeniería de Cerámicas Valtierno?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-adenda-1.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Los honorarios totales pasan a ser de 52.200 euros más IVA, en seis pagos de 8.700 euros."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "52.200"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "48.600"
+  ],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-adenda-1.txt"
+  ],
+  "subtipo": "concreta",
+  "concreta": true,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX06",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuál es la temperatura máxima de diseño del horno según el informe técnico nº 3?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-3.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Temperatura máxima de diseño: 1.180 °C."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "1.180"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-3.txt"
+  ],
+  "subtipo": "concreta",
+  "concreta": true,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX07",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Cuánto se ha facturado en total, sin IVA, en el expte. 2025/017 de Cerámicas Valtierno? Cita cada factura.",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-1.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Número de factura: F-2025-101"
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-2.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Número de factura: F-2025-102"
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-3.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Número de factura: F-2025-103"
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-4.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Número de factura: F-2025-104"
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-5.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Número de factura: F-2025-105"
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-factura-6.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Número de factura: F-2025-106"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": true,
+  "claves": [
+   [
+    "52.200"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-1.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-2.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-3.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-4.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-5.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-6.txt"
+  ],
+  "subtipo": "analisis",
+  "concreta": false,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX08",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "Resume el expte. 2025/017 de Cerámicas Valtierno: qué se contrató, qué presupuestos hubo, cuál se aceptó y cuánto se ha facturado.",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "CONTRATO DE INGENIERÍA CI-2025-017"
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-2.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Se acepta el presupuesto revisado de Montajes Garbea, S.L."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "CI-2025-017"
+   ],
+   [
+    "Montajes Garbea"
+   ],
+   [
+    "52.200",
+    "63.162"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-adenda-1.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-2.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-1.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2-revisado.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-3.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-4.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-5.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-6.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-1.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-2.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-3.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-4.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-5.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-factura-6.txt"
+  ],
+  "subtipo": "analisis",
+  "concreta": false,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX09",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué presupuestos hemos recibido para la ampliación de la línea 2 y cuál es el importe vigente de cada uno?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-1.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total del presupuesto: 21.750 euros."
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2-revisado.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total del presupuesto: 33.900 euros."
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-3.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total del presupuesto: 27.480 euros."
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-4.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total del presupuesto: 12.960 euros."
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-5.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total del presupuesto: 6.240 euros."
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-6.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Total del presupuesto: 41.300 euros."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "Refractarios Sierra del Mar"
+   ],
+   [
+    "Montajes Garbea"
+   ],
+   [
+    "Electroindustrial Prado Alto"
+   ],
+   [
+    "Aislamientos Térmicos Olmedo"
+   ],
+   [
+    "Transportes Hidalgo Cruz"
+   ],
+   [
+    "Ingeniería Civil Ribazo"
+   ],
+   [
+    "21.750"
+   ],
+   [
+    "33.900"
+   ],
+   [
+    "27.480"
+   ],
+   [
+    "12.960"
+   ],
+   [
+    "6.240"
+   ],
+   [
+    "41.300"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [
+   "35.400"
+  ],
+  "sustituidos": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2.txt"
+  ],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-1.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2-revisado.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-3.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-4.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-5.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-6.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2.txt"
+  ],
+  "subtipo": "analisis",
+  "concreta": false,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX10",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué contratos hay en el expte. 2025/017 de Cerámicas Valtierno?",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "CONTRATO DE INGENIERÍA CI-2025-017"
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-adenda-1.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "ADENDA 1 AL CONTRATO CI-2025-017"
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": true,
+  "claves": [
+   [
+    "Contrato de ingeniería"
+   ],
+   [
+    "adenda"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-adenda-1.txt"
+  ],
+  "subtipo": "contiene",
+  "concreta": false,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX11",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "¿Qué penalización por retraso tiene el contrato con Cerámicas Valtierno?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-contrato-ingenieria.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-adenda-1.txt"
+  ],
+  "subtipo": "no_consta",
+  "concreta": false,
+  "ausente": [
+   "penalización"
+  ],
+  "rol": "neutro"
+ },
+ {
+  "id": "GX12",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t09",
+  "pregunta": "Busca todo lo que cite «su referencia 017» y dime cuáles de esos documentos forman parte del expte. 2025/017.",
+  "citas_resueltas": [
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-correo-9.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Te remitimos la oferta revisada para el montaje mecánico, en su referencia 017."
+   },
+   {
+    "doc": "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-6.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "En relación con su referencia 017, la ampliación de la línea del horno 2 de Cerámicas Valtierno, S.A."
+   }
+  ],
+  "fichas_esperadas": [],
+  "todas_las_citas": true,
+  "claves": [],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "brumeral/logistica-penedal/correo-ref-017.txt"
+  ],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-2-revisado.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-presupuesto-6.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-correo-9.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-2.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-acta-obra-6.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-4.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-informe-tecnico-8.txt",
+   "brumeral/ceramicas-valtierno/expte-2025-017-certificado-2.txt"
+  ],
+  "subtipo": "ajenos",
+  "concreta": false,
+  "rol": "neutro",
+  "no_afirmar": [
+   "comunidad",
+   "propietario",
+   "finca",
+   "vecino",
+   "junta de propietarios",
+   "derrama"
+  ]
+ },
+ {
+  "id": "GX13",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t10",
+  "pregunta": "¿Cuánto se ha facturado en el expte. 2025/017 de Cerámicas Valtierno?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "brumeral/ceramicas-valtierno/"
+  ],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [],
+  "subtipo": "aislamiento",
+  "concreta": false,
+  "rol": "neutro"
+ },
+ {
+  "id": "GX14",
+  "tipo": "expediente",
+  "origen": "generalidad",
+  "actor": "t01",
+  "pregunta": "¿Qué contrato tiene Brumeral con Cerámicas Valtierno?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "docs_prohibidos": [
+   "brumeral/"
+  ],
+  "caso": "brumeral/ceramicas-valtierno/caso-2025-017-ampliacion-horno.txt",
+  "esperados": [],
+  "subtipo": "aislamiento",
+  "concreta": false
+ }
+]

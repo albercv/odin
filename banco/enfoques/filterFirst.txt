@@ -1,0 +1,2 @@
+Antes de buscar en el contenido, fija el proyecto y el tema de la pregunta con los filtros.
+Busca solo dentro de ese proyecto y de ese tema.

@@ -1,0 +1,20 @@
+=== Página 1 ===
+Brumeral Ingeniería y Consultoría, S.L. · CIF B-00000001
+Polígono Las Viñas, nave 12, 47999 Valdecerro
+Factura rectificativa R-2025-003
+Fecha: 22/04/2025 · Cliente: Conservas Dalmira, S.A. · CIF B-00000022 · Página 1 de 1
+
+Número de factura rectificativa: R-2025-003
+Rectifica la factura F-2025-052.
+Motivo: el anticipo pactado en la oferta es del 40 %, no del 50 %.
+EMISOR: Brumeral Ingeniería y Consultoría, S.L., CIF B-00000001, Polígono Las Viñas, nave 12, 47999 Valdecerro.
+CLIENTE: Conservas Dalmira, S.A., CIF B-00000022, Camino de los Huertos, Valdecerro.
+Concepto | Cantidad | Precio unitario | Importe
+Anticipo de la auditoría energética, corregido al 40 % | 1 | 6.760,00 euros | 6.760,00 euros
+
+Base imponible rectificada: 6.760,00 euros.
+IVA 21 %: 1.419,60 euros.
+Total rectificado: 8.179,60 euros.
+
+Forma de pago: transferencia bancaria a la cuenta ES00 0000 0000 00 0000000000.
+Esta rectificativa se emite según la norma interna de facturación de Brumeral.
