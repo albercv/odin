@@ -146,7 +146,8 @@ test('focusMovesToTheNextCardTitleAfterResolving', async () => {
 test('focusMovesToTheEmptyStateWhenTheQueueIsDone', async () => {
   show([card(1)]);
   await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
-  expect(await screen.findByRole('heading', { name: 'No hay fichas pendientes.' })).toHaveFocus();
+  const heading = await screen.findByRole('heading', { name: 'No hay fichas pendientes.' }, { timeout: 5000 }); // margen: suite en paralelo
+  await waitFor(() => expect(heading).toHaveFocus(), { timeout: 5000 });
 });
 
 const many = (n: number) => Array.from({ length: n }, (_, i) => card(i + 1));

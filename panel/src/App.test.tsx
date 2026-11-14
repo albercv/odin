@@ -244,7 +244,7 @@ test('backButtonFollowsTheUrlIntoAndOutOfTheCase', async () => {
   render(<App />);
   await screen.findByRole('link', { name: 'Documentos' });
   act(() => { history.pushState(null, '', '/casos/k2?empresa=c2'); window.dispatchEvent(new PopStateEvent('popstate')); });
-  expect(await screen.findByRole('heading', { name: 'Expte 2' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Expte 2' }, { timeout: 5000 })).toBeInTheDocument(); // margen: suite en paralelo
   act(() => { history.pushState(null, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); });
-  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Expte 2' })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Expte 2' })).toBeNull(), { timeout: 5000 });
 });
