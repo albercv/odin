@@ -71,8 +71,8 @@ class AdminApiTest extends WebTestSupport {
         Fixtures.readyDocument(w.docs, company, "de alguien que ya no existe");
         mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.title=='Manual' && @.uploadedByName=='Admin Pérez')]").isNotEmpty())
-                .andExpect(jsonPath("$[?(@.uploadedByName==null)]").isNotEmpty());
+                .andExpect(jsonPath("$.documents[?(@.title=='Manual' && @.uploadedByName=='Admin Pérez')]").isNotEmpty())
+                .andExpect(jsonPath("$.documents[?(@.uploadedByName==null)]").isNotEmpty());
     }
 
     @Test
