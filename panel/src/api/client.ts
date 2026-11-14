@@ -33,6 +33,8 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
 const a = '/v1/admin';
 const co = (id: string) => `${a}/companies/${id}`;
 
+const ib = (companyId: string, batchId: string) => `${co(companyId)}/intake-batches/${batchId}`;
+
 const PAGE_SIZE = 500;
 export const MAX_DOCUMENTS = 2000;
 
@@ -69,6 +71,29 @@ export const uploadLinks = {
     form.append('file', file);
     return request<S['UploadReceipt']>('POST', `/v1/upload-links/${encodeURIComponent(token)}/documents`, form, true);
   },
+};
+
+export const intake = {
+  open: (c: string) => request<S['OpenIntakeBatches']>('GET', `${co(c)}/intake-batches`),
+  batch: (c: string, b: string) => request<S['IntakeBatchView']>('GET', ib(c, b)),
+  candidates: (c: string, b: string) => request<S['ProjectCandidates']>('GET', `${ib(c, b)}/project-candidates`),
+  importList: (c: string, b: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/import`, form);
+  },
+  discover: (c: string, b: string) => request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/discover`),
+  confirmCandidates: (c: string, b: string, decisions: S['ProjectDecisionRequest'][]) =>
+    request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/confirm`, { decisions }),
+  proposals: (c: string, b: string) => request<S['IntakeProposalGroups']>('GET', `${ib(c, b)}/proposals`),
+  confirmProposals: (c: string, b: string, proposalIds: string[]) =>
+    request<S['ConfirmedProposals']>('POST', `${ib(c, b)}/proposals/confirm`, { proposalIds }),
+  decide: (c: string, b: string, id: string, body: S['DecideProposalRequest']) =>
+    request<S['DecidedProposal']>('POST', `${ib(c, b)}/proposals/${id}/decide`, body),
+  unplaced: (c: string, b: string) => request<S['IntakeDocuments']>('GET', `${ib(c, b)}/documents?unplaced=true`),
+  place: (c: string, b: string, id: string, body: S['PlaceDocumentRequest']) =>
+    request<void>('POST', `${ib(c, b)}/documents/${id}/place`, body),
+  withdraw: (c: string, b: string, id: string) => request<unknown>('POST', `${ib(c, b)}/documents/${id}/withdraw`),
 };
 
 export const api = {

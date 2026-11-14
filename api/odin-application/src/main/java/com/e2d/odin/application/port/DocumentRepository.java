@@ -91,6 +91,9 @@ public interface DocumentRepository {
     /** Los títulos de los documentos del lote, retirados y pendientes incluidos: la bandeja los muestra junto a cada propuesta. */
     java.util.Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId);
 
+    /** Los títulos de esos documentos que son de la empresa (retirados y pendientes incluidos); los de otra empresa no salen. */
+    java.util.Map<DocumentId, String> titlesOf(CompanyId companyId, java.util.Collection<DocumentId> ids);
+
     /**
      * Saca un documento pendiente de lo pendiente (D1): lo deja en ese proyecto, o sin proyecto, y visible para quien lo
      * ve. Si ya está confirmado o retirado, o hay otro igual y visible en ese proyecto, 409 y no cambia nada.

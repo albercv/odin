@@ -44,6 +44,13 @@ test.each([['Uso', 'usage-stats'], ['Huecos', 'gaps']])('%sUsesTheChosenCompany'
   expect(calls.some((c) => c.key.includes('/companies/c1/') && !c.key.includes('/cards'))).toBe(false);
 });
 
+test('intakeEntryOpensThePageOfTheChosenCompany', async () => {
+  const calls = await openAs('Primera carga', { 'GET /v1/admin/companies/c2/intake-batches': () => ({ batches: [] }) });
+  expect(await screen.findByRole('heading', { name: 'Primera carga', level: 1 })).toBeInTheDocument();
+  expect(await screen.findByText(/No hay ninguna primera carga en curso/)).toBeInTheDocument();
+  expect(calls.some((c) => c.key.includes('/companies/c1/') && !c.key.includes('/cards'))).toBe(false);
+});
+
 const shell = () => renderWithProviders(<AppShell me={me} onLogout={() => {}} onPasswordChanged={() => {}} onProfileChanged={() => {}} />);
 
 test('groupAdminLandsOnTheFirstCompanyAndKeepsTheChoiceAcrossTabs', async () => {

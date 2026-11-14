@@ -437,6 +437,24 @@ class ConfirmIntakeTest {
     }
 
     @Test
+    void pairsAndLinksCarryTheTitleOfTheOtherDocumentOfTheSameCompanyOnly() {
+        Document newer = pending("Póliza 2026");
+        Document older = Fixtures.titledDocument(docs, company, "Póliza 2025");
+        pair(newer, ProposalKind.SUPERSEDES, older);
+        Document foreign = Fixtures.titledDocument(docs, Fixtures.company(orgs), "Ajeno");
+        Document scan = pending("Escaneo");
+        pair(scan, ProposalKind.SAME_AS_SCAN, foreign);
+
+        List<IntakeProposalItem> items = list.execute(admin, company, batch.id(), ProposalFilter.none()).stream()
+                .flatMap(g -> g.items().stream()).toList();
+
+        assertThat(items).filteredOn(i -> i.title().equals("Póliza 2026")).extracting(IntakeProposalItem::targetTitle)
+                .containsExactly(Optional.of("Póliza 2025"));
+        assertThat(items).filteredOn(i -> i.title().equals("Escaneo")).extracting(IntakeProposalItem::targetTitle)
+                .containsExactly(Optional.empty());
+    }
+
+    @Test
     void anAdminOfAnotherCompanyAndAWorkerAreRefusedAndNothingChanges() {
         Document d = pending("Acta");
         IntakeProposal p = project(d, olmo, ProposalConfidence.HIGH);

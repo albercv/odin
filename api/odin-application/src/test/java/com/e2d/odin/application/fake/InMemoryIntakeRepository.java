@@ -49,6 +49,12 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public synchronized List<IntakeBatch> findOpen(CompanyId companyId) {
+        return batches.values().stream().filter(b -> b.companyId().equals(companyId) && b.state() != IntakeState.CLOSED)
+                .sorted(java.util.Comparator.comparing(IntakeBatch::createdAt).reversed()).toList();
+    }
+
+    @Override
     public synchronized List<IntakeBatch> findReading() {
         return batches.values().stream().filter(b -> b.state() == IntakeState.READING).toList();
     }

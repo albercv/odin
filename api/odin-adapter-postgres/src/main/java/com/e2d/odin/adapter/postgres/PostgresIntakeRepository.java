@@ -77,6 +77,13 @@ public class PostgresIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public List<IntakeBatch> findOpen(CompanyId companyId) {
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
+                + " FROM intake_batch WHERE company_id = :company AND state <> 'CLOSED' ORDER BY created_at DESC")
+                .param("company", companyId.value()).query((rs, n) -> batch(rs)).list());
+    }
+
+    @Override
     public List<IntakeBatch> findReading() {
         return tx.inScope(CompanyScope.all(), ALL, jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
                 + " FROM intake_batch WHERE state = 'READING' ORDER BY created_at").query((rs, n) -> batch(rs)).list());

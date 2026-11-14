@@ -27,6 +27,7 @@ import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.ClassifyIntake;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.port.ProjectProposer;
 import java.util.Optional;
@@ -558,6 +559,11 @@ public class UseCaseConfiguration {
             SupersedeDocument supersedeDocument, AddToCaseFiles addToCaseFiles, Clock clock) {
         return new IntakeEffects(intake, documents, organizations, markCaseDocuments, supersedeDocument,
                 addToCaseFiles, clock);
+    }
+
+    @Bean
+    ListOpenIntakeBatches listOpenIntakeBatches(IntakeRepository intake) {
+        return new ListOpenIntakeBatches(intake);
     }
 
     @Bean

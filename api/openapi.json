@@ -1097,6 +1097,31 @@
       }
     },
     "/v1/admin/companies/{companyId}/intake-batches" : {
+      "get" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "openBatches",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OpenIntakeBatches"
+                }
+              }
+            }
+          }
+        }
+      },
       "post" : {
         "tags" : [ "intake-controller" ],
         "operationId" : "start",
@@ -5230,6 +5255,40 @@
         },
         "required" : [ "createdAt", "id", "label", "prefix" ]
       },
+      "IntakeBatchSummary" : {
+        "type" : "object",
+        "description" : "Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL.",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "channel" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "channel", "createdAt", "id", "state" ]
+      },
+      "OpenIntakeBatches" : {
+        "type" : "object",
+        "description" : "Los lotes de la empresa que no están cerrados, el más reciente primero.",
+        "properties" : {
+          "batches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IntakeBatchSummary"
+            }
+          }
+        },
+        "required" : [ "batches" ]
+      },
       "IntakeProposalGroup" : {
         "type" : "object",
         "description" : "kind: PROJECT, COMPANY_WIDE, CASE_MARK, CASE_LINK, SAME_AS_SCAN o SUPERSEDES. confidence: HIGH o LOW. projectId: el proyecto propuesto, si la clase lo tiene.",
@@ -5267,7 +5326,7 @@
       },
       "IntakeProposalItem" : {
         "type" : "object",
-        "description" : "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace. caseNumber: el número de caso. source: RULES, FOLDER o MODEL.",
+        "description" : "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL.",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -5283,6 +5342,9 @@
           "targetDocumentId" : {
             "type" : "string",
             "format" : "uuid"
+          },
+          "targetTitle" : {
+            "type" : "string"
           },
           "caseNumber" : {
             "type" : "string"

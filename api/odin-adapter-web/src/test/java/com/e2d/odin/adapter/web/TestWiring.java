@@ -41,6 +41,7 @@ import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
 import com.e2d.odin.application.intake.IntakeEffects;
 import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.GetIntakeBatch;
@@ -376,6 +377,9 @@ public class TestWiring {
         return new PlaceIntakeDocument(intakeEffects());
     }
 
+    @Bean ListOpenIntakeBatches listOpenIntakeBatches() {
+        return new ListOpenIntakeBatches(intake);
+    }
     @Bean ListIntakeProposals listIntakeProposals() {
         return new ListIntakeProposals(intake, docs);
     }

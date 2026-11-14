@@ -427,7 +427,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["openBatches"];
         put?: never;
         post: operations["start"];
         delete?: never;
@@ -1997,6 +1997,19 @@ export interface components {
             /** Format: date-time */
             revokedAt?: string;
         };
+        /** @description Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL. */
+        IntakeBatchSummary: {
+            /** Format: uuid */
+            id: string;
+            state: string;
+            channel: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Los lotes de la empresa que no están cerrados, el más reciente primero. */
+        OpenIntakeBatches: {
+            batches: components["schemas"]["IntakeBatchSummary"][];
+        };
         /** @description kind: PROJECT, COMPANY_WIDE, CASE_MARK, CASE_LINK, SAME_AS_SCAN o SUPERSEDES. confidence: HIGH o LOW. projectId: el proyecto propuesto, si la clase lo tiene. */
         IntakeProposalGroup: {
             kind: string;
@@ -2008,7 +2021,7 @@ export interface components {
         IntakeProposalGroups: {
             groups: components["schemas"]["IntakeProposalGroup"][];
         };
-        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace. caseNumber: el número de caso. source: RULES, FOLDER o MODEL. */
+        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. */
         IntakeProposalItem: {
             /** Format: uuid */
             id: string;
@@ -2017,6 +2030,7 @@ export interface components {
             title: string;
             /** Format: uuid */
             targetDocumentId?: string;
+            targetTitle?: string;
             caseNumber?: string;
             source: string;
             reason: string;
@@ -2949,6 +2963,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssuedKeyView"];
+                };
+            };
+        };
+    };
+    openBatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenIntakeBatches"];
                 };
             };
         };

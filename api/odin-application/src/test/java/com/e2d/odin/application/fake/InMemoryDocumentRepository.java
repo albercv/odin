@@ -266,6 +266,12 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public Map<DocumentId, String> titlesOf(CompanyId companyId, java.util.Collection<DocumentId> ids) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId) && ids.contains(d.id()))
+                .collect(Collectors.toMap(Document::id, Document::title));
+    }
+
+    @Override
     public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId) {
         Document d = documents.get(id);
         if (d == null || !d.companyId().equals(companyId) || !d.intakePending() || d.withdrawn()) {

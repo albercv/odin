@@ -19,6 +19,9 @@ public interface IntakeRepository {
     /** El lote abierto o en lectura de la empresa, si lo hay. */
     Optional<IntakeBatch> findActive(CompanyId companyId);
 
+    /** Los lotes de la empresa que no están cerrados, el más reciente primero. */
+    List<IntakeBatch> findOpen(CompanyId companyId);
+
     /** Los lotes en lectura de todas las empresas: es lo que recorre la clasificación. */
     List<IntakeBatch> findReading();
 
