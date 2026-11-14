@@ -465,3 +465,17 @@ test('inactivePersonIsFlagged', async () => {
   expect(await rowOf('Ana')).toHaveTextContent('Desactivada en el grupo');
   expect(await rowOf('Cora Gil')).not.toHaveTextContent('Desactivada en el grupo');
 });
+
+const crowd = Array.from({ length: 12 }, (_, i) => ({ ...ana, userId: `x${i}`, displayName: `Persona ${i}`, memberCode: `X${i}-ACM`, email: i === 4 ? 'zorro@raro.test' : `p${i}@acme.test` }));
+
+test('membersPageByTenAndSearchByNameOrEmail', async () => {
+  show({ [list]: () => crowd });
+  await screen.findByText('Persona 0');
+  expect(screen.getAllByRole('row').slice(1)).toHaveLength(10);
+  expect(screen.getByRole('navigation', { name: 'Páginas de personas' })).toHaveTextContent('Página 1 de 2');
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar personas' }), { target: { value: 'zorro' } });
+  await waitFor(() => expect(screen.getAllByRole('row').slice(1)).toHaveLength(1));
+  expect(screen.getByText('Persona 4')).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar personas' }), { target: { value: 'persona 1' } });
+  await waitFor(() => expect(screen.getAllByRole('row').slice(1)).toHaveLength(3));
+});
