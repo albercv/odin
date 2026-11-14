@@ -90,6 +90,31 @@ class IntakeSecurityIT extends AbstractPostgresIT {
         assertThat(count("intake_proposal", "on")).isEqualTo(1);
     }
 
+    @Test
+    void openBatchesAreTheNotClosedOnesOfTheCompanyMostRecentFirst() {
+        intake.save(batch.startReading().finishReading());
+        IntakeBatch newer = IntakeBatch.open(new IntakeBatchId(UUID.randomUUID()), company, user, IntakeChannel.COMMAND,
+                NOW.plusSeconds(60));
+        intake.save(newer);
+        IntakeBatch closed = IntakeBatch.open(new IntakeBatchId(UUID.randomUUID()), company, user, IntakeChannel.COMMAND,
+                NOW.minusSeconds(60)).startReading().finishReading().close(NOW);
+        intake.save(closed);
+        CompanyId other = newCompany();
+        intake.save(IntakeBatch.open(new IntakeBatchId(UUID.randomUUID()), other, newUser(other), IntakeChannel.COMMAND, NOW));
+
+        assertThat(intake.findOpen(company)).extracting(IntakeBatch::id).containsExactly(newer.id(), batch.id());
+    }
+
+    @Test
+    void titlesOfNeverResolveADocumentOfAnotherCompany() {
+        CompanyId other = newCompany();
+        Document foreign = newDocument(other, newUser(other), "Ajeno", DocumentStatus.READY);
+        Document own = newDocument(company, user, "Propio", DocumentStatus.READY);
+
+        assertThat(docs.titlesOf(company, List.of(own.id(), foreign.id()))).containsOnlyKeys(own.id())
+                .containsEntry(own.id(), "Propio");
+    }
+
     /** D1: el texto de un documento pendiente solo sale por la ruta de la lista de proyectos, y de su empresa y lote. */
     @Test
     void projectCandidatesAreOnlyForTheTrayAndTheirTextsComeOnlyFromTheOwnBatch() {

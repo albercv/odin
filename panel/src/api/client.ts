@@ -74,7 +74,7 @@ export const uploadLinks = {
 };
 
 export const intake = {
-  start: (c: string) => request<S['IntakeBatchView']>('POST', `${co(c)}/intake-batches`, { channel: 'PANEL' }),
+  open: (c: string) => request<S['OpenIntakeBatches']>('GET', `${co(c)}/intake-batches`),
   batch: (c: string, b: string) => request<S['IntakeBatchView']>('GET', ib(c, b)),
   candidates: (c: string, b: string) => request<S['ProjectCandidates']>('GET', `${ib(c, b)}/project-candidates`),
   importList: (c: string, b: string, file: File) => {

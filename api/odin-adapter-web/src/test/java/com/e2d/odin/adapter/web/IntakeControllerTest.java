@@ -64,6 +64,29 @@ class IntakeControllerTest extends WebTestSupport {
     }
 
     @Test
+    void theOpenBatchesOfTheCompanyAreListedAndOnlyForItsAdmin() throws Exception {
+        String id = batch.substring(batch.lastIndexOf('/') + 1);
+        mvc.perform(get(batches).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.batches", hasSize(1))).andExpect(jsonPath("$.batches[0].id").value(id))
+                .andExpect(jsonPath("$.batches[0].state").value("OPEN"))
+                .andExpect(jsonPath("$.batches[0].channel").value("PANEL"))
+                .andExpect(jsonPath("$.batches[0].createdAt").exists());
+
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(newCompany()));
+        mvc.perform(get(batches).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get(batches).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(get(batches)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void aCompanyWithoutOpenBatchesListsNone() throws Exception {
+        CompanyId empty = newCompany();
+        mvc.perform(get("/v1/admin/companies/" + empty.value() + "/intake-batches")
+                .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(empty)))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.batches", hasSize(0)));
+    }
+
+    @Test
     void closingMovesTheBatchToReading() throws Exception {
         mvc.perform(file("uno", admin)).andExpect(status().isCreated());
 
@@ -214,6 +237,20 @@ class IntakeControllerTest extends WebTestSupport {
         mvc.perform(get(batch + "/proposals").param("kind", "CASE_MARK").cookie(admin)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.groups", hasSize(0)));
         mvc.perform(get(batch + "/proposals").param("kind", "OTRA").cookie(admin)).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void pairsCarryTheTitleOfTheOtherDocument() throws Exception {
+        threeProposals();
+        var older = com.e2d.odin.application.fake.Fixtures.titledDocument(w.docs, company, "Versión anterior");
+        w.intake.save(new com.e2d.odin.domain.intake.IntakeProposal(java.util.UUID.randomUUID(), company,
+                firstProposal.batchId(), third.id(), com.e2d.odin.domain.intake.ProposalKind.SUPERSEDES, Optional.empty(),
+                Optional.of(older.id()), Optional.empty(), com.e2d.odin.domain.intake.ProposalConfidence.HIGH,
+                com.e2d.odin.domain.intake.ProposalSource.RULES, "sustituye a la anterior",
+                com.e2d.odin.domain.intake.DecisionState.PROPOSED, Optional.empty(), Optional.empty()));
+
+        mvc.perform(get(batch + "/proposals").param("kind", "SUPERSEDES").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.groups[0].proposals[0].targetTitle").value("Versión anterior"));
     }
 
     @Test

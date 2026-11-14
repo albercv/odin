@@ -6,7 +6,7 @@ import { mockFetch, type Routes } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
 afterEach(() => { vi.restoreAllMocks(); history.replaceState(null, '', '/'); });
-beforeEach(() => history.replaceState(null, '', '/?lote=b1'));
+beforeEach(() => history.replaceState(null, '', '/'));
 
 const base = '/v1/admin/companies/c1/intake-batches';
 const batchRoute = `GET ${base}/b1`;
@@ -18,19 +18,20 @@ const obra = { id: 'p1', companyId: 'c1', name: 'Calle Olmo 24', restricted: tru
 const otra = { id: 'p2', companyId: 'c1', name: 'Residencial Sur', restricted: true, memberCount: 0 };
 const item = (id: string, title: string, reason: string, extra = {}) => ({ id, documentId: `d-${id}`, title, source: 'RULES', reason, ...extra });
 const projectGroup = { kind: 'PROJECT', confidence: 'HIGH', projectId: 'p1', proposals: [item('a', 'Factura 12', 'Calle Olmo 24, cabecera'), item('b', 'Acta 3', 'obra Calle Olmo 24')] };
-const pairGroup = { kind: 'SUPERSEDES', confidence: 'HIGH', projectId: 'p1', proposals: [item('c', 'Póliza 2026', 'sustituye a la póliza nº 8')] };
+const pairGroup = { kind: 'SUPERSEDES', confidence: 'HIGH', projectId: 'p1', proposals: [item('c', 'Póliza 2026', 'sustituye a la póliza nº 8', { targetDocumentId: 'd-old', targetTitle: 'Póliza 2025' })] };
+const openBatches = { batches: [{ id: 'b1', state: 'IN_REVIEW', channel: 'COMMAND', createdAt: '2026-11-13T10:00:00Z' }, { id: 'b0', state: 'IN_REVIEW', channel: 'COMMAND', createdAt: '2026-11-01T10:00:00Z' }] };
 const candidates = { candidates: [{ name: 'Calle Olmo 24', origin: 'IMPORTED', documentCount: 9, state: 'PROPOSED' }] };
 
 const show = (routes: Routes) => {
   const calls = mockFetch({
-    [batchRoute]: () => batch(), [`GET /v1/admin/companies/c1/projects`]: () => [obra, otra],
+    [`GET ${base}`]: () => openBatches, [batchRoute]: () => batch(), [`GET /v1/admin/companies/c1/projects`]: () => [obra, otra],
     [`GET ${base}/b1/project-candidates`]: () => candidates, [`GET ${base}/b1/proposals`]: () => ({ groups: [projectGroup, pairGroup] }),
     [`GET ${base}/b1/documents?unplaced=true`]: () => ({ documents: [] }), ...routes,
   });
   renderWithProviders(<Intake companyId="c1" />);
   return calls;
 };
-const step = (name: string) => userEvent.click(screen.getByRole('button', { name }));
+const step = async (name: string) => userEvent.click(await screen.findByRole('button', { name }));
 const called = (calls: { key: string }[], key: string) => calls.some((c) => c.key === key);
 
 test('showsFourStepsAndNoUploadStep', async () => {
@@ -74,13 +75,30 @@ test('noWarningsWhenNothingPending', async () => {
   expect(screen.queryByRole('region', { name: 'Avisos' })).toBeNull();
 });
 
-test('withoutBatchOffersToStartOne', async () => {
-  history.replaceState(null, '', '/');
-  const calls = show({ [`POST ${base}`]: () => batch() });
-  await userEvent.click(screen.getByRole('button', { name: 'Empezar una primera carga' }));
-  await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}`)?.body).toEqual({ channel: 'PANEL' }));
+test('opensTheMostRecentOpenBatch', async () => {
+  const calls = show({});
   expect(await screen.findByText('Subidos')).toBeInTheDocument();
-  expect(location.search).toBe('?lote=b1');
+  expect(called(calls, batchRoute)).toBe(true);
+  expect(called(calls, `GET ${base}/b0`)).toBe(false);
+});
+
+test('aLoteLinkOpensThatBatchInsteadOfTheLatest', async () => {
+  history.replaceState(null, '', '/?lote=b0');
+  const calls = show({ [`GET ${base}/b0`]: () => batch({ uploaded: 99 }) });
+  expect(await screen.findByText('99')).toBeInTheDocument();
+  expect(called(calls, batchRoute)).toBe(false);
+});
+
+test('withoutAnOpenBatchShowsHowToStartAndNeverCreatesOne', async () => {
+  const calls = show({ [`GET ${base}`]: () => ({ batches: [] }) });
+  expect(await screen.findByRole('heading', { name: 'No hay ninguna primera carga en curso: se empieza con la orden de la guía' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /empezar/i })).toBeNull();
+  expect(calls.some((c) => c.key.startsWith('POST'))).toBe(false);
+});
+
+test('showsTheApiMessageWhenTheBatchListFails', async () => {
+  show({ [`GET ${base}`]: () => ({ status: 500, body: { detail: 'Algo ha fallado' } }) });
+  expect(await screen.findByRole('alert')).toHaveTextContent('Algo ha fallado');
 });
 
 test('confirmsACandidateAsNewProject', async () => {
@@ -163,19 +181,30 @@ test('unplacedDocumentsCanBePlacedOrDiscarded', async () => {
   await waitFor(() => expect(called(calls, `POST ${base}/b1/documents/u1/withdraw`)).toBe(true));
 });
 
-test('pairsStepShowsOnlyPairKinds', async () => {
+test('pairsStepShowsOnlyPairKindsWithTheTitleOfTheOtherDocument', async () => {
   show({});
   await step('3. Parejas');
   expect(await screen.findByText('Versiones (Calle Olmo 24) · confianza alta · 1 documento')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Ver documentos de Versiones (Calle Olmo 24)' }));
+  expect(screen.getByText('Póliza 2026 sustituye a Póliza 2025')).toBeInTheDocument();
   expect(screen.queryByText(/Calle Olmo 24 · confianza/)).toBeNull();
 });
 
+test('scanPairsSayWhichIsTheScannedCopy', async () => {
+  const group = { kind: 'SAME_AS_SCAN', confidence: 'HIGH', proposals: [item('s', 'Escaneo 7', 'mismas fechas', { targetDocumentId: 'd-o', targetTitle: 'Contrato 7' })] };
+  show({ [`GET ${base}/b1/proposals`]: () => ({ groups: [group] }) });
+  await step('3. Parejas');
+  await userEvent.click(await screen.findByRole('button', { name: 'Ver documentos de Escaneos y su copia' }));
+  expect(screen.getByText('Escaneo 7 es la copia escaneada de Contrato 7')).toBeInTheDocument();
+});
+
 test('caseStepShowsCaseNumberAndConfirmsLinks', async () => {
-  const group = { kind: 'CASE_LINK', confidence: 'HIGH', proposals: [item('k', 'Parte 5', 'cita el caso 2024-342', { caseNumber: '2024-342' })] };
+  const group = { kind: 'CASE_LINK', confidence: 'HIGH', proposals: [item('k', 'Parte 5', 'cita el caso 2024-342', { caseNumber: '2024-342', targetDocumentId: 'd-f', targetTitle: 'Ficha de caso 2024-342' })] };
   const calls = show({ [`GET ${base}/b1/proposals`]: () => ({ groups: [group] }), [`POST ${base}/b1/proposals/confirm`]: () => ({ confirmed: 1 }) });
   await step('4. Fichas y expedientes');
   await userEvent.click(await screen.findByRole('button', { name: 'Ver documentos de Enlaces a fichas de caso' }));
   expect(screen.getByText('Caso 2024-342')).toBeInTheDocument();
+  expect(screen.getByText('Parte 5 se añade a la ficha Ficha de caso 2024-342')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar grupo Enlaces a fichas de caso' }));
   expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe('¿Confirmar 1 documento en sus fichas de caso? Se añadirán a la ficha con el número que citan.');
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));

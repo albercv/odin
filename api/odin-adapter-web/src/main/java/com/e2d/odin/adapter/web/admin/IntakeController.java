@@ -10,6 +10,7 @@ import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
 import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.ProposalFilter;
@@ -56,6 +57,7 @@ public class IntakeController {
     private static final int MAX_DECISIONS = 500;
 
     private final StartIntake start;
+    private final ListOpenIntakeBatches openBatches;
     private final AddFileToIntake addFile;
     private final CloseIntakeUpload closeUpload;
     private final GetIntakeBatch get;
@@ -69,12 +71,13 @@ public class IntakeController {
     private final ListUnplacedDocuments unplaced;
     private final PlaceIntakeDocument placeDocument;
 
-    public IntakeController(StartIntake start, AddFileToIntake addFile, CloseIntakeUpload closeUpload,
+    public IntakeController(StartIntake start, ListOpenIntakeBatches openBatches, AddFileToIntake addFile, CloseIntakeUpload closeUpload,
             GetIntakeBatch get, ImportProjectList importList, ListProjectCandidates candidates,
             ConfirmProjectCandidates confirmCandidates, ListIntakeProposals proposals,
             ConfirmIntakeProposals confirmProposals, DecideIntakeProposal decideProposal,
             DiscardIntakeDocument discardDocument, ListUnplacedDocuments unplaced, PlaceIntakeDocument placeDocument) {
         this.start = start;
+        this.openBatches = openBatches;
         this.addFile = addFile;
         this.closeUpload = closeUpload;
         this.get = get;
@@ -95,6 +98,12 @@ public class IntakeController {
             @PathVariable UUID companyId, @RequestBody Requests.StartIntakeRequest request) {
         IntakeBatch batch = start.execute(actor, new CompanyId(companyId), channel(request.channel()));
         return get(actor, companyId, batch.id().value());
+    }
+
+    @GetMapping(BATCHES)
+    public Responses.OpenIntakeBatches openBatches(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId) {
+        return Responses.OpenIntakeBatches.from(openBatches.execute(actor, new CompanyId(companyId)));
     }
 
     @GetMapping(BATCHES + "/{batchId}")

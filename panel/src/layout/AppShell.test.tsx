@@ -45,9 +45,9 @@ test.each([['Uso', 'usage-stats'], ['Huecos', 'gaps']])('%sUsesTheChosenCompany'
 });
 
 test('intakeEntryOpensThePageOfTheChosenCompany', async () => {
-  const calls = await openAs('Primera carga', { 'GET /v1/admin/companies/c2/projects': () => [], 'GET /v1/admin/companies/c2/members': () => [] });
+  const calls = await openAs('Primera carga', { 'GET /v1/admin/companies/c2/intake-batches': () => ({ batches: [] }) });
   expect(await screen.findByRole('heading', { name: 'Primera carga', level: 1 })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Empezar una primera carga' })).toBeInTheDocument();
+  expect(await screen.findByText(/No hay ninguna primera carga en curso/)).toBeInTheDocument();
   expect(calls.some((c) => c.key.includes('/companies/c1/') && !c.key.includes('/cards'))).toBe(false);
 });
 

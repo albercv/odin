@@ -137,20 +137,20 @@ async function openReview(page: Page, company = 'Empresa A'): Promise<void> {
 // La bandeja se prueba con respuestas fijas de la API: no hay lote real en los datos de la demo.
 async function openIntake(page: Page): Promise<void> {
   const item = (id: string, title: string) => ({ id, documentId: `d-${id}`, title, source: 'RULES', reason: `${title}, cabecera` });
-  const batch = { id: 'b1', companyId: 'c1', channel: 'PANEL', state: 'IN_REVIEW', createdAt: '2026-11-13T10:00:00Z', uploaded: 40, reading: 0, pending: 12, alreadyThere: 3, discarded: 1, proposed: { PROJECT: 2 }, unplaced: 1,
+  const batch = { id: 'b1', companyId: 'c1', channel: 'COMMAND', state: 'IN_REVIEW', createdAt: '2026-11-13T10:00:00Z', uploaded: 40, reading: 0, pending: 12, alreadyThere: 3, discarded: 1, proposed: { PROJECT: 2 }, unplaced: 1,
     warnings: [{ code: 'NO_LOCAL_MODEL', message: 'No hay modelo local: solo proponen las reglas.' }] };
   const replies: Record<string, unknown> = {
     '/proposals': { groups: [{ kind: 'PROJECT', confidence: 'HIGH', proposals: [item('a', 'Factura 12'), item('b', 'Acta 3')] }] },
+    '/intake-batches': { batches: [{ id: 'b1', state: 'IN_REVIEW', channel: 'COMMAND', createdAt: '2026-11-13T10:00:00Z' }] },
     '/project-candidates': { candidates: [] }, '/documents?unplaced=true': { documents: [{ id: 'u1', title: 'Escaneo suelto', path: 'cliente/varios', status: 'READY' }] },
   };
   await page.route('**/intake-batches**', (route) => {
     const url = route.request().url();
     const key = Object.keys(replies).find((k) => url.endsWith(k));
-    return route.fulfill({ json: key ? replies[key] : batch, status: route.request().method() === 'POST' ? 201 : 200 });
+    return route.fulfill({ json: key ? replies[key] : batch });
   });
   await openCompany(page, CARD_COMPANY);
   await page.getByRole('link', { name: 'Primera carga' }).click();
-  await page.getByRole('button', { name: 'Empezar una primera carga' }).click();
   await page.getByRole('button', { name: '2. Proyectos' }).click();
   await page.getByRole('button', { name: 'Ver documentos de Proyecto sin nombre' }).click();
   await expect(page.getByText('Factura 12, cabecera')).toBeVisible();

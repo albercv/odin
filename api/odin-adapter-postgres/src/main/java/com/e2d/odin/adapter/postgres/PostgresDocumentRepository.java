@@ -290,6 +290,19 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public java.util.Map<DocumentId, String> titlesOf(CompanyId companyId, java.util.Collection<DocumentId> ids) {
+        if (ids.isEmpty()) {
+            return java.util.Map.of();
+        }
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT id, title FROM document WHERE company_id = :company AND id = ANY (string_to_array(:ids, ',')::uuid[])""")
+                .param("company", companyId.value()).param("ids", ids.stream().map(d -> d.value().toString())
+                        .collect(Collectors.joining(",")))
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "id")), rs.getString("title"))).list()
+                .stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
+    @Override
     public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId) {
         int updated;
         try {

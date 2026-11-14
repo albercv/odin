@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { api, intake, type S } from '../api/client';
 import { IntakeCandidates, type Step } from '../components/IntakeCandidates';
 import { IntakeGroups } from '../components/IntakeGroups';
-import { IntakeStart } from '../components/IntakeStart';
 import { IntakeSummary } from '../components/IntakeSummary';
 import { IntakeUnplaced } from '../components/IntakeUnplaced';
 import { Notice } from '../components/Notice';
 import { useLoad } from '../components/useLoad';
 import { Button } from '../ui/Button';
+import { EmptyState } from '../ui/EmptyState';
 import { PageHeader } from '../ui/PageHeader';
 import styles from '../components/Intake.module.css';
 
@@ -15,7 +15,6 @@ const STEPS = ['1. Lista de proyectos', '2. Proyectos', '3. Parejas', '4. Fichas
 const NONE: S['ProjectView'][] = [];
 
 const batchInUrl = () => new URLSearchParams(location.search).get('lote') ?? undefined;
-const rememberBatch = (id: string) => history.replaceState(null, '', `${location.pathname}?lote=${id}`);
 
 function StepBody({ step, ...props }: Step & { step: number }) {
   if (step === 0) return <IntakeCandidates {...props} />;
@@ -54,14 +53,17 @@ function Batch({ companyId, batchId }: { companyId: string; batchId: string }) {
 
 const DESCRIPTION = 'Confirma cómo se ordena el archivo de un cliente nuevo. Nadie ve un documento hasta que lo confirmas.';
 
-/** The batch comes from `?lote=` (the command's link) or from the batch this page opens. */
+/** `?lote=<id>` is a deep link to one batch; otherwise the most recent batch not closed. The panel never creates batches: the command does. */
 export function Intake({ companyId }: { companyId: string }) {
-  const [batchId, setBatchId] = useState(batchInUrl);
-  const started = (batch: S['IntakeBatchView']) => { rememberBatch(batch.id); setBatchId(batch.id); };
+  const linked = batchInUrl();
+  const open = useLoad(() => (linked ? Promise.resolve(undefined) : intake.open(companyId)), [companyId, linked]);
+  const batchId = linked ?? open.data?.batches[0]?.id;
   return (
     <div>
       <PageHeader title="Primera carga" description={DESCRIPTION} />
-      {batchId ? <Batch key={batchId} companyId={companyId} batchId={batchId} /> : <IntakeStart companyId={companyId} onStarted={started} />}
+      <Notice message={open.error} />
+      {batchId && <Batch key={batchId} companyId={companyId} batchId={batchId} />}
+      {!linked && open.data?.batches.length === 0 && <EmptyState title="No hay ninguna primera carga en curso: se empieza con la orden de la guía" />}
     </div>
   );
 }

@@ -55,7 +55,7 @@ function GroupCard({ group, label, projects, run, ids }: GroupProps) {
       </div>
       {open && (
         <ul className={styles.items}>
-          {group.proposals.map((p) => <IntakeProposalRow key={p.id} item={p} projectKind={group.kind === 'PROJECT' || group.kind === 'COMPANY_WIDE'} projects={projects} decide={decide} />)}
+          {group.proposals.map((p) => <IntakeProposalRow key={p.id} kind={group.kind} item={p} projectKind={group.kind === 'PROJECT' || group.kind === 'COMPANY_WIDE'} projects={projects} decide={decide} />)}
         </ul>
       )}
     </div>
