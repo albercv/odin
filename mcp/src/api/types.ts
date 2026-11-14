@@ -1051,6 +1051,7 @@ export interface components {
             caseDocument: boolean;
             /** Format: date-time */
             withdrawnAt?: string;
+            /** @description Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe. */
             uploadedByName?: string;
         };
         TopicLabelView: {
