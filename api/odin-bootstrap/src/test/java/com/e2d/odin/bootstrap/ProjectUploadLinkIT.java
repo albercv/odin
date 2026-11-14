@@ -177,7 +177,7 @@ class ProjectUploadLinkIT {
         send(token, name, "contenido del autor " + COUNTER.incrementAndGet());
 
         var listed = api.get("/v1/admin/companies/" + company + "/documents?limit=500", "Cookie", adminCookie).json();
-        var mine = java.util.stream.StreamSupport.stream(listed.spliterator(), false)
+        var mine = java.util.stream.StreamSupport.stream(listed.get("documents").spliterator(), false)
                 .filter(d -> d.get("filename").asString().equals(name)).toList();
         assertThat(mine).hasSize(1);
         assertThat(mine.get(0).get("uploadedByName").asString()).isEqualTo("Marta Gil");
