@@ -523,6 +523,39 @@ async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<vo
   console.log('✓ Admin 20b: página pública de subida por enlace, sin sesión: caso y proyecto, recibido y enlace no válido sin datos del caso');
 }
 
+const PROJECT_NAME = 'Proyecto de subida e2e';
+const PROJECT_FILES = ['proyecto-e2e-1.txt', 'proyecto-e2e-2.txt'];
+const projectFile = (name: string) => ({ name, mimeType: 'text/plain', buffer: Buffer.from(`Nota ficticia ${name} subida a un proyecto.`) });
+
+// El trabajador pide el enlace de un proyecto; sube dos ficheros y repite uno; el administrador los ve con su autor.
+async function uploadToProjectThroughPublicLink(page: Page, browser: Browser): Promise<void> {
+  const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
+  const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES', 'UPLOAD_DOCUMENTS'] });
+  const { id: projectId } = await apiJson<{ id: string }>(page, 'post', `/v1/admin/companies/${companyId}/projects`, { name: PROJECT_NAME });
+  const members = await apiJson<{ userId: string; displayName: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/members`);
+  const worker = members.find((m) => m.displayName === ASKERS[0])?.userId ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/projects/${projectId}/members/${worker}`);
+  const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${worker}/keys`, { label: 'enlace proyecto e2e' });
+  const link = await apiJson<{ url: string }>(page, 'post', `/v1/projects/${projectId}/upload-links`, undefined, { Authorization: `Bearer ${key}` });
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/${link.url.split('/').pop()}`);
+  await expect(visitor.getByRole('heading', { name: 'Subir documentos al proyecto' })).toBeVisible();
+  await expect(visitor.getByText('Proyecto', { exact: true })).toBeVisible();
+  await expect(visitor.getByText(PROJECT_NAME)).toBeVisible();
+  await expect(visitor.getByText('Caso', { exact: true })).toHaveCount(0);
+  await visitor.getByLabel('Elegir ficheros').setInputFiles(PROJECT_FILES.map(projectFile));
+  for (const name of PROJECT_FILES) await expect(visitor.getByText(`recibido: ${name}`)).toBeVisible();
+  await visitor.getByLabel('Elegir ficheros').setInputFiles(projectFile(PROJECT_FILES[0] ?? ''));
+  await expect(visitor.getByText(`${PROJECT_FILES[0]}: Ya estaba en el proyecto`)).toBeVisible();
+  expect((await new AxeBuilder({ page: visitor }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await visitorContext.close();
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  for (const name of PROJECT_FILES) await expect(page.getByRole('row').filter({ hasText: name.replace('.txt', '') })).toContainText(ASKERS[0] ?? '');
+  console.log('✓ Admin 20c: subida a un proyecto por enlace: dos ficheros con su autor en Documentos, el repetido avisa y Axe sin fallos graves');
+}
+
 async function seeUsageOfTheMonth(page: Page): Promise<void> {
   await page.getByRole('link', { name: 'Uso', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Uso', level: 1 })).toBeVisible();
@@ -589,6 +622,7 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await removeAndRecoverDocumentTopic(page);
   await workersAskAndSaveCard(page);
   await uploadThroughPublicLink(page, browser);
+  await uploadToProjectThroughPublicLink(page, browser);
   await seeUsageOfTheMonth(page);
   await seeTheGapOfTheQuestion(page);
   await rejectCardSeeingTheNoteWarning(page);

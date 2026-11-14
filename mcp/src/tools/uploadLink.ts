@@ -31,7 +31,7 @@ export function registerUploadLink(server: McpServer, api: ApiClient, cases: boo
         if (args.caseId && args.projectId) return { ...textResult('Indica un caso o un proyecto, no los dos'), isError: true };
         if (args.caseId) return jsonResult(await api.requestUploadLink(args.caseId));
         if (args.projectId) return jsonResult(await api.requestProjectUploadLink(args.projectId));
-        return { ...textResult('Indica un caso o un proyecto'), isError: true };
+        return { ...textResult(`Indica ${[cases && 'un caso', projects && 'un proyecto'].filter(Boolean).join(' o ')}`), isError: true };
       }),
   );
 }
