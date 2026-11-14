@@ -37,8 +37,9 @@ import java.util.stream.Stream;
  * <p>
  * Primero las reglas; el modelo local solo para lo que no dé HIGH, y solo con la cola del lector de la empresa vacía,
  * para que el OCR y el modelo no estén cargados a la vez. Si hay modelo y la cola está ocupada, el lote espera.
- * Un lote sin ningún proyecto confirmado no se clasifica y sigue en lectura (D6); varios candidatos sin desempate dan
- * una propuesta LOW por candidato. No hay propuesta COMPANY_WIDE: las reglas del
+ * Un lote no se clasifica hasta que el administrador da la lista de proyectos por terminada (D6, spec 4.4); con
+ * ninguno confirmado no hay propuestas de proyecto y sí el resto. Varios candidatos sin desempate dan una propuesta LOW
+ * por candidato. No hay propuesta COMPANY_WIDE: las reglas del
  * estudio no tienen ninguna señal explícita de «de toda la empresa», así que lo decide la persona en la bandeja.
  */
 public class ClassifyIntake {
@@ -81,7 +82,7 @@ public class ClassifyIntake {
 
     private void classify(IntakeBatch batch) {
         Run run = new Run(batch);
-        if (documents.intakeCounts(run.company(), batch.id()).reading() > 0) {
+        if (!batch.projectListClosed() || documents.intakeCounts(run.company(), batch.id()).reading() > 0) {
             return;
         }
         run.modelAllowed = proposer.isPresent() && !documents.readerQueueBusy(run.company());
@@ -90,9 +91,6 @@ public class ClassifyIntake {
         }
         intake.candidates(run.company(), batch.id()).stream().filter(c -> c.state() == DecisionState.CONFIRMED)
                 .forEach(c -> run.confirmed.put(c.name(), c.projectId().orElseThrow()));
-        if (run.confirmed.isEmpty()) {
-            return;
-        }
         List<IntakeProposal> existing = intake.proposals(run.company(), batch.id());
         rememberUnambiguous(run, existing.stream().filter(p -> p.kind() == ProposalKind.PROJECT).toList());
         Set<DocumentId> done = existing.stream().map(IntakeProposal::documentId).collect(Collectors.toSet());
@@ -139,6 +137,9 @@ public class ClassifyIntake {
      */
     private List<IntakeProposal> projectProposals(Run run, IntakeDocument d) {
         List<String> names = List.copyOf(run.confirmed.keySet());
+        if (names.isEmpty()) {
+            return List.of();
+        }
         ProjectMatch match = ProjectRules.match(d.text(), names, folderOf(d));
         boolean usable = match.project().isPresent() && !match.reason().isBlank();
         if (usable && match.confidence() == ProposalConfidence.HIGH) {

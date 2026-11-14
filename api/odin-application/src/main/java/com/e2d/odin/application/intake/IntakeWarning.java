@@ -6,6 +6,6 @@ public enum IntakeWarning {
     NO_READER,
     /** No hay modelo local (ODIN_TAGGER_URL): solo propone con reglas. */
     NO_LOCAL_MODEL,
-    /** El lote está en lectura y aún no hay ningún proyecto confirmado: no se clasifica. */
+    /** El lote está en lectura y la lista de proyectos no está terminada: no se clasifica. */
     PROJECT_LIST_NOT_CONFIRMED
 }

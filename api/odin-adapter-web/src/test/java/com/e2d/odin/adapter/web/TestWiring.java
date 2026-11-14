@@ -37,6 +37,7 @@ import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.DecideIntakeProposal;
@@ -365,6 +366,10 @@ public class TestWiring {
 
     @Bean ListProjectCandidates listProjectCandidates() {
         return new ListProjectCandidates(intake, docs);
+    }
+
+    @Bean CloseProjectList closeProjectList() {
+        return new CloseProjectList(intake, docs, listProjectCandidates(), clock);
     }
 
     @Bean ConfirmProjectCandidates confirmProjectCandidates() {

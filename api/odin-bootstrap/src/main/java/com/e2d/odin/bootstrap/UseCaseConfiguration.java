@@ -31,6 +31,7 @@ import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.ClassifyIntake;
 import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.port.ProjectProposer;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
@@ -546,6 +547,13 @@ public class UseCaseConfiguration {
     @Bean
     ListProjectCandidates listProjectCandidates(IntakeRepository intake, DocumentRepository documents) {
         return new ListProjectCandidates(intake, documents);
+    }
+
+    /** Sin transacción: lo que descubre se queda aunque falten candidatos por decidir (lo ve el administrador). */
+    @Bean
+    CloseProjectList closeProjectList(IntakeRepository intake, DocumentRepository documents,
+            ListProjectCandidates candidates, Clock clock) {
+        return new CloseProjectList(intake, documents, candidates, clock);
     }
 
     @Bean

@@ -46,7 +46,7 @@ function Batch({ companyId, batchId }: { companyId: string; batchId: string }) {
       <nav className={styles.steps} aria-label="Pasos de la primera carga">
         {STEPS.map((text, i) => <Button key={text} variant={i === step ? 'primary' : 'secondary'} aria-current={i === step ? 'step' : undefined} onClick={() => setStep(i)}>{text}</Button>)}
       </nav>
-      <StepBody step={step} companyId={companyId} batchId={batchId} projects={projects.data ?? NONE} onChanged={changed} />
+      <StepBody step={step} companyId={companyId} batchId={batchId} projects={projects.data ?? NONE} onChanged={changed} batch={batch.data} />
     </>
   );
 }

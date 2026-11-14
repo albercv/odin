@@ -52,4 +52,22 @@ class IntakeBatchTest {
         assertThatThrownBy(closed::finishReading).isInstanceOf(ConflictException.class);
         assertThatThrownBy(() -> closed.close(NOW)).isInstanceOf(ConflictException.class);
     }
+
+    @Test
+    void theProjectListIsClosedOnceWhileReadingWithWhoAndWhen() {
+        UserId admin = new UserId(UUID.randomUUID());
+        IntakeBatch reading = open().startReading();
+        assertThat(reading.projectListClosed()).isFalse();
+
+        IntakeBatch closed = reading.closeProjectList(admin, NOW);
+
+        assertThat(closed.projectListClosed()).isTrue();
+        assertThat(closed.projectListClosedBy()).contains(admin);
+        assertThat(closed.projectListClosedAt()).contains(NOW);
+        assertThat(closed.finishReading().projectListClosedBy()).contains(admin);
+        assertThatThrownBy(() -> closed.closeProjectList(admin, NOW)).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> open().closeProjectList(admin, NOW)).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> closed.finishReading().closeProjectList(admin, NOW))
+                .isInstanceOf(ConflictException.class);
+    }
 }

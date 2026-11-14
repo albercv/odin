@@ -15,8 +15,12 @@ CREATE TABLE intake_batch (
     -- ficheros que al subirse ya estaban en la empresa, y los descartados en este lote; sobreviven a reanudar
     already_there integer NOT NULL DEFAULT 0 CHECK (already_there >= 0),
     discarded     integer NOT NULL DEFAULT 0 CHECK (discarded >= 0),
+    -- «lista terminada»: quién y cuándo dio por buena la lista de proyectos; sin ella no se clasifica
+    project_list_closed_by uuid NULL REFERENCES app_user (id),
+    project_list_closed_at timestamptz NULL,
     UNIQUE (id, company_id),
-    CHECK ((state = 'CLOSED') = (closed_at IS NOT NULL))
+    CHECK ((state = 'CLOSED') = (closed_at IS NOT NULL)),
+    CHECK ((project_list_closed_by IS NULL) = (project_list_closed_at IS NULL))
 );
 -- Solo hay un lote abierto o en lectura por empresa a la vez.
 CREATE UNIQUE INDEX intake_batch_one_active_key ON intake_batch (company_id) WHERE state IN ('OPEN', 'READING');

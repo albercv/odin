@@ -102,20 +102,52 @@ test('showsTheApiMessageWhenTheBatchListFails', async () => {
 });
 
 test('confirmsACandidateAsNewProject', async () => {
-  const calls = show({ [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
+  const calls = show({ [batchRoute]: reading(), [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
   await userEvent.click(await screen.findByRole('button', { name: 'Crear Calle Olmo 24' }));
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/project-candidates/confirm`)?.body).toEqual({ decisions: [{ name: 'Calle Olmo 24', decision: 'CREATE' }] }));
 });
 
 test('mergesACandidateIntoAnExistingProject', async () => {
-  const calls = show({ [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
+  const calls = show({ [batchRoute]: reading(), [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
   await userEvent.selectOptions(await screen.findByLabelText('Unir Calle Olmo 24 a'), 'Residencial Sur');
   await userEvent.click(screen.getByRole('button', { name: 'Unir Calle Olmo 24' }));
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/project-candidates/confirm`)?.body).toEqual({ decisions: [{ name: 'Calle Olmo 24', decision: 'MERGE', projectId: 'p2' }] }));
 });
 
+const reading = (changes = {}) => () => batch({ state: 'READING', reading: 0, projectListClosedAt: undefined, ...changes });
+const decided = { candidates: [{ name: 'Calle Olmo 24', origin: 'IMPORTED', documentCount: 9, state: 'CONFIRMED', projectId: 'p1' }] };
+const closeList = `POST ${base}/b1/project-list/close`;
+
+test('theListCannotBeFinishedWhileCandidatesAreUndecided', async () => {
+  show({ [batchRoute]: reading() });
+  expect(await screen.findByText('Faltan 1 por decidir')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Lista terminada: clasificar' })).toBeDisabled();
+});
+
+test('theListCannotBeFinishedWhileDocumentsAreBeingRead', async () => {
+  show({ [batchRoute]: reading({ reading: 3 }), [`GET ${base}/b1/project-candidates`]: () => decided });
+  expect(await screen.findByText('Aún se están leyendo 3 documentos')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Lista terminada: clasificar' })).toBeDisabled();
+});
+
+test('finishingTheListAsksTheApiToClassify', async () => {
+  const calls = show({ [batchRoute]: reading(), [`GET ${base}/b1/project-candidates`]: () => decided, [closeList]: () => batch({ state: 'READING' }) });
+  const button = await screen.findByRole('button', { name: 'Lista terminada: clasificar' });
+  await waitFor(() => expect(button).toBeEnabled());
+  await userEvent.click(button);
+  await waitFor(() => expect(called(calls, closeList)).toBe(true));
+});
+
+test('aFinishedListShowsItAndOffersNoMoreChanges', async () => {
+  show({ [batchRoute]: reading({ projectListClosedAt: '2026-11-13T11:00:00Z' }) });
+  expect(await screen.findByText('Lista terminada: Odín está clasificando los documentos.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Lista terminada: clasificar' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Crear Calle Olmo 24' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Buscar proyectos en los textos' })).toBeDisabled();
+});
+
 test('importsAProjectListAndDiscoversFromTexts', async () => {
-  const calls = show({ [`POST ${base}/b1/project-candidates/import`]: () => candidates, [`POST ${base}/b1/project-candidates/discover`]: () => candidates });
+  const calls = show({ [batchRoute]: reading(), [`POST ${base}/b1/project-candidates/import`]: () => candidates, [`POST ${base}/b1/project-candidates/discover`]: () => candidates });
   await userEvent.upload(await screen.findByLabelText('Importar la lista de proyectos'), new File(['Calle Olmo 24'], 'lista.csv', { type: 'text/csv' }));
   await waitFor(() => expect(called(calls, `POST ${base}/b1/project-candidates/import`)).toBe(true));
   await userEvent.click(screen.getByRole('button', { name: 'Buscar proyectos en los textos' }));

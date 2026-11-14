@@ -36,7 +36,7 @@ public class ListProjectCandidates {
      * administrador ya decidió no se toca, y con una lista importada no se descubre nada.
      */
     public List<ProjectCandidate> discover(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
-        IntakeBatches.require(intake, actor, companyId, batchId);
+        IntakeBatches.requireListOpen(intake, actor, companyId, batchId);
         List<ProjectCandidate> existing = intake.candidates(companyId, batchId);
         if (existing.stream().anyMatch(c -> c.origin() == CandidateOrigin.IMPORTED)) {
             return existing;

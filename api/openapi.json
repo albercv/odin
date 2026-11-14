@@ -1283,6 +1283,41 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-list/close" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "closeProjectList",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeBatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import" : {
       "post" : {
         "tags" : [ "intake-controller" ],
@@ -4122,7 +4157,7 @@
       },
       "IntakeBatchView" : {
         "type" : "object",
-        "description" : "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión).",
+        "description" : "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). projectListClosedAt: cuándo se dio la lista de proyectos por terminada; sin ella no se clasifica.",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -4182,6 +4217,10 @@
           "unplaced" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "projectListClosedAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         },
         "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "proposed", "reading", "state", "unplaced", "uploaded", "warnings" ]

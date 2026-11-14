@@ -40,7 +40,7 @@ public class ConfirmProjectCandidates {
 
     public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
             List<ProjectDecision> decisions) {
-        IntakeBatches.require(intake, actor, companyId, batchId);
+        IntakeBatches.requireListOpen(intake, actor, companyId, batchId);
         Map<String, ProjectCandidate> candidates = intake.candidates(companyId, batchId).stream()
                 .collect(Collectors.toMap(ProjectCandidate::name, Function.identity()));
         decisions.forEach(d -> validate(companyId, candidates, d));

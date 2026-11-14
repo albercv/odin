@@ -396,4 +396,38 @@ class IntakeControllerTest extends WebTestSupport {
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isUnauthorized());
         org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().intakePending()).isTrue();
     }
+
+    @Test
+    void theProjectListIsClosedByItsAdminOnlyWhenNothingIsLeftToDecide() throws Exception {
+        mvc.perform(list("Calle Olmo 24".getBytes(), admin)).andExpect(status().isOk());
+        mvc.perform(post(batch + "/close-upload").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.projectListClosedAt").doesNotExist());
+        String close = batch + "/project-list/close";
+
+        mvc.perform(post(close).cookie(admin)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Falta 1 candidato por decidir"));
+        postJson(batch + "/project-candidates/confirm", "{\"decisions\":[{\"name\":\"Calle Olmo 24\",\"decision\":\"REJECT\"}]}")
+                .andExpect(status().isOk());
+        mvc.perform(post(close).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("READING")).andExpect(jsonPath("$.projectListClosedAt").exists())
+                .andExpect(jsonPath("$.warnings[*].code", org.hamcrest.Matchers.not(hasItem("PROJECT_LIST_NOT_CONFIRMED"))));
+        mvc.perform(post(close).cookie(admin)).andExpect(status().isConflict());
+        mvc.perform(list("Calle Haya 2".getBytes(), admin)).andExpect(status().isConflict());
+        mvc.perform(post(batch + "/project-candidates/discover").cookie(admin)).andExpect(status().isConflict());
+    }
+
+    @Test
+    void closingTheProjectListIsRefusedToAnotherCompanyAdminAndToAWorker() throws Exception {
+        mvc.perform(post(batch + "/close-upload").cookie(admin)).andExpect(status().isOk());
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        String ownPath = "/v1/admin/companies/" + otherCompany.value() + "/intake-batches/"
+                + batch.substring(batch.lastIndexOf('/') + 1);
+
+        mvc.perform(post(batch + "/project-list/close").cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(post(ownPath + "/project-list/close").cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(post(batch + "/project-list/close").header("Authorization", workerKey(company)))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.projectListClosedAt").doesNotExist());
+    }
 }

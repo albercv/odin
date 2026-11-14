@@ -83,6 +83,7 @@ export const intake = {
     return request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/import`, form);
   },
   discover: (c: string, b: string) => request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/discover`),
+  closeList: (c: string, b: string) => request<S['IntakeBatchView']>('POST', `${ib(c, b)}/project-list/close`),
   confirmCandidates: (c: string, b: string, decisions: S['ProjectDecisionRequest'][]) =>
     request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/confirm`, { decisions }),
   proposals: (c: string, b: string) => request<S['IntakeProposalGroups']>('GET', `${ib(c, b)}/proposals`),

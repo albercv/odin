@@ -51,7 +51,7 @@ La orden cuenta cuántos ficheros se han subido, cuántos ya estaban y cuántos 
 
 Nadie ve un documento hasta que tú lo confirmas.
 
-1. **Lista de proyectos:** importa la lista que exporta tu programa de gestión (un nombre por línea) o confirma los que Odín encuentra en las carpetas. Sin una lista confirmada no se proponen proyectos.
+1. **Lista de proyectos:** importa la lista que exporta tu programa de gestión (un nombre por línea) o busca los proyectos en los textos de los documentos ya leídos. Decide cada candidato: crearlo, unirlo a un proyecto que ya existe o rechazarlo. Cuando no quede ninguno por decidir y la lectura haya terminado, pulsa **«Lista terminada: clasificar»**. Hasta entonces Odín no propone nada. Si no confirmas ningún proyecto, no hay propuestas de proyecto y colocas los documentos a mano; el resto de propuestas sale igual. Una vez terminada, la lista ya no se cambia en esta carga.
 2. **Proyectos:** Odín agrupa los documentos por proyecto y te enseña el motivo de cada uno. Confirma el grupo entero o decide documento a documento.
 3. **Parejas:** escaneos y su copia en texto, y versiones que sustituyen a otras.
 4. **Fichas y expedientes:** documentos de casos y enlaces a sus fichas.

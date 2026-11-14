@@ -478,7 +478,7 @@ public final class Responses {
                 case NO_LOCAL_MODEL -> new IntakeWarningView(warning.name(),
                         "No hay modelo local: solo se propondrá con las reglas");
                 case PROJECT_LIST_NOT_CONFIRMED -> new IntakeWarningView(warning.name(),
-                        "Falta confirmar la lista de proyectos");
+                        "Falta terminar la lista de proyectos: hasta entonces no se clasifica");
             };
         }
     }
@@ -486,10 +486,12 @@ public final class Responses {
     @Schema(description = "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; "
             + "alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; "
             + "proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos "
-            + "pendientes sin propuesta de proyecto por decidir (en revisión).")
+            + "pendientes sin propuesta de proyecto por decidir (en revisión). projectListClosedAt: cuándo se dio la lista "
+            + "de proyectos por terminada; sin ella no se clasifica.")
     public record IntakeBatchView(UUID id, UUID companyId, String channel, String state, Instant createdAt,
             @Nullable Instant closedAt, int uploaded, int reading, int pending, int alreadyThere, int discarded,
-            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced) {
+            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced,
+            @Nullable Instant projectListClosedAt) {
         public static IntakeBatchView from(com.e2d.odin.application.intake.IntakeBatchView view) {
             var b = view.batch();
             return new IntakeBatchView(b.id().value(), b.companyId().value(), b.channel().name(), b.state().name(),
@@ -497,7 +499,8 @@ public final class Responses {
                     view.counts().pending(), b.alreadyThere(), b.discarded(),
                     view.warnings().stream().map(IntakeWarningView::from).toList(),
                     view.proposed().entrySet().stream().collect(java.util.stream.Collectors.toMap(
-                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced());
+                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced(),
+                    b.projectListClosedAt().orElse(null));
         }
     }
 

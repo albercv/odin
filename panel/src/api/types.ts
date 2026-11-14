@@ -484,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-list/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeProjectList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import": {
         parameters: {
             query?: never;
@@ -1555,7 +1571,7 @@ export interface components {
              */
             channel: "COMMAND" | "PANEL";
         };
-        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). */
+        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). projectListClosedAt: cuándo se dio la lista de proyectos por terminada; sin ella no se clasifica. */
         IntakeBatchView: {
             /** Format: uuid */
             id: string;
@@ -1583,6 +1599,8 @@ export interface components {
             };
             /** Format: int32 */
             unplaced: number;
+            /** Format: date-time */
+            projectListClosedAt?: string;
         };
         IntakeWarningView: {
             code: string;
@@ -3109,6 +3127,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConfirmedProposals"];
+                };
+            };
+        };
+    };
+    closeProjectList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
                 };
             };
         };

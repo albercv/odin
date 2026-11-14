@@ -5,6 +5,7 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
 import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
@@ -70,12 +71,14 @@ public class IntakeController {
     private final DiscardIntakeDocument discardDocument;
     private final ListUnplacedDocuments unplaced;
     private final PlaceIntakeDocument placeDocument;
+    private final CloseProjectList closeProjectList;
 
     public IntakeController(StartIntake start, ListOpenIntakeBatches openBatches, AddFileToIntake addFile, CloseIntakeUpload closeUpload,
             GetIntakeBatch get, ImportProjectList importList, ListProjectCandidates candidates,
             ConfirmProjectCandidates confirmCandidates, ListIntakeProposals proposals,
             ConfirmIntakeProposals confirmProposals, DecideIntakeProposal decideProposal,
-            DiscardIntakeDocument discardDocument, ListUnplacedDocuments unplaced, PlaceIntakeDocument placeDocument) {
+            DiscardIntakeDocument discardDocument, ListUnplacedDocuments unplaced, PlaceIntakeDocument placeDocument,
+            CloseProjectList closeProjectList) {
         this.start = start;
         this.openBatches = openBatches;
         this.addFile = addFile;
@@ -90,6 +93,7 @@ public class IntakeController {
         this.discardDocument = discardDocument;
         this.unplaced = unplaced;
         this.placeDocument = placeDocument;
+        this.closeProjectList = closeProjectList;
     }
 
     @PostMapping(BATCHES)
@@ -171,6 +175,14 @@ public class IntakeController {
         }
         return Responses.ProjectCandidates.from(confirmCandidates.execute(actor, new CompanyId(companyId),
                 new IntakeBatchId(batchId), given.stream().map(IntakeController::decision).toList()));
+    }
+
+    /** «Lista terminada»: 409 con lo que falta (documentos por leer o candidatos por decidir). */
+    @PostMapping(BATCHES + "/{batchId}/project-list/close")
+    public Responses.IntakeBatchView closeProjectList(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId) {
+        closeProjectList.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId));
+        return get(actor, companyId, batchId);
     }
 
     @GetMapping(BATCHES + "/{batchId}/proposals")

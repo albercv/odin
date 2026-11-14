@@ -72,9 +72,22 @@ class ClassifyIntakeTest {
         return new ClassifyIntake(intake, docs, withModel ? Optional.of(model) : Optional.empty(), ids);
     }
 
+    /** Un candidato confirmado y la lista terminada: lo que hace falta para clasificar. */
     private void confirmed(String name, ProjectId project) {
-        intake.save(new ProjectCandidate(company, batch.id(), name, CandidateOrigin.IMPORTED, 0,
-                DecisionState.CONFIRMED, Optional.of(project)));
+        candidate(name, DecisionState.CONFIRMED, Optional.of(project));
+        listClosed();
+    }
+
+    private void candidate(String name, DecisionState state, Optional<ProjectId> project) {
+        intake.save(new ProjectCandidate(company, batch.id(), name, CandidateOrigin.IMPORTED, 0, state, project));
+    }
+
+    private void listClosed() {
+        IntakeBatch current = intake.find(company, batch.id()).orElseThrow();
+        if (!current.projectListClosed()) {
+            batch = current.closeProjectList(Actors.companyAdmin(company).userId(), java.time.Instant.EPOCH);
+            intake.save(batch);
+        }
     }
 
     private Document pending(String path, String text) {
@@ -236,22 +249,43 @@ class ClassifyIntakeTest {
     }
 
     @Test
-    void withoutAConfirmedListNothingIsProposedAndTheBatchStaysInReadingUntilItIsConfirmed() {
-        intake.save(new ProjectCandidate(company, batch.id(), OLMO, CandidateOrigin.DISCOVERED, 1,
-                DecisionState.PROPOSED, Optional.empty()));
+    void nothingIsClassifiedUntilTheListIsClosedEvenWithCandidatesConfirmedOneByOne() {
+        candidate(OLMO, DecisionState.PROPOSED, Optional.empty());
+        candidate(HAYA, DecisionState.PROPOSED, Optional.empty());
         pending("a/uno.pdf", OLMO_TEXT);
+        pending("a/dos.pdf", "Comunidad: Comunidad de Propietarios Calle Haya 2\nActa");
         pending("a/caso.pdf", "FICHA DE CASO\nCaso 2024-342\nGoteras en " + OLMO);
 
+        classify(true).execute();
+        candidate(OLMO, DecisionState.CONFIRMED, Optional.of(olmoId));
         classify(true).execute();
 
         assertThat(intake.proposals(company, batch.id())).isEmpty();
         assertThat(asked).isEmpty();
         assertThat(state()).isEqualTo(IntakeState.READING);
 
-        confirmed(OLMO, olmoId);
+        candidate(HAYA, DecisionState.CONFIRMED, Optional.of(hayaId));
+        listClosed();
         classify(true).execute();
 
-        assertThat(proposals(ProposalKind.PROJECT)).hasSize(2);
+        assertThat(proposals(ProposalKind.PROJECT)).extracting(p -> p.targetProjectId().orElseThrow())
+                .containsExactlyInAnyOrder(olmoId, olmoId, hayaId);
+        assertThat(proposals(ProposalKind.CASE_MARK)).hasSize(1);
+        assertThat(state()).isEqualTo(IntakeState.IN_REVIEW);
+    }
+
+    @Test
+    void aClosedListWithEveryCandidateRejectedClassifiesWithoutProjectProposals() {
+        candidate(OLMO, DecisionState.REJECTED, Optional.empty());
+        listClosed();
+        pending("a/uno.pdf", OLMO_TEXT);
+        pending("a/caso.pdf", "FICHA DE CASO\nCaso 2024-342\nGoteras en " + OLMO);
+        modelAnswer = Optional.of(OLMO);
+
+        classify(true).execute();
+
+        assertThat(proposals(ProposalKind.PROJECT)).isEmpty();
+        assertThat(asked).isEmpty();
         assertThat(proposals(ProposalKind.CASE_MARK)).hasSize(1);
         assertThat(state()).isEqualTo(IntakeState.IN_REVIEW);
     }
@@ -431,7 +465,8 @@ class ClassifyIntakeTest {
     void aFailureWhileSavingADocumentLeavesItWithNoProposalsAndTheNextPassProposesItFully() {
         FailingOnce failing = new FailingOnce();
         batch = new StartIntake(failing, orgs, ids, new MutableClock())
-                .execute(Actors.companyAdmin(company), company, IntakeChannel.PANEL).startReading();
+                .execute(Actors.companyAdmin(company), company, IntakeChannel.PANEL).startReading()
+                .closeProjectList(Actors.companyAdmin(company).userId(), java.time.Instant.EPOCH);
         failing.save(batch);
         failing.save(new ProjectCandidate(company, batch.id(), OLMO, CandidateOrigin.IMPORTED, 0,
                 DecisionState.CONFIRMED, Optional.of(olmoId)));

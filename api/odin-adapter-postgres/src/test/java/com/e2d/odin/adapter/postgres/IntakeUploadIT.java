@@ -17,6 +17,7 @@ import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeChannel;
 import com.e2d.odin.domain.intake.IntakeCounts;
+import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
@@ -71,6 +72,17 @@ class IntakeUploadIT extends AbstractPostgresIT {
         assertThat(docs.findEntryIncludingWithdrawn(CompanyScope.of(company), ProjectVisibility.all(), d.id()))
                 .isPresent();
         assertThat(docs.findBySha256(company, d.sha256())).isEmpty();
+    }
+
+    @Test
+    void theClosedProjectListKeepsWhoAndWhen() {
+        IntakeBatch closed = batch.startReading().closeProjectList(user, NOW.plusSeconds(5));
+        intake.save(closed);
+
+        IntakeBatch found = intake.find(company, batch.id()).orElseThrow();
+        assertThat(found.projectListClosedBy()).contains(user);
+        assertThat(found.projectListClosedAt()).contains(NOW.plusSeconds(5));
+        assertThat(intake.find(company, batch.id()).map(IntakeBatch::state)).contains(IntakeState.READING);
     }
 
     @Test

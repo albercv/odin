@@ -43,8 +43,7 @@ public class GetIntakeBatch {
         if (!settings.localModelConfigured()) {
             warnings.add(IntakeWarning.NO_LOCAL_MODEL);
         }
-        if (batch.state() == IntakeState.READING && intake.candidates(companyId, batchId).stream()
-                .noneMatch(c -> c.state() == DecisionState.CONFIRMED)) {
+        if (batch.state() == IntakeState.READING && !batch.projectListClosed()) {
             warnings.add(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
         }
         Map<ProposalKind, Integer> proposed = new EnumMap<>(ProposalKind.class);
