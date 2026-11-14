@@ -42,7 +42,7 @@ Qué hace con la carpeta:
 
 ## Si se corta
 
-Corte de luz, red o terminal cerrada: vuelve a lanzar la misma orden. Odín pregunta qué ficheros ya tiene y sube solo los que faltan. Nada se duplica. Un fichero que descartaste en el panel no vuelve a entrar.
+Corte de luz, red o terminal cerrada: vuelve a lanzar la misma orden. Odín pregunta qué ficheros ya tiene y sube solo los que faltan. Nada se duplica. Un fichero que descartaste en el panel no vuelve a entrar en esta misma carga.
 
 ## Al terminar
 
@@ -62,7 +62,7 @@ Nadie ve un documento hasta que tú lo confirmas.
 En cada propuesta puedes confirmarla, corregir el proyecto, marcarla «de toda la empresa» o rechazarla.
 
 - **«No lo sé»** deja el documento oculto y pendiente, sin plazo, y guarda quién lo dijo y cuándo. Puedes volver a él cuando lo sepas. Mientras quede alguno, la carga sigue abierta y **no se puede empezar otra primera carga**: la orden lo rechaza hasta que lo decidas.
-- **Descartar** retira el documento. No vuelve a entrar si repites la orden.
+- **Descartar** retira el documento. No vuelve a entrar si repites la orden en esta misma carga; en una primera carga nueva, sí, porque para ella es un fichero que falta.
 
 La carga se cierra sola cuando no queda ningún documento pendiente ni ninguna propuesta por decidir.
 

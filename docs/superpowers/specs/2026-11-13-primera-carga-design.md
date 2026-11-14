@@ -52,7 +52,7 @@ Hexagonal, como el resto de la API, con las mismas reglas de ArchUnit.
   - el filtro SQL del trabajador excluye lo pendiente;
   - y la RLS lo exige por su cuenta (apartado 3).
 
-## 3. Modelo de datos (migración `V25__intake.sql`)
+## 3. Modelo de datos (migración `V26__intake.sql`)
 
 Va por encima de la V24 del encargo 13. Se renumera al integrar si hace falta (T-020, T-021).
 
