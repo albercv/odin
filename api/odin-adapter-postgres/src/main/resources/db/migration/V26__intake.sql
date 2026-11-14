@@ -84,6 +84,11 @@ CREATE TABLE intake_proposal (
     CHECK ((state = 'PROPOSED') = (decided_at IS NULL))
 );
 CREATE INDEX intake_proposal_batch_idx ON intake_proposal (batch_id);
+-- Idempotencia de la clasificación: la misma propuesta (lote, documento, tipo y destinos) no se guarda dos veces,
+-- aunque dos instancias o dos pasadas la escriban a la vez. Un documento solo tiene un número de caso.
+CREATE UNIQUE INDEX intake_proposal_same_uq ON intake_proposal (batch_id, document_id, kind,
+    coalesce(target_document_id, '00000000-0000-0000-0000-000000000000'),
+    coalesce(target_project_id, '00000000-0000-0000-0000-000000000000'));
 
 GRANT SELECT, INSERT, UPDATE ON intake_batch, intake_project_candidate, intake_proposal TO odin_app;
 

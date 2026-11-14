@@ -31,5 +31,11 @@ public interface IntakeRepository {
 
     void save(IntakeProposal proposal);
 
+    /**
+     * Añade propuestas nuevas, todas o ninguna. Una propuesta igual a otra ya guardada (mismo lote, documento, tipo y
+     * destinos) se ignora, así que dos pasadas a la vez no duplican. Decidir una propuesta existente sigue siendo save.
+     */
+    void addProposals(List<IntakeProposal> proposals);
+
     List<IntakeProposal> proposals(CompanyId companyId, IntakeBatchId batchId);
 }

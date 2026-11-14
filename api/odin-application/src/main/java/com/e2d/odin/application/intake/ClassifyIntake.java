@@ -112,7 +112,8 @@ public class ClassifyIntake {
 
     private void saveNew(Run run, List<IntakeProposal> existing) {
         Set<String> known = existing.stream().map(ClassifyIntake::key).collect(Collectors.toSet());
-        run.made.stream().filter(p -> known.add(key(p))).forEach(intake::save);
+        run.made.stream().filter(p -> known.add(key(p))).collect(Collectors.groupingBy(IntakeProposal::documentId,
+                LinkedHashMap::new, Collectors.toList())).values().forEach(intake::addProposals);
     }
 
     private static String key(IntakeProposal p) {
@@ -215,8 +216,10 @@ public class ClassifyIntake {
     }
 
     private void duplicates(Run run, List<IntakeDocument> all) {
-        List<DuplicateFinder.Candidate> candidates = all.stream().map(d -> new DuplicateFinder.Candidate(
-                d.id().value().toString(), run.projectOf.getOrDefault(d.id(), ""), d.scan(), d.text())).toList();
+        // solo entre documentos con un único proyecto propuesto: sin él (o con varios) no se compara con nadie
+        List<DuplicateFinder.Candidate> candidates = all.stream().filter(d -> run.projectOf.containsKey(d.id()))
+                .map(d -> new DuplicateFinder.Candidate(d.id().value().toString(), run.projectOf.get(d.id()), d.scan(),
+                        d.text())).toList();
         for (DuplicateFinder.Duplicate dup : DuplicateFinder.find(candidates)) {
             if (!dup.reason().isBlank()) {
                 run.made.add(proposal(run, new DocumentId(java.util.UUID.fromString(dup.documentId())), dup.kind(),

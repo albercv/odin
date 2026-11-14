@@ -1,6 +1,7 @@
 package com.e2d.odin.application.intake;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
@@ -88,6 +89,30 @@ class ClassifyIntakeTest {
 
     private List<IntakeProposal> proposals(ProposalKind kind) {
         return intake.proposals(company, batch.id()).stream().filter(p -> p.kind() == kind).toList();
+    }
+
+    /** Falla al guardar las propuestas de un documento: el repositorio no guarda ninguna de esa tanda. */
+    private final class FailingOnce extends InMemoryIntakeRepository {
+        boolean armed;
+        int writes;
+
+        @Override
+        public synchronized void save(IntakeProposal proposal) {
+            if (armed && ++writes == 2) {
+                armed = false;
+                throw new IllegalStateException("se cae a mitad");
+            }
+            super.save(proposal);
+        }
+
+        @Override
+        public synchronized void addProposals(List<IntakeProposal> added) {
+            if (armed && added.size() >= 2) {
+                armed = false;
+                throw new IllegalStateException("se cae a mitad");
+            }
+            super.addProposals(added);
+        }
     }
 
     private IntakeState state() {
@@ -399,5 +424,44 @@ class ClassifyIntakeTest {
                 .containsOnly(mine.id());
         assertThat(intake.proposals(other, otherBatch.id())).isEmpty();
         assertThat(theirs.companyId()).isEqualTo(other);
+    }
+
+    @Test
+    void aFailureWhileSavingADocumentLeavesItWithNoProposalsAndTheNextPassProposesItFully() {
+        FailingOnce failing = new FailingOnce();
+        batch = new StartIntake(failing, orgs, ids, new MutableClock())
+                .execute(Actors.companyAdmin(company), company, IntakeChannel.PANEL).startReading();
+        failing.save(batch);
+        failing.save(new ProjectCandidate(company, batch.id(), OLMO, CandidateOrigin.IMPORTED, 0,
+                DecisionState.CONFIRMED, Optional.of(olmoId)));
+        Document caso = pending("a/caso.pdf", "FICHA DE CASO\nCaso 2024-342\nGoteras en " + OLMO);
+        failing.armed = true;
+        ClassifyIntake job = new ClassifyIntake(failing, docs, Optional.empty(), ids);
+
+        assertThatThrownBy(job::execute).isInstanceOf(IllegalStateException.class);
+
+        assertThat(failing.proposals(company, batch.id())).isEmpty();
+        assertThat(failing.find(company, batch.id()).orElseThrow().state()).isEqualTo(IntakeState.READING);
+
+        job.execute();
+
+        assertThat(failing.proposals(company, batch.id())).extracting(IntakeProposal::kind)
+                .containsExactlyInAnyOrder(ProposalKind.PROJECT, ProposalKind.CASE_MARK);
+        assertThat(failing.proposals(company, batch.id())).extracting(IntakeProposal::documentId).containsOnly(caso.id());
+    }
+
+    @Test
+    void documentsWithoutAProposedProjectAreNeverComparedAmongThemselves() {
+        confirmed(OLMO, olmoId);
+        String body = "Acta de la junta\nIncluye una derrama de 1.200 euros acordada el 12 de marzo de 2024 para el "
+                + "arreglo del tejado del bloque segundo con la empresa constructora local";
+        pending(batch, "a/acta.pdf", body, "pdfbox", DocumentStatus.READY);
+        pending(batch, "a/acta-escaneada.pdf", body, "unlimited-ocr-2", DocumentStatus.READY);
+
+        classify(false).execute();
+
+        assertThat(proposals(ProposalKind.SAME_AS_SCAN)).isEmpty();
+        assertThat(proposals(ProposalKind.SUPERSEDES)).isEmpty();
+        assertThat(proposals(ProposalKind.PROJECT)).isEmpty();
     }
 }

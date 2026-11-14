@@ -70,6 +70,18 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public synchronized void addProposals(List<IntakeProposal> added) {
+        added.forEach(p -> {
+            boolean same = proposals.values().stream().anyMatch(q -> q.batchId().equals(p.batchId())
+                    && q.documentId().equals(p.documentId()) && q.kind() == p.kind()
+                    && q.targetDocumentId().equals(p.targetDocumentId()) && q.targetProjectId().equals(p.targetProjectId()));
+            if (!same) {
+                proposals.put(p.id(), p);
+            }
+        });
+    }
+
+    @Override
     public synchronized List<IntakeProposal> proposals(CompanyId companyId, IntakeBatchId batchId) {
         return proposals.values().stream()
                 .filter(p -> p.companyId().equals(companyId) && p.batchId().equals(batchId)).toList();

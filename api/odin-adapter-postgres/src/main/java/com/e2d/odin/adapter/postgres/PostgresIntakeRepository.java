@@ -20,7 +20,9 @@ import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -103,21 +105,43 @@ public class PostgresIntakeRepository implements IntakeRepository {
 
     @Override
     public void save(IntakeProposal p) {
-        tx.runInScope(CompanyScope.of(p.companyId()), ALL, jdbc -> jdbc.sql("""
-                INSERT INTO intake_proposal (id, company_id, batch_id, document_id, kind, target_project_id,
-                    target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at)
-                VALUES (:id, :company, :batch, :document, :kind, :targetProject, :targetDocument, :caseNumber,
-                    :confidence, :source, :reason, :state, :decidedBy, :decidedAt)
+        tx.runInScope(CompanyScope.of(p.companyId()), ALL, jdbc -> jdbc.sql(INSERT_PROPOSAL + """
                 ON CONFLICT (id) DO UPDATE SET state = EXCLUDED.state, decided_by = EXCLUDED.decided_by,
-                    decided_at = EXCLUDED.decided_at""")
-                .param("id", p.id()).param("company", p.companyId().value()).param("batch", p.batchId().value())
-                .param("document", p.documentId().value()).param("kind", p.kind().name())
-                .param("targetProject", p.targetProjectId().map(ProjectId::value).orElse(null))
-                .param("targetDocument", p.targetDocumentId().map(DocumentId::value).orElse(null))
-                .param("caseNumber", p.caseNumber().orElse(null)).param("confidence", p.confidence().name())
-                .param("source", p.source().name()).param("reason", p.reason()).param("state", p.state().name())
-                .param("decidedBy", p.decidedBy().map(UserId::value).orElse(null))
-                .param("decidedAt", Sql.ts(p.decidedAt())).update());
+                    decided_at = EXCLUDED.decided_at""").params(proposalParams(p)).update());
+    }
+
+    @Override
+    public void addProposals(List<IntakeProposal> proposals) {
+        if (proposals.isEmpty()) {
+            return;
+        }
+        tx.runInScope(CompanyScope.of(proposals.get(0).companyId()), ALL, jdbc -> proposals.forEach(
+                p -> jdbc.sql(INSERT_PROPOSAL + " ON CONFLICT DO NOTHING").params(proposalParams(p)).update()));
+    }
+
+    private static final String INSERT_PROPOSAL = """
+            INSERT INTO intake_proposal (id, company_id, batch_id, document_id, kind, target_project_id,
+                target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at)
+            VALUES (:id, :company, :batch, :document, :kind, :targetProject, :targetDocument, :caseNumber,
+                :confidence, :source, :reason, :state, :decidedBy, :decidedAt)""";
+
+    private static Map<String, Object> proposalParams(IntakeProposal p) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", p.id());
+        m.put("company", p.companyId().value());
+        m.put("batch", p.batchId().value());
+        m.put("document", p.documentId().value());
+        m.put("kind", p.kind().name());
+        m.put("targetProject", p.targetProjectId().map(ProjectId::value).orElse(null));
+        m.put("targetDocument", p.targetDocumentId().map(DocumentId::value).orElse(null));
+        m.put("caseNumber", p.caseNumber().orElse(null));
+        m.put("confidence", p.confidence().name());
+        m.put("source", p.source().name());
+        m.put("reason", p.reason());
+        m.put("state", p.state().name());
+        m.put("decidedBy", p.decidedBy().map(UserId::value).orElse(null));
+        m.put("decidedAt", Sql.ts(p.decidedAt()));
+        return m;
     }
 
     @Override
