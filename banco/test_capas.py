@@ -2,6 +2,7 @@
 import contextlib
 import io
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -22,7 +23,7 @@ def write_archive(datos, empresa, **overrides):
     ruta = values["ruta"]
     (datos / "corpus" / Path(ruta).parent).mkdir(parents=True, exist_ok=True)
     (datos / "corpus" / ruta).write_text(f"=== Página 1 ===\nTexto de {empresa}\n", encoding="utf-8")
-    manifest = {"semilla": 7, "empresas": [{"clave": empresa, "nombre": empresa, "codigo": empresa[:3].upper()}],
+    manifest = {"semilla": 7, "empresas": [{"clave": empresa, "nombre": values.get("nombre", empresa), "codigo": empresa[:3].upper()}],
                 "proyectos": [],
                 "trabajadores": [{"clave": values["trabajador"], "empresa": empresa, "nombre": "Ana",
                                   "apellidos": "Pérez", "proyectos": ["*"]}],
@@ -104,7 +105,6 @@ class ArchivesTest(unittest.TestCase):
 
     def test_repeated_keys_are_refused(self):
         cases = {
-            "empresas": ("ribera", {"trabajador": "x-t", "ruta": "x/doc.txt", "ficha": "x-F", "clave": "x-K"}, "ribera"),
             "trabajadores": ("brumeral", {"trabajador": "ribera-t"}, "ribera-t"),
             "documentos": ("brumeral", {"ruta": "ribera/_general/doc.txt"}, "ribera/_general/doc.txt"),
             "fichas": ("brumeral", {"ficha": "F001"}, "F001"),
@@ -179,6 +179,89 @@ class ArchivesTest(unittest.TestCase):
             code = capas.main(["fusionar", "--archivos", "publico"], layout=self.layout)
         self.assertEqual(code, 1)
         self.assertIn("capa no disponible todavía: publico", errors.getvalue())
+
+
+    def test_same_company_in_two_layers_is_accepted_once(self):
+        other = self.layout.state_dir / "otra-identica"
+        write_archive(other, "ribera", ficha="F002", clave="K002", trabajador="ribera-t2", ruta="ribera/_general/otro.txt")
+        capas.merge([self.ficticio, other], self.layout.state_dir / "fusion-identica")
+        manifest = json.loads((self.layout.state_dir / "fusion-identica" / "manifiesto.json").read_text(encoding="utf-8"))
+        self.assertEqual([e["clave"] for e in manifest["empresas"]], ["ribera"])
+
+    def test_conflicting_company_in_two_layers_is_refused(self):
+        other = self.layout.state_dir / "otra-distinta"
+        write_archive(other, "ribera", nombre="Ribera Norte", ruta="ribera/_general/otro.txt", ficha="F002", clave="K002")
+        with self.assertRaisesRegex(ArchivoError, re.escape("empresa repetida con datos distintos: ribera")):
+            capas.merge([self.ficticio, other], self.layout.state_dir / "fusion-distinta")
+
+
+class MiradorArchiveTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.layout = make_layout(self.root)
+        self.ficticio = self.layout.exp / "datos"
+        write_archive(self.ficticio, "ribera", ficha="F001", clave="K001", trabajador="ribera-t", ruta="ribera/_general/doc.txt")
+        self.mirador = self.root / "mirador"
+
+    def write_mirador(self, textos, ruta="ribera/_general/mirador.txt"):
+        """Capa de Mirador: manifiesto con un documento, claves y textos por página; sin corpus/ (lo dan los textos)."""
+        self.mirador.mkdir(parents=True, exist_ok=True)
+        manifest = {"semilla": 7, "empresas": [{"clave": "ribera", "nombre": "ribera", "codigo": "RIB"}], "proyectos": [],
+                    "trabajadores": [], "fichas": [],
+                    "documentos": [{"ruta": ruta, "empresa": "ribera", "proyecto": None, "titulo": "Mirador",
+                                    "subido": "2025-01-01T00:00:00Z", "subido_por": "ribera-t"}]}
+        (self.mirador / "manifiesto.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (self.mirador / "claves.json").write_text("[]", encoding="utf-8")
+        (self.mirador / "textos.json").write_text(json.dumps({ruta: textos}, ensure_ascii=False), encoding="utf-8")
+        (self.mirador / "bateria-mirador.json").write_text(json.dumps([{"id": "M01"}]), encoding="utf-8")
+
+    def test_unset_env_is_a_spanish_error(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(ArchivoError, "ODIN_BANCO_MIRADOR"):
+                capas.archive_dir(self.layout, "mirador")
+
+    def test_missing_folder_is_a_spanish_error(self):
+        with mock.patch.dict(os.environ, {"ODIN_BANCO_MIRADOR": str(self.root / "no-existe")}):
+            with self.assertRaisesRegex(ArchivoError, "no existe"):
+                capas.archive_dir(self.layout, "mirador")
+
+    def test_battery_lives_in_mirador_folder_and_needs_both_archives(self):
+        self.write_mirador({"1": "Texto"})
+        with mock.patch.dict(os.environ, {"ODIN_BANCO_MIRADOR": str(self.mirador)}):
+            self.assertEqual(capas.battery_file(self.layout, "mirador"), self.mirador / "bateria-mirador.json")
+        self.assertEqual(capas.BATTERIES["mirador"].requires, ("ficticio", "mirador"))
+
+    def test_merge_takes_textos_and_skips_missing_corpus(self):
+        self.write_mirador({"1": "Página uno", "2": "Página dos"})
+        out = self.root / "fusion"
+        capas.merge([self.ficticio, self.mirador], out)
+        textos = json.loads((out / "textos.json").read_text(encoding="utf-8"))
+        self.assertEqual(textos, {"ribera/_general/mirador.txt": {"1": "Página uno", "2": "Página dos"}})
+        self.assertTrue((out / "corpus" / "ribera" / "_general" / "doc.txt").is_file())
+        self.assertFalse((out / "corpus" / "ribera" / "_general" / "mirador.txt").exists())
+
+    def test_document_without_file_or_textos_is_refused(self):
+        self.write_mirador({"1": "Texto"}, ruta="ribera/_general/otro.txt")
+        (self.mirador / "textos.json").write_text(json.dumps({"ribera/_general/distinto.txt": {"1": "x"}}), encoding="utf-8")
+        with self.assertRaisesRegex(ArchivoError, re.escape("falta en el corpus: ribera/_general/otro.txt")):
+            capas.merge([self.ficticio, self.mirador], self.root / "fusion")
+
+    def test_repeated_textos_ruta_is_refused(self):
+        self.write_mirador({"1": "Texto"})
+        other = self.root / "otra"
+        other.mkdir()
+        (other / "manifiesto.json").write_text(json.dumps({"semilla": 7, "empresas": [], "proyectos": [], "trabajadores": [],
+                                                           "documentos": [], "fichas": []}), encoding="utf-8")
+        (other / "claves.json").write_text("[]", encoding="utf-8")
+        (other / "textos.json").write_text(json.dumps({"ribera/_general/mirador.txt": {"1": "Otro"}}), encoding="utf-8")
+        with self.assertRaisesRegex(ArchivoError, re.escape("ruta repetida en los textos: ribera/_general/mirador.txt")):
+            capas.merge([self.mirador, other], self.root / "fusion")
+
+    def test_ficticio_only_writes_no_textos(self):
+        capas.merge([self.ficticio], self.root / "solo")
+        self.assertFalse((self.root / "solo" / "textos.json").exists())
 
 
 class ExpedientesMergeTest(unittest.TestCase):

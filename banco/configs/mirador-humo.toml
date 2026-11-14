@@ -1,0 +1,26 @@
+# Batería de Mirador, humo: cinco preguntas fijas, un buscador y 0,10 USD de tope. Juez local (Ollama), sin IA de pago.
+name = "mirador-humo"
+archives = ["ficticio", "mirador"]
+battery = ["mirador"]
+mode = "explore"
+sample = { size = 5, strata = "tipo", seed = 7, include = ["M01", "M15", "M24", "M27", "M29"] }
+repetitions = 1
+budgetUsd = 0.1
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 1
+model = "haiku"
+
+[combiner]
+kind = "single"
+
+[[judges]]
+rubric = "strict"
+count = 1
+model = "ollama:qwen3.5:9b"
+think = false
+
+[judging]
+aggregation = "majority"

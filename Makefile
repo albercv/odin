@@ -1,4 +1,4 @@
-.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery banco-arriba banco-cargar banco-abajo banco banco-reanudar banco-barrido banco-informe banco-comprobar banco-test
+.PHONY: setup test check up down demo answer-battery tagger-model tagging-battery banco-arriba banco-cargar banco-cargar-mirador banco-abajo banco banco-reanudar banco-barrido banco-informe banco-comprobar banco-test
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -58,6 +58,10 @@ banco-cargar:
 	if [ -n "$(EXPEDIENTES)" ] && [ ! -f "$$D/expedientes.json" ]; then echo "sin expedientes.json en $$D"; exit 1; fi; \
 	$(BANCO_ENV) python3 $(EXP)/pila/cargar.py --manifiesto $$D/manifiesto.json --corpus $$D/corpus --marcar $(CARGAR_OPCIONES) || exit 1; \
 	if [ -n "$(EXPEDIENTES)" ]; then $(BANCO_ENV) python3 $(EXP)/pila/cargar_expedientes.py --mapa "$(CURDIR)/banco/estado/carga.json" --datos "$$D" --marcar-casos || exit 1; fi
+
+# Mirador (encargo): proyecto nuevo en Ribera con t01 como miembro. Requiere banco-cargar con todas las capacidades y ODIN_BANCO_MIRADOR_DATOS.
+banco-cargar-mirador:
+	$(BANCO_ENV) python3 banco/propietario.py && $(BANCO_ENV) python3 banco/cargar_mirador.py
 
 banco-abajo:
 	$(BANCO_ENV) python3 banco/propietario.py

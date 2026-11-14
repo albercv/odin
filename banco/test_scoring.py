@@ -76,5 +76,25 @@ class ExpedientesContextTest(unittest.TestCase):
         self.assertEqual(ctx.reales, set())
 
 
+class TextsContextTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.data = Path(tmp.name)
+        (self.data / "corpus").mkdir()
+        (self.data / "manifiesto.json").write_text(json.dumps({"semilla": 1, "empresas": [], "proyectos": [], "trabajadores": [],
+                                                              "documentos": [], "fichas": []}), encoding="utf-8")
+        (self.data / "claves.json").write_text("[]", encoding="utf-8")
+
+    def test_textos_pages_join_the_corpus_with_integer_pages(self):
+        (self.data / "textos.json").write_text(json.dumps({"mirador/a.txt": {"1": "Uno", "2": "Dos"}}), encoding="utf-8")
+        ctx = scoring.build_context(self.data, {"doc_ruta": {}, "ficha_f": {}})
+        self.assertEqual(ctx.corpus["mirador/a.txt"], {1: "Uno", 2: "Dos"})
+
+    def test_without_textos_nothing_is_added(self):
+        ctx = scoring.build_context(self.data, {"doc_ruta": {}, "ficha_f": {}})
+        self.assertEqual(ctx.corpus, {})
+
+
 if __name__ == "__main__":
     unittest.main()
