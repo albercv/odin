@@ -72,6 +72,32 @@ class PostgresKnowledgeRepositoriesIT extends AbstractPostgresIT {
     }
 
     @Test
+    void searchAndCountShareTheFilterOldestFirstAndEscapeWildcards() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        KnowledgeCard one = card(a, ua, "Póliza del 100%");
+        KnowledgeCard two = card(a, ua, "Contrato");
+        KnowledgeCard three = card(a, ua, "Póliza_x");
+        card(newCompany(), newUser(newCompany()), "Póliza ajena");
+        CompanyScope scope = CompanyScope.of(a);
+        ProjectVisibility all = ProjectVisibility.all();
+        var any = Optional.<String>empty();
+
+        assertThat(cards.search(scope, all, CardStatus.PENDING, any, 0, 10)).containsExactly(one, two, three);
+        assertThat(cards.search(scope, all, CardStatus.PENDING, any, 1, 1)).containsExactly(two);
+        assertThat(cards.count(scope, all, CardStatus.PENDING, any)).isEqualTo(3);
+        assertThat(cards.search(scope, all, CardStatus.PENDING, Optional.of("POLIZA"), 0, 10))
+                .containsExactly(one, three);
+        assertThat(cards.count(scope, all, CardStatus.PENDING, Optional.of("poliza"))).isEqualTo(2);
+        assertThat(cards.search(scope, all, CardStatus.PENDING, Optional.of("%"), 0, 10)).containsExactly(one);
+        assertThat(cards.count(scope, all, CardStatus.PENDING, Optional.of("_"))).isEqualTo(1);
+        assertThat(cards.search(scope, all, CardStatus.PENDING, Optional.of("cuerpo"), 0, 10)).hasSize(3);
+        assertThat(cards.count(scope, ProjectVisibility.of(java.util.Set.of()), CardStatus.PENDING, any))
+                .isEqualTo(3);
+        assertThat(cards.count(scope, all, CardStatus.APPROVED, any)).isZero();
+    }
+
+    @Test
     void questionLogStoresTextAndAuthorOnlyForItsCompany() {
         CompanyId a = newCompany();
         CompanyId b = newCompany();

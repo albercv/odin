@@ -185,9 +185,9 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         assertThat(docs.findPage(scope, all, d.id(), 1)).isEmpty();
         assertThat(docs.list(scope, all, Optional.empty(), Optional.empty(), 0, 10)).isEmpty();
         Document active = newDocument(a, admin, "Activo", DocumentStatus.READY);
-        assertThat(docs.listWithdrawn(scope, all, 0, 10)).extracting(e -> e.document().id())
+        assertThat(docs.search(scope, all, true, Optional.empty(), 0, 10)).extracting(e -> e.document().id())
                 .containsExactly(d.id()).doesNotContain(active.id());
-        assertThat(docs.listWithdrawn(scope, all, 1, 10)).isEmpty();
+        assertThat(docs.search(scope, all, true, Optional.empty(), 1, 10)).isEmpty();
         Document withdrawn = docs.findEntryIncludingWithdrawn(scope, all, d.id()).orElseThrow().document();
         assertThat(withdrawn.withdrawnAt()).contains(NOW);
         assertThat(withdrawn.withdrawnBy()).contains(admin);
@@ -613,5 +613,38 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
                 d.processingStartedAt(), 0, Optional.empty(), Optional.empty());
         docs.save(moved);
         return moved;
+    }
+
+    @Test
+    void searchesByTitleIgnoringCaseAccentsAndWildcardsAndCountsOnlyTheCompany() {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        UserId admin = newUser(a);
+        Document policy = newDocument(a, admin, "Póliza seguro 2023", DocumentStatus.READY);
+        Document upper = newDocument(a, admin, "PÓLIZA", DocumentStatus.READY);
+        Document percent = newDocument(a, admin, "Descuento 100% fijo", DocumentStatus.READY);
+        Document underscore = newDocument(a, admin, "a_b", DocumentStatus.READY);
+        newDocument(a, admin, "axb", DocumentStatus.READY);
+        newDocument(a, admin, "Descuento 1000 fijo", DocumentStatus.READY);
+        Document gone = newDocument(a, admin, "Póliza vieja", DocumentStatus.READY);
+        docs.markWithdrawal(gone.withWithdrawal(Optional.of(NOW), Optional.of(admin)));
+        newDocument(b, newUser(b), "Póliza de la otra", DocumentStatus.READY);
+        CompanyScope scope = CompanyScope.of(a);
+        ProjectVisibility all = ProjectVisibility.all();
+
+        assertThat(docs.search(scope, all, false, Optional.of("poliza"), 0, 10)).extracting(e -> e.document().id())
+                .containsExactlyInAnyOrder(policy.id(), upper.id());
+        assertThat(docs.count(scope, all, false, Optional.of("poliza"))).isEqualTo(2);
+        assertThat(docs.search(scope, all, false, Optional.of("poliza"), 1, 10)).hasSize(1);
+        assertThat(docs.search(scope, all, false, Optional.of("100%"), 0, 10)).extracting(e -> e.document().id())
+                .containsExactly(percent.id());
+        assertThat(docs.search(scope, all, false, Optional.of("a_b"), 0, 10)).extracting(e -> e.document().id())
+                .containsExactly(underscore.id());
+        assertThat(docs.count(scope, all, false, Optional.empty())).isEqualTo(6);
+        assertThat(docs.count(scope, all, true, Optional.empty())).isEqualTo(1);
+        assertThat(docs.count(scope, all, true, Optional.of("poliza"))).isEqualTo(1);
+        assertThat(docs.search(scope, all, true, Optional.of("poliza"), 0, 10)).extracting(e -> e.document().id())
+                .containsExactly(gone.id());
+        assertThat(docs.count(CompanyScope.of(b), all, true, Optional.empty())).isZero();
     }
 }

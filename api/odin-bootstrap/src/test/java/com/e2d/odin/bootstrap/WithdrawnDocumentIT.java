@@ -117,7 +117,8 @@ class WithdrawnDocumentIT {
         assertThat(ids(api.get(list, "Cookie", adminCookie))).doesNotContain(doc);
         Reply filtered = api.get(list + "?withdrawn=true", "Cookie", adminCookie);
         assertThat(ids(filtered)).contains(doc).doesNotContain(active);
-        assertThat(filtered.json().get(ids(filtered).indexOf(doc)).get("withdrawnAt").isNull()).isFalse();
+        assertThat(filtered.json().get("documents").get(ids(filtered).indexOf(doc)).get("withdrawnAt").isNull()).isFalse();
+        assertThat(filtered.json().get("total").asInt()).isEqualTo(filtered.json().get("documents").size());
         assertThat(ids(api.get("/v1/documents", "Authorization", worker))).doesNotContain(doc);
 
         assertThat(api.delete(withdrawal(doc), "Cookie", adminCookie).status()).isEqualTo(200);

@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 
 public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository {
 
@@ -63,6 +64,35 @@ public class PostgresKnowledgeCardRepository implements KnowledgeCardRepository 
                 + Sql.inScope("company_id") + " AND " + Sql.inVisibleProjects("project_id") + " ORDER BY seq";
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("status", status.name()).query((rs, n) -> card(rs)).list());
+    }
+
+    @Override
+    public List<KnowledgeCard> search(CompanyScope scope, ProjectVisibility visibility, CardStatus status,
+            Optional<String> query, int offset, int limit) {
+        String sql = "SELECT " + COLUMNS + " FROM knowledge_card WHERE " + searchFilter()
+                + " ORDER BY seq OFFSET :offset LIMIT :limit";
+        return tx.inScope(scope, visibility, jdbc -> bindSearch(Sql.scoped(jdbc.sql(sql), scope), visibility, status,
+                query).param("offset", offset).param("limit", limit).query((rs, n) -> card(rs)).list());
+    }
+
+    @Override
+    public int count(CompanyScope scope, ProjectVisibility visibility, CardStatus status, Optional<String> query) {
+        String sql = "SELECT count(*) FROM knowledge_card WHERE " + searchFilter();
+        return tx.inScope(scope, visibility, jdbc -> bindSearch(Sql.scoped(jdbc.sql(sql), scope), visibility, status,
+                query).query(Integer.class).single());
+    }
+
+    private static String searchFilter() {
+        return "status = :status AND (CAST(:text AS text) IS NULL OR unaccent(lower(title || ' ' || body)) "
+                + "LIKE unaccent(lower(CAST(:text AS text)))) AND " + Sql.inScope("company_id") + " AND "
+                + Sql.inVisibleProjects("project_id");
+    }
+
+    private static StatementSpec bindSearch(StatementSpec spec, ProjectVisibility visibility, CardStatus status,
+            Optional<String> query) {
+        String like = query.map(q -> "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                + "%").orElse(null);
+        return Sql.visible(spec, visibility).param("status", status.name()).param("text", like);
     }
 
     @Override

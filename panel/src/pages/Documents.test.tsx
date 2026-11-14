@@ -1,13 +1,13 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
 import { Documents } from './Documents';
 import { mockFetch, type Routes } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-const list = 'GET /v1/admin/companies/c1/documents?offset=0&limit=500';
+const list = 'GET /v1/admin/companies/c1/documents?offset=0&limit=25';
 const projects = 'GET /v1/admin/companies/c1/projects';
 const supersede = 'PUT /v1/admin/documents/d1/superseded-by';
 const base = { companyId: 'c1', filename: 'f.pdf', format: 'PDF', paginated: true, attemptCount: 1, pagesWithoutText: [] as number[], topics: [] as unknown[], uploadedAt: '2026-03-10T10:00:00Z' };
@@ -15,8 +15,9 @@ const old = { ...base, id: 'd1', title: 'Póliza 2022', status: 'READY', project
 const renewed = { ...base, id: 'd2', title: 'Póliza 2024', status: 'READY', projectId: 'p1', uploadedAt: '2026-05-02T10:00:00Z' };
 const draft = { ...base, id: 'd3', title: 'Borrador', status: 'FAILED' };
 const marked = { ...old, supersededBy: { id: 'd2', title: 'Póliza 2024' }, supersededAt: '2026-06-01T09:00:00Z' };
+const candidatesUrl = 'GET /v1/admin/companies/c1/documents?offset=0&limit=50';
 const routes = (documents: unknown[], more: Routes = {}): Routes => ({
-  [list]: () => documents, [projects]: () => [{ id: 'p1', name: 'Los Almendros' }], ...more,
+  [list]: () => ({ documents, total: documents.length }), [candidatesUrl]: () => ({ documents, total: documents.length }), [projects]: () => [{ id: 'p1', name: 'Los Almendros' }], ...more,
 });
 
 const show = (r: Routes, scannedDocumentsSupported = false) => {
@@ -42,21 +43,76 @@ test('showsSupersededMarkWithReplacementTitle', async () => {
   expect(within(screen.getByText('Póliza 2024', { selector: 'td' }).closest('tr')!).queryByText('Sustituido')).toBeNull();
 });
 
-test('candidatesAreReadyDocumentsWithProjectAndDateFilteredByTitle', async () => {
-  show(routes([old, renewed, draft]));
+test('candidatesAreReadyDocumentsWithProjectAndDateSearchedOnTheServer', async () => {
+  const zzz = `${candidatesUrl}&q=zzz`;
+  show(routes([old, renewed, draft], { [zzz]: () => ({ documents: [], total: 0 }) }));
   const dialog = await openDialog('Póliza 2022');
   expect(within(dialog).getByText(/Usa esta marca cuando un documento sustituye entero a otro, como una póliza renovada\. Un anexo que cambia una parte no sustituye al contrato\./)).toBeInTheDocument();
   const group = within(dialog).getByRole('group', { name: 'Documento que lo sustituye' });
-  const options = within(group).getAllByRole('radio');
+  const options = await within(group).findAllByRole('radio');
   expect(options).toHaveLength(1);
   expect(options[0]).toHaveAccessibleName('Póliza 2024 · Los Almendros · 2 may 2026');
-  await userEvent.type(within(dialog).getByLabelText('Buscar por título'), 'zzz');
-  expect(within(dialog).getByText('Ningún documento listo coincide con la búsqueda.')).toBeInTheDocument();
-  await userEvent.clear(within(dialog).getByLabelText('Buscar por título'));
-  await userEvent.type(within(dialog).getByLabelText('Buscar por título'), 'PÓLIZA 20');
-  expect(within(dialog).getAllByRole('radio')).toHaveLength(1);
+  fireEvent.change(within(dialog).getByRole('searchbox', { name: 'Buscar por título' }), { target: { value: 'zzz' } });
+  expect(await within(dialog).findByText('Ningún documento listo coincide con la búsqueda.')).toBeInTheDocument();
 });
 
+test('supersedeDialogFindsACandidateThatIsNotOnThePage', async () => {
+  const far = { ...renewed, id: 'd9', title: 'Póliza 2030' };
+  const q = `${candidatesUrl}&q=2030`;
+  show(routes([old, renewed], { [q]: () => ({ documents: [far], total: 1 }) }));
+  const dialog = await openDialog('Póliza 2022');
+  fireEvent.change(within(dialog).getByRole('searchbox', { name: 'Buscar por título' }), { target: { value: '2030' } });
+  expect(await within(dialog).findByRole('radio', { name: /Póliza 2030/ })).toBeInTheDocument();
+});
+
+test('supersedeDialogShowsAReadyCandidateBeyondNonReadyOnesWithoutAFalseHint', async () => {
+  const failed = Array.from({ length: 10 }, (_, i) => ({ ...draft, id: `f${i}`, title: `Fallido ${i}` }));
+  show(routes([old, ...failed, renewed]));
+  const dialog = await openDialog('Póliza 2022');
+  expect(await within(dialog).findByRole('radio', { name: /Póliza 2024/ })).toBeInTheDocument();
+  expect(within(dialog).queryByText('Escribe al menos 3 letras del título para afinar')).toBeNull();
+});
+
+test('supersedeDialogHintsOnlyWhenReadyCandidatesAreHiddenAndNoSearchIsActive', async () => {
+  const ready = Array.from({ length: 11 }, (_, i) => ({ ...renewed, id: `r${i}`, title: `Póliza ${2030 + i}` }));
+  const q = `${candidatesUrl}&q=2031`;
+  show(routes([old, ...ready], { [q]: () => ({ documents: [ready[1]], total: 1 }) }));
+  const dialog = await openDialog('Póliza 2022');
+  expect(await within(dialog).findByText('Escribe al menos 3 letras del título para afinar')).toBeInTheDocument();
+  fireEvent.change(within(dialog).getByRole('searchbox', { name: 'Buscar por título' }), { target: { value: '2031' } });
+  await waitFor(() => expect(within(dialog).getAllByRole('radio')).toHaveLength(1)); // ya llegó la búsqueda
+  expect(within(dialog).queryByText('Escribe al menos 3 letras del título para afinar')).toBeNull();
+});
+
+test('supersedeDialogShowsSearchErrorAndNoFalseEmptyMessage', async () => {
+  show(routes([old], { [candidatesUrl]: () => ({ status: 500, body: { detail: 'Fallo del buscador' } }) }));
+  const dialog = await openDialog('Póliza 2022');
+  expect(await within(dialog).findByText('Fallo del buscador')).toBeInTheDocument();
+  expect(within(dialog).queryByText('Ningún documento listo coincide con la búsqueda.')).toBeNull();
+});
+
+test('supersedeDialogDropsStaleSearchResponses', async () => {
+  const slow: Record<string, (r: Response) => void> = {};
+  const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
+  const doc = (title: string) => ({ ...renewed, id: title, title });
+  vi.stubGlobal('fetch', vi.fn((url: string) => {
+    if (url.endsWith('/projects')) return Promise.resolve(json([]));
+    if (url.includes('q=')) return new Promise<Response>((res) => { slow[url.split('q=')[1]!] = res; });
+    return Promise.resolve(json({ documents: [old], total: 1, items: [] }));
+  }));
+  renderWithProviders(<Documents companyId="c1" />);
+  const dialog = await openDialog('Póliza 2022');
+  const box = within(dialog).getByRole('searchbox', { name: 'Buscar por título' });
+  fireEvent.change(box, { target: { value: 'pol' } });
+  await waitFor(() => expect(slow['pol']).toBeDefined());
+  fireEvent.change(box, { target: { value: 'poli' } });
+  await waitFor(() => expect(slow['poli']).toBeDefined());
+  slow['poli']!(json({ documents: [doc('Nueva')], total: 1 }));
+  await within(dialog).findByRole('radio', { name: /Nueva/ });
+  slow['pol']!(json({ documents: [doc('Vieja')], total: 1 }));
+  await new Promise((r) => setTimeout(r, 20));
+  expect(within(dialog).queryByRole('radio', { name: /Vieja/ })).toBeNull();
+});
 test('marksAsSupersededAfterTheConfirmationText', async () => {
   const calls = show(routes([old, renewed], { [supersede]: () => ({ status: 200, body: marked }) }));
   const dialog = await openDialog('Póliza 2022');
@@ -249,7 +305,7 @@ test('cancellingTheConfirmationDoesNotWithdraw', async () => {
 
 test('withdrawnFilterListsOnlyWithdrawnAndRestores', async () => {
   const gone = { ...old, withdrawnAt: '2026-11-13T10:00:00Z' };
-  const calls = show(routes([renewed], { [withdrawnList]: () => [gone], [restoreUrl]: () => ({ status: 200, body: old }) }));
+  const calls = show(routes([renewed], { [withdrawnList]: () => ({ documents: [gone], total: 1 }), [restoreUrl]: () => ({ status: 200, body: old }) }));
   await screen.findByText('Póliza 2024');
   await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
   expect(await screen.findByText('Póliza 2022')).toBeInTheDocument();
@@ -260,7 +316,7 @@ test('withdrawnFilterListsOnlyWithdrawnAndRestores', async () => {
 
 test('restoreConflictShowsTheServerMessage', async () => {
   const gone = { ...old, withdrawnAt: '2026-11-13T10:00:00Z' };
-  show(routes([], { [withdrawnList]: () => [gone], [restoreUrl]: () => ({ status: 409, body: { detail: 'Ya hay un documento activo igual' } }) }));
+  show(routes([], { [withdrawnList]: () => ({ documents: [gone], total: 1 }), [restoreUrl]: () => ({ status: 409, body: { detail: 'Ya hay un documento activo igual' } }) }));
   await userEvent.click(await screen.findByRole('button', { name: 'Retirados' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Recuperar Póliza 2022' }));
   expect(await screen.findByText('Ya hay un documento activo igual')).toBeInTheDocument();
@@ -282,9 +338,136 @@ test('detailOffersTheOriginalDownload', async () => {
 
 test('withdrawnViewHasNoSelectionNorCaseLink', async () => {
   const gone = { ...old, caseDocument: true, withdrawnAt: '2026-11-13T10:00:00Z' };
-  show(routes([], { [withdrawnList]: () => [gone] }));
+  show(routes([], { [withdrawnList]: () => ({ documents: [gone], total: 1 }) }));
   await userEvent.click(await screen.findByRole('button', { name: 'Retirados' }));
   await screen.findByText('Póliza 2022');
   expect(screen.queryByRole('checkbox')).toBeNull();
   expect(screen.queryByRole('link', { name: /Ver expediente/ })).toBeNull();
+});
+
+const pageOf = (n: number, total = 60) => ({ documents: Array.from({ length: Math.min(n, 3) }, (_, i) => ({ ...old, id: `x${i}`, title: `Doc ${i}` })), total });
+const search = (value: string) => fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar documentos' }), { target: { value } });
+
+test('urlCarriesQueryOffsetAndLimit', async () => {
+  const next = `${list.replace('offset=0', 'offset=25')}`;
+  const calls = show(routes([old], { [list]: () => pageOf(25), [next]: () => pageOf(25), [`${list}&q=poli`]: () => pageOf(1, 1) }));
+  await screen.findByText('Doc 0');
+  expect(screen.getByRole('navigation', { name: 'Páginas de documentos' })).toHaveTextContent('Página 1 de 3');
+  await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  await waitFor(() => expect(calls.some((c) => c.key === next)).toBe(true));
+  search('poli');
+  await waitFor(() => expect(calls.some((c) => c.key === `${list}&q=poli`)).toBe(true));
+});
+
+test('changingPageSizeGoesBackToPageOne', async () => {
+  const p2 = list.replace('offset=0', 'offset=25');
+  const calls = show(routes([old], { [list]: () => pageOf(25), [p2]: () => pageOf(25), [list.replace('limit=25', 'limit=50')]: () => pageOf(50) }));
+  await screen.findByText('Doc 0');
+  await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  await screen.findByText('Página 2 de 3');
+  await userEvent.selectOptions(screen.getByLabelText('Por página'), '50');
+  await waitFor(() => expect(calls.at(-1)?.key).toBe(list.replace('limit=25', 'limit=50')));
+});
+
+test('selectionClearsOnPageChange', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [list.replace('offset=0', 'offset=25')]: () => pageOf(25) }));
+  await userEvent.click(await screen.findByRole('checkbox', { name: 'Seleccionar Doc 0' }));
+  expect(screen.getByText('1 seleccionado')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  await waitFor(() => expect(screen.queryByText('1 seleccionado')).toBeNull());
+});
+
+test('withdrawnToggleGoesBackToPageOne', async () => {
+  const calls = show(routes([old], { [list]: () => pageOf(25), [list.replace('offset=0', 'offset=25')]: () => pageOf(25), [withdrawnList]: () => pageOf(1, 1) }));
+  await screen.findByText('Doc 0');
+  await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  await screen.findByText('Página 2 de 3');
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  await waitFor(() => expect(calls.at(-1)?.key).toBe(withdrawnList));
+});
+
+const next25 = list.replace('offset=0', 'offset=25');
+const selectFirst = async () => {
+  await userEvent.click(await screen.findByRole('checkbox', { name: 'Seleccionar Doc 0' }));
+  expect(screen.getByText('1 seleccionado')).toBeInTheDocument();
+};
+const gone = () => waitFor(() => expect(screen.queryByText('1 seleccionado')).toBeNull());
+
+test('selectionClearsOnSearch', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [`${list}&q=poli`]: () => pageOf(1, 1) }));
+  await selectFirst();
+  search('poli');
+  await gone();
+});
+
+test('selectionClearsOnPageSizeChange', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [list.replace('limit=25', 'limit=50')]: () => pageOf(50) }));
+  await selectFirst();
+  await userEvent.selectOptions(screen.getByLabelText('Por página'), '50');
+  await gone();
+});
+
+test('selectionClearsOnWithdrawnToggle', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [withdrawnList]: () => pageOf(1, 1) }));
+  await selectFirst();
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  await gone();
+});
+
+test('selectionKeepsOnlyRowsStillInViewAfterReload', async () => {
+  let rows = pageOf(25);
+  show(routes([old], { [list]: () => rows }));
+  await selectFirst();
+  rows = { documents: [{ ...old, id: 'z9', title: 'Otro' }], total: 1 };
+  await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+  await screen.findByText('Otro');
+  await gone();
+});
+
+test('togglingWithdrawnTwiceReturnsToPageOne', async () => {
+  const calls = show(routes([old], { [list]: () => pageOf(25), [next25]: () => pageOf(25), [withdrawnList]: () => pageOf(1, 1) }));
+  await screen.findByText('Doc 0');
+  await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  await screen.findByText('Página 2 de 3');
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  await waitFor(() => expect(calls.at(-1)?.key).toBe(withdrawnList));
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  await screen.findByText('Página 1 de 3');
+  expect(calls.at(-1)?.key).toBe(list);
+});
+
+test('failedLoadShowsOnlyTheErrorNotTheEmptyCompanyState', async () => {
+  show(routes([old], { [list]: () => ({ status: 500, body: { detail: 'Se cayó' } }) }));
+  expect(await screen.findByText('Se cayó')).toBeInTheDocument();
+  expect(screen.queryByText('Aún no hay documentos')).toBeNull();
+});
+
+test('searchWithoutResultsDoesNotShowTheEmptyCompanyState', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [`${list}&q=zzzz`]: () => ({ documents: [], total: 0 }) }));
+  await screen.findByText('Doc 0');
+  search('zzzz');
+  expect(await screen.findByText('Ningún resultado para «zzzz»')).toBeInTheDocument();
+  expect(screen.queryByText('Aún no hay documentos')).toBeNull();
+});
+
+test('laterFailureDoesNotLeaveOldRowsLookingCurrent', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [`${list}&q=zzzz`]: () => ({ status: 500, body: { detail: 'Se cayó' } }) }));
+  await screen.findByText('Doc 0');
+  search('zzzz');
+  expect(await screen.findByText('Se cayó')).toBeInTheDocument();
+  expect(screen.queryByText('Doc 0')).toBeNull();
+});
+
+test('clearingAZeroResultSearchNeverFlashesTheEmptyState', async () => {
+  show(routes([old], { 'GET /v1/admin/companies/c1/documents?offset=0&limit=25&q=zzz': () => ({ documents: [], total: 0 }) }));
+  await screen.findByText('Póliza 2022');
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar documentos' }), { target: { value: 'zzz' } });
+  await screen.findByText(/Ningún resultado/);
+  let flashed = false;
+  const watch = new MutationObserver(() => { flashed ||= !!screen.queryByText('Aún no hay documentos'); });
+  watch.observe(document.body, { childList: true, subtree: true });
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar documentos' }), { target: { value: '' } });
+  await screen.findByText('Póliza 2022');
+  watch.disconnect();
+  expect(flashed).toBe(false);
 });

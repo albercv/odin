@@ -26,7 +26,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -50,6 +49,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 public class AdminDocumentController {
+
+    private static final int MAX_QUERY = 100;
 
     private final UploadDocument upload;
     private final ListCompanyDocuments list;
@@ -83,12 +84,19 @@ public class AdminDocumentController {
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/documents")
-    public List<Responses.DocumentView> list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+    public Responses.DocumentPage list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "100") int limit, @Parameter(description = "Si es true, devuelve solo los documentos retirados (con su paginación)")
-            @RequestParam(defaultValue = "false") boolean withdrawn) {
-        return list.execute(actor, new CompanyId(companyId), offset, limit, withdrawn).stream()
-                .map(Responses.DocumentView::from).toList();
+            @RequestParam(defaultValue = "100") int limit,
+            @Parameter(description = "Si es true, devuelve solo los documentos retirados (con su paginación)")
+            @RequestParam(defaultValue = "false") boolean withdrawn,
+            @Parameter(description = "Texto del título, sin mayúsculas ni acentos (hasta 100 caracteres)")
+            @RequestParam(required = false) String q) {
+        if (q != null && q.strip().length() > MAX_QUERY) {
+            throw new ValidationException("La búsqueda admite hasta " + MAX_QUERY + " caracteres");
+        }
+        var page = list.page(actor, new CompanyId(companyId), offset, limit, withdrawn, Optional.ofNullable(q));
+        return new Responses.DocumentPage(page.documents().stream().map(Responses.DocumentView::from).toList(),
+                page.total());
     }
 
     @PostMapping(path = "/v1/admin/companies/{companyId}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

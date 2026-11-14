@@ -2,8 +2,10 @@ import { Fragment, useRef, useState } from 'react';
 import { api, type S } from '../api/client';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { FormDialog } from '../ui/FormDialog';
+import { Pagination } from '../ui/Pagination';
 import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
+import { SearchBox } from '../ui/SearchBox';
 import { StatusPill } from '../ui/StatusPill';
 import { Table, Td, Tr, tableStyles } from '../ui/Table';
 import { useToast } from '../ui/Toast';
@@ -14,6 +16,7 @@ import { MemberForm } from './MemberForm';
 import { Notice } from './Notice';
 import { confirmDeactivatePerson, confirmDeletePerson } from './personConfirmations';
 import { useAction, useLoad } from './useLoad';
+import { includesText, usePagedList } from './usePagedList';
 import styles from './Members.module.css';
 
 type Member = S['MemberView'];
@@ -139,15 +142,17 @@ function MemberRow(props: RowProps) {
   );
 }
 
+const NONE: Member[] = [];
+const byNameOrEmail = (m: Member, q: string) => includesText(`${m.displayName} ${m.email ?? ''}`, q);
+
 type Props = {
   companyId: string; me: S['AdminMe']; addOpen?: boolean; onAddClose?: () => void; onProjectsChanged?: () => void;
 };
 
 export function Members({ companyId, me, addOpen = false, onAddClose = () => undefined, onProjectsChanged = () => undefined }: Props) {
   const list = useLoad(() => api.members(companyId), [companyId]);
-  const region = useRef<HTMLElement>(null);
-  const toast = useToast();
-  const isGroup = me.role === 'GROUP_ADMIN';
+  const paged = usePagedList(list.data ?? NONE, byNameOrEmail, 10);
+  const [region, toast, isGroup] = [useRef<HTMLElement>(null), useToast(), me.role === 'GROUP_ADMIN'];
   const removed = (announcement: string) => {
     list.reload();
     onProjectsChanged();
@@ -157,14 +162,16 @@ export function Members({ companyId, me, addOpen = false, onAddClose = () => und
   return (
     <Section title="Personas" description="Cada persona usa Odín desde su IA con su clave personal.">
       <Notice message={list.error} />
+      <SearchBox label="Buscar personas" onSearch={paged.setQuery} resultCount={paged.total} />
       <section ref={region} tabIndex={-1} aria-label="Lista de personas" className={styles.region}>
         <Table columns={['Código', 'Persona', 'Papel', 'Acceso']}>
-          {list.data?.map((u) => (
+          {paged.visible.map((u) => (
             <MemberRow key={u.userId} companyId={companyId} u={u} isGroup={isGroup} meId={me.userId} onChanged={list.reload}
               onRemoved={removed} onProjectsChanged={onProjectsChanged} />
           ))}
         </Table>
       </section>
+      <Pagination label="Páginas de personas" page={paged.page} pageCount={paged.pageCount} onPage={paged.setPage} />
       <FormDialog title="Añadir persona" open={addOpen} onClose={onAddClose}>
         <MemberForm companyId={companyId} isGroupAdmin={isGroup} onDone={() => { onAddClose(); list.reload(); onProjectsChanged(); }} />
       </FormDialog>

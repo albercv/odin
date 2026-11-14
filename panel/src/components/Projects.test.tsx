@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
 import { Projects } from './Projects';
@@ -81,4 +81,49 @@ test('failedAddKeepsTheTypedName', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Crear proyecto' }));
   expect(await screen.findByRole('alert')).toBeInTheDocument();
   expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Obra');
+});
+
+const many = Array.from({ length: 23 }, (_, i) => ({ id: `m${i}`, companyId: 'c1', name: i < 3 ? `Solar ${i}` : `Obra ${i}`, restricted: true, memberCount: 0 }));
+const search = (q: string) => fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar proyectos' }), { target: { value: q } });
+const bodyRows = () => screen.getAllByRole('row').slice(1);
+
+test('showsTenPerPageWithPagination', async () => {
+  show({ [list]: () => many });
+  await screen.findByText('Obra 3');
+  expect(bodyRows()).toHaveLength(10);
+  const nav = screen.getByRole('navigation', { name: 'Páginas de proyectos' });
+  expect(nav).toHaveTextContent('Página 1 de 3');
+  await userEvent.click(within(nav).getByRole('button', { name: 'Siguiente' }));
+  expect(nav).toHaveTextContent('Página 2 de 3');
+});
+
+test('searchFiltersAndGoesBackToPageOne', async () => {
+  show({ [list]: () => many });
+  await screen.findByText('Obra 3');
+  await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  search('sol');
+  await waitFor(() => expect(bodyRows()).toHaveLength(3));
+  expect(screen.getByText('3 resultados')).toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'Páginas de proyectos' })).not.toBeInTheDocument();
+});
+
+test('shortQueryDoesNotFilter', async () => {
+  show({ [list]: () => many });
+  await screen.findByText('Obra 3');
+  search('so');
+  await new Promise((r) => setTimeout(r, 400));
+  expect(bodyRows()).toHaveLength(10);
+});
+
+test('creatingKeepsTheSearch', async () => {
+  const calls = show({ [list]: () => many, 'POST /v1/admin/companies/c1/projects': () => ({ ...obra, id: 'new', name: 'Solana' }) });
+  await screen.findByText('Obra 3');
+  search('sol');
+  await waitFor(() => expect(bodyRows()).toHaveLength(3));
+  await userEvent.click(screen.getByRole('button', { name: 'Nuevo proyecto' }));
+  await userEvent.type(screen.getByLabelText('Nombre del proyecto'), 'Solana');
+  await userEvent.click(screen.getByRole('button', { name: 'Crear proyecto' }));
+  await waitFor(() => expect(calls.filter((c) => c.key === list)).toHaveLength(2));
+  expect(screen.getByRole('searchbox', { name: 'Buscar proyectos' })).toHaveValue('sol');
+  expect(bodyRows()).toHaveLength(3);
 });

@@ -500,7 +500,7 @@ async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<vo
   const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
   const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
   await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES'] });
-  const documents = await apiJson<{ id: string; title: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/documents`);
+  const { documents } = await apiJson<{ documents: { id: string; title: string }[] }>(page, 'get', `/v1/admin/companies/${companyId}/documents?limit=500`);
   const caseId = documents.find((d) => d.title === CASE_FILES[1])?.id ?? '';
   const members = await apiJson<{ userId: string; displayName: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/members`);
   const worker = members.find((m) => m.displayName === ASKERS[0])?.userId ?? '';
