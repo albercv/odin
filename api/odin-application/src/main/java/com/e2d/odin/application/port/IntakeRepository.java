@@ -19,6 +19,9 @@ public interface IntakeRepository {
     /** El lote abierto o en lectura de la empresa, si lo hay. */
     Optional<IntakeBatch> findActive(CompanyId companyId);
 
+    /** Los lotes en lectura de todas las empresas: es lo que recorre la clasificación. */
+    List<IntakeBatch> findReading();
+
     /** Suma uno al recuento de «ya estaban» o de «descartados en este lote», sin pisar a otra subida en marcha. */
     void countFile(CompanyId companyId, IntakeBatchId id, boolean discarded);
 
@@ -27,6 +30,12 @@ public interface IntakeRepository {
     List<ProjectCandidate> candidates(CompanyId companyId, IntakeBatchId batchId);
 
     void save(IntakeProposal proposal);
+
+    /**
+     * Añade propuestas nuevas, todas o ninguna. Una propuesta igual a otra ya guardada (mismo lote, documento, tipo y
+     * destinos) se ignora, así que dos pasadas a la vez no duplican. Decidir una propuesta existente sigue siendo save.
+     */
+    void addProposals(List<IntakeProposal> proposals);
 
     List<IntakeProposal> proposals(CompanyId companyId, IntakeBatchId batchId);
 }

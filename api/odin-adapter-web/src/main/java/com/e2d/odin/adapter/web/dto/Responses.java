@@ -458,6 +458,8 @@ public final class Responses {
                         "No hay lector OCR: los escaneos esperarán hasta que lo haya");
                 case NO_LOCAL_MODEL -> new IntakeWarningView(warning.name(),
                         "No hay modelo local: solo se propondrá con las reglas");
+                case PROJECT_LIST_NOT_CONFIRMED -> new IntakeWarningView(warning.name(),
+                        "Falta confirmar la lista de proyectos");
             };
         }
     }

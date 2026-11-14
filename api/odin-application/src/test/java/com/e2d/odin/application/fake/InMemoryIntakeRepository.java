@@ -49,6 +49,11 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public synchronized List<IntakeBatch> findReading() {
+        return batches.values().stream().filter(b -> b.state() == IntakeState.READING).toList();
+    }
+
+    @Override
     public synchronized void save(ProjectCandidate candidate) {
         candidates.put(candidate.batchId().value() + "/" + candidate.name(), candidate);
     }
@@ -62,6 +67,18 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     @Override
     public synchronized void save(IntakeProposal proposal) {
         proposals.put(proposal.id(), proposal);
+    }
+
+    @Override
+    public synchronized void addProposals(List<IntakeProposal> added) {
+        added.forEach(p -> {
+            boolean same = proposals.values().stream().anyMatch(q -> q.batchId().equals(p.batchId())
+                    && q.documentId().equals(p.documentId()) && q.kind() == p.kind()
+                    && q.targetDocumentId().equals(p.targetDocumentId()) && q.targetProjectId().equals(p.targetProjectId()));
+            if (!same) {
+                proposals.put(p.id(), p);
+            }
+        });
     }
 
     @Override

@@ -107,6 +107,29 @@ class IntakeSecurityIT extends AbstractPostgresIT {
         assertThat(docs.intakeTexts(company, new IntakeBatchId(UUID.randomUUID()))).isEmpty();
     }
 
+    /** D1 y D-014: los documentos de la clasificación salen solo de su empresa y lote, y con el lector que los leyó. */
+    @Test
+    void classificationReadsOnlyReadyPendingDocumentsOfItsOwnBatchAndCompany() {
+        docs.replacePages(pending.id(), List.of(new DocumentPage(pending.id(), 1, "uno", "unlimited-ocr-2", "1"),
+                new DocumentPage(pending.id(), 2, "dos", "unlimited-ocr-2", "1")));
+        Document unread = newDocument(company, user, "Sin leer", DocumentStatus.PENDING_READER);
+        owner("UPDATE document SET intake_pending = true, intake_batch_id = '" + batch.id().value() + "' WHERE id = '"
+                + unread.id().value() + "'");
+        CompanyId other = newCompany();
+
+        assertThat(docs.intakeReadyDocuments(company, batch.id())).singleElement().satisfies(d -> {
+            assertThat(d.id()).isEqualTo(pending.id());
+            assertThat(d.text()).isEqualTo("uno\ndos");
+            assertThat(d.scan()).isTrue();
+        });
+        assertThat(docs.intakeReadyDocuments(other, batch.id())).isEmpty();
+        assertThat(docs.readerQueueBusy(company)).isTrue();
+        assertThat(docs.readerQueueBusy(other)).isFalse();
+        assertThat(intake.findReading()).isEmpty();
+        intake.save(batch.startReading());
+        assertThat(intake.findReading()).extracting(IntakeBatch::id).containsExactly(batch.id());
+    }
+
     @Test
     void sqlFilterHidesPendingAndScansEvenWithoutRls() {
         Document digital = newDocument(company, user, "Digital", DocumentStatus.READY);

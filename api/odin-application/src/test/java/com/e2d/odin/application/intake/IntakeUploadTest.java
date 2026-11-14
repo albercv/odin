@@ -201,6 +201,22 @@ class IntakeUploadTest {
     }
 
     @Test
+    void aReadingBatchWithoutAConfirmedListWarnsAboutIt() {
+        GetIntakeBatch complete = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
+                new IntakeSettings(true));
+        assertThat(complete.execute(admin, company, batch.id()).warnings()).isEmpty();
+        intake.save(batch.startReading());
+
+        assertThat(complete.execute(admin, company, batch.id()).warnings())
+                .containsExactly(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
+
+        intake.save(new com.e2d.odin.domain.intake.ProjectCandidate(company, batch.id(), "Calle Olmo 24",
+                com.e2d.odin.domain.intake.CandidateOrigin.IMPORTED, 0, com.e2d.odin.domain.intake.DecisionState.CONFIRMED,
+                Optional.of(new com.e2d.odin.domain.shared.ProjectId(java.util.UUID.randomUUID()))));
+        assertThat(complete.execute(admin, company, batch.id()).warnings()).isEmpty();
+    }
+
+    @Test
     void aSecondActiveBatchIsAConflict() {
         assertThatThrownBy(() -> start.execute(admin, company, IntakeChannel.COMMAND))
                 .isInstanceOf(ConflictException.class);

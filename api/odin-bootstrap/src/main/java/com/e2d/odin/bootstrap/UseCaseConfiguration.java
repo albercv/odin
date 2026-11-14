@@ -26,7 +26,11 @@ import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.ClassifyIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.port.ProjectProposer;
+import java.util.Optional;
+import org.springframework.beans.factory.ObjectProvider;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.GetIntakeBatch;
 import com.e2d.odin.application.intake.ImportProjectList;
@@ -486,6 +490,13 @@ public class UseCaseConfiguration {
     @Bean
     AddFileToIntake addFileToIntake(IntakeRepository intake, UploadDocument upload) {
         return new AddFileToIntake(intake, upload);
+    }
+
+    /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
+    @Bean
+    ClassifyIntake classifyIntake(IntakeRepository intake, DocumentRepository documents,
+            ObjectProvider<ProjectProposer> proposer, IdGenerator ids) {
+        return new ClassifyIntake(intake, documents, Optional.ofNullable(proposer.getIfAvailable()), ids);
     }
 
     @Bean
