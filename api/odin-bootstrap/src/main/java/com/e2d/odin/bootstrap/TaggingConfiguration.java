@@ -1,6 +1,8 @@
 package com.e2d.odin.bootstrap;
 
+import com.e2d.odin.adapter.taggerollama.OllamaProjectProposer;
 import com.e2d.odin.adapter.taggerollama.OllamaTopicTagger;
+import com.e2d.odin.application.port.ProjectProposer;
 import com.e2d.odin.application.port.TaggingRepository;
 import com.e2d.odin.application.port.TopicTagger;
 import com.e2d.odin.application.shared.ProcessingSettings;
@@ -29,6 +31,11 @@ public class TaggingConfiguration {
             @Value("${odin.tagger.num-gpu:}") String numGpu, @Value("${odin.tagger.num-thread:}") String numThread) {
         return new OllamaTopicTagger(url, model, timeout, optionalInt(numGpu), optionalInt(numThread),
                 HttpClient.newHttpClient());
+    }
+
+    @Bean
+    ProjectProposer projectProposer(TopicTagger tagger) {
+        return new OllamaProjectProposer(tagger);
     }
 
     @Bean

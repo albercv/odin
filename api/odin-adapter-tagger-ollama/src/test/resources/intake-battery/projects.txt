@@ -1,0 +1,61 @@
+Avenida del Puerto 3
+Calle Abeto 16
+Calle Abeto 39
+Calle Castaño 16
+Calle Castaño 27
+Calle Castaño 38
+Calle Castaño 42
+Calle Fresno 9
+Calle Haya 2
+Calle Haya 2 (bloque 2)
+Calle Haya 57
+Calle Olmo 10
+Calle Olmo 11
+Calle Olmo 14
+Calle Olmo 23
+Calle Olmo 24
+Calle Olmo 24 (bloque 2)
+Calle Olmo 25
+Calle Olmo 32
+Calle Olmo 4
+Calle Olmo 40
+Calle Olmo 47
+Calle Olmo 51
+Calle Olmo 52
+Calle Olmo 52 (bloque 2)
+Calle Olmo 56
+Calle Olmo 59
+Calle Pino 26
+Calle Pino 47
+Calle Roble 46
+Calle Sauce 43
+Calle Sauce 57
+Procedimientos generales
+Residencial Las Acacias
+Residencial Las Acacias 2
+Residencial Las Adelfas
+Residencial Las Adelfas 2
+Residencial Las Encinas
+Residencial Las Encinas 2
+Residencial Las Moreras
+Residencial Las Palmeras
+Residencial Las Palmeras 2
+Residencial Los Almendros
+Residencial Los Cerezos
+Residencial Los Cerezos 2
+Residencial Los Jazmines
+Residencial Los Jazmines 2
+Residencial Los Limoneros
+Residencial Los Limoneros 2
+Residencial Los Naranjos
+Residencial Los Naranjos 2
+Residencial Los Olivos
+Residencial Los Olivos 2
+Residencial Los Pinos
+Residencial Los Pinos 2
+Residencial Los Robles
+Residencial Los Robles 2
+Residencial Los Sauces
+Residencial Los Sauces 2
+Residencial Los Tilos
+Residencial Los Tilos 2
