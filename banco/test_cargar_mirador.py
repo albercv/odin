@@ -22,12 +22,15 @@ PROYECTO = "Mirador de prueba"
 class FakeOdin:
     """API falsa: responde lo que pide la carga y anota cada llamada (método, ruta, cabeceras, cuerpo)."""
 
-    def __init__(self, proyectos=(), sin_t01=False, estados=None):
+    def __init__(self, proyectos=(), sin_t01=False, estados=None, case_api=True, file_error=None, unmarked=False):
         self.llamadas = []
         self.proyectos = list(proyectos)
         self.sin_t01 = sin_t01
         self.estados = {k: list(v) for k, v in (estados or {}).items()}  # título -> estados sucesivos
-        self.documentos = {}  # id -> título
+        self.case_api = case_api  # False: la pila es más antigua y no tiene la API de expedientes (404)
+        self.file_error = file_error  # código de error distinto de 404 para la API de expedientes
+        self.unmarked = unmarked  # True: los documentos de caso no vienen marcados como caso
+        self.documentos = {}  # id -> {"title", "case"}
         self.n = 0  # ids de documento
         self.tarjetas = 0  # ids de ficha, en su propia cuenta
 
@@ -58,6 +61,12 @@ class FakeOdin:
             return 201, {}, json.dumps({"id": f"k-{self.tarjetas}", "status": "SAVED", "message": "ok"})
         if re.fullmatch(r"/v1/admin/cards/k-\d+/review", ruta):
             return 200, {}, "{}"
+        if (metodo, ruta) == ("POST", "/v1/admin/companies/c1/documents/case-marks"):
+            return 200, {}, json.dumps({"updated": 1})
+        if re.fullmatch(r"/v1/admin/documents/d-\d+", ruta):
+            return self._documento(ruta.rsplit("/", 1)[1])
+        if re.fullmatch(r"/v1/admin/companies/c1/cases/d-\d+/file/documents", ruta):
+            return self._archivo(cuerpo)
         raise AssertionError(f"ruta no prevista: {metodo} {ruta}")
 
     def _proyectos(self, metodo, cuerpo):
@@ -70,14 +79,25 @@ class FakeOdin:
         miembros = [{"email": "t02@medicion.invalid", "userId": "u-t02"}]
         return miembros if self.sin_t01 else [{"email": "t01@medicion.invalid", "userId": "u-t01"}, *miembros]
 
+    def _documento(self, did):
+        caso = self.documentos[did]["case"] and not self.unmarked
+        return 200, {}, json.dumps({"id": did, "status": "READY", "caseDocument": caso})
+
+    def _archivo(self, cuerpo):
+        if not self.case_api:
+            return 404, {}, "{}"
+        if self.file_error:
+            return self.file_error, {}, "{}"
+        return 200, {}, json.dumps({"added": len(json.loads(cuerpo)["documentIds"])})
+
     def _sube(self, query, cuerpo):
         self.n += 1
         did = f"d-{self.n}"
-        self.documentos[did] = query["title"][0]
+        self.documentos[did] = {"title": query["title"][0], "case": query["caseDocument"][0] == "true"}
         return 201, {}, json.dumps({"document": {"id": did, "status": "PROCESSING"}, "duplicate": False})
 
     def _lista(self):
-        return [{"id": did, "title": titulo, "status": self._estado(titulo)} for did, titulo in self.documentos.items()]
+        return [{"id": did, "title": d["title"], "status": self._estado(d["title"])} for did, d in self.documentos.items()]
 
     def _estado(self, titulo):
         cola = self.estados.get(titulo)
@@ -89,7 +109,7 @@ class FakeOdin:
         return [c for c in self.llamadas if c[0] == metodo and re.fullmatch(ruta_regex, c[1])]
 
     def id_de(self, titulo):
-        return next(did for did, t in self.documentos.items() if t == titulo)
+        return next(did for did, d in self.documentos.items() if d["title"] == titulo)
 
 
 class Clock:
@@ -189,6 +209,42 @@ class CargarMiradorTest(unittest.TestCase):
         self.load(api)
         titulos = [c[4]["title"][0] for c in api.llamadas_a("POST", r"/v1/admin/companies/c1/documents")]
         self.assertIn("c1.txt", titulos)
+
+    def test_attaches_expediente_documents_to_their_case(self):
+        api = FakeOdin()
+        self.load(api)
+        asignados = api.llamadas_a("POST", r"/v1/admin/companies/c1/cases/d-\d+/file/documents")
+        self.assertEqual(len(asignados), 1)
+        self.assertEqual(asignados[0][1], f"/v1/admin/companies/c1/cases/{api.id_de('Caso viejo')}/file/documents")
+        self.assertEqual(json.loads(asignados[0][3]), {"documentIds": [api.id_de("c1.txt")]})
+        self.assertEqual(api.llamadas_a("POST", r"/v1/admin/companies/c1/documents/case-marks"), [])
+
+    def test_case_not_flagged_as_case_is_marked_first(self):
+        api = FakeOdin(unmarked=True)
+        self.load(api)
+        marcas = api.llamadas_a("POST", r"/v1/admin/companies/c1/documents/case-marks")
+        self.assertEqual(len(marcas), 1)
+        self.assertEqual(json.loads(marcas[0][3]), {"documentIds": [api.id_de("Caso viejo")], "caseDocument": True})
+
+    def test_missing_case_file_api_warns_once_and_loads_the_rest(self):
+        api = FakeOdin(case_api=False)
+        result = self.load(api)
+        avisos = [line for line in result.lines if "API de expedientes" in line]
+        self.assertEqual(avisos, ["la pila no tiene la API de expedientes: los documentos quedan en el proyecto sin asignar"])
+        self.assertEqual(len(api.llamadas_a("POST", r"/v1/admin/companies/c1/cases/d-\d+/file/documents")), 1)
+        self.assertEqual(len(api.llamadas_a("POST", r"/v1/cards")), 4)
+        self.assertIn(api.id_de("c1.txt"), self.stack_file()["documentos"])
+
+    def test_other_case_file_errors_fail_the_load(self):
+        api = FakeOdin(file_error=500)
+        with self.assertRaisesRegex(LoadError, "HTTP 500"):
+            self.load(api)
+
+    def test_case_still_failing_is_not_attached(self):
+        api = FakeOdin(estados={"Caso viejo": ["FAILED"]})
+        result = self.load(api)
+        self.assertEqual(api.llamadas_a("POST", r"/v1/admin/companies/c1/cases/d-\d+/file/documents"), [])
+        self.assertTrue(any("no está READY" in line for line in result.lines))
 
     def test_supersedes_old_document_with_its_replacement(self):
         api = FakeOdin()

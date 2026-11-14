@@ -39,6 +39,13 @@ class LoadError(Exception):
     """La carga de Mirador no se puede hacer: falta algo, ya está cargada o los datos no cuadran. Nada se cambia antes."""
 
 
+class NotFoundError(LoadError):
+    """La API responde 404: la pila no tiene esa operación (p. ej. una versión sin expedientes)."""
+
+
+CASE_FILE_MISSING = "la pila no tiene la API de expedientes: los documentos quedan en el proyecto sin asignar"
+
+
 class _NoRedirects(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         return None
@@ -158,7 +165,8 @@ class Api:
             data = None
         status, _, text = self.http(method, self.base + path, headers, data)
         if not 200 <= status < 300:
-            raise LoadError(f"HTTP {status} en {method} {path}: {text[:300]}")
+            error_class = NotFoundError if status == 404 else LoadError
+            raise error_class(f"HTTP {status} en {method} {path}: {text[:300]}")
         return json.loads(text) if text else None
 
 
@@ -223,6 +231,29 @@ def wait_reader(api, company_id, ids, clock=time.time, sleep=time.sleep, limit=L
         sleep(INTERVAL_S)
 
 
+def mark_case(api, company_id, case_id):
+    if not api.call("GET", f"/v1/admin/documents/{case_id}").get("caseDocument"):
+        api.call("POST", f"/v1/admin/companies/{company_id}/documents/case-marks", {"documentIds": [case_id], "caseDocument": True})
+
+
+def attach_cases(api, company_id, ids, cases, statuses):
+    """Cada expediente: su caso marcado como caso y sus documentos y compartidos asignados a él. Devuelve avisos.
+    Sin la API de expedientes (404) avisa una sola vez y no asigna nada más."""
+    notes = []
+    for case in cases:
+        case_id = ids[case["caso"]]
+        if statuses.get(case_id) != "READY":
+            notes.append(f"el caso {case['caso']} no está READY: sus documentos no se asignan")
+            continue
+        mark_case(api, company_id, case_id)
+        doc_ids = [ids[p] for p in case["documentos"] + case["compartidos"]]
+        try:
+            api.call("POST", f"/v1/admin/companies/{company_id}/cases/{case_id}/file/documents", {"documentIds": doc_ids})
+        except NotFoundError:
+            return notes + [CASE_FILE_MISSING]
+    return notes
+
+
 def supersede(api, ids, supersessions):
     for s in supersessions:
         api.call("PUT", f"/v1/admin/documents/{ids[s['viejo']]}/superseded-by", {"replacementId": ids[s["nuevo"]]})
@@ -270,12 +301,12 @@ def annotate_stack(state_dir, documents, cards):
     write_atomic(path, raw)
 
 
-def report(project_name, ids, cards, statuses):
+def report(project_name, ids, cards, statuses, notes):
     failed = sorted(path for path, doc_id in ids.items() if statuses.get(doc_id) == "FAILED")
     counts = {s: sum(1 for v in statuses.values() if v == s) for s in sorted(set(statuses.values()))}
     lines = [f"Proyecto «{project_name}» creado; lo ve {ACTOR} y los administradores.",
              f"Documentos subidos: {len(ids)} ({', '.join(f'{s} {n}' for s, n in counts.items())}).",
-             f"Fichas creadas: {len(cards)}."]
+             f"Fichas creadas: {len(cards)}.", *notes]
     return Result(lines, failed)
 
 
@@ -292,10 +323,11 @@ def load(state_dir, folder, http, clock=time.time, sleep=time.sleep, limit=LIMIT
     add_actor_member(api, company_id, project_id)
     ids = upload_documents(api, company_id, project_id, manifest, cases, Path(folder))
     statuses = wait_reader(api, company_id, set(ids.values()), clock, sleep, limit)
+    notes = attach_cases(api, company_id, ids, cases, statuses)
     supersede(api, ids, manifest.get("sustituciones", []))
     cards = create_cards(api, manifest["fichas"], project_id, stack["claves"][ACTOR])
     annotate_stack(state_dir, {doc_id: path for path, doc_id in ids.items()}, cards)
-    return report(project_name, ids, cards, statuses)
+    return report(project_name, ids, cards, statuses, notes)
 
 
 def main(argv=None):
