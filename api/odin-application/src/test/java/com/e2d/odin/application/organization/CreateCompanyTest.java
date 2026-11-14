@@ -33,6 +33,7 @@ class CreateCompanyTest {
         Company company = create.execute(Actors.groupAdmin(), "Talleres Demo", "TD");
 
         assertThat(company.capabilities()).isEqualTo(EnumSet.allOf(Capability.class));
+        assertThat(company.capabilities()).contains(Capability.UPLOAD_DOCUMENTS);
         assertThat(company.code()).isEqualTo("TD");
         assertThat(organizations.findCompany(company.id())).contains(company);
     }

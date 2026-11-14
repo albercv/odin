@@ -41,7 +41,7 @@ public class LinkIssuer {
         Instant now = clock.instant();
         boolean upload = kind == AccessLinkKind.UPLOAD;
         AccessLink link = new AccessLink(ids.newId(), kind, actor.requireCompany(), actor.userId(),
-                upload ? Optional.of(target) : Optional.empty(), upload ? Optional.empty() : Optional.of(target), now,
+                upload ? Optional.of(target) : Optional.empty(), Optional.empty(), upload ? Optional.empty() : Optional.of(target), now,
                 now.plus(settings.ttl()), Optional.empty(), 0);
         links.save(link, secrets.hash(token));
         return new IssuedLink(prefix + token + fragment, link.expiresAt());

@@ -75,7 +75,7 @@ class RevokeAccessKeyTest {
     private com.e2d.odin.domain.link.AccessLink link(UserId user) {
         return new com.e2d.odin.domain.link.AccessLink(UUID.randomUUID(), com.e2d.odin.domain.link.AccessLinkKind.UPLOAD,
                 company, user, Optional.of(new com.e2d.odin.domain.shared.DocumentId(UUID.randomUUID())),
-                Optional.empty(), clock.instant(), clock.instant().plusSeconds(900), Optional.empty(), 0);
+                Optional.empty(), Optional.empty(), clock.instant(), clock.instant().plusSeconds(900), Optional.empty(), 0);
     }
 
     @Test
