@@ -3,6 +3,7 @@ package com.e2d.odin.bootstrap;
 import com.e2d.odin.application.link.LinkSettings;
 import com.e2d.odin.application.shared.CaseFileSettings;
 import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.shared.IntakeSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
@@ -27,6 +28,11 @@ public class SettingsConfiguration {
     InstallationSettings installationSettings(@Value("${odin.setup-token:}") String setupToken,
             @Value("${odin.reader.url:}") String readerUrl) {
         return new InstallationSettings(setupToken, !readerUrl.isBlank());
+    }
+
+    @Bean
+    IntakeSettings intakeSettings(@Value("${odin.tagger.url:}") String taggerUrl) {
+        return new IntakeSettings(!taggerUrl.isBlank());
     }
 
     @Bean

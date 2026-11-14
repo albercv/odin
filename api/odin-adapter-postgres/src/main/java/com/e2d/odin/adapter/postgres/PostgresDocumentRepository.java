@@ -6,6 +6,8 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -20,6 +22,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -35,7 +38,8 @@ public class PostgresDocumentRepository implements DocumentRepository {
     static final String COLUMNS = """
             d.id, d.company_id, d.project_id, d.title, d.filename, d.format, d.sha256, d.status, d.failure_reason,
             d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
-            d.superseded_at, d.pages_without_text, d.case_document, d.withdrawn_at, d.withdrawn_by""";
+            d.superseded_at, d.pages_without_text, d.case_document, d.withdrawn_at, d.withdrawn_by,
+            d.intake_batch_id, d.intake_pending, d.intake_path, d.scan_of""";
     private final ScopedTransactions tx;
     /** Los carriles del lector y del etiquetado terminan también lo que se retiró a mitad de trabajo (sin WITH CHECK, la RLS lo impediría). */
     private final ScopedTransactions pipeline;
@@ -173,6 +177,39 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public Optional<Document> findBySha256ForIntake(CompanyId companyId, IntakeBatchId batchId, String sha256) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
+                .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
+                        + "AND (d.withdrawn_at IS NULL OR d.intake_batch_id = :batch) "
+                        + "ORDER BY d.withdrawn_at IS NOT NULL, d.seq LIMIT 1")
+                .param("company", companyId.value()).param("sha", sha256).param("batch", batchId.value())
+                .query((rs, n) -> document(rs)).optional());
+    }
+
+    @Override
+    public Set<String> existingSha256ForIntake(CompanyId companyId, IntakeBatchId batchId,
+            Collection<String> sha256s) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> Set.copyOf(jdbc.sql("""
+                SELECT DISTINCT d.sha256 FROM document d WHERE d.company_id = :company
+                AND d.sha256 = ANY (string_to_array(:shas, ',')) AND (d.withdrawn_at IS NULL OR d.intake_batch_id = :batch)""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .param("shas", String.join(",", sha256s)).query(String.class).list()));
+    }
+
+    @Override
+    public IntakeCounts intakeCounts(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT count(*) FILTER (WHERE withdrawn_at IS NULL) AS uploaded,
+                       count(*) FILTER (WHERE withdrawn_at IS NULL
+                           AND status IN ('RECEIVED', 'PROCESSING', 'PENDING_READER', 'READER_PROCESSING')) AS reading,
+                       count(*) FILTER (WHERE withdrawn_at IS NULL AND intake_pending) AS pending
+                FROM document WHERE company_id = :company AND intake_batch_id = :batch""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> new IntakeCounts(rs.getInt("uploaded"), rs.getInt("reading"),
+                        rs.getInt("pending"))).single());
+    }
+
+    @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS
@@ -264,9 +301,10 @@ public class PostgresDocumentRepository implements DocumentRepository {
         jdbc.sql("""
                 INSERT INTO document (id, company_id, project_id, title, filename, format, sha256, status,
                     failure_reason, paginated, uploaded_by, uploaded_at, processing_started_at, attempt_count,
-                    pages_without_text, case_document)
+                    pages_without_text, case_document, intake_batch_id, intake_pending, intake_path)
                 VALUES (:id, :company, :project, :title, :filename, :format, :sha, :status, :reason, :paginated,
-                    :uploader, :uploaded, :started, :attempts, :blankPages, :caseDocument)
+                    :uploader, :uploaded, :started, :attempts, :blankPages, :caseDocument, :intakeBatch,
+                    :intakePending, :intakePath)
                 ON CONFLICT (id) DO UPDATE SET project_id = :project, title = :title, filename = :filename,
                     format = :format, status = :status, failure_reason = :reason, paginated = :paginated,
                     processing_started_at = :started, attempt_count = :attempts,
@@ -279,7 +317,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 .param("uploaded", Sql.ts(d.uploadedAt())).param("started", Sql.ts(d.processingStartedAt()))
                 .param("attempts", d.attemptCount())
                 .param("blankPages", d.pagesWithoutText().toArray(Integer[]::new))
-                .param("caseDocument", d.caseDocument()).update();
+                .param("caseDocument", d.caseDocument())
+                .param("intakeBatch", d.intakeBatchId().map(IntakeBatchId::value).orElse(null))
+                .param("intakePending", d.intakePending()).param("intakePath", d.intakePath().orElse(null)).update();
     }
 
     private static DocumentEntry entry(ResultSet rs) throws SQLException {
@@ -297,6 +337,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 Sql.optionalInstant(rs, "superseded_at"),
                 List.of((Integer[]) rs.getArray("pages_without_text").getArray()), rs.getBoolean("case_document"),
                 Sql.optionalInstant(rs, "withdrawn_at"),
-                Optional.ofNullable(Sql.uuid(rs, "withdrawn_by")).map(UserId::new));
+                Optional.ofNullable(Sql.uuid(rs, "withdrawn_by")).map(UserId::new),
+                Optional.ofNullable(Sql.uuid(rs, "intake_batch_id")).map(IntakeBatchId::new),
+                rs.getBoolean("intake_pending"), Optional.ofNullable(rs.getString("intake_path")),
+                Optional.ofNullable(Sql.uuid(rs, "scan_of")).map(DocumentId::new));
     }
 }

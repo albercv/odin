@@ -51,6 +51,12 @@ public final class Requests {
             Integer page) {
     }
 
+    public record StartIntakeRequest(
+            @Schema(description = "Quién sube: el comando de la IA o el panel.", allowableValues = {"COMMAND", "PANEL"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            String channel) {
+    }
+
     public record CaseMarksRequest(
             @Schema(description = "De 1 a 500 documentos de la empresa.", requiredMode = Schema.RequiredMode.REQUIRED)
             List<UUID> documentIds,

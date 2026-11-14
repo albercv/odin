@@ -19,6 +19,9 @@ public interface IntakeRepository {
     /** El lote abierto o en lectura de la empresa, si lo hay. */
     Optional<IntakeBatch> findActive(CompanyId companyId);
 
+    /** Suma uno al recuento de «ya estaban» o de «descartados en este lote», sin pisar a otra subida en marcha. */
+    void countFile(CompanyId companyId, IntakeBatchId id, boolean discarded);
+
     void save(ProjectCandidate candidate);
 
     List<ProjectCandidate> candidates(CompanyId companyId, IntakeBatchId batchId);
