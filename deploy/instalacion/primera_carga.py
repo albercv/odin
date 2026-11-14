@@ -2,7 +2,7 @@
 """Primera carga: sube la carpeta del archivo de una empresa a Odín por la API (vía de la orden).
 La lanza el administrador de la empresa en el servidor de la oficina: make primera-carga CARPETA=/ruta [ARGS=--si].
 Pide su correo y su contraseña (getpass); la contraseña no se guarda ni se muestra. Nada sale del equipo.
-Variables: INSTALACION_ENV (por defecto deploy/.env) y ODIN_API_URL (por defecto el puerto de ODIN_API_PORT en ese fichero)."""
+Variables: INSTALACION_ENV (por defecto deploy/.env) y PRIMERA_CARGA_API_URL (por defecto el puerto de ODIN_API_PORT en ese fichero)."""
 import argparse
 import getpass
 import hashlib
@@ -157,10 +157,15 @@ def ejecutar(api, argv, libre=None, limite=LIMITE):
 def main():
     entorno = dp.leer_entorno(dp.PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
     try:
-        return ejecutar(dp.conectar(entorno), sys.argv[1:], limite=int(entorno.get("ODIN_UPLOAD_MAX_BYTES", LIMITE)))
+        api = dp.conectar(entorno, os.environ.get("PRIMERA_CARGA_API_URL"))
+        return ejecutar(api, sys.argv[1:], limite=int(entorno.get("ODIN_UPLOAD_MAX_BYTES", LIMITE)))
     except KeyboardInterrupt:
-        print("\nInterrumpida. Vuelve a lanzar la orden: sigue donde se quedó.", file=sys.stderr)
-        return 1
+        print("\nInterrumpida. Vuelve a lanzar la misma orden: sigue donde se quedó.", file=sys.stderr)
+    except (RuntimeError, OSError) as error:
+        print(f"Ha fallado algo y la carga se ha parado: {error}\n"
+              "Vuelve a lanzar la misma orden: sigue donde se quedó. Si se repite, avisa a quien instaló Odín.",
+              file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

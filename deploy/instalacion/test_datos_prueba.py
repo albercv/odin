@@ -3,6 +3,7 @@ import os
 import stat
 import tempfile
 import unittest
+from unittest import mock
 import urllib.parse
 from pathlib import Path
 
@@ -320,6 +321,20 @@ class ComunShTest(unittest.TestCase):
     def test_unEnsayoConSusPuertosCarga(self):
         r = self.cargar("odin-ensayo", 38080)
         self.assertEqual("cargado", r.stdout.strip(), r.stderr)
+
+
+class ConectarTest(unittest.TestCase):
+
+    def test_conectarIgnoraOdinApiUrlDelEntornoDelShell(self):
+        with mock.patch.dict(os.environ, {"ODIN_API_URL": "http://127.0.0.1:8080"}), \
+                mock.patch.object(dp.Api, "pedir"):
+            api = dp.conectar({"ODIN_API_PORT": "18080"})
+        self.assertEqual("http://127.0.0.1:18080", api.url)
+
+    def test_laGuardaSigueBloqueandoAunqueElShellTengaOdinApiUrl(self):
+        with mock.patch.dict(os.environ, {"ODIN_API_URL": "http://127.0.0.1:8080"}):
+            with self.assertRaises(SystemExit):
+                dp.proteger_propietario({"ODIN_API_PORT": "8080"}, "ensayo", escribe=True)
 
 
 if __name__ == "__main__":

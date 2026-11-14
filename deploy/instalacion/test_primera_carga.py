@@ -2,6 +2,7 @@ import contextlib
 import hashlib
 import io
 import json
+import os
 import re
 import tempfile
 import threading
@@ -67,6 +68,8 @@ class FalsoOdin(BaseHTTPRequestHandler):
             self.responder(200 if ok else 401, {"userId": "x"} if ok else {"detail": "no"}, {"Set-Cookie": "sid=abc; Path=/"})
         elif self.path == base:
             self.responder(201, {"id": LOTE, "state": "OPEN", "channel": "COMMAND"})
+        elif self.path == f"{base}/{LOTE}/files" and e.get("fallar_subida"):
+            self.responder(500, {"detail": "disco lleno"})
         elif self.path == f"{base}/{LOTE}/files":
             ruta = re.search(rb'name="path"\r\n\r\n(.*?)\r\n--', cuerpo, re.S).group(1).decode()
             e["subidos"].append(ruta)
@@ -225,6 +228,35 @@ class PrimeraCargaTest(unittest.TestCase):
         codigo, texto = self.lanzar(respuestas=("n",))
         self.assertIn("Hermanos Ruiz", texto)
         self.assertIn("Sin lector OCR", texto)
+
+    # errores de la API
+
+    def lanzar_main(self, *argumentos):
+        salida = io.StringIO()
+        entorno = {"PRIMERA_CARGA_API_URL": self.api.url}
+        with mock.patch.object(pc.dp, "leer_entorno", return_value={}), mock.patch.dict(os.environ, entorno), \
+                mock.patch("sys.argv", ["primera_carga.py", str(self.carpeta), *argumentos]), \
+                mock.patch("getpass.getpass", return_value=CLAVE), \
+                mock.patch("builtins.input", side_effect=["admin@ruiz.invalid", "s"]), \
+                contextlib.redirect_stdout(salida), contextlib.redirect_stderr(salida):
+            codigo = pc.main()
+        return codigo, salida.getvalue()
+
+    def test_siLaApiFallaAMitadDeLaSubidaDiceQueHacerSinTraza(self):
+        self.crear("uno.txt")
+        self.estado["fallar_subida"] = True
+        codigo, texto = self.lanzar_main()
+        self.assertEqual(1, codigo)
+        self.assertIn("Vuelve a lanzar la misma orden", texto)
+        self.assertIn("HTTP 500", texto)
+        self.assertNotIn("Traceback", texto)
+        self.assertNotIn(CLAVE, texto)
+
+    def test_laOrdenUsaPrimeraCargaApiUrlYNoOdinApiUrl(self):
+        self.crear("uno.txt")
+        with mock.patch.dict(os.environ, {"ODIN_API_URL": "http://127.0.0.1:1"}):
+            codigo, texto = self.lanzar_main()
+        self.assertEqual(0, codigo, texto)
 
 
 if __name__ == "__main__":

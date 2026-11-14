@@ -555,8 +555,9 @@ def elegir_seleccion():
     return (seleccionar_completo if modo else seleccionar)(manifiesto, claves)
 
 
-def conectar(entorno):
-    url = os.environ.get("ODIN_API_URL") or f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}"
+def conectar(entorno, url=None):
+    """url solo la pasa quien no escribe con la guarda de proteger_propietario (primera_carga.py)."""
+    url = url or f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}"
     api = Api(url, entorno.get("ODIN_PANEL_ORIGIN", ""))
     try:
         api.pedir("GET", "/v1/health")
