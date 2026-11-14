@@ -259,6 +259,33 @@ class MiradorArchiveTest(unittest.TestCase):
         with self.assertRaisesRegex(ArchivoError, re.escape("ruta repetida en los textos: ribera/_general/mirador.txt")):
             capas.merge([self.mirador, other], self.root / "fusion")
 
+    def test_textos_route_already_in_corpus_is_refused(self):
+        self.write_mirador({"1": "Texto"}, ruta="ribera/_general/otro.txt")
+        (self.mirador / "textos.json").write_text(json.dumps({"ribera/_general/doc.txt": {"1": "x"}}), encoding="utf-8")
+        with self.assertRaisesRegex(ArchivoError, re.escape("ruta repetida en el corpus y en los textos: ribera/_general/doc.txt")):
+            capas.merge([self.ficticio, self.mirador], self.root / "fusion")
+
+    def test_textos_route_already_in_expedientes_is_refused(self):
+        write_expedientes(self.ficticio, "ribera/_general/doc.txt", ["ribera/exp/c1.txt"])
+        self.write_mirador({"1": "Texto"}, ruta="ribera/exp/c1.txt")
+        with self.assertRaisesRegex(ArchivoError, re.escape("ruta repetida en los expedientes y en los textos: ribera/exp/c1.txt")):
+            capas.merge([self.ficticio, self.mirador], self.root / "fusion")
+
+    def test_textos_with_bad_shape_is_refused(self):
+        for bad in ({"ribera/_general/mirador.txt": {"uno": "x"}}, {"ribera/_general/mirador.txt": {"1": 5}}):
+            with self.subTest(bad=bad):
+                self.write_mirador({"1": "Texto"})
+                (self.mirador / "textos.json").write_text(json.dumps(bad), encoding="utf-8")
+                with self.assertRaisesRegex(ArchivoError, "formato no válido"):
+                    capas.merge([self.ficticio, self.mirador], self.root / "fusion")
+
+    def test_same_company_twice_in_one_layer_is_refused(self):
+        manifest = json.loads((self.ficticio / "manifiesto.json").read_text(encoding="utf-8"))
+        manifest["empresas"].append(dict(manifest["empresas"][0]))
+        (self.ficticio / "manifiesto.json").write_text(json.dumps(manifest), encoding="utf-8")
+        with self.assertRaisesRegex(ArchivoError, "clave repetida en empresas: ribera"):
+            capas.merge([self.ficticio], self.root / "fusion")
+
     def test_ficticio_only_writes_no_textos(self):
         capas.merge([self.ficticio], self.root / "solo")
         self.assertFalse((self.root / "solo" / "textos.json").exists())

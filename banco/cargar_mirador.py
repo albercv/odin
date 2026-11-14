@@ -43,6 +43,8 @@ class NotFoundError(LoadError):
     """La API responde 404: la pila no tiene esa operación (p. ej. una versión sin expedientes)."""
 
 
+PARTIAL_MESSAGE = ("Carga a medias: la pila del banco es desechable; rehazla con make banco-abajo, make banco-arriba, "
+                   "make banco-cargar … y make banco-cargar-mirador.")
 CASE_FILE_MISSING = "la pila no tiene la API de expedientes: los documentos quedan en el proyecto sin asignar"
 
 
@@ -51,7 +53,7 @@ class _NoRedirects(urllib.request.HTTPRedirectHandler):
         return None
 
 
-_OPEN = urllib.request.build_opener(_NoRedirects()).open
+_OPEN = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirects()).open
 
 
 def _http(method, url, headers, body):
@@ -106,9 +108,18 @@ def _problems_documents(manifest, folder):
     return problems
 
 
-def _problems_cases(cases, folder):
-    paths = [p for case in cases for p in case["documentos"] + case["compartidos"]]
-    return [f"falta el fichero expedientes/{p}" for p in paths if not (folder / "expedientes" / p).is_file()]
+def _problems_cases(cases, manifest, folder):
+    doc_paths = {doc["ruta"] for doc in manifest["documentos"]}
+    problems = []
+    for case in cases:
+        if case["caso"] not in doc_paths:
+            problems.append(f"expediente sin su caso en el manifiesto: {case['caso']}")
+        for p in case["documentos"] + case["compartidos"]:
+            if Path(p).suffix.lower() not in MIME_TYPES:
+                problems.append(f"tipo no admitido para {p}")
+            if not (folder / "expedientes" / p).is_file():
+                problems.append(f"falta el fichero expedientes/{p}")
+    return problems
 
 
 def _problems_cards(manifest):
@@ -126,7 +137,7 @@ def read_data(folder):
     cases_path = folder / "expedientes.json"
     cases = json.loads(cases_path.read_text(encoding="utf-8")) if cases_path.is_file() else []
     failures = ["el manifiesto tiene que tener exactamente un proyecto"] if len(manifest["proyectos"]) != 1 else []
-    failures += _problems_documents(manifest, folder) + _problems_cases(cases, folder) + _problems_cards(manifest)
+    failures += _problems_documents(manifest, folder) + _problems_cases(cases, manifest, folder) + _problems_cards(manifest)
     if failures:
         raise LoadError("los datos de Mirador no se pueden cargar. No se ha cambiado nada:\n- " + "\n- ".join(failures))
     return manifest, cases
@@ -286,18 +297,18 @@ def write_atomic(path, data):
     """Temporal y cambio de nombre: un corte no deja carga.json a medias. Solo lo lee su dueño (600), también si existía."""
     tmp = path.with_name(path.name + ".tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)  # un temporal viejo con otros permisos no se hereda
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False, indent=1))
-    os.chmod(tmp, 0o600)
     os.replace(tmp, path)
 
 
-def annotate_stack(state_dir, documents, cards):
+def annotate_stack(state_dir, documents=None, cards=None):
     """Añade a carga.json los mapas nuevos (documentId → ruta, cardId → id de ficha), sin quitar lo anterior."""
     path = state_dir / "carga.json"
     raw = json.loads(path.read_text(encoding="utf-8"))
-    raw["documentos"] = {**raw.get("documentos", {}), **documents}
-    raw["fichas"] = {**raw.get("fichas", {}), **cards}
+    raw["documentos"] = {**raw.get("documentos", {}), **(documents or {})}
+    raw["fichas"] = {**raw.get("fichas", {}), **(cards or {})}
     write_atomic(path, raw)
 
 
@@ -310,9 +321,24 @@ def report(project_name, ids, cards, statuses, notes):
     return Result(lines, failed)
 
 
+def _populate(api, state_dir, company_id, project_id, project_name, job):
+    """Todo lo que va después de crear el proyecto. Los ids se anotan en carga.json según se crean."""
+    manifest, cases, folder, stack, timing = job
+    add_actor_member(api, company_id, project_id)
+    ids = upload_documents(api, company_id, project_id, manifest, cases, folder)
+    annotate_stack(state_dir, documents={doc_id: path for path, doc_id in ids.items()})
+    statuses = wait_reader(api, company_id, set(ids.values()), *timing)
+    notes = attach_cases(api, company_id, ids, cases, statuses)
+    supersede(api, ids, manifest.get("sustituciones", []))
+    cards = create_cards(api, manifest["fichas"], project_id, stack["claves"][ACTOR])
+    annotate_stack(state_dir, cards=cards)
+    return report(project_name, ids, cards, statuses, notes)
+
+
 def load(state_dir, folder, http, clock=time.time, sleep=time.sleep, limit=LIMIT_S):
-    """Carga Mirador de punta a punta. Antes de cualquier cambio revisa datos, carga y env; luego actúa por la API."""
+    """Carga Mirador de punta a punta. Antes de cualquier llamada revisa carga (con la guarda D-099), datos y env."""
     stack = read_stack(state_dir)
+    propietario.proteger_banco(urls=[u for u in (stack["api"], stack.get("mcp")) if u])
     manifest, cases = read_data(folder)
     env = read_env(state_dir)
     api = Api(stack["api"], http)
@@ -320,14 +346,11 @@ def load(state_dir, folder, http, clock=time.time, sleep=time.sleep, limit=LIMIT
     company_id = find_company(api)
     project_name = manifest["proyectos"][0]["nombre"]
     project_id = create_project(api, company_id, project_name)
-    add_actor_member(api, company_id, project_id)
-    ids = upload_documents(api, company_id, project_id, manifest, cases, Path(folder))
-    statuses = wait_reader(api, company_id, set(ids.values()), clock, sleep, limit)
-    notes = attach_cases(api, company_id, ids, cases, statuses)
-    supersede(api, ids, manifest.get("sustituciones", []))
-    cards = create_cards(api, manifest["fichas"], project_id, stack["claves"][ACTOR])
-    annotate_stack(state_dir, {doc_id: path for path, doc_id in ids.items()}, cards)
-    return report(project_name, ids, cards, statuses, notes)
+    job = (manifest, cases, Path(folder), stack, (clock, sleep, limit))
+    try:
+        return _populate(api, state_dir, company_id, project_id, project_name, job)
+    except Exception as error:  # cualquier fallo tras crear el proyecto deja la pila a medias
+        raise LoadError(f"{error}. {PARTIAL_MESSAGE}") from error
 
 
 def main(argv=None):

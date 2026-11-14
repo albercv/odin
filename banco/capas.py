@@ -169,14 +169,29 @@ def _copy_layer_corpus(layer, target):
     _copy_corpus(layer / "corpus", target)
 
 
+def _check_texts_shape(route, pages):
+    if not isinstance(pages, dict) or not all(num.isdigit() and isinstance(text, str) for num, text in pages.items()):
+        raise ArchivoError(f"formato no válido en los textos de {route}: páginas numeradas con texto")
+
+
+def _check_text_route(route, target):
+    """Una ruta de textos no puede estar ya en el corpus ni en los expedientes de la carpeta fusionada."""
+    if (target / "corpus" / route).is_file():
+        raise ArchivoError(f"ruta repetida en el corpus y en los textos: {route}")
+    if (target / "expedientes" / route).is_file():
+        raise ArchivoError(f"ruta repetida en los expedientes y en los textos: {route}")
+
+
 def _merge_texts(data_dirs, target):
-    """Unión de los textos.json de las capas (páginas por ruta); una ruta no puede venir de dos capas."""
+    """Unión de los textos.json de las capas (páginas por ruta); una ruta no puede venir de dos capas ni del corpus."""
     texts = {}
     for d in data_dirs:
         if (Path(d) / "textos.json").is_file():
             for route, pages in _read_json(Path(d) / "textos.json").items():
                 if route in texts:
                     raise ArchivoError(f"ruta repetida en los textos: {route}")
+                _check_texts_shape(route, pages)
+                _check_text_route(route, target)
                 texts[route] = pages
     if texts:
         _write_json(target / "textos.json", texts)
@@ -192,6 +207,8 @@ def _check_corpus(documents, corpus, texts):
 def _build(data_dirs, target):
     manifests = [_read_json(Path(d) / "manifiesto.json") for d in data_dirs]
     rows = {key: [row for m in manifests for row in m.get(key, [])] for key in LIST_KEYS}
+    for m in manifests:
+        _check_unique(m.get("empresas", []), "clave", "empresas")
     rows["empresas"] = _same_companies(rows["empresas"])
     rows["claves"] = [row for d in data_dirs for row in _read_json(Path(d) / "claves.json")]
     for section, field in UNIQUE_KEYS.items():
@@ -201,9 +218,9 @@ def _build(data_dirs, target):
     _write_json(target / "claves.json", rows["claves"])
     for d in data_dirs:
         _copy_layer_corpus(Path(d), target / "corpus")
+    _build_expedientes(data_dirs, target)
     texts = _merge_texts(data_dirs, target)
     _check_corpus(rows["documentos"], target / "corpus", texts)
-    _build_expedientes(data_dirs, target)
 
 
 def merge(data_dirs, out_dir):

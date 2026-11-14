@@ -22,7 +22,8 @@ PROYECTO = "Mirador de prueba"
 class FakeOdin:
     """API falsa: responde lo que pide la carga y anota cada llamada (método, ruta, cabeceras, cuerpo)."""
 
-    def __init__(self, proyectos=(), sin_t01=False, estados=None, case_api=True, file_error=None, unmarked=False):
+    def __init__(self, proyectos=(), sin_t01=False, estados=None, case_api=True, file_error=None, unmarked=False,
+                 cards_error=None):
         self.llamadas = []
         self.proyectos = list(proyectos)
         self.sin_t01 = sin_t01
@@ -30,6 +31,7 @@ class FakeOdin:
         self.case_api = case_api  # False: la pila es más antigua y no tiene la API de expedientes (404)
         self.file_error = file_error  # código de error distinto de 404 para la API de expedientes
         self.unmarked = unmarked  # True: los documentos de caso no vienen marcados como caso
+        self.cards_error = cards_error  # código de error al crear fichas (para probar cargas a medias)
         self.documentos = {}  # id -> {"title", "case"}
         self.n = 0  # ids de documento
         self.tarjetas = 0  # ids de ficha, en su propia cuenta
@@ -57,6 +59,8 @@ class FakeOdin:
         if re.fullmatch(r"/v1/admin/documents/d-\d+/superseded-by", ruta):
             return 200, {}, "{}"
         if (metodo, ruta) == ("POST", "/v1/cards"):
+            if self.cards_error:
+                return self.cards_error, {}, "{}"
             self.tarjetas += 1
             return 201, {}, json.dumps({"id": f"k-{self.tarjetas}", "status": "SAVED", "message": "ok"})
         if re.fullmatch(r"/v1/admin/cards/k-\d+/review", ruta):
@@ -246,6 +250,54 @@ class CargarMiradorTest(unittest.TestCase):
         self.assertEqual(api.llamadas_a("POST", r"/v1/admin/companies/c1/cases/d-\d+/file/documents"), [])
         self.assertTrue(any("no está READY" in line for line in result.lines))
 
+    def test_load_refuses_owner_port_with_the_real_guard_before_any_call(self):
+        (self.estado / "carga.json").write_text(json.dumps({
+            "api": "http://127.0.0.1:8080", "claves": {"t01": "a", "t02": "b"}}), encoding="utf-8")
+        api = FakeOdin()
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(propietario.PropietarioError, "No se ha cambiado nada."):
+                self.load(api)
+        self.assertEqual(api.llamadas, [])
+
+    def test_expediente_with_unsupported_extension_is_refused_before_any_call(self):
+        cambiar_expediente(self.datos, documentos=["ribera/exp/c1.docx"])
+        (self.datos / "expedientes" / "ribera" / "exp" / "c1.docx").write_text("x", encoding="utf-8")
+        api = FakeOdin()
+        with self.assertRaisesRegex(LoadError, "tipo no admitido para ribera/exp/c1.docx"):
+            self.load(api)
+        self.assertEqual(api.llamadas, [])
+
+    def test_expediente_pointing_to_unknown_case_is_refused_before_any_call(self):
+        cambiar_expediente(self.datos, caso="ribera/_general/no-existe.txt")
+        api = FakeOdin()
+        with self.assertRaisesRegex(LoadError, "sin su caso en el manifiesto: ribera/_general/no-existe.txt"):
+            self.load(api)
+        self.assertEqual(api.llamadas, [])
+
+    def test_failure_after_project_creation_ends_with_partial_message(self):
+        api = FakeOdin(sin_t01=True)
+        with self.assertRaisesRegex(LoadError, re.escape(
+                "Carga a medias: la pila del banco es desechable; rehazla con make banco-abajo, make banco-arriba, "
+                "make banco-cargar … y make banco-cargar-mirador.")):
+            self.load(api)
+
+    def test_partial_load_keeps_the_document_ids_already_written(self):
+        api = FakeOdin(cards_error=500)
+        with self.assertRaises(LoadError):
+            self.load(api)
+        crudo = self.stack_file()
+        self.assertIn(api.id_de("Norma"), crudo["documentos"])
+        self.assertEqual(crudo["fichas"], {})
+
+    def test_write_atomic_fixes_mode_of_a_stale_temporary(self):
+        fichero = self.estado / "carga.json"
+        stale = fichero.with_name(fichero.name + ".tmp")
+        stale.write_text("viejo", encoding="utf-8")
+        os.chmod(stale, 0o644)
+        cargar_mirador.write_atomic(fichero, {"a": 1})
+        self.assertEqual(stat.S_IMODE(os.stat(fichero).st_mode), 0o600)
+        self.assertFalse(stale.exists())
+
     def test_supersedes_old_document_with_its_replacement(self):
         api = FakeOdin()
         self.load(api)
@@ -345,6 +397,17 @@ def write_data_with(datos, ruta_vieja, ruta_nueva):
             doc["ruta"] = ruta_nueva
     (datos / "manifiesto.json").write_text(json.dumps(manifiesto), encoding="utf-8")
     (datos / "corpus" / ruta_nueva).write_bytes(b"x")
+
+
+def cambiar_expediente(datos, caso=None, documentos=None):
+    """Cambia el expediente de prueba (caso y documentos) sin tocar sus ficheros."""
+    path = datos / "expedientes.json"
+    case = json.loads(path.read_text(encoding="utf-8"))[0]
+    if caso is not None:
+        case["caso"] = caso
+    if documentos is not None:
+        case["documentos"] = documentos
+    path.write_text(json.dumps([case]), encoding="utf-8")
 
 
 class MiradorConfigsTest(unittest.TestCase):
