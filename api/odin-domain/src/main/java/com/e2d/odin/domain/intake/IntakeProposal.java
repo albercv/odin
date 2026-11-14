@@ -23,6 +23,11 @@ public record IntakeProposal(UUID id, CompanyId companyId, IntakeBatchId batchId
         }
     }
 
+    /** Por decidir: sin decidir o con «no lo sé». Mantiene el lote abierto y se puede confirmar o rechazar. */
+    public boolean open() {
+        return state == DecisionState.PROPOSED || state == DecisionState.DONT_KNOW;
+    }
+
     public IntakeProposal confirm(UserId by, Instant now) {
         return decide(DecisionState.CONFIRMED, by, now);
     }
@@ -31,8 +36,13 @@ public record IntakeProposal(UUID id, CompanyId companyId, IntakeBatchId batchId
         return decide(DecisionState.REJECTED, by, now);
     }
 
+    /** «No lo sé»: el documento sigue pendiente y oculto, sin plazo (D-080), y queda quién lo dijo y cuándo. */
+    public IntakeProposal dontKnow(UserId by, Instant now) {
+        return decide(DecisionState.DONT_KNOW, by, now);
+    }
+
     private IntakeProposal decide(DecisionState to, UserId by, Instant now) {
-        if (state != DecisionState.PROPOSED) {
+        if (!open()) {
             throw new ConflictException("La propuesta ya está decidida");
         }
         return new IntakeProposal(id, companyId, batchId, documentId, kind, targetProjectId, targetDocumentId,

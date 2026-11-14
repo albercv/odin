@@ -31,6 +31,7 @@ import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.ClassifyIntake;
 import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.port.ProjectProposer;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
@@ -43,6 +44,7 @@ import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.IntakeEffects;
 import com.e2d.odin.application.intake.ListIntakeProposals;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -516,8 +518,10 @@ public class UseCaseConfiguration {
     /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
     @Bean
     ClassifyIntake classifyIntake(IntakeRepository intake, DocumentRepository documents,
-            ObjectProvider<ProjectProposer> proposer, IdGenerator ids) {
-        return new ClassifyIntake(intake, documents, Optional.ofNullable(proposer.getIfAvailable()), ids);
+            ObjectProvider<ProjectProposer> proposer, IdGenerator ids, InstallationSettings installationSettings,
+            Clock clock) {
+        return new ClassifyIntake(intake, documents, Optional.ofNullable(proposer.getIfAvailable()), ids,
+                installationSettings, clock);
     }
 
     @Bean
@@ -548,6 +552,13 @@ public class UseCaseConfiguration {
         return new ListProjectCandidates(intake, documents);
     }
 
+    /** Sin transacción: lo que descubre se queda aunque falten candidatos por decidir (lo ve el administrador). */
+    @Bean
+    CloseProjectList closeProjectList(IntakeRepository intake, DocumentRepository documents,
+            ListProjectCandidates candidates, InstallationSettings installationSettings, Clock clock) {
+        return new CloseProjectList(intake, documents, candidates, installationSettings, clock);
+    }
+
     @Bean
     ConfirmProjectCandidates confirmProjectCandidates(IntakeRepository intake, OrganizationRepository organizations,
             CreateProject createProject, PlatformTransactionManager transactionManager) {
@@ -564,9 +575,10 @@ public class UseCaseConfiguration {
     @Bean
     IntakeEffects intakeEffects(IntakeRepository intake, DocumentRepository documents,
             OrganizationRepository organizations, MarkCaseDocuments markCaseDocuments,
-            SupersedeDocument supersedeDocument, AddToCaseFiles addToCaseFiles, Clock clock) {
+            SupersedeDocument supersedeDocument, AddToCaseFiles addToCaseFiles,
+            InstallationSettings installationSettings, Clock clock) {
         return new IntakeEffects(intake, documents, organizations, markCaseDocuments, supersedeDocument,
-                addToCaseFiles, clock);
+                addToCaseFiles, installationSettings, clock);
     }
 
     @Bean
@@ -609,6 +621,12 @@ public class UseCaseConfiguration {
     @Bean
     ListUnplacedDocuments listUnplacedDocuments(IntakeRepository intake, DocumentRepository documents) {
         return new ListUnplacedDocuments(intake, documents);
+    }
+
+    @Bean
+    OpenIntakeOriginal openIntakeOriginal(IntakeRepository intake, DocumentRepository documents,
+            OriginalFileStore files) {
+        return new OpenIntakeOriginal(intake, documents, files);
     }
 
     @Bean

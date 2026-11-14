@@ -175,11 +175,14 @@ class IntakeControllerTest extends WebTestSupport {
         org.assertj.core.api.Assertions.assertThat(w.orgs.listProjects(company)).isEmpty();
     }
 
+    /** Subido y ya leído: en revisión nada se está leyendo (con la lectura en marcha, decidir da 409). */
     private com.e2d.odin.domain.document.Document uploaded(String content) throws Exception {
         String body = mvc.perform(file(content, admin)).andExpect(status().isCreated()).andReturn().getResponse()
                 .getContentAsString();
-        return w.docs.get(new com.e2d.odin.domain.shared.DocumentId(java.util.UUID.fromString(
-                com.jayway.jsonpath.JsonPath.<String>read(body, "$.document.id")))).orElseThrow();
+        var read = w.docs.get(new com.e2d.odin.domain.shared.DocumentId(java.util.UUID.fromString(
+                com.jayway.jsonpath.JsonPath.<String>read(body, "$.document.id")))).orElseThrow().markReady(false, List.of());
+        w.docs.save(read);
+        return read;
     }
 
     private com.e2d.odin.domain.intake.IntakeProposal proposal(com.e2d.odin.domain.document.Document d,
@@ -273,7 +276,8 @@ class IntakeControllerTest extends WebTestSupport {
         postJson(decide, "{\"decision\":\"OTRA\"}").andExpect(status().isBadRequest());
         postJson(decide, "{\"decision\":\"CORRECT_PROJECT\"}").andExpect(status().isBadRequest());
         postJson(decide, "{\"decision\":\"DONT_KNOW\"}").andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("PROPOSED"));
+                .andExpect(jsonPath("$.state").value("DONT_KNOW")).andExpect(jsonPath("$.decidedBy").exists())
+                .andExpect(jsonPath("$.decidedAt").exists());
         postJson(decide, "{\"decision\":\"COMPANY_WIDE\"}").andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("REJECTED")).andExpect(jsonPath("$.decidedAt").exists());
         org.assertj.core.api.Assertions.assertThat(w.docs.get(second.id()).orElseThrow().projectId()).isEmpty();
@@ -395,5 +399,65 @@ class IntakeControllerTest extends WebTestSupport {
         mvc.perform(post(batch + "/documents/" + first.id().value() + "/place").header("Authorization", worker)
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isUnauthorized());
         org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().intakePending()).isTrue();
+    }
+
+    @Test
+    void theProjectListIsClosedByItsAdminOnlyWhenNothingIsLeftToDecide() throws Exception {
+        mvc.perform(list("Calle Olmo 24".getBytes(), admin)).andExpect(status().isOk());
+        mvc.perform(post(batch + "/close-upload").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.projectListClosedAt").doesNotExist());
+        String close = batch + "/project-list/close";
+
+        mvc.perform(post(close).cookie(admin)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Falta 1 candidato por decidir"));
+        postJson(batch + "/project-candidates/confirm", "{\"decisions\":[{\"name\":\"Calle Olmo 24\",\"decision\":\"REJECT\"}]}")
+                .andExpect(status().isOk());
+        mvc.perform(post(close).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("READING")).andExpect(jsonPath("$.projectListClosedAt").exists())
+                .andExpect(jsonPath("$.warnings[*].code", org.hamcrest.Matchers.not(hasItem("PROJECT_LIST_NOT_CONFIRMED"))));
+        mvc.perform(post(close).cookie(admin)).andExpect(status().isConflict());
+        mvc.perform(list("Calle Haya 2".getBytes(), admin)).andExpect(status().isConflict());
+        mvc.perform(post(batch + "/project-candidates/discover").cookie(admin)).andExpect(status().isConflict());
+    }
+
+    @Test
+    void closingTheProjectListIsRefusedToAnotherCompanyAdminAndToAWorker() throws Exception {
+        mvc.perform(post(batch + "/close-upload").cookie(admin)).andExpect(status().isOk());
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        String ownPath = "/v1/admin/companies/" + otherCompany.value() + "/intake-batches/"
+                + batch.substring(batch.lastIndexOf('/') + 1);
+
+        mvc.perform(post(batch + "/project-list/close").cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(post(ownPath + "/project-list/close").cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(post(batch + "/project-list/close").header("Authorization", workerKey(company)))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.projectListClosedAt").doesNotExist());
+    }
+
+    @Test
+    void theAdminOpensTheOriginalOfAPendingDocumentOfTheBatchAndNobodyElseDoes() throws Exception {
+        oneProposedOneUnplaced();
+        String original = batch + "/documents/" + first.id().value() + "/original";
+        mvc.perform(get(original).cookie(admin)).andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().bytes("uno".getBytes()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
+
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        String id = batch.substring(batch.lastIndexOf('/') + 1);
+        mvc.perform(get(original).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get("/v1/admin/companies/" + otherCompany.value() + "/intake-batches/" + id + "/documents/"
+                + first.id().value() + "/original").cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(get(original).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(get(original)).andExpect(status().isUnauthorized());
+
+        String body = mvc.perform(post(batches).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"channel\":\"PANEL\"}")).andExpect(status().isCreated()).andReturn().getResponse()
+                .getContentAsString();
+        String otherBatch = batches + "/" + com.jayway.jsonpath.JsonPath.<String>read(body, "$.id");
+        mvc.perform(get(otherBatch + "/documents/" + first.id().value() + "/original").cookie(admin))
+                .andExpect(status().isNotFound());
     }
 }

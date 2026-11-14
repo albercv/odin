@@ -81,7 +81,7 @@ class IntakeFirstLoadIT {
         for (String worker : List.of("w1", "w2", "w3")) {
             workerKeys.put(worker, workerKey(company, worker));
         }
-        workerKeys.put("otra", workerKey(createCompany("Otra empresa", "OT"), "otra"));
+        workerKeys.put("otra", workerKey(otherCompany = createCompany("Otra empresa", "OT"), "otra"));
         base = "/v1/admin/companies/" + company + "/intake-batches";
         String batch = start();
         uploadCutAndResumed(batch);
@@ -93,7 +93,7 @@ class IntakeFirstLoadIT {
         awaitBatch(batch, view -> view.get("state").asString().equals("IN_REVIEW"));
         Set<String> all = documentIds();
 
-        assertNobodySees(all, "pendiente");
+        assertNobodySeesPending(batch, all);
         JsonNode groups = proposals(batch);
         assertProjectProposalsMatchTruth(groups, projectIds);
         for (String project : List.of("calle abeto 16", "calle olmo 47", "calle olmo 4")) {
@@ -103,6 +103,26 @@ class IntakeFirstLoadIT {
         }
         placeWhatIsLeft(batch);
         assertThat(api.get(base + "/" + batch, "Cookie", cookie).json().get("unplaced").asInt()).isZero();
+        everyCandidateRejectedClassifiesWithoutProjectProposals();
+    }
+
+    /** Otra empresa, otra carga: rechaza todos los candidatos, termina la lista y se clasifica sin proyectos. */
+    private void everyCandidateRejectedClassifiesWithoutProjectProposals() throws InterruptedException {
+        String batch = uploadedToTheOtherCompany(4);
+        awaitView(batch, groupCookie, view -> view.get("reading").asInt() == 0);
+        JsonNode found = api.post(batch + "/project-candidates/discover", map(), "Cookie", groupCookie).json();
+        assertThat(found.get("candidates")).isNotEmpty();
+        for (JsonNode c : found.get("candidates")) {
+            List<Object> one = List.of(map("name", c.get("name").asString(), "decision", "REJECT"));
+            assertThat(api.post(batch + "/project-candidates/confirm", map("decisions", one), "Cookie", groupCookie)
+                    .status()).isEqualTo(200);
+        }
+        assertThat(api.post(batch + "/project-list/close", map(), "Cookie", groupCookie).status()).isEqualTo(200);
+        awaitView(batch, groupCookie, view -> view.get("state").asString().equals("IN_REVIEW"));
+        JsonNode groups = api.get(batch + "/proposals", "Cookie", groupCookie).json().get("groups");
+        groups.forEach(g -> assertThat(g.get("kind").asString()).isNotEqualTo("PROJECT"));
+        assertThat(api.get(batch + "/documents?unplaced=true", "Cookie", groupCookie).json().get("documents")).hasSize(4);
+        assertThat(visibleTo("otra")).isEmpty();
     }
 
     // ---------- Recorrido ----------
@@ -124,24 +144,26 @@ class IntakeFirstLoadIT {
     }
 
     private Reply upload(String batch, String file) {
-        try {
-            String path = URLEncoder.encode("Cliente/" + file, StandardCharsets.UTF_8);
-            Reply reply = api.upload(base + "/" + batch + "/files?path=" + path, file, Files.readAllBytes(BATTERY.resolve(file)),
-                    "Cookie", cookie);
-            assertThat(reply.status()).isIn(200, 201);
-            fileOfDocument.put(reply.json().get("document").get("id").asString(), file);
-            return reply;
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        String path = URLEncoder.encode("Cliente/" + file, StandardCharsets.UTF_8);
+        Reply reply = api.upload(base + "/" + batch + "/files?path=" + path, file, readBattery(file), "Cookie", cookie);
+        assertThat(reply.status()).isIn(200, 201);
+        fileOfDocument.put(reply.json().get("document").get("id").asString(), file);
+        return reply;
     }
 
-    private Map<String, String> confirmDiscoveredProjects(String batch) {
+    /** Como el panel: un candidato por petición; nada se clasifica hasta «lista terminada». */
+    private Map<String, String> confirmDiscoveredProjects(String batch) throws InterruptedException {
         JsonNode found = api.post(base + "/" + batch + "/project-candidates/discover", map(), "Cookie", cookie).json();
-        List<Object> decisions = new ArrayList<>();
-        found.get("candidates").forEach(c -> decisions.add(map("name", c.get("name").asString(), "decision", "CREATE")));
-        assertThat(api.post(base + "/" + batch + "/project-candidates/confirm", map("decisions", decisions), "Cookie", cookie)
-                .status()).isEqualTo(200);
+        for (JsonNode c : found.get("candidates")) {
+            List<Object> one = List.of(map("name", c.get("name").asString(), "decision", "CREATE"));
+            assertThat(api.post(base + "/" + batch + "/project-candidates/confirm", map("decisions", one), "Cookie", cookie)
+                    .status()).isEqualTo(200);
+            Thread.sleep(700);
+            JsonNode view = api.get(base + "/" + batch, "Cookie", cookie).json();
+            assertThat(view.get("state").asString()).as("sin lista terminada no se clasifica").isEqualTo("READING");
+            assertThat(proposals(batch).get("groups")).isEmpty();
+        }
+        assertThat(api.post(base + "/" + batch + "/project-list/close", map(), "Cookie", cookie).status()).isEqualTo(200);
         Map<String, String> ids = new HashMap<>();
         api.get(base + "/" + batch + "/project-candidates", "Cookie", cookie).json().get("candidates")
                 .forEach(c -> ids.put(c.get("name").asString().toLowerCase(), c.get("projectId").asString()));
@@ -192,11 +214,17 @@ class IntakeFirstLoadIT {
 
     // ---------- D1: lo que ve un trabajador ----------
 
-    private void assertNobodySees(Set<String> documents, String why) {
+    /** Lo pendiente: su administrador abre el original desde la bandeja; ningún trabajador lo ve ni lo abre. */
+    private void assertNobodySeesPending(String batch, Set<String> documents) {
+        String one = documents.iterator().next();
+        String tray = base + "/" + batch + "/documents/" + one + "/original";
+        assertThat(api.get(tray, "Cookie", cookie).status()).isEqualTo(200);
         for (String worker : workerKeys.keySet()) {
-            assertThat(visibleTo(worker)).as(worker + " con todo " + why).isEmpty();
+            assertThat(visibleTo(worker)).as(worker + " con todo pendiente").isEmpty();
+            assertThat(api.get(tray, "Authorization", workerKeys.get(worker)).status()).isEqualTo(401);
             for (String document : documents) {
                 assertThat(readable(worker, document)).as(worker + " lee " + document).isFalse();
+                assertThat(originalLinkStatus(worker, document)).as(worker + " abre " + document).isEqualTo(404);
             }
         }
     }
@@ -272,6 +300,29 @@ class IntakeFirstLoadIT {
         return api.get(base + "/" + batch + "/proposals", "Cookie", cookie).json();
     }
 
+    /** Abre una carga en la otra empresa, sube n ficheros distintos y cierra la subida. Devuelve la ruta del lote. */
+    private String uploadedToTheOtherCompany(int n) {
+        String otherBase = "/v1/admin/companies/" + otherCompany + "/intake-batches";
+        Reply started = api.post(otherBase, map("channel", "COMMAND"), "Cookie", groupCookie);
+        assertThat(started.status()).isEqualTo(201);
+        String batch = otherBase + "/" + started.json().get("id").asString();
+        for (Truth t : truth.stream().filter(x -> x.copyOf().isEmpty()).limit(n).toList()) {
+            String path = URLEncoder.encode("Cliente/" + t.file(), StandardCharsets.UTF_8);
+            assertThat(api.upload(batch + "/files?path=" + path, t.file(), readBattery(t.file()), "Cookie", groupCookie)
+                    .status()).isIn(200, 201);
+        }
+        assertThat(api.post(batch + "/close-upload", map(), "Cookie", groupCookie).status()).isEqualTo(200);
+        return batch;
+    }
+
+    private static byte[] readBattery(String file) {
+        try {
+            return Files.readAllBytes(BATTERY.resolve(file));
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     private Truth truthOf(String file) {
         return truth.stream().filter(t -> t.file().equals(file)).findFirst().orElseThrow();
     }
@@ -295,9 +346,13 @@ class IntakeFirstLoadIT {
     }
 
     private void awaitBatch(String batch, Predicate<JsonNode> done) throws InterruptedException {
+        awaitView(base + "/" + batch, cookie, done);
+    }
+
+    private void awaitView(String batchPath, String as, Predicate<JsonNode> done) throws InterruptedException {
         JsonNode view = null;
         for (int i = 0; i < 240; i++) {
-            view = api.get(base + "/" + batch, "Cookie", cookie).json();
+            view = api.get(batchPath, "Cookie", as).json();
             if (done.test(view)) {
                 return;
             }
@@ -319,6 +374,7 @@ class IntakeFirstLoadIT {
     }
 
     private final Map<String, String> workerUsers = new HashMap<>();
+    private String otherCompany;
     private String groupCookie;
 
     private void startInstallation() {

@@ -12,6 +12,7 @@ import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.intake.ProjectDecision.Action;
 import com.e2d.odin.application.organization.CreateProject;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.CandidateOrigin;
@@ -43,6 +44,9 @@ class ProjectListTest {
     private final ListProjectCandidates list = new ListProjectCandidates(intake, docs);
     private final ConfirmProjectCandidates confirm = new ConfirmProjectCandidates(intake, orgs,
             new CreateProject(orgs, ids));
+    private final MutableClock clock = new MutableClock();
+    private final CloseProjectList closeList = new CloseProjectList(intake, docs, list,
+            new InstallationSettings("t", true), clock);
     private final CompanyId company = Fixtures.company(orgs);
     private final CompanyId other = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);
@@ -268,5 +272,131 @@ class ProjectListTest {
         docs.save(foreign.withIntake(batch.id(), "x.pdf"));
 
         assertThat(list.discover(admin, company, batch.id())).isEmpty();
+    }
+
+    private IntakeBatch reading() {
+        batch = batch.startReading();
+        intake.save(batch);
+        return batch;
+    }
+
+    private IntakeBatch stored() {
+        return intake.find(company, batch.id()).orElseThrow();
+    }
+
+    @Test
+    void theListIsClosedOnlyWhenNothingIsLeftToDecideAndKeepsWhoAndWhen() {
+        importText("Calle Olmo 24\nCalle Haya 2");
+        reading();
+        confirm.execute(admin, company, batch.id(), List.of(new ProjectDecision("Calle Olmo 24", Action.CREATE,
+                Optional.empty())));
+
+        assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class)
+                .hasMessage("Falta 1 candidato por decidir");
+        assertThat(stored().projectListClosed()).isFalse();
+
+        confirm.execute(admin, company, batch.id(), List.of(new ProjectDecision("Calle Haya 2", Action.REJECT,
+                Optional.empty())));
+        closeList.execute(admin, company, batch.id());
+
+        assertThat(stored().projectListClosedBy()).contains(admin.userId());
+        assertThat(stored().projectListClosedAt()).contains(clock.instant());
+    }
+
+    @Test
+    void theListIsNotClosedWhileDocumentsAreStillBeingRead() {
+        reading();
+        for (int i = 0; i < 2; i++) {
+            Document d = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PROCESSING);
+            docs.save(d.withIntake(batch.id(), "a/" + i + ".pdf"));
+        }
+
+        assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class)
+                .hasMessage("Aún se están leyendo 2 documentos");
+    }
+
+    @Test
+    void withoutAReaderTheScansWaitingForItDoNotHoldTheList() {
+        reading();
+        Document scan = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PENDING_READER);
+        docs.save(scan.withIntake(batch.id(), "a/escaneo.pdf"));
+        CloseProjectList withoutReader = new CloseProjectList(intake, docs, list, new InstallationSettings("t", false),
+                clock);
+
+        assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class)
+                .hasMessage("Aún se está leyendo 1 documento");
+        withoutReader.execute(admin, company, batch.id());
+
+        assertThat(stored().projectListClosed()).isTrue();
+    }
+
+    @Test
+    void closingRunsTheDiscoveryFirstSoNewCandidatesMustBeDecided() {
+        reading();
+        pendingDocument("Comunidad: Calle Haya 2");
+        pendingDocument("Comunidad: Calle Olmo 24");
+
+        assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class)
+                .hasMessage("Faltan 2 candidatos por decidir");
+        assertThat(names(intake.candidates(company, batch.id()))).containsExactlyInAnyOrder("Calle Haya 2",
+                "Calle Olmo 24");
+    }
+
+    @Test
+    void aListWithNoConfirmedProjectCanBeClosed() {
+        importText("Calle Olmo 24");
+        reading();
+        confirm.execute(admin, company, batch.id(), List.of(new ProjectDecision("Calle Olmo 24", Action.REJECT,
+                Optional.empty())));
+
+        closeList.execute(admin, company, batch.id());
+
+        assertThat(stored().projectListClosed()).isTrue();
+    }
+
+    @Test
+    void theListIsClosedOnlyInReadingAndOnlyOnce() {
+        assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class);
+        reading();
+        closeList.execute(admin, company, batch.id());
+        assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void withTheListClosedOrTheBatchInReviewTheCandidatesCannotChange() {
+        importText("Calle Olmo 24");
+        reading();
+        confirm.execute(admin, company, batch.id(), List.of(new ProjectDecision("Calle Olmo 24", Action.REJECT,
+                Optional.empty())));
+        closeList.execute(admin, company, batch.id());
+        assertCandidatesFrozen();
+
+        intake.save(stored().finishReading());
+        assertCandidatesFrozen();
+        intake.save(stored().close(clock.instant()));
+        assertCandidatesFrozen();
+        assertThat(list.execute(admin, company, batch.id())).hasSize(1);
+    }
+
+    private void assertCandidatesFrozen() {
+        byte[] bytes = "Calle Pino 7".getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> importList.execute(admin, company, batch.id(), bytes))
+                .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> list.discover(admin, company, batch.id())).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> confirm.execute(admin, company, batch.id(), List.of(new ProjectDecision(
+                "Calle Olmo 24", Action.CREATE, Optional.empty())))).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void closingTheListIsRefusedToAnAdminOfAnotherCompanyAndToAWorker() {
+        reading();
+
+        for (Actor intruder : List.of(Actors.companyAdmin(other), Actors.worker(company))) {
+            assertThatThrownBy(() -> closeList.execute(intruder, company, batch.id()))
+                    .isInstanceOf(ForbiddenException.class);
+        }
+        assertThatThrownBy(() -> closeList.execute(Actors.companyAdmin(other), other, batch.id()))
+                .isInstanceOf(NotFoundException.class);
+        assertThat(stored().projectListClosed()).isFalse();
     }
 }

@@ -24,7 +24,7 @@ public class DecideIntakeProposal {
         this.effects = effects;
     }
 
-    /** Devuelve la propuesta como queda: con «no lo sé» sigue sin decidir. */
+    /** Devuelve la propuesta como queda: con «no lo sé», DONT_KNOW con quién y cuándo, y se puede decidir después. */
     public IntakeProposal execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, UUID proposalId,
             IntakeDecision decision, Optional<ProjectId> projectId) {
         IntakeBatch batch = effects.inReview(actor, companyId, batchId);
@@ -34,14 +34,14 @@ public class DecideIntakeProposal {
         List<IntakeProposal> all = intake.proposals(companyId, batchId);
         IntakeProposal p = all.stream().filter(q -> q.id().equals(proposalId)).findFirst()
                 .orElseThrow(() -> new NotFoundException("Propuesta no encontrada"));
-        IntakeEffects.requireProposed(p);
+        IntakeEffects.requireOpen(p);
         switch (decision) {
             case CONFIRM -> effects.confirm(actor, batch, List.of(p), all);
             case CORRECT_PROJECT -> effects.placeAs(actor, batch, p, Optional.of(projectId.orElseThrow(
                     () -> new ValidationException("Indica el proyecto al que va el documento"))), all);
             case COMPANY_WIDE -> effects.placeAs(actor, batch, p, Optional.empty(), all);
             case REJECT -> effects.reject(actor, p);
-            case DONT_KNOW -> { }
+            case DONT_KNOW -> effects.dontKnow(actor, p);
         }
         effects.closeIfDone(batch);
         return intake.proposals(companyId, batchId).stream().filter(q -> q.id().equals(proposalId)).findFirst()

@@ -22,8 +22,8 @@ public interface IntakeRepository {
     /** Los lotes de la empresa que no están cerrados, el más reciente primero. */
     List<IntakeBatch> findOpen(CompanyId companyId);
 
-    /** Los lotes en lectura de todas las empresas: es lo que recorre la clasificación. */
-    List<IntakeBatch> findReading();
+    /** Los lotes en lectura o en revisión de todas las empresas: es lo que recorre la tarea programada. */
+    List<IntakeBatch> findReadingOrInReview();
 
     /** Suma uno al recuento de «ya estaban» o de «descartados en este lote», sin pisar a otra subida en marcha. */
     void countFile(CompanyId companyId, IntakeBatchId id, boolean discarded);

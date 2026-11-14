@@ -16,12 +16,14 @@ import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -243,7 +245,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
                 && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()).toList();
         long reading = mine.stream().filter(d -> Set.of(DocumentStatus.RECEIVED, DocumentStatus.PROCESSING,
                 DocumentStatus.PENDING_READER, DocumentStatus.READER_PROCESSING).contains(d.status())).count();
-        return new IntakeCounts(mine.size(), (int) reading, (int) mine.stream().filter(Document::intakePending).count());
+        return new IntakeCounts(mine.size(), (int) reading, (int) mine.stream().filter(Document::intakePending).count(),
+                (int) mine.stream().filter(d -> d.status() == DocumentStatus.PENDING_READER).count());
     }
 
     @Override
@@ -284,8 +287,15 @@ public class InMemoryDocumentRepository implements DocumentRepository {
                 .collect(Collectors.toMap(Document::id, Document::title));
     }
 
+    private final Map<DocumentId, Map.Entry<UserId, Instant>> placements = new HashMap<>();
+
+    /** Quién y cuándo sacó el documento de lo pendiente (la base lo guarda en intake_placed_by/at). */
+    public Map.Entry<UserId, Instant> placedBy(DocumentId id) {
+        return placements.get(id);
+    }
+
     @Override
-    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId) {
+    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId, UserId by, Instant at) {
         Document d = documents.get(id);
         if (d == null || !d.companyId().equals(companyId) || !d.intakePending() || d.withdrawn()) {
             throw new ConflictException("El documento ya no está pendiente");
@@ -298,6 +308,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
             throw new ConflictException("Ya hay un documento igual en ese proyecto: descarta este");
         }
         documents.put(id, d.confirmedIn(projectId));
+        placements.put(id, Map.entry(by, at));
     }
 
     @Override

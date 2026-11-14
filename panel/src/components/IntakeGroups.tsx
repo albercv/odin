@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { intake, type S } from '../api/client';
+import { intake, intakeOriginalUrl, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
@@ -33,15 +33,33 @@ const groupLabel = (g: Group, projects: S['ProjectView'][]) => {
   return project ? `${KIND[g.kind] ?? g.kind} (${project})` : KIND[g.kind] ?? g.kind;
 };
 
+/** The API takes at most 500 proposals per request (each one all or nothing): bigger groups go in parts. */
+const PART = 500;
+const PARTS_NOTE = ` Va en partes de hasta ${PART} propuestas y cada parte es todo o nada.`;
+
+async function confirmInParts(ids: { company: string; batch: string }, proposalIds: string[]) {
+  const parts = Array.from({ length: Math.ceil(proposalIds.length / PART) }, (_, i) => proposalIds.slice(i * PART, (i + 1) * PART));
+  for (const [i, part] of parts.entries()) {
+    try {
+      await intake.confirmProposals(ids.company, ids.batch, part);
+    } catch (e) {
+      if (parts.length === 1) throw e;
+      throw new Error(`Se aplicaron ${i} de ${parts.length} partes (${i * PART} propuestas); la siguiente falló: ${(e as Error).message}`, { cause: e });
+    }
+  }
+}
+
 type GroupProps = { group: Group; label: string; projects: S['ProjectView'][]; run: Run; ids: { company: string; batch: string } };
 
 function GroupCard({ group, label, projects, run, ids }: GroupProps) {
   const [open, setOpen] = useState(false);
   const confirm = useConfirm();
   const count = group.proposals.length;
+  // never ask to confirm documents in a project whose name is not known (D2: informed consent)
+  const unknownProject = group.kind === 'PROJECT' && !projects.some((p) => p.id === group.projectId);
   const confirmGroup = async () => {
-    const message = EFFECT[group.kind]?.(count, label) ?? `¿Confirmar ${noun(count, 'documento', 'documentos')}?`;
-    if (await confirm({ message, confirmLabel: 'Confirmar' })) run(() => intake.confirmProposals(ids.company, ids.batch, group.proposals.map((p) => p.id)));
+    const message = (EFFECT[group.kind]?.(count, label) ?? `¿Confirmar ${noun(count, 'documento', 'documentos')}?`) + (count > PART ? PARTS_NOTE : '');
+    if (await confirm({ message, confirmLabel: 'Confirmar' })) run(() => confirmInParts(ids, group.proposals.map((p) => p.id)));
   };
   const decide = (id: string, d: Decision) => run(() => intake.decide(ids.company, ids.batch, id, d));
   return (
@@ -50,12 +68,12 @@ function GroupCard({ group, label, projects, run, ids }: GroupProps) {
         <h3>{`${label} · confianza ${group.confidence === 'HIGH' ? 'alta' : 'baja'} · ${noun(count, 'documento', 'documentos')}`}</h3>
         <div className={styles.tools}>
           <Button aria-expanded={open} aria-label={`Ver documentos de ${label}`} onClick={() => setOpen(!open)}>{open ? 'Ocultar' : 'Ver documentos'}</Button>
-          <Button variant="primary" aria-label={`Confirmar grupo ${label}`} onClick={confirmGroup}>Confirmar grupo</Button>
+          <Button variant="primary" aria-label={`Confirmar grupo ${label}`} disabled={unknownProject} onClick={confirmGroup}>Confirmar grupo</Button>
         </div>
       </div>
       {open && (
         <ul className={styles.items}>
-          {group.proposals.map((p) => <IntakeProposalRow key={p.id} kind={group.kind} item={p} projectKind={group.kind === 'PROJECT' || group.kind === 'COMPANY_WIDE'} projects={projects} decide={decide} />)}
+          {group.proposals.map((p) => <IntakeProposalRow key={p.id} kind={group.kind} item={p} projectKind={group.kind === 'PROJECT' || group.kind === 'COMPANY_WIDE'} projects={projects} decide={decide} original={intakeOriginalUrl(ids.company, ids.batch, p.documentId)} />)}
         </ul>
       )}
     </div>
@@ -68,7 +86,8 @@ type Props = Step & { kinds: string[]; title: string; description: string; empty
 export function IntakeGroups({ companyId, batchId, projects, onChanged, kinds, title, description, empty, children }: Props) {
   const list = useLoad(() => intake.proposals(companyId, batchId), [companyId, batchId]);
   const { error, act } = useAction();
-  const run: Run = async (fn) => { if (await act(fn)) { list.reload(); onChanged(); } };
+  // refresh also after a failure: part of a group may have been confirmed
+  const run: Run = async (fn) => { await act(fn); list.reload(); onChanged(); };
   const groups = (list.data?.groups ?? []).filter((g) => kinds.includes(g.kind));
   return (
     <>

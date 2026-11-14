@@ -4,8 +4,8 @@ import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
-import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.application.shared.InstallationSettings;
@@ -43,16 +43,16 @@ public class GetIntakeBatch {
         if (!settings.localModelConfigured()) {
             warnings.add(IntakeWarning.NO_LOCAL_MODEL);
         }
-        if (batch.state() == IntakeState.READING && intake.candidates(companyId, batchId).stream()
-                .noneMatch(c -> c.state() == DecisionState.CONFIRMED)) {
+        if (batch.state() == IntakeState.READING && !batch.projectListClosed()) {
             warnings.add(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
         }
         Map<ProposalKind, Integer> proposed = new EnumMap<>(ProposalKind.class);
-        intake.proposals(companyId, batchId).stream().filter(p -> p.state() == DecisionState.PROPOSED)
+        intake.proposals(companyId, batchId).stream().filter(IntakeProposal::open)
                 .forEach(p -> proposed.merge(p.kind(), 1, Integer::sum));
         int unplaced = batch.state() == IntakeState.IN_REVIEW
                 ? UnplacedDocuments.find(intake, documents, companyId, batchId).size() : 0;
-        return new IntakeBatchView(batch, documents.intakeCounts(companyId, batchId), warnings, proposed, unplaced);
+        return new IntakeBatchView(batch, IntakeBatches.counts(documents, installation, companyId, batchId), warnings,
+                proposed, unplaced);
     }
 
     /** De esas huellas, las que ya están en la empresa o se descartaron en el lote: el cliente no las vuelve a subir. */

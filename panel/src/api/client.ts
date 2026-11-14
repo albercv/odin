@@ -63,6 +63,9 @@ async function allDocuments(companyId: string, withdrawn = false) {
 }
 
 export const originalUrl = (documentId: string) => `${a}/documents/${documentId}/original`;
+/** The original of a pending document of a batch: only its admin opens it, from the tray. */
+export const intakeOriginalUrl = (companyId: string, batchId: string, documentId: string) =>
+  `${ib(companyId, batchId)}/documents/${documentId}/original`;
 
 export const uploadLinks = {
   info: (token: string) => request<S['UploadLinkInfo']>('GET', `/v1/upload-links/${encodeURIComponent(token)}`, undefined, true),
@@ -83,6 +86,7 @@ export const intake = {
     return request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/import`, form);
   },
   discover: (c: string, b: string) => request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/discover`),
+  closeList: (c: string, b: string) => request<S['IntakeBatchView']>('POST', `${ib(c, b)}/project-list/close`),
   confirmCandidates: (c: string, b: string, decisions: S['ProjectDecisionRequest'][]) =>
     request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/confirm`, { decisions }),
   proposals: (c: string, b: string) => request<S['IntakeProposalGroups']>('GET', `${ib(c, b)}/proposals`),

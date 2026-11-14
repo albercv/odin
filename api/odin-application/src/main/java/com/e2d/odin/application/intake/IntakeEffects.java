@@ -7,11 +7,11 @@ import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
-import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeProposal;
@@ -50,16 +50,19 @@ public class IntakeEffects {
     private final MarkCaseDocuments markCases;
     private final SupersedeDocument supersede;
     private final AddToCaseFiles caseFiles;
+    private final InstallationSettings installation;
     private final Clock clock;
 
     public IntakeEffects(IntakeRepository intake, DocumentRepository documents, OrganizationRepository organizations,
-            MarkCaseDocuments markCases, SupersedeDocument supersede, AddToCaseFiles caseFiles, Clock clock) {
+            MarkCaseDocuments markCases, SupersedeDocument supersede, AddToCaseFiles caseFiles,
+            InstallationSettings installation, Clock clock) {
         this.intake = intake;
         this.documents = documents;
         this.organizations = organizations;
         this.markCases = markCases;
         this.supersede = supersede;
         this.caseFiles = caseFiles;
+        this.installation = installation;
         this.clock = clock;
     }
 
@@ -72,15 +75,15 @@ public class IntakeEffects {
         return batch;
     }
 
-    static void requireProposed(IntakeProposal p) {
-        if (p.state() != DecisionState.PROPOSED) {
+    static void requireOpen(IntakeProposal p) {
+        if (!p.open()) {
             throw new ConflictException("La propuesta ya está decidida");
         }
     }
 
     /** Confirma las propuestas: primero los proyectos, después las fichas de caso, las parejas y al final los enlaces. */
     void confirm(Actor actor, IntakeBatch batch, List<IntakeProposal> selected, List<IntakeProposal> all) {
-        selected.forEach(IntakeEffects::requireProposed);
+        selected.forEach(IntakeEffects::requireOpen);
         requireOnePlacementPerDocument(selected);
         for (IntakeProposal p : ofKind(selected, PLACEMENTS)) {
             Optional<ProjectId> project = p.kind() == ProposalKind.PROJECT
@@ -108,48 +111,50 @@ public class IntakeEffects {
         intake.save(p.reject(actor.userId(), clock.instant()));
     }
 
+    void dontKnow(Actor actor, IntakeProposal p) {
+        intake.save(p.dontKnow(actor.userId(), clock.instant()));
+    }
+
     /** Las propuestas por decidir sobre un documento descartado ya no se pueden confirmar: se rechazan. */
     void rejectUndecidedAbout(Actor actor, IntakeBatch batch, DocumentId documentId) {
-        intake.proposals(batch.companyId(), batch.id()).stream().filter(p -> p.state() == DecisionState.PROPOSED
+        intake.proposals(batch.companyId(), batch.id()).stream().filter(p -> p.open()
                 && (p.documentId().equals(documentId) || p.targetDocumentId().equals(Optional.of(documentId))))
                 .forEach(p -> reject(actor, p));
     }
 
     /** Sin documentos pendientes ni propuestas por decidir, el lote se cierra. */
     void closeIfDone(IntakeBatch batch) {
-        boolean pending = documents.intakeCounts(batch.companyId(), batch.id()).pending() > 0;
-        if (!pending && intake.proposals(batch.companyId(), batch.id()).stream()
-                .noneMatch(p -> p.state() == DecisionState.PROPOSED)) {
-            intake.save(batch.close(clock.instant()));
-        }
+        IntakeBatches.closeIfDone(intake, documents, batch, clock.instant());
     }
 
     private void place(IntakeBatch batch, IntakeProposal p, Optional<ProjectId> project, boolean asProposed,
             Actor actor, List<IntakeProposal> all) {
-        placeDocument(batch, p.documentId(), project);
+        placeDocument(batch, p.documentId(), project, actor);
         intake.save(asProposed ? p.confirm(actor.userId(), clock.instant()) : p.reject(actor.userId(), clock.instant()));
         all.stream().filter(q -> q.documentId().equals(p.documentId()) && !q.id().equals(p.id())
-                && q.state() == DecisionState.PROPOSED && PLACEMENTS.contains(q.kind()))
+                && q.open() && PLACEMENTS.contains(q.kind()))
                 .forEach(q -> reject(actor, q));
     }
 
     /** Decisión del administrador sobre un documento sin propuesta de proyecto por decidir (D2: sigue siendo suya). */
-    void placeUnplaced(IntakeBatch batch, DocumentId documentId, Optional<ProjectId> project) {
+    void placeUnplaced(Actor actor, IntakeBatch batch, DocumentId documentId, Optional<ProjectId> project) {
         Document d = find(batch.companyId(), documentId);
         if (!d.intakeBatchId().equals(Optional.of(batch.id()))) {
             throw new NotFoundException("Documento no encontrado");
         }
         if (d.status() == DocumentStatus.FAILED) {
-            throw new ConflictException("«" + d.title() + "» no se pudo leer: descártalo o reintenta su lectura");
+            throw new ConflictException("«" + d.title()
+                    + "» no se pudo leer: descártalo y, si lo necesitas, súbelo de nuevo desde Documentos");
         }
         if (intake.proposals(batch.companyId(), batch.id()).stream().anyMatch(p -> p.documentId().equals(documentId)
-                && p.state() == DecisionState.PROPOSED && PLACEMENTS.contains(p.kind()))) {
+                && p.open() && PLACEMENTS.contains(p.kind()))) {
             throw new ConflictException("«" + d.title() + "» tiene una propuesta de proyecto: decídelo en su propuesta");
         }
-        placeDocument(batch, documentId, project);
+        placeDocument(batch, documentId, project, actor);
     }
 
-    private void placeDocument(IntakeBatch batch, DocumentId documentId, Optional<ProjectId> project) {
+    /** Saca el documento de lo pendiente con quién y cuándo. Nunca mientras se lee: el lector lo reescribiría (M3). */
+    private void placeDocument(IntakeBatch batch, DocumentId documentId, Optional<ProjectId> project, Actor actor) {
         CompanyId company = batch.companyId();
         Document d = find(company, documentId);
         if (!d.intakeBatchId().equals(Optional.of(batch.id()))) {
@@ -158,9 +163,12 @@ public class IntakeEffects {
         if (d.withdrawn() || !d.intakePending()) {
             throw new ConflictException("El documento «" + d.title() + "» ya no está pendiente");
         }
+        if (IntakeBatches.beingRead(d, installation)) {
+            throw new ConflictException("«" + d.title() + "» se está leyendo; espera a que termine");
+        }
         project.ifPresent(id -> organizations.findProject(company, id)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado")));
-        documents.confirmIntake(company, d.id(), project);
+        documents.confirmIntake(company, d.id(), project, actor.userId(), clock.instant());
     }
 
     private void markCases(Actor actor, IntakeBatch batch, List<IntakeProposal> marks) {

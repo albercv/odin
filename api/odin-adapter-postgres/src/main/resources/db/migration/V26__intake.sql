@@ -15,8 +15,12 @@ CREATE TABLE intake_batch (
     -- ficheros que al subirse ya estaban en la empresa, y los descartados en este lote; sobreviven a reanudar
     already_there integer NOT NULL DEFAULT 0 CHECK (already_there >= 0),
     discarded     integer NOT NULL DEFAULT 0 CHECK (discarded >= 0),
+    -- «lista terminada»: quién y cuándo dio por buena la lista de proyectos; sin ella no se clasifica
+    project_list_closed_by uuid NULL REFERENCES app_user (id),
+    project_list_closed_at timestamptz NULL,
     UNIQUE (id, company_id),
-    CHECK ((state = 'CLOSED') = (closed_at IS NOT NULL))
+    CHECK ((state = 'CLOSED') = (closed_at IS NOT NULL)),
+    CHECK ((project_list_closed_by IS NULL) = (project_list_closed_at IS NULL))
 );
 -- Solo hay un lote abierto o en lectura por empresa a la vez.
 CREATE UNIQUE INDEX intake_batch_one_active_key ON intake_batch (company_id) WHERE state IN ('OPEN', 'READING');
@@ -25,6 +29,11 @@ ALTER TABLE document ADD COLUMN intake_batch_id uuid NULL;
 ALTER TABLE document ADD COLUMN intake_pending boolean NOT NULL DEFAULT false;
 ALTER TABLE document ADD COLUMN intake_path text NULL;
 ALTER TABLE document ADD COLUMN scan_of uuid NULL;
+-- quién y cuándo sacó el documento de lo pendiente (colocarlo o confirmar su propuesta)
+ALTER TABLE document ADD COLUMN intake_placed_by uuid NULL REFERENCES app_user (id);
+ALTER TABLE document ADD COLUMN intake_placed_at timestamptz NULL;
+ALTER TABLE document ADD CONSTRAINT document_intake_placed_who_and_when
+    CHECK ((intake_placed_by IS NULL) = (intake_placed_at IS NULL));
 ALTER TABLE document ADD CONSTRAINT document_intake_batch_same_company_fk
     FOREIGN KEY (intake_batch_id, company_id) REFERENCES intake_batch (id, company_id);
 ALTER TABLE document ADD CONSTRAINT document_scan_of_same_company_fk
@@ -74,18 +83,22 @@ CREATE TABLE intake_proposal (
     confidence         text NOT NULL CHECK (confidence IN ('HIGH', 'LOW')),
     source             text NOT NULL CHECK (source IN ('RULES', 'FOLDER', 'MODEL')),
     reason             text NOT NULL CHECK (char_length(reason) <= 300),
-    state              text NOT NULL CHECK (state IN ('PROPOSED', 'CONFIRMED', 'REJECTED')),
+    -- DONT_KNOW: «no lo sé», con quién y cuándo; sigue abierta y se puede decidir después
+    state              text NOT NULL CHECK (state IN ('PROPOSED', 'CONFIRMED', 'REJECTED', 'DONT_KNOW')),
     decided_by         uuid NULL REFERENCES app_user (id),
     decided_at         timestamptz NULL,
     FOREIGN KEY (batch_id, company_id) REFERENCES intake_batch (id, company_id),
     FOREIGN KEY (document_id, company_id) REFERENCES document (id, company_id),
     FOREIGN KEY (target_document_id, company_id) REFERENCES document (id, company_id),
     FOREIGN KEY (target_project_id, company_id) REFERENCES project (id, company_id),
-    CHECK ((state = 'PROPOSED') = (decided_at IS NULL))
+    -- una propuesta decidida (CONFIRMED, REJECTED o DONT_KNOW) lleva quién y cuándo; una sin decidir, ninguno
+    CHECK ((state = 'PROPOSED') = (decided_at IS NULL)),
+    CHECK ((state = 'PROPOSED') = (decided_by IS NULL))
 );
 CREATE INDEX intake_proposal_batch_idx ON intake_proposal (batch_id);
 -- Idempotencia de la clasificación: la misma propuesta (lote, documento, tipo y destinos) no se guarda dos veces,
--- aunque dos instancias o dos pasadas la escriban a la vez. Un documento solo tiene un número de caso.
+-- aunque dos instancias o dos pasadas la escriban a la vez. El número de caso no entra en la clave: si un documento
+-- diera dos marcas de caso con números distintos, se guarda la primera.
 CREATE UNIQUE INDEX intake_proposal_same_uq ON intake_proposal (batch_id, document_id, kind,
     coalesce(target_document_id, '00000000-0000-0000-0000-000000000000'),
     coalesce(target_project_id, '00000000-0000-0000-0000-000000000000'));

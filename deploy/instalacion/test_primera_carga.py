@@ -50,7 +50,8 @@ class FalsoOdin(BaseHTTPRequestHandler):
         elif url.path == base:
             self.responder(200, {"batches": e["lotes"]})
         elif url.path == f"{base}/{LOTE}":
-            self.responder(200, {"id": LOTE, "state": "OPEN", "warnings": e["avisos"], "uploaded": 0})
+            self.responder(200, {"id": LOTE, "state": "OPEN", "warnings": e["avisos"],
+                                 "uploaded": e.get("ya_en_lote", 0) + len(e["subidos"])})
         elif url.path == f"{base}/{LOTE}/files":
             pedidas = urllib.parse.parse_qs(url.query)["sha256"]
             e["consultas"].append(pedidas)
@@ -72,6 +73,10 @@ class FalsoOdin(BaseHTTPRequestHandler):
             self.responder(500, {"detail": "disco lleno"})
         elif self.path == f"{base}/{LOTE}/files":
             ruta = re.search(rb'name="path"\r\n\r\n(.*?)\r\n--', cuerpo, re.S).group(1).decode()
+            if ruta.endswith(".xlsx"):
+                return self.responder(415, {"detail": "Ese formato no se admite"})
+            if ruta.endswith(".enorme"):
+                return self.responder(413, {"detail": "El fichero supera el límite"})
             e["subidos"].append(ruta)
             self.responder(201, {"outcome": "CREATED", "document": {}})
         elif self.path == f"{base}/{LOTE}/close-upload":
@@ -135,7 +140,40 @@ class PrimeraCargaTest(unittest.TestCase):
         self.assertEqual(["pequeno.txt"], [ruta for _, ruta in ficheros])
         self.assertEqual(["grande.bin"], [ruta for ruta, _ in saltados])
 
+    def test_saltaLosVaciosYLosNombresConSaltoDeLineaSinRomper(self):
+        self.crear("vacio.txt", "")
+        self.crear("mal\nnombre.txt")
+        self.crear("bien.txt")
+        ficheros, saltados = pc.recorrer(self.carpeta)
+        self.assertEqual(["bien.txt"], [ruta for _, ruta in ficheros])
+        self.assertEqual({"vacio.txt": "está vacío", "mal\nnombre.txt": "el nombre tiene un salto de línea"},
+                         dict(saltados))
+
+    def test_saltaLosNombresQueNoSonUtf8SinRomper(self):
+        self.crear("bien.txt")
+        malo = "mal\udcff.txt"  # un byte que no es UTF-8, tal como lo da os.walk en Linux
+        with mock.patch("os.walk", return_value=[(str(self.carpeta), [], ["bien.txt", malo])]):
+            ficheros, saltados = pc.recorrer(self.carpeta)
+        self.assertEqual(["bien.txt"], [ruta for _, ruta in ficheros])
+        self.assertEqual([(malo, "el nombre no está en UTF-8")], saltados)
+        self.assertEqual("mal\\udcff.txt", pc.mostrar(malo))
+
     # subir, saltar, reanudar
+
+    def test_unFicheroQueLaApiNoAdmiteSeSaltaConSuMotivoYSigue(self):
+        self.crear("hoja.xlsx")
+        self.crear("plano.enorme")
+        self.crear("dos.txt", "2")
+        self.crear("vacio.txt", "")
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertEqual(["dos.txt"], self.estado["subidos"])
+        self.assertTrue(self.estado["cerrado"])
+        self.assertIn("Se salta: hoja.xlsx: Ese formato no se admite", texto)
+        self.assertIn("Se salta: plano.enorme: El fichero supera el límite", texto)
+        final = texto[texto.rindex("Saltados"):]
+        for ruta in ("hoja.xlsx", "plano.enorme", "vacio.txt"):
+            self.assertIn(ruta, final)
 
     def test_subeConSuRutaRelativaYCierraLaSubida(self):
         self.crear("A/uno.txt", "1")
@@ -159,6 +197,24 @@ class PrimeraCargaTest(unittest.TestCase):
             self.crear(f"f{i:03}.txt", str(i))
         self.lanzar()
         self.assertEqual([pc.TANDA, 1], [len(c) for c in self.estado["consultas"]])
+
+    def test_sinNadaNuevoNoCierraLaSubidaYElLoteVacioSeReutiliza(self):
+        self.crear("uno.txt", "1")
+        self.estado["conocidas"] = {hashlib.sha256(b"1").hexdigest()}
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertEqual([], self.estado["subidos"])
+        self.assertFalse(self.estado["cerrado"])
+        self.assertIn("No hay nada nuevo que subir", texto)
+
+    def test_unLoteReanudadoConDocumentosSeCierraAunqueNoHayaNadaNuevo(self):
+        self.estado["lotes"] = [{"id": LOTE, "state": "OPEN", "channel": "COMMAND"}]
+        self.estado["ya_en_lote"] = 2
+        self.crear("uno.txt", "1")
+        self.estado["conocidas"] = {hashlib.sha256(b"1").hexdigest()}
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertTrue(self.estado["cerrado"])
 
     def test_reutilizaUnLoteAbierto(self):
         self.estado["lotes"] = [{"id": LOTE, "state": "OPEN", "channel": "COMMAND"}]
@@ -257,6 +313,50 @@ class PrimeraCargaTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"ODIN_API_URL": "http://127.0.0.1:1"}):
             codigo, texto = self.lanzar_main()
         self.assertEqual(0, codigo, texto)
+
+    # D-099: la guarda del propietario (nunca se conecta: conectar está sustituido)
+
+    def guarda(self, url, *argumentos, **variables):
+        entorno = {k: v for k, v in os.environ.items() if k not in ("INSTALACION_PROYECTO", "CONFIRMAR_INSTALACION")}
+        entorno |= {"PRIMERA_CARGA_API_URL": url, **variables} if url else variables
+        if not url:
+            entorno.pop("PRIMERA_CARGA_API_URL", None)
+        conectar = mock.Mock(side_effect=RuntimeError("conectado"))
+        salida = io.StringIO()
+        with mock.patch.object(pc.dp, "leer_entorno", return_value={}), mock.patch.dict(os.environ, entorno, clear=True), \
+                mock.patch.object(pc.dp, "conectar", conectar), \
+                mock.patch("sys.argv", ["primera_carga.py", str(self.carpeta), *argumentos]), \
+                contextlib.redirect_stdout(salida), contextlib.redirect_stderr(salida):
+            try:
+                pc.main()
+                return None, conectar.called
+            except SystemExit as fin:
+                return str(fin.code), conectar.called
+
+    def test_unaPilaDeEnsayoNoVaALosPuertosDelPropietario(self):
+        for puerto in sorted(dp.PUERTOS_PROPIETARIO):
+            motivo, conectada = self.guarda(f"http://127.0.0.1:{puerto}", INSTALACION_PROYECTO="odin-prueba")
+            self.assertIn("puertos de la instalación del propietario", motivo)
+            self.assertFalse(conectada)
+
+    def test_conSiHaciaElPropietarioPideConfirmarInstalacion(self):
+        for url in ("http://127.0.0.1:8080", None):  # None: el puerto por defecto de deploy/.env
+            motivo, conectada = self.guarda(url, "--si")
+            self.assertIn("CONFIRMAR_INSTALACION=PROPIETARIO", motivo)
+            self.assertFalse(conectada)
+        motivo, conectada = self.guarda("http://127.0.0.1:8080", "--si", CONFIRMAR_INSTALACION="PROPIETARIO")
+        self.assertIsNone(motivo)
+        self.assertTrue(conectada)
+
+    def test_elCaminoInteractivoHaciaElPropietarioNoCambia(self):
+        motivo, conectada = self.guarda("http://127.0.0.1:8080")
+        self.assertIsNone(motivo)
+        self.assertTrue(conectada)
+
+    def test_unaPilaDeEnsayoEnSusPuertosSigueConSi(self):
+        motivo, conectada = self.guarda("http://127.0.0.1:48080", "--si", INSTALACION_PROYECTO="odin-primera-carga")
+        self.assertIsNone(motivo)
+        self.assertTrue(conectada)
 
 
 if __name__ == "__main__":

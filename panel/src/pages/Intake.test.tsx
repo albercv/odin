@@ -102,20 +102,66 @@ test('showsTheApiMessageWhenTheBatchListFails', async () => {
 });
 
 test('confirmsACandidateAsNewProject', async () => {
-  const calls = show({ [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
+  const calls = show({ [batchRoute]: reading(), [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
   await userEvent.click(await screen.findByRole('button', { name: 'Crear Calle Olmo 24' }));
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/project-candidates/confirm`)?.body).toEqual({ decisions: [{ name: 'Calle Olmo 24', decision: 'CREATE' }] }));
 });
 
 test('mergesACandidateIntoAnExistingProject', async () => {
-  const calls = show({ [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
+  const calls = show({ [batchRoute]: reading(), [`POST ${base}/b1/project-candidates/confirm`]: () => candidates });
   await userEvent.selectOptions(await screen.findByLabelText('Unir Calle Olmo 24 a'), 'Residencial Sur');
   await userEvent.click(screen.getByRole('button', { name: 'Unir Calle Olmo 24' }));
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/project-candidates/confirm`)?.body).toEqual({ decisions: [{ name: 'Calle Olmo 24', decision: 'MERGE', projectId: 'p2' }] }));
 });
 
+const reading = (changes = {}) => () => batch({ state: 'READING', reading: 0, projectListClosedAt: undefined, ...changes });
+const decided = { candidates: [{ name: 'Calle Olmo 24', origin: 'IMPORTED', documentCount: 9, state: 'CONFIRMED', projectId: 'p1' }] };
+const closeList = `POST ${base}/b1/project-list/close`;
+
+test('theListCannotBeFinishedWhileCandidatesAreUndecided', async () => {
+  show({ [batchRoute]: reading() });
+  expect(await screen.findByText('Faltan 1 por decidir')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Lista terminada: clasificar' })).toBeDisabled();
+});
+
+test('theListCannotBeFinishedWhileDocumentsAreBeingRead', async () => {
+  show({ [batchRoute]: reading({ reading: 3 }), [`GET ${base}/b1/project-candidates`]: () => decided });
+  expect(await screen.findByText('Aún se están leyendo 3 documentos')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Lista terminada: clasificar' })).toBeDisabled();
+});
+
+test('finishingTheListAsksTheApiToClassify', async () => {
+  const calls = show({ [batchRoute]: reading(), [`GET ${base}/b1/project-candidates`]: () => decided, [closeList]: () => batch({ state: 'READING' }) });
+  const button = await screen.findByRole('button', { name: 'Lista terminada: clasificar' });
+  await waitFor(() => expect(button).toBeEnabled());
+  await userEvent.click(button);
+  await waitFor(() => expect(called(calls, closeList)).toBe(true));
+});
+
+test('whenFinishingFindsNewCandidatesItSaysSoAndShowsThem', async () => {
+  let found: unknown = decided;
+  const calls = show({
+    [batchRoute]: reading(), [`GET ${base}/b1/project-candidates`]: () => found,
+    [closeList]: () => { found = candidates; return { status: 409, body: { detail: 'Falta 1 candidato por decidir' } }; },
+  });
+  const button = await screen.findByRole('button', { name: 'Lista terminada: clasificar' });
+  await waitFor(() => expect(button).toBeEnabled());
+  await userEvent.click(button);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Falta 1 candidato por decidir');
+  expect(await screen.findByRole('button', { name: 'Crear Calle Olmo 24' })).toBeInTheDocument();
+  expect(calls.filter((c) => c.key === `GET ${base}/b1/project-candidates`).length).toBeGreaterThan(1);
+});
+
+test('aFinishedListShowsItAndOffersNoMoreChanges', async () => {
+  show({ [batchRoute]: reading({ projectListClosedAt: '2026-11-13T11:00:00Z' }) });
+  expect(await screen.findByText('Lista terminada: Odín está clasificando los documentos.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Lista terminada: clasificar' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Crear Calle Olmo 24' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Buscar proyectos en los textos' })).toBeDisabled();
+});
+
 test('importsAProjectListAndDiscoversFromTexts', async () => {
-  const calls = show({ [`POST ${base}/b1/project-candidates/import`]: () => candidates, [`POST ${base}/b1/project-candidates/discover`]: () => candidates });
+  const calls = show({ [batchRoute]: reading(), [`POST ${base}/b1/project-candidates/import`]: () => candidates, [`POST ${base}/b1/project-candidates/discover`]: () => candidates });
   await userEvent.upload(await screen.findByLabelText('Importar la lista de proyectos'), new File(['Calle Olmo 24'], 'lista.csv', { type: 'text/csv' }));
   await waitFor(() => expect(called(calls, `POST ${base}/b1/project-candidates/import`)).toBe(true));
   await userEvent.click(screen.getByRole('button', { name: 'Buscar proyectos en los textos' }));
@@ -143,6 +189,44 @@ test('confirmingAGroupAsksWithTheDialogAndSendsAllIds', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar grupo Calle Olmo 24' }));
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/proposals/confirm`)?.body).toEqual({ proposalIds: ['a', 'b'] }));
+});
+
+test('confirmIsDisabledUntilTheProjectNameIsKnown', async () => {
+  show({ [`GET /v1/admin/companies/c1/projects`]: () => ({ status: 500, body: { detail: 'No cargan los proyectos' } }) });
+  await step('2. Proyectos');
+  expect(await screen.findByRole('button', { name: 'Confirmar grupo Proyecto sin nombre' })).toBeDisabled();
+});
+
+test('confirmIsDisabledWhenTheGroupProjectIsNotInTheList', async () => {
+  show({ [`GET /v1/admin/companies/c1/projects`]: () => [otra] });
+  await step('2. Proyectos');
+  expect(await screen.findByRole('button', { name: 'Confirmar grupo Proyecto sin nombre' })).toBeDisabled();
+});
+
+const many = (n: number) => ({ ...projectGroup, proposals: Array.from({ length: n }, (_, i) => item(`m${i}`, `Doc ${i}`, 'Calle Olmo 24')) });
+const confirmKey = `POST ${base}/b1/proposals/confirm`;
+
+test('aGroupOverFiveHundredIsConfirmedInPartsOfAtMostFiveHundred', async () => {
+  const calls = show({ [`GET ${base}/b1/proposals`]: () => ({ groups: [many(1001)] }), [confirmKey]: () => ({ confirmed: 1 }) });
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Confirmar grupo Calle Olmo 24' }));
+  expect(screen.getByRole('dialog').getAttribute('aria-label')).toContain('Va en partes de hasta 500 propuestas y cada parte es todo o nada.');
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
+  await waitFor(() => expect(calls.filter((c) => c.key === confirmKey).map((c) => (c.body as { proposalIds: string[] }).proposalIds.length)).toEqual([500, 500, 1]));
+});
+
+test('whenAPartFailsItStopsSaysHowManyWereAppliedAndRefreshes', async () => {
+  let n = 0;
+  const calls = show({
+    [`GET ${base}/b1/proposals`]: () => ({ groups: [many(1001)] }),
+    [confirmKey]: () => (++n === 2 ? { status: 409, body: { detail: 'Confirma antes el proyecto de «Doc 7»' } } : { confirmed: 500 }),
+  });
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Confirmar grupo Calle Olmo 24' }));
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Se aplicaron 1 de 3 partes (500 propuestas); la siguiente falló: Confirma antes el proyecto de «Doc 7»');
+  expect(calls.filter((c) => c.key === confirmKey)).toHaveLength(2);
+  await waitFor(() => expect(calls.filter((c) => c.key === `GET ${base}/b1/proposals`).length).toBeGreaterThan(1));
 });
 
 const decide = async (button: string, expected: unknown, extra = async () => {}) => {
@@ -179,6 +263,25 @@ test('unplacedDocumentsCanBePlacedOrDiscarded', async () => {
   await userEvent.click(within(section).getByRole('button', { name: 'Descartar Escaneo suelto' }));
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Descartar' }));
   await waitFor(() => expect(called(calls, `POST ${base}/b1/documents/u1/withdraw`)).toBe(true));
+});
+
+test('unplacedScansSayTheyAreWaitingForTheReader', async () => {
+  const docs = { documents: [{ id: 'u2', title: 'Escaneo 9', path: 'cliente', status: 'PENDING_READER' }, { id: 'u3', title: 'Roto', status: 'FAILED' }] };
+  show({ [`GET ${base}/b1/documents?unplaced=true`]: () => docs });
+  await step('2. Proyectos');
+  const section = await screen.findByRole('region', { name: 'Sin ubicar' });
+  expect(within(section).getByText('Esperando al lector OCR.')).toBeInTheDocument();
+  expect(within(section).getByText('No se pudo leer este documento.')).toBeInTheDocument();
+});
+
+test('proposalsAndUnplacedDocumentsLinkTheirPendingOriginal', async () => {
+  const docs = { documents: [{ id: 'u1', title: 'Escaneo suelto', path: 'cliente/varios', status: 'READY' }] };
+  show({ [`GET ${base}/b1/documents?unplaced=true`]: () => docs });
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Ver documentos de Calle Olmo 24' }));
+  expect(screen.getByRole('link', { name: 'Ver el original de Factura 12' })).toHaveAttribute('href', `${base}/b1/documents/d-a/original`);
+  const section = screen.getByRole('region', { name: 'Sin ubicar' });
+  expect(await within(section).findByRole('link', { name: 'Ver el original de Escaneo suelto' })).toHaveAttribute('href', `${base}/b1/documents/u1/original`);
 });
 
 test('pairsStepShowsOnlyPairKindsWithTheTitleOfTheOtherDocument', async () => {

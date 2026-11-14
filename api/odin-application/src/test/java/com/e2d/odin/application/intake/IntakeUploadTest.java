@@ -201,11 +201,12 @@ class IntakeUploadTest {
     }
 
     @Test
-    void aReadingBatchWithoutAConfirmedListWarnsAboutIt() {
+    void aReadingBatchWarnsUntilItsProjectListIsClosedEvenWithConfirmedCandidates() {
         GetIntakeBatch complete = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
                 new IntakeSettings(true));
         assertThat(complete.execute(admin, company, batch.id()).warnings()).isEmpty();
-        intake.save(batch.startReading());
+        IntakeBatch reading = batch.startReading();
+        intake.save(reading);
 
         assertThat(complete.execute(admin, company, batch.id()).warnings())
                 .containsExactly(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
@@ -213,7 +214,26 @@ class IntakeUploadTest {
         intake.save(new com.e2d.odin.domain.intake.ProjectCandidate(company, batch.id(), "Calle Olmo 24",
                 com.e2d.odin.domain.intake.CandidateOrigin.IMPORTED, 0, com.e2d.odin.domain.intake.DecisionState.CONFIRMED,
                 Optional.of(new com.e2d.odin.domain.shared.ProjectId(java.util.UUID.randomUUID()))));
+        assertThat(complete.execute(admin, company, batch.id()).warnings())
+                .containsExactly(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
+
+        intake.save(reading.closeProjectList(admin.userId(), java.time.Instant.EPOCH));
         assertThat(complete.execute(admin, company, batch.id()).warnings()).isEmpty();
+    }
+
+    @Test
+    void withoutAReaderTheScansWaitingForItAreNotCountedAsBeingRead() {
+        Document scan = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PENDING_READER);
+        docs.save(scan.withIntake(batch.id(), "a/escaneo.pdf"));
+        Document text = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PROCESSING);
+        docs.save(text.withIntake(batch.id(), "a/texto.pdf"));
+        GetIntakeBatch withReader = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
+                new IntakeSettings(true));
+        GetIntakeBatch withoutReader = new GetIntakeBatch(intake, docs, new InstallationSettings("t", false),
+                new IntakeSettings(true));
+
+        assertThat(withReader.execute(admin, company, batch.id()).counts().reading()).isEqualTo(2);
+        assertThat(withoutReader.execute(admin, company, batch.id()).counts().reading()).isEqualTo(1);
     }
 
     @Test

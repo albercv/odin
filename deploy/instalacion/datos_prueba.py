@@ -556,7 +556,7 @@ def elegir_seleccion():
 
 
 def conectar(entorno, url=None):
-    """url solo la pasa quien no escribe con la guarda de proteger_propietario (primera_carga.py)."""
+    """url solo la pasa primera_carga.py, que antes se protege con proteger(url, si) sobre ese destino."""
     url = url or f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}"
     api = Api(url, entorno.get("ODIN_PANEL_ORIGIN", ""))
     try:

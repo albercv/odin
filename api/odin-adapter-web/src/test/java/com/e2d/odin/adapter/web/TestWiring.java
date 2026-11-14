@@ -37,6 +37,7 @@ import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.DecideIntakeProposal;
@@ -45,6 +46,7 @@ import com.e2d.odin.application.intake.IntakeEffects;
 import com.e2d.odin.application.intake.ListIntakeProposals;
 import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.GetIntakeBatch;
 import com.e2d.odin.application.intake.ImportProjectList;
@@ -367,12 +369,21 @@ public class TestWiring {
         return new ListProjectCandidates(intake, docs);
     }
 
+    @Bean OpenIntakeOriginal openIntakeOriginal() {
+        return new OpenIntakeOriginal(intake, docs, files);
+    }
+
+    @Bean CloseProjectList closeProjectList() {
+        return new CloseProjectList(intake, docs, listProjectCandidates(), installationSettings(), clock);
+    }
+
     @Bean ConfirmProjectCandidates confirmProjectCandidates() {
         return new ConfirmProjectCandidates(intake, orgs, createProject());
     }
 
     @Bean IntakeEffects intakeEffects() {
-        return new IntakeEffects(intake, docs, orgs, markCaseDocuments(), supersedeDocument(), addToCaseFiles(), clock);
+        return new IntakeEffects(intake, docs, orgs, markCaseDocuments(), supersedeDocument(), addToCaseFiles(),
+                installationSettings(), clock);
     }
 
     @Bean ListUnplacedDocuments listUnplacedDocuments() {

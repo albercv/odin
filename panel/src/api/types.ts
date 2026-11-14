@@ -484,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-list/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeProjectList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import": {
         parameters: {
             query?: never;
@@ -1092,6 +1108,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["original"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/gaps": {
         parameters: {
             query?: never;
@@ -1555,7 +1587,7 @@ export interface components {
              */
             channel: "COMMAND" | "PANEL";
         };
-        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). */
+        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). projectListClosedAt: cuándo se dio la lista de proyectos por terminada; sin ella no se clasifica. */
         IntakeBatchView: {
             /** Format: uuid */
             id: string;
@@ -1583,6 +1615,8 @@ export interface components {
             };
             /** Format: int32 */
             unplaced: number;
+            /** Format: date-time */
+            projectListClosedAt?: string;
         };
         IntakeWarningView: {
             code: string;
@@ -1600,7 +1634,7 @@ export interface components {
              */
             projectId?: string;
         };
-        /** @description state: PROPOSED (sigue sin decidir, con «no lo sé»), CONFIRMED o REJECTED. decidedBy y decidedAt: quién y cuándo, si está decidida. */
+        /** @description state: PROPOSED, CONFIRMED, REJECTED o DONT_KNOW («no lo sé»: sigue abierta y se puede decidir después). decidedBy y decidedAt: quién y cuándo, si está decidida o con «no lo sé». */
         DecidedProposal: {
             /** Format: uuid */
             id: string;
@@ -3113,6 +3147,29 @@ export interface operations {
             };
         };
     };
+    closeProjectList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
     importProjectList: {
         parameters: {
             query?: never;
@@ -4219,6 +4276,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IntakeDocuments"];
+                };
+            };
+        };
+    };
+    original: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };

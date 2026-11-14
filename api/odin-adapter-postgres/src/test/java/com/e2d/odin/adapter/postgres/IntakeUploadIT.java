@@ -17,6 +17,7 @@ import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeChannel;
 import com.e2d.odin.domain.intake.IntakeCounts;
+import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
@@ -74,6 +75,17 @@ class IntakeUploadIT extends AbstractPostgresIT {
     }
 
     @Test
+    void theClosedProjectListKeepsWhoAndWhen() {
+        IntakeBatch closed = batch.startReading().closeProjectList(user, NOW.plusSeconds(5));
+        intake.save(closed);
+
+        IntakeBatch found = intake.find(company, batch.id()).orElseThrow();
+        assertThat(found.projectListClosedBy()).contains(user);
+        assertThat(found.projectListClosedAt()).contains(NOW.plusSeconds(5));
+        assertThat(intake.find(company, batch.id()).map(IntakeBatch::state)).contains(IntakeState.READING);
+    }
+
+    @Test
     void aWithdrawnFileCountsOnlyInsideItsOwnBatch() {
         Document d = pendingDocument(batch, "a/uno.pdf");
         docs.markWithdrawal(d.withWithdrawal(Optional.of(NOW), Optional.of(user)));
@@ -110,7 +122,7 @@ class IntakeUploadIT extends AbstractPostgresIT {
 
         assertThat(docs.findBySha256ForIntake(other, batch.id(), d.sha256())).isEmpty();
         assertThat(docs.existingSha256ForIntake(other, batch.id(), List.of(d.sha256()))).isEmpty();
-        assertThat(docs.intakeCounts(other, batch.id())).isEqualTo(new IntakeCounts(0, 0, 0));
+        assertThat(docs.intakeCounts(other, batch.id())).isEqualTo(new IntakeCounts(0, 0, 0, 0));
     }
 
     @Test
@@ -120,8 +132,9 @@ class IntakeUploadIT extends AbstractPostgresIT {
         docs.save(read.markReady(true, List.of()));
         Document gone = pendingDocument(batch, "a/tres.pdf");
         docs.markWithdrawal(gone.withWithdrawal(Optional.of(NOW), Optional.of(user)));
+        docs.save(pendingDocument(batch, "a/escaneo.pdf").awaitReader());
 
-        assertThat(docs.intakeCounts(company, batch.id())).isEqualTo(new IntakeCounts(2, 1, 2));
+        assertThat(docs.intakeCounts(company, batch.id())).isEqualTo(new IntakeCounts(3, 2, 3, 1));
     }
 
     private final UploadDocument upload = new UploadDocument(docs, orgs, new InMemoryOriginalFileStore(),

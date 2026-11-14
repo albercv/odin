@@ -27,7 +27,7 @@ public class PlaceIntakeDocument {
         if (projectId.isPresent() == companyWide) {
             throw new ValidationException("Indica un proyecto o «de toda la empresa», solo uno de los dos");
         }
-        effects.placeUnplaced(batch, documentId, projectId);
+        effects.placeUnplaced(actor, batch, documentId, projectId);
         effects.closeIfDone(batch);
     }
 }

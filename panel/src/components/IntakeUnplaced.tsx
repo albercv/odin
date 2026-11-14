@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { intake, type S } from '../api/client';
+import { intake, intakeOriginalUrl, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { Section } from '../ui/Section';
@@ -10,14 +10,18 @@ import styles from './Intake.module.css';
 
 type Place = S['PlaceDocumentRequest'];
 
-function UnplacedRow({ doc, projects, place, discard }: { doc: S['IntakeDocumentView']; projects: S['ProjectView'][]; place: (p: Place) => void; discard: () => void }) {
+const STATUS: Record<string, string> = { FAILED: 'No se pudo leer este documento.', PENDING_READER: 'Esperando al lector OCR.' };
+
+type RowProps = { doc: S['IntakeDocumentView']; original: string; projects: S['ProjectView'][]; place: (p: Place) => void; discard: () => void };
+
+function UnplacedRow({ doc, original, projects, place, discard }: RowProps) {
   const [projectId, setProjectId] = useState('');
   const { title } = doc;
   return (
     <li className={styles.row}>
-      <p><strong>{title}</strong></p>
+      <p><strong>{title}</strong> <a href={original} target="_blank" rel="noreferrer" aria-label={`Ver el original de ${title}`}>Ver el original</a></p>
       {doc.path && <p className={styles.reason}>{doc.path}</p>}
-      {doc.status === 'FAILED' && <p className={styles.reason}>No se pudo leer este documento.</p>}
+      {STATUS[doc.status] && <p className={styles.reason}>{STATUS[doc.status]}</p>}
       <div className={styles.tools}>
         <select aria-label={`Proyecto de ${title}`} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
           <option value="">Un proyecto…</option>
@@ -47,7 +51,7 @@ export function IntakeUnplaced({ companyId, batchId, projects, onChanged }: Step
         <Notice message={list.error ?? error} />
         {list.data && docs.length === 0 && <p>No queda ningún documento sin ubicar.</p>}
         <ul className={styles.items}>
-          {docs.map((d) => <UnplacedRow key={d.id} doc={d} projects={projects} place={(p) => run(() => intake.place(companyId, batchId, d.id, p))} discard={() => discard(d)} />)}
+          {docs.map((d) => <UnplacedRow key={d.id} doc={d} original={intakeOriginalUrl(companyId, batchId, d.id)} projects={projects} place={(p) => run(() => intake.place(companyId, batchId, d.id, p))} discard={() => discard(d)} />)}
         </ul>
       </div>
     </Section>

@@ -35,7 +35,7 @@ public class ImportProjectList {
     }
 
     public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, byte[] content) {
-        IntakeBatches.require(intake, actor, companyId, batchId);
+        IntakeBatches.requireListOpen(intake, actor, companyId, batchId);
         Map<String, String> names = names(decode(content));
         if (names.isEmpty()) {
             throw new ValidationException("La lista no tiene ningún nombre");
