@@ -29,13 +29,13 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
     private static final String VISIBLE = "AND " + Sql.inScope("x.company_id") + """
              AND EXISTS (SELECT 1 FROM document c WHERE c.id = x.case_document_id AND %s AND %s)
              AND EXISTS (SELECT 1 FROM document m WHERE m.id = x.document_id AND %s AND %s)""".formatted(
-            Sql.inVisibleProjects("c.project_id"), Sql.notWithdrawn("c.withdrawn_at"),
-            Sql.inVisibleProjects("m.project_id"), Sql.notWithdrawn("m.withdrawn_at"));
+            Sql.inVisibleProjects("c.project_id"), Sql.visibleDocument("c"),
+            Sql.inVisibleProjects("m.project_id"), Sql.visibleDocument("m"));
 
     /** Las dos puntas de la relación sin retirar, mirando directamente la columna (sin la RLS). */
     private static final String NOT_HIDDEN = """
-            (NOT EXISTS (SELECT 1 FROM document c WHERE c.id = x.case_document_id AND c.withdrawn_at IS NOT NULL)
-            AND NOT EXISTS (SELECT 1 FROM document m WHERE m.id = x.document_id AND m.withdrawn_at IS NOT NULL))""";
+            (NOT EXISTS (SELECT 1 FROM document c WHERE c.id = x.case_document_id AND (c.withdrawn_at IS NOT NULL OR c.intake_pending))
+            AND NOT EXISTS (SELECT 1 FROM document m WHERE m.id = x.document_id AND (m.withdrawn_at IS NOT NULL OR m.intake_pending)))""";
 
     private final ScopedTransactions tx;
 
@@ -190,7 +190,7 @@ public class PostgresCaseFileRepository implements CaseFileRepository {
                 SELECT p.document_id, count(*) AS pages FROM document_page p JOIN document d ON d.id = p.document_id
                 WHERE p.document_id IN (:ids) AND %s AND %s AND %s GROUP BY p.document_id""".formatted(
                 Sql.inScope("p.company_id"), Sql.inVisibleProjects("d.project_id"),
-                Sql.notWithdrawn("d.withdrawn_at"));
+                Sql.visibleDocument("d"));
         return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("ids", ids.stream().map(DocumentId::value).toList())
                 .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("pages"))).list())

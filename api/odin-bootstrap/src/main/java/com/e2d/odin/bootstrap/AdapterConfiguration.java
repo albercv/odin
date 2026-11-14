@@ -6,6 +6,7 @@ import com.e2d.odin.adapter.postgres.PostgresAccessLinkRepository;
 import com.e2d.odin.adapter.postgres.PostgresAdminSessionRepository;
 import com.e2d.odin.adapter.postgres.PostgresDeliveryMeter;
 import com.e2d.odin.adapter.postgres.PostgresCaseFileRepository;
+import com.e2d.odin.adapter.postgres.PostgresIntakeRepository;
 import com.e2d.odin.adapter.postgres.PostgresDocumentRepository;
 import com.e2d.odin.adapter.postgres.PostgresKnowledgeCardRepository;
 import com.e2d.odin.adapter.postgres.PostgresKnowledgeSearch;
@@ -28,6 +29,7 @@ import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.CaseFileRepository;
+import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
 import com.e2d.odin.application.port.IdGenerator;
@@ -107,6 +109,11 @@ public class AdapterConfiguration {
     @Bean
     CaseFileRepository caseFileRepository(ScopedTransactions tx) {
         return new PostgresCaseFileRepository(tx);
+    }
+
+    @Bean
+    IntakeRepository intakeRepository(ScopedTransactions tx) {
+        return new PostgresIntakeRepository(tx);
     }
 
     @Bean

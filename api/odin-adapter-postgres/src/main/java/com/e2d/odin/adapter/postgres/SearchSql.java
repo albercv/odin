@@ -110,7 +110,7 @@ final class SearchSql {
         return "(CAST(:caseId AS uuid) IS NULL OR (" + alias + ".id = :caseId AND " + alias + ".case_document) OR"
                 + " (EXISTS (SELECT 1 FROM document k WHERE k.id = :caseId AND k.case_document AND "
                 + Sql.inScope("k.company_id") + " AND " + Sql.inVisibleProjects("k.project_id") + " AND "
-                + Sql.notWithdrawn("k.withdrawn_at") + ") AND EXISTS (SELECT 1 FROM case_file_entry e"
+                + Sql.visibleDocument("k") + ") AND EXISTS (SELECT 1 FROM case_file_entry e"
                 + " WHERE e.case_document_id = :caseId AND e.document_id = " + alias + ".id)))";
     }
 
