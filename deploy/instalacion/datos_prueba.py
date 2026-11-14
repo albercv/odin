@@ -177,9 +177,11 @@ def escribir_mapa(carpeta, documentos):
     escribir_privado(carpeta / "mapa-ids.local.json", json.dumps(documentos, ensure_ascii=False, indent=1))
 
 
-def multipart(nombre, contenido, tipo="application/octet-stream"):
+def multipart(nombre, contenido, tipo="application/octet-stream", campos=None):
     limite = uuid.uuid4().hex
-    cabecera = (f'--{limite}\r\nContent-Disposition: form-data; name="file"; filename="{nombre}"\r\n'
+    texto = "".join(f'--{limite}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'
+                    for k, v in (campos or {}).items())
+    cabecera = (f'{texto}--{limite}\r\nContent-Disposition: form-data; name="file"; filename="{nombre}"\r\n'
                 f"Content-Type: {tipo}\r\n\r\n").encode()
     return cabecera + contenido + f"\r\n--{limite}--\r\n".encode(), f"multipart/form-data; boundary={limite}"
 
@@ -554,7 +556,8 @@ def elegir_seleccion():
 
 
 def conectar(entorno):
-    api = Api(f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}", entorno.get("ODIN_PANEL_ORIGIN", ""))
+    url = os.environ.get("ODIN_API_URL") or f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}"
+    api = Api(url, entorno.get("ODIN_PANEL_ORIGIN", ""))
     try:
         api.pedir("GET", "/v1/health")
     except (OSError, RuntimeError):

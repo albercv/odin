@@ -1,4 +1,4 @@
-.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
+.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento primera-carga instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -67,6 +67,11 @@ instalacion-desplegar:
 
 instalacion-actualizar:
 	@CONFIRMAR="$(CONFIRMAR)" MODO=actualizar CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
+
+# Primera carga del archivo de una empresa (la lanza su administrador): make primera-carga CARPETA=/ruta [ARGS=--si]
+primera-carga:
+	@test -n "$(CARPETA)" || { echo "Falta la carpeta: make primera-carga CARPETA=/ruta/del/archivo"; exit 1; }
+	@deploy/instalacion/cerrojo.sh python3 deploy/instalacion/primera_carga.py "$(CARPETA)" $(ARGS)
 
 # Añade un proyecto nuevo sin vaciar (encargo 14): make instalacion-anadir-proyecto DATOS_PROYECTO=<carpeta> CONFIRMAR=ANADIR
 instalacion-anadir-proyecto:
