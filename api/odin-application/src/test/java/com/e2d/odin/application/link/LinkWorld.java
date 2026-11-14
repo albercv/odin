@@ -3,6 +3,7 @@ package com.e2d.odin.application.link;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.UploadToCaseFile;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
@@ -25,6 +26,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ProjectId;
 import java.time.Duration;
@@ -81,7 +83,18 @@ final class LinkWorld {
     UploadByLink uploadByLink() {
         var upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(1000), ids, clock);
         var add = new AddToCaseFiles(orgs, members, docs, caseFiles, ids, clock);
-        return new UploadByLink(resolve(), links, new UploadToCaseFile(upload, add, caseFiles, ids, clock));
+        return new UploadByLink(resolve(), links, new UploadToCaseFile(upload, add, caseFiles, ids, clock),
+                new UploadToProject(upload, docs));
+    }
+
+    /** Cambia lo que la empresa tiene activado. */
+    void setCapabilities(Capability... capabilities) {
+        var old = orgs.findCompany(company).orElseThrow();
+        orgs.saveCompany(old.withCapabilities(Set.of(capabilities)));
+    }
+
+    Document uploaded(String filename) {
+        return docs.all().stream().filter(d -> d.filename().equals(filename)).findFirst().orElseThrow();
     }
 
     OpenOriginal openOriginal() {

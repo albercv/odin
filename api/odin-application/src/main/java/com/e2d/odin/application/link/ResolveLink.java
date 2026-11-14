@@ -8,7 +8,6 @@ import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.shared.WorkerAccess;
-import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.link.AccessLink;
 import com.e2d.odin.domain.link.AccessLinkKind;
@@ -21,7 +20,7 @@ import java.util.Optional;
 
 /**
  * Cada uso de un enlace vuelve a comprobarlo todo: que existe y es del tipo esperado, que no ha caducado, que la
- * persona sigue activa y ve el caso o el documento, y que viene del equipo al que quedó atado. Cualquier fallo es el
+ * persona sigue activa y ve el caso, el proyecto o el documento (y, para subir a un proyecto, conserva la capacidad), y que viene del equipo al que quedó atado. Cualquier fallo es el
  * mismo 404, para que el token no sirva para averiguar nada.
  */
 public class ResolveLink {
@@ -49,7 +48,7 @@ public class ResolveLink {
         try {
             AccessLink link = find(token, kind);
             Actor actor = actors.worker(link.userId(), link.companyId());
-            Document target = visibleTarget(actor, link);
+            LinkTarget target = visibleTarget(actor, link);
             requireBoundTo(link, clientAddress);
             return new ResolvedLink(link, actor, target);
         } catch (DomainException e) {
@@ -66,14 +65,23 @@ public class ResolveLink {
                 .orElseThrow(ResolveLink::notFound);
     }
 
-    private Document visibleTarget(Actor actor, AccessLink link) {
-        if (link.kind() == AccessLinkKind.UPLOAD) {
-            return CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers)
-                    .caseDocument(documents, link.caseId().orElseThrow());
+    private LinkTarget visibleTarget(Actor actor, AccessLink link) {
+        if (link.kind() != AccessLinkKind.UPLOAD) {
+            return visibleOriginal(actor, link);
         }
+        if (link.projectId().isPresent()) {
+            return new LinkTarget.ProjectTarget(
+                    ProjectUploadAccess.require(actor, organizations, projectMembers, link.projectId().get()));
+        }
+        return new LinkTarget.CaseTarget(CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers)
+                .caseDocument(documents, link.caseId().orElseThrow()));
+    }
+
+    private LinkTarget visibleOriginal(Actor actor, AccessLink link) {
         var granted = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE);
-        return documents.findById(CompanyScope.of(link.companyId()), granted.content(), link.documentId().orElseThrow())
-                .filter(d -> d.withdrawnAt().isEmpty()).orElseThrow(ResolveLink::notFound);
+        return new LinkTarget.OriginalTarget(documents
+                .findById(CompanyScope.of(link.companyId()), granted.content(), link.documentId().orElseThrow())
+                .filter(d -> d.withdrawnAt().isEmpty()).orElseThrow(ResolveLink::notFound));
     }
 
     private void requireBoundTo(AccessLink link, String clientAddress) {
