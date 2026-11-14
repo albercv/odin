@@ -150,6 +150,19 @@ describe('case file tools', () => {
     expect(fake.requests.filter((r) => r.url.includes('upload-links'))).toEqual([]);
   });
 
+  it('requestUploadLinkNamesOnlyWhatTheCompanyHasWhenNothingIsGiven', async () => {
+    for (const [caps, text] of [[['CASE_FILES'], 'Indica un caso'], [['UPLOAD_DOCUMENTS'], 'Indica un proyecto'], [['CASE_FILES', 'UPLOAD_DOCUMENTS'], 'Indica un caso o un proyecto']] as const) {
+      await fake?.close();
+      fake = await startFakeApi(() => meWith([...caps]));
+      const server = await buildServer(createApiClient(fake.url, 'clave'));
+      const [a, b] = InMemoryTransport.createLinkedPair();
+      const c = new Client({ name: 'test', version: '1' });
+      await Promise.all([server.connect(a), c.connect(b)]);
+      const none = await c.callTool({ name: 'requestUploadLink', arguments: {} });
+      expect([none.isError, textOf(none)]).toEqual([true, text]);
+    }
+  });
+
   it('requestUploadLinkOffersOnlyWhatTheCompanyHas', async () => {
     const tool = async (caps: string[]) => {
       await fake?.close();
