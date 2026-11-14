@@ -182,7 +182,30 @@ Las respuestas esperadas salen de las claves del archivo ficticio. Odín debe ci
 make -C /Users/albercv/Documents/personalProjects/odin instalacion-restaurar COPIA=data/copias/odin-v24-antes-anadir-proyecto-2026-11-13-232428.sql CONFIRMAR=BORRAR
 ```
 
-## Gestión Albar perdió «casos parecidos» a las 21:26 (pendiente de tu decisión)
+## Actualización de la 01:05 del 14 de noviembre (sin vaciar)
+
+- **Qué entra:** el código de `integracion/instalacion` 8585360, sin migraciones:
+  - las mejoras del expediente (D-093);
+  - los números de caso en la búsqueda;
+  - los nombres de proyecto al día (D-101).
+- **Lo lanzó el CEO con tu permiso:** salida 0 entre las 01:05:14 y las 01:05:55. Copia previa: `2026-11-14-010514`.
+- **Tu base no ha cambiado:** la huella de todas las tablas (personas, proyectos, documentos, páginas, temas, fichas, expedientes y claves) es idéntica a la de las 01:03. Mirador sigue igual.
+- **Lo nuevo que verás:**
+  - `verifyCitation` comprueba varias citas de una vez (`citations`): da por buena una cita real y rechaza una inventada;
+  - un proyecto creado con el conector abierto sale con su nombre: Mirador ya no aparece como «Proyecto borrado»;
+  - un proyecto que no puedes ver sale como «Proyecto no disponible».
+- **Comprobado** por el MCP de la instalación y por la copia del conector de Claude Desktop, ejecutada igual que la arranca Claude Desktop.
+- **Te falta:** cerrar Claude Desktop del todo (Cmd+Q) y abrirlo otra vez. A la 01:10 seguía abierto desde las 18:17 y usaba el MCP anterior.
+- **El lector OCR** corre aparte de Claude Desktop y debería seguir en marcha tras reiniciarlo. Si no responde, se arranca como dice «El lector OCR, tras reiniciar el Mac».
+- **Para volver a antes de esta actualización:**
+
+```bash
+make -C /Users/albercv/Documents/personalProjects/odin instalacion-restaurar COPIA=data/copias/odin-v24-antes-despliegue-actualizar-2026-11-14-010514.sql CONFIRMAR=BORRAR
+```
+
+## Gestión Albar perdió «casos parecidos» a las 21:26 (cerrado)
+
+- **Cerrado el 14 de noviembre:** dices que pudo ser cosa tuya. Si quieres que Albar vuelva a tener casos parecidos, actívalo en el panel (Empresas > Gestión Albar). No se ha restaurado.
 
 - **Qué pasó:**
   - con un clic en la página de empresas del panel, se quitó a Gestión Albar la capacidad «casos parecidos» (`SIMILAR_CASES`);
