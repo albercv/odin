@@ -131,6 +131,7 @@ public class TestWiring {
     final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
+    final com.e2d.odin.application.shared.IntakeSettings intakeSettings = new com.e2d.odin.application.shared.IntakeSettings(false);
     final InMemoryIntakeRepository intake = new InMemoryIntakeRepository();
     final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository(docs);
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
@@ -338,7 +339,7 @@ public class TestWiring {
     }
 
     @Bean GetIntakeBatch getIntakeBatch() {
-        return new GetIntakeBatch(intake, docs);
+        return new GetIntakeBatch(intake, docs, installationSettings(), intakeSettings);
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {

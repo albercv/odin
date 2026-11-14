@@ -12,6 +12,9 @@ CREATE TABLE intake_batch (
     state      text NOT NULL CHECK (state IN ('OPEN', 'READING', 'IN_REVIEW', 'CLOSED')),
     created_at timestamptz NOT NULL,
     closed_at  timestamptz NULL,
+    -- ficheros que al subirse ya estaban en la empresa, y los descartados en este lote; sobreviven a reanudar
+    already_there integer NOT NULL DEFAULT 0 CHECK (already_there >= 0),
+    discarded     integer NOT NULL DEFAULT 0 CHECK (discarded >= 0),
     UNIQUE (id, company_id),
     CHECK ((state = 'CLOSED') = (closed_at IS NOT NULL))
 );
@@ -28,6 +31,13 @@ ALTER TABLE document ADD CONSTRAINT document_scan_of_same_company_fk
     FOREIGN KEY (scan_of, company_id) REFERENCES document (id, company_id);
 ALTER TABLE document ADD CONSTRAINT document_scan_of_not_self CHECK (scan_of IS NULL OR scan_of <> id);
 ALTER TABLE document ADD CONSTRAINT document_pending_has_batch CHECK (NOT intake_pending OR intake_batch_id IS NOT NULL);
+-- D1: lo pendiente no cuenta para los duplicados de quien no lo ve (subir lo mismo no delata el documento oculto);
+-- entre los propios pendientes, la huella es única en la empresa para que reanudar no duplique.
+DROP INDEX document_company_project_sha256_key;
+CREATE UNIQUE INDEX document_company_project_sha256_key ON document (company_id, project_id, sha256) NULLS NOT DISTINCT
+    WHERE withdrawn_at IS NULL AND NOT intake_pending;
+CREATE UNIQUE INDEX document_pending_sha256_key ON document (company_id, sha256)
+    WHERE withdrawn_at IS NULL AND intake_pending;
 CREATE INDEX document_intake_batch_idx ON document (intake_batch_id) WHERE intake_batch_id IS NOT NULL;
 
 -- Copia exacta de la política de V24 más la condición de lo pendiente.

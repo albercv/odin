@@ -14,6 +14,8 @@ import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
 import com.e2d.odin.application.intake.IntakeFileResult.Outcome;
+import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.shared.IntakeSettings;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
@@ -45,7 +47,8 @@ class IntakeUploadTest {
     private final StartIntake start = new StartIntake(intake, orgs, ids, clock);
     private final AddFileToIntake addFile = new AddFileToIntake(intake, upload);
     private final CloseIntakeUpload close = new CloseIntakeUpload(intake);
-    private final GetIntakeBatch get = new GetIntakeBatch(intake, docs);
+    private final GetIntakeBatch get = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
+            new IntakeSettings(true));
     private final CompanyId company = Fixtures.company(orgs);
     private final CompanyId other = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);
@@ -79,6 +82,15 @@ class IntakeUploadTest {
         assertThat(docs.findById(CompanyScope.of(company), ProjectVisibility.all(), d.id())).isEmpty();
         assertThat(docs.list(CompanyScope.of(company), ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0,
                 10)).isEmpty();
+    }
+
+    @Test
+    void theOrdinaryHashLookupsNeverFindAPendingDocument() {
+        Document d = add("a/uno.pdf", "uno").entry().document();
+
+        assertThat(docs.findBySha256(company, d.sha256())).isEmpty();
+        assertThat(docs.findBySha256InProject(company, Optional.empty(), d.sha256())).isEmpty();
+        assertThat(docs.findBySha256ForIntake(company, batch.id(), d.sha256())).isPresent();
     }
 
     @Test
@@ -153,6 +165,39 @@ class IntakeUploadTest {
         assertThat(get.execute(admin, company, batch.id()).counts().uploaded()).isEqualTo(1);
         assertThatThrownBy(() -> add("a/dos.pdf", "dos")).isInstanceOf(ConflictException.class);
         assertThatThrownBy(() -> close.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void theCountsSurviveAResume() {
+        add("a/uno.pdf", "uno");
+        add("a/dos.pdf", "dos");
+        withdraw(docs.all().get(1));
+        add("a/uno.pdf", "uno");
+        add("a/uno.pdf", "uno");
+        add("a/dos.pdf", "dos");
+
+        var view = get.execute(admin, company, batch.id());
+
+        assertThat(view.batch().alreadyThere()).isEqualTo(2);
+        assertThat(view.batch().discarded()).isEqualTo(1);
+        assertThat(view.counts().uploaded()).isEqualTo(1);
+        assertThat(view.counts().pending()).isEqualTo(1);
+        assertThat(intake.find(company, batch.id()).orElseThrow().alreadyThere()).isEqualTo(2);
+    }
+
+    @Test
+    void warningsAppearOnlyWhenTheReaderOrTheLocalModelAreMissing() {
+        GetIntakeBatch bare = new GetIntakeBatch(intake, docs, new InstallationSettings("t", false),
+                new IntakeSettings(false));
+        GetIntakeBatch complete = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
+                new IntakeSettings(true));
+        GetIntakeBatch noModel = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
+                new IntakeSettings(false));
+
+        assertThat(bare.execute(admin, company, batch.id()).warnings())
+                .containsExactly(IntakeWarning.NO_READER, IntakeWarning.NO_LOCAL_MODEL);
+        assertThat(noModel.execute(admin, company, batch.id()).warnings()).containsExactly(IntakeWarning.NO_LOCAL_MODEL);
+        assertThat(complete.execute(admin, company, batch.id()).warnings()).isEmpty();
     }
 
     @Test

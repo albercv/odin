@@ -1376,6 +1376,7 @@ export interface components {
              */
             channel: "COMMAND" | "PANEL";
         };
+        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote. */
         IntakeBatchView: {
             /** Format: uuid */
             id: string;
@@ -1391,6 +1392,17 @@ export interface components {
             uploaded: number;
             /** Format: int32 */
             reading: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            alreadyThere: number;
+            /** Format: int32 */
+            discarded: number;
+            warnings: components["schemas"]["IntakeWarningView"][];
+        };
+        IntakeWarningView: {
+            code: string;
+            message: string;
         };
         /** @description outcome: CREATED, ALREADY_THERE (la huella ya estaba) o DISCARDED_IN_BATCH (se descartó en este lote). */
         IntakeFile: {

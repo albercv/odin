@@ -201,10 +201,12 @@ public class PostgresDocumentRepository implements DocumentRepository {
         return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
                 SELECT count(*) FILTER (WHERE withdrawn_at IS NULL) AS uploaded,
                        count(*) FILTER (WHERE withdrawn_at IS NULL
-                           AND status IN ('RECEIVED', 'PROCESSING', 'PENDING_READER', 'READER_PROCESSING')) AS reading
+                           AND status IN ('RECEIVED', 'PROCESSING', 'PENDING_READER', 'READER_PROCESSING')) AS reading,
+                       count(*) FILTER (WHERE withdrawn_at IS NULL AND intake_pending) AS pending
                 FROM document WHERE company_id = :company AND intake_batch_id = :batch""")
                 .param("company", companyId.value()).param("batch", batchId.value())
-                .query((rs, n) -> new IntakeCounts(rs.getInt("uploaded"), rs.getInt("reading"))).single());
+                .query((rs, n) -> new IntakeCounts(rs.getInt("uploaded"), rs.getInt("reading"),
+                        rs.getInt("pending"))).single());
     }
 
     @Override

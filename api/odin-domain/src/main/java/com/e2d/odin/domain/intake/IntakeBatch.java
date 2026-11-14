@@ -8,11 +8,11 @@ import java.util.Optional;
 
 /** Máquina de estados del lote: OPEN, READING, IN_REVIEW y CLOSED, siempre en ese orden. */
 public record IntakeBatch(IntakeBatchId id, CompanyId companyId, UserId startedBy, IntakeChannel channel,
-        IntakeState state, Instant createdAt, Optional<Instant> closedAt) {
+        IntakeState state, Instant createdAt, Optional<Instant> closedAt, int alreadyThere, int discarded) {
 
     public static IntakeBatch open(IntakeBatchId id, CompanyId companyId, UserId startedBy, IntakeChannel channel,
             Instant now) {
-        return new IntakeBatch(id, companyId, startedBy, channel, IntakeState.OPEN, now, Optional.empty());
+        return new IntakeBatch(id, companyId, startedBy, channel, IntakeState.OPEN, now, Optional.empty(), 0, 0);
     }
 
     /** Termina la subida: empieza la lectura. */
@@ -33,6 +33,6 @@ public record IntakeBatch(IntakeBatchId id, CompanyId companyId, UserId startedB
         if (state != from) {
             throw new ConflictException("El lote está en " + state + " y no puede pasar a " + to);
         }
-        return new IntakeBatch(id, companyId, startedBy, channel, to, createdAt, closed);
+        return new IntakeBatch(id, companyId, startedBy, channel, to, createdAt, closed, alreadyThere, discarded);
     }
 }

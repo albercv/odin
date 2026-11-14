@@ -27,7 +27,8 @@ import java.util.function.Function;
 
 public class PostgresIntakeRepository implements IntakeRepository {
 
-    private static final String BATCH_COLUMNS = "id, company_id, started_by, channel, state, created_at, closed_at";
+    private static final String BATCH_COLUMNS = "id, company_id, started_by, channel, state, created_at, closed_at, "
+            + "already_there, discarded";
     private static final String PROPOSAL_COLUMNS = "id, company_id, batch_id, document_id, kind, target_project_id, "
             + "target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at";
 
@@ -49,6 +50,14 @@ public class PostgresIntakeRepository implements IntakeRepository {
                 .param("id", b.id().value()).param("company", b.companyId().value()).param("by", b.startedBy().value())
                 .param("channel", b.channel().name()).param("state", b.state().name())
                 .param("created", Sql.ts(b.createdAt())).param("closed", Sql.ts(b.closedAt())).update());
+    }
+
+    @Override
+    public void countFile(CompanyId companyId, IntakeBatchId id, boolean discarded) {
+        String column = discarded ? "discarded" : "already_there";
+        tx.runInScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("UPDATE intake_batch SET " + column + " = "
+                + column + " + 1 WHERE id = :id AND company_id = :company").param("id", id.value())
+                .param("company", companyId.value()).update());
     }
 
     @Override
@@ -117,7 +126,7 @@ public class PostgresIntakeRepository implements IntakeRepository {
         return new IntakeBatch(new IntakeBatchId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
                 new UserId(Sql.uuid(rs, "started_by")), IntakeChannel.valueOf(rs.getString("channel")),
                 IntakeState.valueOf(rs.getString("state")), Sql.instant(rs, "created_at"),
-                Sql.optionalInstant(rs, "closed_at"));
+                Sql.optionalInstant(rs, "closed_at"), rs.getInt("already_there"), rs.getInt("discarded"));
     }
 
     private static ProjectCandidate candidate(ResultSet rs) throws SQLException {

@@ -31,6 +31,13 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public synchronized void countFile(CompanyId companyId, IntakeBatchId id, boolean discarded) {
+        IntakeBatch b = batches.get(id);
+        batches.put(id, new IntakeBatch(b.id(), b.companyId(), b.startedBy(), b.channel(), b.state(), b.createdAt(),
+                b.closedAt(), b.alreadyThere() + (discarded ? 0 : 1), b.discarded() + (discarded ? 1 : 0)));
+    }
+
+    @Override
     public synchronized Optional<IntakeBatch> find(CompanyId companyId, IntakeBatchId id) {
         return Optional.ofNullable(batches.get(id)).filter(b -> b.companyId().equals(companyId));
     }

@@ -115,6 +115,7 @@ import com.e2d.odin.application.usage.GetDeliveredVolume;
 import com.e2d.odin.application.usage.GetUsageStats;
 import com.e2d.odin.application.usage.ListGaps;
 import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.shared.IntakeSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
@@ -487,8 +488,9 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    GetIntakeBatch getIntakeBatch(IntakeRepository intake, DocumentRepository documents) {
-        return new GetIntakeBatch(intake, documents);
+    GetIntakeBatch getIntakeBatch(IntakeRepository intake, DocumentRepository documents,
+            InstallationSettings installationSettings, IntakeSettings intakeSettings) {
+        return new GetIntakeBatch(intake, documents, installationSettings, intakeSettings);
     }
 
     @Bean

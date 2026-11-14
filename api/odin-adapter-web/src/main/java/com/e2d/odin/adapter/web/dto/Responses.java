@@ -450,12 +450,28 @@ public final class Responses {
     public record CaseMarksResult(int updated) {
     }
 
+    public record IntakeWarningView(String code, String message) {
+        static IntakeWarningView from(com.e2d.odin.application.intake.IntakeWarning warning) {
+            return switch (warning) {
+                case NO_READER -> new IntakeWarningView(warning.name(),
+                        "No hay lector OCR: los escaneos esperarán hasta que lo haya");
+                case NO_LOCAL_MODEL -> new IntakeWarningView(warning.name(),
+                        "No hay modelo local: solo se propondrá con las reglas");
+            };
+        }
+    }
+
+    @Schema(description = "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; "
+            + "alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote.")
     public record IntakeBatchView(UUID id, UUID companyId, String channel, String state, Instant createdAt,
-            @Nullable Instant closedAt, int uploaded, int reading) {
+            @Nullable Instant closedAt, int uploaded, int reading, int pending, int alreadyThere, int discarded,
+            List<IntakeWarningView> warnings) {
         public static IntakeBatchView from(com.e2d.odin.application.intake.IntakeBatchView view) {
             var b = view.batch();
             return new IntakeBatchView(b.id().value(), b.companyId().value(), b.channel().name(), b.state().name(),
-                    b.createdAt(), b.closedAt().orElse(null), view.counts().uploaded(), view.counts().reading());
+                    b.createdAt(), b.closedAt().orElse(null), view.counts().uploaded(), view.counts().reading(),
+                    view.counts().pending(), b.alreadyThere(), b.discarded(),
+                    view.warnings().stream().map(IntakeWarningView::from).toList());
         }
     }
 

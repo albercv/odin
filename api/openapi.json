@@ -3590,6 +3590,7 @@
       },
       "IntakeBatchView" : {
         "type" : "object",
+        "description" : "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote.",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -3620,9 +3621,39 @@
           "reading" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "pending" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "alreadyThere" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "discarded" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "warnings" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IntakeWarningView"
+            }
           }
         },
-        "required" : [ "channel", "companyId", "createdAt", "id", "reading", "state", "uploaded" ]
+        "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "reading", "state", "uploaded", "warnings" ]
+      },
+      "IntakeWarningView" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message" ]
       },
       "IntakeFile" : {
         "type" : "object",

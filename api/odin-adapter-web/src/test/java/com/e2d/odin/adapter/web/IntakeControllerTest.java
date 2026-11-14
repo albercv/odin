@@ -51,7 +51,11 @@ class IntakeControllerTest extends WebTestSupport {
 
         mvc.perform(file("uno", admin)).andExpect(status().isOk()).andExpect(jsonPath("$.outcome").value("ALREADY_THERE"))
                 .andExpect(jsonPath("$.document.id").value(known));
-        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.uploaded").value(1));
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.uploaded").value(1))
+                .andExpect(jsonPath("$.pending").value(1)).andExpect(jsonPath("$.alreadyThere").value(1))
+                .andExpect(jsonPath("$.discarded").value(0))
+                // la prueba tiene lector pero no modelo local
+                .andExpect(jsonPath("$.warnings", hasSize(1))).andExpect(jsonPath("$.warnings[0].code").value("NO_LOCAL_MODEL"));
         String digest = w.docs.all().stream().filter(d -> d.companyId().equals(company)).findFirst().orElseThrow()
                 .sha256();
         mvc.perform(get(batch + "/files").param("sha256", digest, "otra").cookie(admin)).andExpect(status().isOk())

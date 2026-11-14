@@ -2,7 +2,14 @@ package com.e2d.odin.adapter.postgres;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.document.UploadOutcome;
+import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
+import com.e2d.odin.application.fake.StubFormatDetector;
+import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.document.Document;
+import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.intake.IntakeBatch;
@@ -14,6 +21,8 @@ import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -78,13 +87,27 @@ class IntakeUploadIT extends AbstractPostgresIT {
     }
 
     @Test
+    void theCountersOfAlreadyThereAndDiscardedPersistAndNeverCrossCompanies() {
+        intake.countFile(company, batch.id(), false);
+        intake.countFile(company, batch.id(), false);
+        intake.countFile(company, batch.id(), true);
+        intake.countFile(newCompany(), batch.id(), true);
+
+        IntakeBatch stored = intake.find(company, batch.id()).orElseThrow();
+        assertThat(stored.alreadyThere()).isEqualTo(2);
+        assertThat(stored.discarded()).isEqualTo(1);
+        intake.save(stored.startReading());
+        assertThat(intake.find(company, batch.id()).orElseThrow().alreadyThere()).isEqualTo(2);
+    }
+
+    @Test
     void theHashLookupNeverCrossesCompanies() {
         Document d = pendingDocument(batch, "a/uno.pdf");
         CompanyId other = newCompany();
 
         assertThat(docs.findBySha256ForIntake(other, batch.id(), d.sha256())).isEmpty();
         assertThat(docs.existingSha256ForIntake(other, batch.id(), List.of(d.sha256()))).isEmpty();
-        assertThat(docs.intakeCounts(other, batch.id())).isEqualTo(new IntakeCounts(0, 0));
+        assertThat(docs.intakeCounts(other, batch.id())).isEqualTo(new IntakeCounts(0, 0, 0));
     }
 
     @Test
@@ -95,6 +118,30 @@ class IntakeUploadIT extends AbstractPostgresIT {
         Document gone = pendingDocument(batch, "a/tres.pdf");
         docs.markWithdrawal(gone.withWithdrawal(Optional.of(NOW), Optional.of(user)));
 
-        assertThat(docs.intakeCounts(company, batch.id())).isEqualTo(new IntakeCounts(2, 1));
+        assertThat(docs.intakeCounts(company, batch.id())).isEqualTo(new IntakeCounts(2, 1, 2));
+    }
+
+    /** D1: subir lo mismo que hay pendiente no delata el documento oculto: se responde como con un duplicado que no se ve. */
+    @Test
+    void aWorkerUploadingTheBytesOfAPendingDocumentLearnsNothingAndTheOriginalStaysHidden() {
+        Actor admin = new Actor(user, "Admin", Role.COMPANY_ADMIN, Set.of(company));
+        Actor worker = new Actor(user, "Wanda", Role.WORKER, Set.of(company));
+        UploadDocument upload = new UploadDocument(docs, orgs, new InMemoryOriginalFileStore(),
+                new StubFormatDetector(DocumentFormat.PDF), new UploadSettings(1000), UUID::randomUUID,
+                Clock.fixed(NOW, ZoneOffset.UTC));
+        byte[] bytes = "mismo contenido".getBytes();
+        Document pending = upload.executeForIntake(admin, company, batch.id(), "a/uno.pdf", "uno.pdf", "uno.pdf", bytes)
+                .document();
+
+        UploadOutcome outcome = upload.executeForCase(worker, company, Optional.empty(), "Mi copia", "copia.pdf",
+                bytes, docs::save);
+
+        assertThat(outcome.duplicate()).isFalse();
+        assertThat(outcome.document().id()).isNotEqualTo(pending.id());
+        assertThat(docs.findEntry(CompanyScope.of(company), ProjectVisibility.all(), pending.id())).isEmpty();
+        assertThat(docs.list(CompanyScope.of(company), ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0,
+                10)).extracting(e -> e.document().id()).containsExactly(outcome.document().id());
+        assertThat(docs.findBySha256ForIntake(company, batch.id(), pending.sha256()).orElseThrow().id())
+                .isEqualTo(pending.id());
     }
 }

@@ -34,7 +34,9 @@ public class AddFileToIntake {
         if (!outcome.duplicate()) {
             return new IntakeFileResult(IntakeFileResult.Outcome.CREATED, outcome.entry());
         }
-        return new IntakeFileResult(outcome.document().withdrawn() ? IntakeFileResult.Outcome.DISCARDED_IN_BATCH
+        boolean discarded = outcome.document().withdrawn();
+        intake.countFile(companyId, batchId, discarded);
+        return new IntakeFileResult(discarded ? IntakeFileResult.Outcome.DISCARDED_IN_BATCH
                 : IntakeFileResult.Outcome.ALREADY_THERE, outcome.entry());
     }
 }

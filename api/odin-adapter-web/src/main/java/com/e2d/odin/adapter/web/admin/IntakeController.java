@@ -6,14 +6,12 @@ import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.intake.GetIntakeBatch;
-import com.e2d.odin.application.intake.IntakeBatchView;
 import com.e2d.odin.application.intake.IntakeFileResult;
 import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeChannel;
-import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ValidationException;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -57,7 +55,7 @@ public class IntakeController {
     public Responses.IntakeBatchView start(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestBody Requests.StartIntakeRequest request) {
         IntakeBatch batch = start.execute(actor, new CompanyId(companyId), channel(request.channel()));
-        return Responses.IntakeBatchView.from(new IntakeBatchView(batch, new IntakeCounts(0, 0)));
+        return get(actor, companyId, batch.id().value());
     }
 
     @GetMapping(BATCHES + "/{batchId}")

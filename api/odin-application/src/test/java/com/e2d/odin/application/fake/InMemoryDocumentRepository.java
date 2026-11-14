@@ -185,7 +185,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return documents.values().stream()
-                .filter(d -> !d.withdrawn() && d.companyId().equals(companyId) && d.sha256().equals(sha256))
+                .filter(d -> !d.withdrawn() && !d.intakePending() && d.companyId().equals(companyId)
+                        && d.sha256().equals(sha256))
                 .findFirst();
     }
 
@@ -209,14 +210,14 @@ public class InMemoryDocumentRepository implements DocumentRepository {
                 && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()).toList();
         long reading = mine.stream().filter(d -> Set.of(DocumentStatus.RECEIVED, DocumentStatus.PROCESSING,
                 DocumentStatus.PENDING_READER, DocumentStatus.READER_PROCESSING).contains(d.status())).count();
-        return new IntakeCounts(mine.size(), (int) reading);
+        return new IntakeCounts(mine.size(), (int) reading, (int) mine.stream().filter(Document::intakePending).count());
     }
 
     @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
-        return documents.values().stream().filter(d -> !d.withdrawn() && d.companyId().equals(companyId)
-                && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
+        return documents.values().stream().filter(d -> !d.withdrawn() && !d.intakePending()
+                && d.companyId().equals(companyId) && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
                 .findFirst();
     }
 
