@@ -100,4 +100,53 @@ class IntakeControllerTest extends WebTestSupport {
         mvc.perform(get(batch)).andExpect(status().isUnauthorized());
         org.assertj.core.api.Assertions.assertThat(w.docs.all()).noneMatch(d -> d.companyId().equals(company));
     }
+
+    private MockMultipartHttpServletRequestBuilder list(byte[] bytes, Cookie as) {
+        return multipart(batch + "/project-candidates/import")
+                .file(new MockMultipartFile("file", "proyectos.csv", "text/csv", bytes)).cookie(as);
+    }
+
+    @Test
+    void theProjectListIsImportedListedAndConfirmedWithNoCreationWhenMerging() throws Exception {
+        String candidates = batch + "/project-candidates";
+        mvc.perform(list("Calle Olmo 24\n\nCALLE OLMO 24\nCalle Haya 2\n".getBytes(), admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates", hasSize(2))).andExpect(jsonPath("$.candidates[0].origin").value("IMPORTED"));
+        mvc.perform(get(candidates).cookie(admin)).andExpect(jsonPath("$.candidates", hasSize(2)))
+                .andExpect(jsonPath("$.candidates[0].state").value("PROPOSED"));
+
+        mvc.perform(post(candidates + "/confirm").cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"decisions\":[{\"name\":\"Calle Olmo 24\",\"decision\":\"CREATE\"},"
+                        + "{\"name\":\"Calle Haya 2\",\"decision\":\"REJECT\"}]}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates[?(@.name=='Calle Olmo 24')].state").value("CONFIRMED"))
+                .andExpect(jsonPath("$.candidates[?(@.name=='Calle Haya 2')].state").value("REJECTED"));
+        org.assertj.core.api.Assertions.assertThat(w.orgs.listProjects(company)).hasSize(1);
+        mvc.perform(post(candidates + "/confirm").cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"decisions\":[{\"name\":\"Calle Olmo 24\",\"decision\":\"REJECT\"}]}"))
+                .andExpect(status().isConflict());
+        mvc.perform(post(candidates + "/confirm").cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"decisions\":[{\"name\":\"Calle Olmo 24\",\"decision\":\"OTRA\"}]}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(candidates + "/confirm").cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"decisions\":[]}")).andExpect(status().isBadRequest());
+        mvc.perform(post(candidates + "/discover").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates", hasSize(2)));
+    }
+
+    @Test
+    void anAdminOfAnotherCompanyAndAWorkerCannotUseTheProjectList() throws Exception {
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        String candidates = batch + "/project-candidates";
+        mvc.perform(list("Calle Olmo 24".getBytes(), admin)).andExpect(status().isOk());
+
+        mvc.perform(get(candidates).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(list("Calle Haya 2".getBytes(), other)).andExpect(status().isForbidden());
+        mvc.perform(post(candidates + "/discover").cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(post(candidates + "/confirm").cookie(other).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"decisions\":[{\"name\":\"Calle Olmo 24\",\"decision\":\"CREATE\"}]}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(candidates).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(get(candidates)).andExpect(status().isUnauthorized());
+        org.assertj.core.api.Assertions.assertThat(w.orgs.listProjects(company)).isEmpty();
+    }
 }

@@ -57,6 +57,20 @@ public final class Requests {
             String channel) {
     }
 
+    public record ProjectDecisionRequest(
+            @Schema(description = "Nombre del candidato, tal como sale en la lista.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) String name,
+            @Schema(description = "CREATE crea el proyecto, MERGE lo une a uno que ya existe (projectId), REJECT lo rechaza.",
+                    allowableValues = {"CREATE", "MERGE", "REJECT"}, requiredMode = Schema.RequiredMode.REQUIRED)
+            String decision,
+            @Schema(description = "Solo con MERGE: el proyecto de la empresa al que se une.") UUID projectId) {
+    }
+
+    public record ConfirmProjectCandidatesRequest(
+            @Schema(description = "De 1 a 500 decisiones, todo o nada.", requiredMode = Schema.RequiredMode.REQUIRED)
+            List<ProjectDecisionRequest> decisions) {
+    }
+
     public record CaseMarksRequest(
             @Schema(description = "De 1 a 500 documentos de la empresa.", requiredMode = Schema.RequiredMode.REQUIRED)
             List<UUID> documentIds,

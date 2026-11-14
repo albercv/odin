@@ -10,7 +10,9 @@ import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeChannel;
+import com.e2d.odin.domain.intake.CandidateOrigin;
 import com.e2d.odin.domain.intake.IntakeProposal;
+import com.e2d.odin.domain.intake.ProjectCandidate;
 import com.e2d.odin.domain.intake.ProposalConfidence;
 import com.e2d.odin.domain.intake.ProposalKind;
 import com.e2d.odin.domain.intake.ProposalSource;
@@ -85,6 +87,24 @@ class IntakeSecurityIT extends AbstractPostgresIT {
         assertThat(count("intake_proposal", "off")).isZero();
         assertThat(count("intake_batch", "on")).isEqualTo(1);
         assertThat(count("intake_proposal", "on")).isEqualTo(1);
+    }
+
+    /** D1: el texto de un documento pendiente solo sale por la ruta de la lista de proyectos, y de su empresa y lote. */
+    @Test
+    void projectCandidatesAreOnlyForTheTrayAndTheirTextsComeOnlyFromTheOwnBatch() {
+        docs.replacePages(pending.id(), List.of(new DocumentPage(pending.id(), 1, "uno", "lector", "1"),
+                new DocumentPage(pending.id(), 2, "dos", "lector", "1")));
+        CompanyId other = newCompany();
+        intake.save(new ProjectCandidate(company, batch.id(), "Calle Haya 2", CandidateOrigin.DISCOVERED, 1,
+                DecisionState.PROPOSED, Optional.empty()));
+
+        assertThat(count("intake_project_candidate", "off")).isZero();
+        assertThat(count("intake_project_candidate", "on")).isEqualTo(1);
+        assertThat(intake.candidates(company, batch.id())).extracting(ProjectCandidate::name).containsExactly("Calle Haya 2");
+        assertThat(intake.candidates(other, batch.id())).isEmpty();
+        assertThat(docs.intakeTexts(company, batch.id())).containsExactly("uno\ndos");
+        assertThat(docs.intakeTexts(other, batch.id())).isEmpty();
+        assertThat(docs.intakeTexts(company, new IntakeBatchId(UUID.randomUUID()))).isEmpty();
     }
 
     @Test

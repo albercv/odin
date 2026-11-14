@@ -214,6 +214,15 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public List<String> intakeTexts(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()
+                && d.status() == DocumentStatus.READY)
+                .map(d -> pagesOf(d.id()).stream().map(DocumentPage::text).collect(java.util.stream.Collectors.joining("\n")))
+                .toList();
+    }
+
+    @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
         return documents.values().stream().filter(d -> !d.withdrawn() && !d.intakePending()

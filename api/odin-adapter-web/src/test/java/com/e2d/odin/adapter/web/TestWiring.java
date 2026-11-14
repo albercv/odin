@@ -35,7 +35,10 @@ import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.ImportProjectList;
+import com.e2d.odin.application.intake.ListProjectCandidates;
 import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
@@ -340,6 +343,18 @@ public class TestWiring {
 
     @Bean GetIntakeBatch getIntakeBatch() {
         return new GetIntakeBatch(intake, docs, installationSettings(), intakeSettings);
+    }
+
+    @Bean ImportProjectList importProjectList() {
+        return new ImportProjectList(intake);
+    }
+
+    @Bean ListProjectCandidates listProjectCandidates() {
+        return new ListProjectCandidates(intake, docs);
+    }
+
+    @Bean ConfirmProjectCandidates confirmProjectCandidates() {
+        return new ConfirmProjectCandidates(intake, orgs, createProject());
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {

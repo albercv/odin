@@ -210,6 +210,16 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public List<String> intakeTexts(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT string_agg(p.text, E'\\n' ORDER BY p.number) FROM document d
+                JOIN document_page p ON p.document_id = d.id
+                WHERE d.company_id = :company AND d.intake_batch_id = :batch AND d.withdrawn_at IS NULL
+                AND d.status = 'READY' GROUP BY d.id ORDER BY d.seq""")
+                .param("company", companyId.value()).param("batch", batchId.value()).query(String.class).list());
+    }
+
+    @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS

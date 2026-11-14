@@ -79,7 +79,7 @@ public class PostgresIntakeRepository implements IntakeRepository {
         tx.runInScope(CompanyScope.of(c.companyId()), ALL, jdbc -> jdbc.sql("""
                 INSERT INTO intake_project_candidate (company_id, batch_id, name, origin, document_count, state, project_id)
                 VALUES (:company, :batch, :name, :origin, :count, :state, :project)
-                ON CONFLICT (batch_id, name) DO UPDATE SET document_count = EXCLUDED.document_count,
+                ON CONFLICT (batch_id, name) DO UPDATE SET origin = EXCLUDED.origin, document_count = EXCLUDED.document_count,
                     state = EXCLUDED.state, project_id = EXCLUDED.project_id""")
                 .param("company", c.companyId().value()).param("batch", c.batchId().value()).param("name", c.name())
                 .param("origin", c.origin().name()).param("count", c.documentCount()).param("state", c.state().name())

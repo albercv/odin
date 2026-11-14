@@ -5,14 +5,19 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.ImportProjectList;
 import com.e2d.odin.application.intake.IntakeFileResult;
+import com.e2d.odin.application.intake.ListProjectCandidates;
+import com.e2d.odin.application.intake.ProjectDecision;
 import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeChannel;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
@@ -36,18 +41,26 @@ import org.springframework.web.multipart.MultipartFile;
 public class IntakeController {
 
     private static final String BATCHES = "/v1/admin/companies/{companyId}/intake-batches";
+    private static final int MAX_DECISIONS = 500;
 
     private final StartIntake start;
     private final AddFileToIntake addFile;
     private final CloseIntakeUpload closeUpload;
     private final GetIntakeBatch get;
+    private final ImportProjectList importList;
+    private final ListProjectCandidates candidates;
+    private final ConfirmProjectCandidates confirmCandidates;
 
     public IntakeController(StartIntake start, AddFileToIntake addFile, CloseIntakeUpload closeUpload,
-            GetIntakeBatch get) {
+            GetIntakeBatch get, ImportProjectList importList, ListProjectCandidates candidates,
+            ConfirmProjectCandidates confirmCandidates) {
         this.start = start;
         this.addFile = addFile;
         this.closeUpload = closeUpload;
         this.get = get;
+        this.importList = importList;
+        this.candidates = candidates;
+        this.confirmCandidates = confirmCandidates;
     }
 
     @PostMapping(BATCHES)
@@ -88,6 +101,50 @@ public class IntakeController {
             @PathVariable UUID companyId, @PathVariable UUID batchId) {
         closeUpload.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId));
         return get(actor, companyId, batchId);
+    }
+
+    @GetMapping(BATCHES + "/{batchId}/project-candidates")
+    public Responses.ProjectCandidates projectCandidates(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId) {
+        return Responses.ProjectCandidates.from(
+                candidates.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId)));
+    }
+
+    @PostMapping(path = BATCHES + "/{batchId}/project-candidates/import",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Responses.ProjectCandidates importProjectList(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId, @RequestParam("file") MultipartFile file)
+            throws IOException {
+        return Responses.ProjectCandidates.from(
+                importList.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId), file.getBytes()));
+    }
+
+    @PostMapping(BATCHES + "/{batchId}/project-candidates/discover")
+    public Responses.ProjectCandidates discoverProjects(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId) {
+        return Responses.ProjectCandidates.from(
+                candidates.discover(actor, new CompanyId(companyId), new IntakeBatchId(batchId)));
+    }
+
+    @PostMapping(BATCHES + "/{batchId}/project-candidates/confirm")
+    public Responses.ProjectCandidates confirmProjectCandidates(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId,
+            @RequestBody Requests.ConfirmProjectCandidatesRequest request) {
+        List<Requests.ProjectDecisionRequest> given = request.decisions();
+        if (given == null || given.isEmpty() || given.size() > MAX_DECISIONS || given.contains(null)) {
+            throw new ValidationException("Envía de 1 a " + MAX_DECISIONS + " decisiones");
+        }
+        return Responses.ProjectCandidates.from(confirmCandidates.execute(actor, new CompanyId(companyId),
+                new IntakeBatchId(batchId), given.stream().map(IntakeController::decision).toList()));
+    }
+
+    private static ProjectDecision decision(Requests.ProjectDecisionRequest request) {
+        try {
+            return new ProjectDecision(request.name(), ProjectDecision.Action.valueOf(request.decision()),
+                    java.util.Optional.ofNullable(request.projectId()).map(ProjectId::new));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new ValidationException("La decisión tiene que ser CREATE, MERGE o REJECT");
+        }
     }
 
     private static IntakeChannel channel(String value) {
