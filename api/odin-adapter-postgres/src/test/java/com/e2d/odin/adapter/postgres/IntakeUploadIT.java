@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
+import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
 import com.e2d.odin.application.fake.StubFormatDetector;
 import com.e2d.odin.application.shared.UploadSettings;
@@ -16,6 +17,7 @@ import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeChannel;
 import com.e2d.odin.domain.intake.IntakeCounts;
+import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -27,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -121,20 +124,19 @@ class IntakeUploadIT extends AbstractPostgresIT {
         assertThat(docs.intakeCounts(company, batch.id())).isEqualTo(new IntakeCounts(2, 1, 2));
     }
 
-    /** D1: subir lo mismo que hay pendiente no delata el documento oculto: se responde como con un duplicado que no se ve. */
-    @Test
-    void aWorkerUploadingTheBytesOfAPendingDocumentLearnsNothingAndTheOriginalStaysHidden() {
+    private final UploadDocument upload = new UploadDocument(docs, orgs, new InMemoryOriginalFileStore(),
+            new StubFormatDetector(DocumentFormat.PDF), new UploadSettings(1000), UUID::randomUUID,
+            Clock.fixed(NOW, ZoneOffset.UTC));
+    private final byte[] bytes = "mismo contenido".getBytes();
+
+    /** El administrador sube {@link #bytes} a la primera carga y un trabajador sube lo mismo por {@code workerUpload}. */
+    private void assertTheWorkerLearnsNothing(Function<Actor, UploadOutcome> workerUpload) {
         Actor admin = new Actor(user, "Admin", Role.COMPANY_ADMIN, Set.of(company));
         Actor worker = new Actor(user, "Wanda", Role.WORKER, Set.of(company));
-        UploadDocument upload = new UploadDocument(docs, orgs, new InMemoryOriginalFileStore(),
-                new StubFormatDetector(DocumentFormat.PDF), new UploadSettings(1000), UUID::randomUUID,
-                Clock.fixed(NOW, ZoneOffset.UTC));
-        byte[] bytes = "mismo contenido".getBytes();
         Document pending = upload.executeForIntake(admin, company, batch.id(), "a/uno.pdf", "uno.pdf", "uno.pdf", bytes)
                 .document();
 
-        UploadOutcome outcome = upload.executeForCase(worker, company, Optional.empty(), "Mi copia", "copia.pdf",
-                bytes, docs::save);
+        UploadOutcome outcome = workerUpload.apply(worker);
 
         assertThat(outcome.duplicate()).isFalse();
         assertThat(outcome.document().id()).isNotEqualTo(pending.id());
@@ -143,5 +145,21 @@ class IntakeUploadIT extends AbstractPostgresIT {
                 10)).extracting(e -> e.document().id()).containsExactly(outcome.document().id());
         assertThat(docs.findBySha256ForIntake(company, batch.id(), pending.sha256()).orElseThrow().id())
                 .isEqualTo(pending.id());
+    }
+
+    /** D1: subir lo mismo que hay pendiente no delata el documento oculto: se responde como con un duplicado que no se ve. */
+    @Test
+    void aWorkerUploadingTheBytesOfAPendingDocumentLearnsNothingAndTheOriginalStaysHidden() {
+        assertTheWorkerLearnsNothing(worker -> upload.executeForCase(worker, company, Optional.empty(), "Mi copia",
+                "copia.pdf", bytes, docs::save));
+    }
+
+    /** D1 en la subida a un proyecto del encargo 17 (por enlace o desde el chat): igual que en la de un caso. */
+    @Test
+    void aWorkerUploadingToAProjectTheBytesOfAPendingDocumentLearnsNothingAndTheOriginalStaysHidden() {
+        Project project = orgs.findProject(company, newProject(company, "Obra")).orElseThrow();
+
+        assertTheWorkerLearnsNothing(worker -> new UploadToProject(upload, docs).execute(worker, project, "Mi copia",
+                "copia.pdf", bytes));
     }
 }

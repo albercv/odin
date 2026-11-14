@@ -96,4 +96,13 @@ class IssueUploadLinkTest {
 
         assertThatThrownBy(() -> w.issueUpload().execute(w.worker, caseDoc.id())).isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void caseWithoutProjectIsTheSameNotFoundAsAMissingCase() {
+        Document general = w.caseInGeneral();
+
+        assertThatThrownBy(() -> w.issueUpload().execute(w.worker, general.id())).isInstanceOf(NotFoundException.class)
+                .hasMessage("Caso no encontrado");
+        assertThat(w.links.all()).isEmpty();
+    }
 }

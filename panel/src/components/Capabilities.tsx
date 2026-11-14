@@ -8,6 +8,7 @@ const CAPABILITIES: [Capability, string][] = [
   ['SAVE_KNOWLEDGE_CARD', 'Guardar fichas'],
   ['SIMILAR_CASES', 'Casos parecidos'],
   ['CASE_FILES', 'Expedientes'],
+  ['UPLOAD_DOCUMENTS', 'Subir documentos'],
 ];
 
 type Props = { company: S['CompanyView']; onChange?: (capabilities: Capability[]) => void };

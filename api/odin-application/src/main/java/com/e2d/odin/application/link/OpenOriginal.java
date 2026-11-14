@@ -24,7 +24,11 @@ public class OpenOriginal {
     }
 
     public OriginalFile execute(String token, String clientAddress) {
-        return read(resolve.execute(token, clientAddress, AccessLinkKind.ORIGINAL).target());
+        var target = resolve.execute(token, clientAddress, AccessLinkKind.ORIGINAL).target();
+        if (target instanceof LinkTarget.OriginalTarget original) {
+            return read(original.document());
+        }
+        throw new NotFoundException("Enlace no encontrado");
     }
 
     public OriginalFile execute(Actor admin, DocumentId id) {

@@ -49,6 +49,7 @@ export interface ApiClient {
   addToCaseFile(caseId: string, documentIds: string[]): Promise<CaseFileAdded>;
   removeFromCaseFile(caseId: string, documentId: string): Promise<void>;
   requestUploadLink(caseId: string): Promise<IssuedLink>;
+  requestProjectUploadLink(projectId: string): Promise<IssuedLink>;
   originalLink(documentId: string, page?: number): Promise<IssuedLink>;
 }
 
@@ -84,7 +85,7 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
 
 type Call = <T>(method: string, path: string, body?: unknown) => Promise<T>;
 
-function caseFileCalls(call: Call): Pick<ApiClient, 'caseFile' | 'caseFileText' | 'addToCaseFile' | 'removeFromCaseFile' | 'requestUploadLink'> {
+function caseFileCalls(call: Call): Pick<ApiClient, 'caseFile' | 'caseFileText' | 'addToCaseFile' | 'removeFromCaseFile' | 'requestUploadLink' | 'requestProjectUploadLink'> {
   const enc = encodeURIComponent;
   return {
     caseFile: (caseId) => call('GET', `/v1/cases/${enc(caseId)}/file`),
@@ -94,6 +95,7 @@ function caseFileCalls(call: Call): Pick<ApiClient, 'caseFile' | 'caseFileText' 
     removeFromCaseFile: (caseId, documentId) =>
       call('DELETE', `/v1/cases/${enc(caseId)}/file/documents/${enc(documentId)}`),
     requestUploadLink: (caseId) => call('POST', `/v1/cases/${enc(caseId)}/upload-links`, {}),
+    requestProjectUploadLink: (projectId) => call('POST', `/v1/projects/${enc(projectId)}/upload-links`, {}),
   };
 }
 

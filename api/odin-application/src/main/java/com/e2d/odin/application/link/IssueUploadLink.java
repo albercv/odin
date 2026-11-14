@@ -1,15 +1,14 @@
 package com.e2d.odin.application.link;
 
-import com.e2d.odin.application.casefile.CaseFileAccess;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.link.AccessLinkKind;
 import com.e2d.odin.domain.shared.DocumentId;
-import java.util.Optional;
+import com.e2d.odin.domain.shared.ProjectId;
 
-/** Un enlace para subir ficheros al expediente de un caso: lo pide quien tiene CASE_FILES y ve el caso. */
+/** Un enlace para subir al expediente de un caso: lo pide quien tiene CASE_FILES y ve el caso, que ha de tener proyecto. */
 public class IssueUploadLink {
 
     private final OrganizationRepository organizations;
@@ -26,8 +25,13 @@ public class IssueUploadLink {
     }
 
     public IssuedLink execute(Actor actor, DocumentId caseId) {
-        var caseDocument = CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers)
-                .caseDocument(documents, caseId);
+        var caseDocument = CaseUploadAccess.require(actor, organizations, projectMembers, documents, caseId);
         return issuer.issue(AccessLinkKind.UPLOAD, actor, caseDocument.id(), "/subir/", "");
+    }
+
+    /** Un enlace para subir a un proyecto: lo pide quien tiene UPLOAD_DOCUMENTS y ve el proyecto vivo. */
+    public IssuedLink forProject(Actor actor, ProjectId projectId) {
+        ProjectUploadAccess.require(actor, organizations, projectMembers, projectId);
+        return issuer.issueForProject(actor, projectId, "/subir/");
     }
 }

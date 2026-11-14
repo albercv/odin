@@ -197,7 +197,8 @@ class AccessLinkIT {
         Reply sent = upload(token, "propio.txt", "mismo contenido", OFFICE);
 
         assertThat(sent.status()).isEqualTo(200);
-        assertThat(sent.body()).doesNotContain("otro proyecto", "existe", "duplic");
+        assertThat(sent.body()).doesNotContain("otro proyecto", "existe");
+        assertThat(sent.json().get("duplicate").asBoolean()).isFalse();
         assertThat(entries(caseId)).hasSize(1).doesNotContain(hiddenElsewhere);
         assertThat(strings("SELECT project_id FROM document WHERE id = '" + entries(caseId).get(0) + "'"))
                 .containsExactly(projectA);
@@ -220,6 +221,16 @@ class AccessLinkIT {
 
         assertThat(count("SELECT count(*) FROM document")).isEqualTo(before);
         assertThat(entries(caseId)).containsExactlyInAnyOrder(inProject, general);
+    }
+
+    @Test
+    void uploadLinkOfACaseWithoutProjectIsNotFound() {
+        Worker marta = worker(List.of(project()));
+        String caseId = adminUpload("ficha.txt", null, true, unique("Ficha")).json().get("document").get("id").asString();
+
+        Reply reply = api.post("/v1/cases/" + caseId + "/upload-links", map(), "Authorization", marta.bearer());
+
+        assertThat(reply.status()).isEqualTo(404);
     }
 
     @Test
@@ -544,7 +555,8 @@ class AccessLinkIT {
         Reply sent = upload(token, "nuevo.txt", text, OFFICE);
 
         assertThat(sent.status()).isEqualTo(200);
-        assertThat(sent.body()).doesNotContain("retirado", "duplic");
+        assertThat(sent.body()).doesNotContain("retirado");
+        assertThat(sent.json().get("duplicate").asBoolean()).isFalse();
         assertThat(entries(caseId)).hasSize(1).doesNotContain(old);
     }
 
