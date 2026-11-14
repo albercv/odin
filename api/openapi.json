@@ -2648,6 +2648,10 @@
           "withdrawnAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "uploadedByName" : {
+            "type" : "string",
+            "description" : "Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe."
           }
         },
         "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]

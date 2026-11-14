@@ -34,6 +34,13 @@ const openDialog = async (title: string) => {
   return screen.getByRole('dialog', { name: 'Marcar como sustituido' });
 };
 
+test('showsWhoUploadedEachDocument', async () => {
+  show(routes([{ ...old, uploadedByName: 'Marta Gil' }, renewed]));
+  const row = (await screen.findByText('Póliza 2022')).closest('tr')!;
+  expect(within(row).getByText('Marta Gil')).toBeInTheDocument();
+  expect(screen.getByRole('columnheader', { name: 'Subido por' })).toBeInTheDocument();
+});
+
 test('showsSupersededMarkWithReplacementTitle', async () => {
   show(routes([marked, renewed]));
   const row = (await screen.findByText('Póliza 2022')).closest('tr')!;

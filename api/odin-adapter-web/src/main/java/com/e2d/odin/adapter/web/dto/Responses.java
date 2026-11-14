@@ -211,17 +211,27 @@ public final class Responses {
         }
     }
 
-    /** {@code taggingStatus} y {@code topics} solo van completos en la lista de la empresa; en el resto, nulo y vacío. */
+    /**
+     * {@code taggingStatus}, {@code topics} y {@code uploadedByName} solo van completos en la lista de la empresa; en el
+     * resto, nulo y vacío.
+     */
     public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,
             int attemptCount, @Nullable DocumentLink supersededBy, @Nullable Instant supersededAt,
             List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics,
-            boolean caseDocument, @Nullable Instant withdrawnAt) {
+            boolean caseDocument, @Nullable Instant withdrawnAt,
+            @Schema(description = "Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe.")
+            @Nullable String uploadedByName) {
         public static DocumentView from(DocumentEntry entry) {
             return from(new TaggedDocument(entry, Optional.empty(), List.of()));
         }
 
         public static DocumentView from(TaggedDocument tagged) {
+            return from(tagged, Map.of());
+        }
+
+        /** El nombre de quien subió va solo en la lista de la empresa; en el resto, nulo. */
+        public static DocumentView from(TaggedDocument tagged, Map<UserId, String> names) {
             DocumentEntry entry = tagged.entry();
             Document d = entry.document();
             return new DocumentView(d.id().value(), d.companyId().value(),
@@ -231,7 +241,7 @@ public final class Responses {
                     d.supersededAt().orElse(null), d.pagesWithoutText(),
                     tagged.tagging().map(t -> t.status().name()).orElse(null),
                     tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
-                    d.withdrawnAt().orElse(null));
+                    d.withdrawnAt().orElse(null), names.get(d.uploadedBy()));
         }
     }
 
