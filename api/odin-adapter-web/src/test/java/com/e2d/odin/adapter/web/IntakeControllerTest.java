@@ -299,4 +299,64 @@ class IntakeControllerTest extends WebTestSupport {
         mvc.perform(get(batch + "/proposals")).andExpect(status().isUnauthorized());
         org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().intakePending()).isTrue();
     }
+
+    private void oneProposedOneUnplaced() throws Exception {
+        olmo = com.e2d.odin.application.fake.Fixtures.project(w.orgs, company);
+        first = uploaded("uno");
+        second = uploaded("dos");
+        firstProposal = proposal(second, olmo);
+        inReview();
+    }
+
+    @Test
+    void theBatchCountsUndecidedProposalsByKindAndUnplacedDocuments() throws Exception {
+        oneProposedOneUnplaced();
+
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.proposed.PROJECT").value(1))
+                .andExpect(jsonPath("$.unplaced").value(1));
+    }
+
+    @Test
+    void anUnplacedDocumentIsListedAndPlacedByTheAdminWithExactlyOneDestination() throws Exception {
+        oneProposedOneUnplaced();
+        String place = batch + "/documents/" + first.id().value() + "/place";
+
+        mvc.perform(get(batch + "/documents").param("unplaced", "true").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].id").value(first.id().value().toString()))
+                .andExpect(jsonPath("$.documents[0].path").value("Cliente/2019/a.pdf"))
+                .andExpect(jsonPath("$.documents[0].status").exists());
+        mvc.perform(get(batch + "/documents").param("unplaced", "false").cookie(admin)).andExpect(status().isBadRequest());
+        postJson(place, "{}").andExpect(status().isBadRequest());
+        postJson(place, "{\"projectId\":\"" + olmo.value() + "\",\"companyWide\":true}").andExpect(status().isBadRequest());
+        postJson(batch + "/documents/" + second.id().value() + "/place", "{\"companyWide\":true}")
+                .andExpect(status().isConflict());
+        postJson(place, "{\"projectId\":\"" + olmo.value() + "\"}").andExpect(status().isNoContent());
+
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().projectId()).contains(olmo);
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.unplaced").value(0));
+    }
+
+    @Test
+    void theUnplacedRoutesAreRefusedToAnotherCompanyAdminAndToAWorker() throws Exception {
+        oneProposedOneUnplaced();
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        String ownPath = "/v1/admin/companies/" + otherCompany.value() + "/intake-batches/"
+                + batch.substring(batch.lastIndexOf('/') + 1);
+        String worker = workerKey(company);
+        String body = "{\"companyWide\":true}";
+
+        for (String root : List.of(batch, ownPath)) {
+            int refused = root.equals(batch) ? 403 : 404;
+            mvc.perform(get(root + "/documents").param("unplaced", "true").cookie(other)).andExpect(status().is(refused));
+            mvc.perform(post(root + "/documents/" + first.id().value() + "/place").cookie(other)
+                    .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().is(refused));
+        }
+        mvc.perform(get(batch + "/documents").param("unplaced", "true").header("Authorization", worker))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post(batch + "/documents/" + first.id().value() + "/place").header("Authorization", worker)
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isUnauthorized());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().intakePending()).isTrue();
+    }
 }

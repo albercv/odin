@@ -20,6 +20,8 @@ import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
 import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
@@ -88,6 +90,8 @@ class IntakeConfirmationIT {
     private static ConfirmIntakeProposals confirm;
     private static DecideIntakeProposal decide;
     private static DiscardIntakeDocument discard;
+    private static PlaceIntakeDocument place;
+    private static ListUnplacedDocuments unplaced;
 
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private Actor admin;
@@ -115,6 +119,8 @@ class IntakeConfirmationIT {
                         new RandomUuidGenerator(), clock), clock);
         confirm = config.confirmIntakeProposals(intake, effects, transactionManager);
         decide = config.decideIntakeProposal(intake, effects, transactionManager);
+        place = config.placeIntakeDocument(effects, transactionManager);
+        unplaced = config.listUnplacedDocuments(intake, docs);
         discard = config.discardIntakeDocument(docs, new WithdrawDocument(docs, clock), effects,
                 transactionManager);
     }
@@ -313,6 +319,48 @@ class IntakeConfirmationIT {
         assertThat(stored(keepProposal).state()).isEqualTo(DecisionState.PROPOSED);
         assertThat(seenBy(CompanyScope.of(company), ProjectVisibility.all(), gone, "descarta")).isFalse();
         confirm(keepProposal);
+        assertThat(intake.find(company, batch).orElseThrow().state()).isEqualTo(IntakeState.CLOSED);
+    }
+
+    @Test
+    void unplacedDocumentsIncludingFailedOnesAreListedAndPlacingThemFollowsD047() {
+        Document unmatched = pending("Sin propuesta zafiro", "baliza zafiro");
+        Document broken = pending("Roto", "nada");
+        docs.save(docs.findEntryIncludingWithdrawn(CompanyScope.of(company), ProjectVisibility.all(), broken.id())
+                .orElseThrow().document().markFailed("no se pudo leer"));
+        projectProposal(pending("Con propuesta", "otra"), olmo);
+        Document wide = pending("Para toda la empresa berilo", "baliza berilo");
+
+        assertThat(unplaced.execute(admin, company, batch)).extracting(Document::id)
+                .containsExactlyInAnyOrder(unmatched.id(), broken.id(), wide.id());
+        assertThatThrownBy(() -> place.execute(admin, company, batch, broken.id(), Optional.of(olmo), false))
+                .isInstanceOf(ConflictException.class);
+        place.execute(admin, company, batch, unmatched.id(), Optional.of(olmo), false);
+        place.execute(admin, company, batch, wide.id(), Optional.empty(), true);
+
+        CompanyScope mine = CompanyScope.of(company);
+        assertThat(seenBy(mine, ProjectVisibility.of(Set.of(olmo)), unmatched, "zafiro")).isTrue();
+        assertThat(seenBy(mine, ProjectVisibility.of(Set.of(haya)), unmatched, "zafiro")).isFalse();
+        assertThat(seenBy(CompanyScope.of(new CompanyId(UUID.randomUUID())), ProjectVisibility.all(), unmatched,
+                "zafiro")).isFalse();
+        assertThat(seenBy(mine, ProjectVisibility.of(Set.of()), wide, "berilo")).isTrue();
+        assertThat(seenBy(mine, ProjectVisibility.of(Set.of(haya)), broken, "nada")).isFalse();
+    }
+
+    @Test
+    void aDocumentOfAnotherBatchOrCompanyCannotBePlacedAndTheLastPlacementClosesTheBatch() {
+        Document mine = pending("Mío", "mio");
+        CompanyId otherCompany = new CompanyId(UUID.randomUUID());
+        organizations.saveCompany(new Company(otherCompany, "Otra", new SecureRandomPersonCodeGenerator().next(),
+                EnumSet.allOf(Capability.class)));
+        Actor otherAdmin = new Actor(admin.userId(), "Ada", Role.COMPANY_ADMIN, Set.of(otherCompany));
+
+        assertThatThrownBy(() -> place.execute(otherAdmin, otherCompany, batch, mine.id(), Optional.empty(), true))
+                .isInstanceOf(com.e2d.odin.domain.shared.NotFoundException.class);
+        assertThat(stored(mine).intakePending()).isTrue();
+
+        place.execute(admin, company, batch, mine.id(), Optional.empty(), true);
+
         assertThat(intake.find(company, batch).orElseThrow().state()).isEqualTo(IntakeState.CLOSED);
     }
 }

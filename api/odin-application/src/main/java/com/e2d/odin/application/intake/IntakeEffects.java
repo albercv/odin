@@ -9,6 +9,7 @@ import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
+import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatch;
@@ -125,8 +126,32 @@ public class IntakeEffects {
 
     private void place(IntakeBatch batch, IntakeProposal p, Optional<ProjectId> project, boolean asProposed,
             Actor actor, List<IntakeProposal> all) {
+        placeDocument(batch, p.documentId(), project);
+        intake.save(asProposed ? p.confirm(actor.userId(), clock.instant()) : p.reject(actor.userId(), clock.instant()));
+        all.stream().filter(q -> q.documentId().equals(p.documentId()) && !q.id().equals(p.id())
+                && q.state() == DecisionState.PROPOSED && PLACEMENTS.contains(q.kind()))
+                .forEach(q -> reject(actor, q));
+    }
+
+    /** Decisión del administrador sobre un documento sin propuesta de proyecto por decidir (D2: sigue siendo suya). */
+    void placeUnplaced(IntakeBatch batch, DocumentId documentId, Optional<ProjectId> project) {
+        Document d = find(batch.companyId(), documentId);
+        if (!d.intakeBatchId().equals(Optional.of(batch.id()))) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+        if (d.status() == DocumentStatus.FAILED) {
+            throw new ConflictException("«" + d.title() + "» no se pudo leer: descártalo o reintenta su lectura");
+        }
+        if (intake.proposals(batch.companyId(), batch.id()).stream().anyMatch(p -> p.documentId().equals(documentId)
+                && p.state() == DecisionState.PROPOSED && PLACEMENTS.contains(p.kind()))) {
+            throw new ConflictException("«" + d.title() + "» tiene una propuesta de proyecto: decídelo en su propuesta");
+        }
+        placeDocument(batch, documentId, project);
+    }
+
+    private void placeDocument(IntakeBatch batch, DocumentId documentId, Optional<ProjectId> project) {
         CompanyId company = batch.companyId();
-        Document d = find(company, p.documentId());
+        Document d = find(company, documentId);
         if (!d.intakeBatchId().equals(Optional.of(batch.id()))) {
             throw new NotFoundException("Documento no encontrado");
         }
@@ -136,10 +161,6 @@ public class IntakeEffects {
         project.ifPresent(id -> organizations.findProject(company, id)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado")));
         documents.confirmIntake(company, d.id(), project);
-        intake.save(asProposed ? p.confirm(actor.userId(), clock.instant()) : p.reject(actor.userId(), clock.instant()));
-        all.stream().filter(q -> q.documentId().equals(p.documentId()) && !q.id().equals(p.id())
-                && q.state() == DecisionState.PROPOSED && PLACEMENTS.contains(q.kind()))
-                .forEach(q -> reject(actor, q));
     }
 
     private void markCases(Actor actor, IntakeBatch batch, List<IntakeProposal> marks) {

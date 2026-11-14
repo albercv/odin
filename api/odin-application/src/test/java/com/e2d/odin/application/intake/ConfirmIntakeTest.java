@@ -66,6 +66,9 @@ class ConfirmIntakeTest {
     private DecideIntakeProposal decide;
     private DiscardIntakeDocument discard;
     private ListIntakeProposals list;
+    private ListUnplacedDocuments unplaced;
+    private PlaceIntakeDocument place;
+    private GetIntakeBatch getBatch;
 
     @BeforeEach
     void inReview() {
@@ -88,6 +91,10 @@ class ConfirmIntakeTest {
         decide = new DecideIntakeProposal(intake, effects);
         discard = new DiscardIntakeDocument(docs, new WithdrawDocument(docs, clock), effects);
         list = new ListIntakeProposals(intake, docs);
+        unplaced = new ListUnplacedDocuments(intake, docs);
+        place = new PlaceIntakeDocument(effects);
+        getBatch = new GetIntakeBatch(intake, docs, new com.e2d.odin.application.shared.InstallationSettings("t", true),
+                new com.e2d.odin.application.shared.IntakeSettings(true));
     }
 
     private Document pending(String title) {
@@ -476,5 +483,122 @@ class ConfirmIntakeTest {
 
         assertThatThrownBy(() -> confirm(p)).isInstanceOf(ConflictException.class);
         assertThat(stored(d).intakePending()).isTrue();
+    }
+
+    private Document failed(String title) {
+        Document d = pending(title);
+        Document f = d.markFailed("no se pudo leer");
+        docs.save(f);
+        return f;
+    }
+
+    private void place(Document d, Optional<ProjectId> project, boolean companyWide) {
+        place.execute(admin, company, batch.id(), d.id(), project, companyWide);
+    }
+
+    @Test
+    void anUnmatchedDocumentAndAFailedOneAreListedAsUnplacedButNotOneWithAProjectProposal() {
+        Document unmatched = pending("Sin propuesta");
+        Document broken = failed("Roto");
+        Document proposed = pending("Con propuesta");
+        project(proposed, olmo, ProposalConfidence.LOW);
+        Document decided = pending("Propuesta rechazada");
+        decide.execute(admin, company, batch.id(), project(decided, olmo, ProposalConfidence.LOW).id(),
+                IntakeDecision.REJECT, Optional.empty());
+
+        assertThat(unplaced.execute(admin, company, batch.id())).extracting(Document::id)
+                .containsExactlyInAnyOrder(unmatched.id(), broken.id(), decided.id());
+    }
+
+    @Test
+    void placingAnUnmatchedDocumentMakesItVisibleWhereTheAdminSaysAndClosesTheBatchWithTheLastOne() {
+        Document inProject = pending("A un proyecto");
+        Document everyone = pending("De toda la empresa");
+
+        place(inProject, Optional.of(olmo), false);
+        assertThat(intake.find(company, batch.id()).orElseThrow().state()).isEqualTo(IntakeState.IN_REVIEW);
+        place(everyone, Optional.empty(), true);
+
+        assertThat(stored(inProject).projectId()).contains(olmo);
+        assertThat(stored(inProject).intakePending()).isFalse();
+        assertThat(visibleTo(inProject, ProjectVisibility.of(Set.of(haya)))).isFalse();
+        assertThat(stored(everyone).projectId()).isEmpty();
+        assertThat(visibleTo(everyone, ProjectVisibility.of(Set.of()))).isTrue();
+        assertThat(intake.find(company, batch.id()).orElseThrow().state()).isEqualTo(IntakeState.CLOSED);
+    }
+
+    @Test
+    void placingNeedsExactlyOneOfProjectOrCompanyWideAndAProjectOfTheCompany() {
+        Document d = pending("Sin propuesta");
+        ProjectId foreign = Fixtures.project(orgs, Fixtures.company(orgs));
+
+        assertThatThrownBy(() -> place(d, Optional.empty(), false)).isInstanceOf(ValidationException.class);
+        assertThatThrownBy(() -> place(d, Optional.of(olmo), true)).isInstanceOf(ValidationException.class);
+        assertThatThrownBy(() -> place(d, Optional.of(foreign), false)).isInstanceOf(NotFoundException.class);
+        assertThat(stored(d).intakePending()).isTrue();
+    }
+
+    @Test
+    void aFailedDocumentAndOneWithAProjectProposalCannotBePlacedDirectly() {
+        Document broken = failed("Roto");
+        Document proposed = pending("Con propuesta");
+        project(proposed, olmo, ProposalConfidence.LOW);
+        pending("Para que siga abierto");
+
+        assertThatThrownBy(() -> place(broken, Optional.of(olmo), false)).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> place(proposed, Optional.of(olmo), false)).isInstanceOf(ConflictException.class)
+                .hasMessageContaining("decídelo en su propuesta");
+        assertThat(stored(broken).intakePending()).isTrue();
+        assertThat(stored(proposed).intakePending()).isTrue();
+    }
+
+    @Test
+    void aVisibleTwinMakesDirectPlacementA409() {
+        Document d = pending("Acta");
+        Document twin = Fixtures.documentIn(docs, company, olmo, "igual");
+        docs.save(new Document(twin.id(), company, Optional.of(olmo), "igual", "igual.pdf", d.format(), d.sha256(),
+                DocumentStatus.READY, Optional.empty(), true, d.uploadedBy(), d.uploadedAt(), Optional.empty(), 0,
+                Optional.empty(), Optional.empty()));
+
+        assertThatThrownBy(() -> place(d, Optional.of(olmo), false)).isInstanceOf(ConflictException.class);
+        assertThat(stored(d).intakePending()).isTrue();
+    }
+
+    @Test
+    void unplacedAndPlacementRefuseAWorkerAnotherCompanyAndForeignDocuments() {
+        Document d = pending("Sin propuesta");
+        CompanyId otherCompany = Fixtures.company(orgs);
+        Document foreign = Fixtures.readyDocument(docs, company, "de otro lote");
+        Actor other = Actors.companyAdmin(otherCompany);
+        Actor worker = Actors.worker(company);
+
+        for (Actor actor : List.of(Actors.companyAdmin(Fixtures.company(orgs)), worker)) {
+            assertThatThrownBy(() -> unplaced.execute(actor, company, batch.id())).isInstanceOf(ForbiddenException.class);
+            assertThatThrownBy(() -> place.execute(actor, company, batch.id(), d.id(), Optional.of(olmo), false))
+                    .isInstanceOf(ForbiddenException.class);
+        }
+        assertThatThrownBy(() -> unplaced.execute(other, otherCompany, batch.id())).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> place.execute(other, otherCompany, batch.id(), d.id(), Optional.of(olmo), false))
+                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> place(foreign, Optional.of(olmo), false)).isInstanceOf(NotFoundException.class);
+        assertThat(stored(d).intakePending()).isTrue();
+    }
+
+    @Test
+    void theBatchViewCountsUndecidedProposalsByKindAndTheUnplacedDocuments() {
+        Document a = pending("A");
+        Document b = pending("B");
+        pending("Sin propuesta");
+        project(a, olmo, ProposalConfidence.HIGH);
+        IntakeProposal rejected = project(b, olmo, ProposalConfidence.LOW);
+        propose(a, ProposalKind.CASE_MARK, ProposalConfidence.HIGH, Optional.empty(), Optional.empty(),
+                Optional.of("2024-1"));
+        decide.execute(admin, company, batch.id(), rejected.id(), IntakeDecision.REJECT, Optional.empty());
+
+        IntakeBatchView view = getBatch.execute(admin, company, batch.id());
+
+        assertThat(view.proposed()).containsEntry(ProposalKind.PROJECT, 1).containsEntry(ProposalKind.CASE_MARK, 1)
+                .doesNotContainKey(ProposalKind.CASE_LINK);
+        assertThat(view.unplaced()).isEqualTo(2);
     }
 }

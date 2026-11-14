@@ -10,6 +10,8 @@ import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
 import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.ProposalFilter;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.GetIntakeBatch;
@@ -64,12 +66,14 @@ public class IntakeController {
     private final ConfirmIntakeProposals confirmProposals;
     private final DecideIntakeProposal decideProposal;
     private final DiscardIntakeDocument discardDocument;
+    private final ListUnplacedDocuments unplaced;
+    private final PlaceIntakeDocument placeDocument;
 
     public IntakeController(StartIntake start, AddFileToIntake addFile, CloseIntakeUpload closeUpload,
             GetIntakeBatch get, ImportProjectList importList, ListProjectCandidates candidates,
             ConfirmProjectCandidates confirmCandidates, ListIntakeProposals proposals,
             ConfirmIntakeProposals confirmProposals, DecideIntakeProposal decideProposal,
-            DiscardIntakeDocument discardDocument) {
+            DiscardIntakeDocument discardDocument, ListUnplacedDocuments unplaced, PlaceIntakeDocument placeDocument) {
         this.start = start;
         this.addFile = addFile;
         this.closeUpload = closeUpload;
@@ -81,6 +85,8 @@ public class IntakeController {
         this.confirmProposals = confirmProposals;
         this.decideProposal = decideProposal;
         this.discardDocument = discardDocument;
+        this.unplaced = unplaced;
+        this.placeDocument = placeDocument;
     }
 
     @PostMapping(BATCHES)
@@ -195,6 +201,25 @@ public class IntakeController {
             @PathVariable UUID batchId, @PathVariable UUID documentId) {
         discardDocument.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId),
                 new DocumentId(documentId));
+    }
+
+    @GetMapping(BATCHES + "/{batchId}/documents")
+    public Responses.IntakeDocuments unplacedDocuments(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId, @RequestParam boolean unplaced) {
+        if (!unplaced) {
+            throw new ValidationException("Solo se listan los documentos sin colocar: unplaced=true");
+        }
+        return Responses.IntakeDocuments.from(
+                this.unplaced.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId)));
+    }
+
+    @PostMapping(BATCHES + "/{batchId}/documents/{documentId}/place")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void place(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID companyId,
+            @PathVariable UUID batchId, @PathVariable UUID documentId,
+            @RequestBody Requests.PlaceDocumentRequest request) {
+        placeDocument.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId), new DocumentId(documentId),
+                Optional.ofNullable(request.projectId()).map(ProjectId::new), Boolean.TRUE.equals(request.companyWide()));
     }
 
     private static <T> Optional<T> parse(String value, java.util.function.Function<String, T> valueOf, String message) {

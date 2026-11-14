@@ -1509,6 +1509,52 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/place" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "place",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlaceDocumentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload" : {
       "post" : {
         "tags" : [ "intake-controller" ],
@@ -2815,6 +2861,48 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents" : {
+      "get" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "unplacedDocuments",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "unplaced",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeDocuments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/gaps" : {
       "get" : {
         "tags" : [ "usage-controller" ],
@@ -3947,7 +4035,7 @@
       },
       "IntakeBatchView" : {
         "type" : "object",
-        "description" : "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote.",
+        "description" : "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión).",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -3996,9 +4084,20 @@
             "items" : {
               "$ref" : "#/components/schemas/IntakeWarningView"
             }
+          },
+          "proposed" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
+          },
+          "unplaced" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         },
-        "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "reading", "state", "uploaded", "warnings" ]
+        "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "proposed", "reading", "state", "unplaced", "uploaded", "warnings" ]
       },
       "IntakeWarningView" : {
         "type" : "object",
@@ -4155,6 +4254,20 @@
           }
         },
         "required" : [ "document", "outcome" ]
+      },
+      "PlaceDocumentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "El proyecto de la empresa al que va el documento. Exactamente uno de projectId o companyWide."
+          },
+          "companyWide" : {
+            "type" : "boolean",
+            "description" : "Verdadero: sin proyecto, visible para toda la empresa. Exactamente uno de projectId o companyWide."
+          }
+        }
       },
       "Upload" : {
         "type" : "object",
@@ -5166,6 +5279,38 @@
           }
         },
         "required" : [ "sha256" ]
+      },
+      "IntakeDocumentView" : {
+        "type" : "object",
+        "description" : "Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo.",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "status", "title" ]
+      },
+      "IntakeDocuments" : {
+        "type" : "object",
+        "properties" : {
+          "documents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IntakeDocumentView"
+            }
+          }
+        },
+        "required" : [ "documents" ]
       },
       "GapView" : {
         "type" : "object",

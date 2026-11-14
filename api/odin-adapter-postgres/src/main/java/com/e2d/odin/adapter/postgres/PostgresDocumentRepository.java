@@ -236,6 +236,16 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT "
+                + COLUMNS + """
+                 FROM document d WHERE d.company_id = :company AND d.intake_batch_id = :batch
+                AND d.intake_pending AND d.withdrawn_at IS NULL ORDER BY d.seq""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> document(rs)).list());
+    }
+
+    @Override
     public java.util.Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId) {
         return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
                 SELECT id, title FROM document WHERE company_id = :company AND intake_batch_id = :batch""")

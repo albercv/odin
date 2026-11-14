@@ -234,6 +234,12 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && d.intakePending() && !d.withdrawn()).toList();
+    }
+
+    @Override
     public Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId) {
         return documents.values().stream().filter(d -> d.companyId().equals(companyId)
                 && d.intakeBatchId().equals(Optional.of(batchId)))

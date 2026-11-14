@@ -548,6 +548,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["place"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload": {
         parameters: {
             query?: never;
@@ -1044,6 +1060,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["unplacedDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/gaps": {
         parameters: {
             query?: never;
@@ -1504,7 +1536,7 @@ export interface components {
              */
             channel: "COMMAND" | "PANEL";
         };
-        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote. */
+        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). */
         IntakeBatchView: {
             /** Format: uuid */
             id: string;
@@ -1527,6 +1559,11 @@ export interface components {
             /** Format: int32 */
             discarded: number;
             warnings: components["schemas"]["IntakeWarningView"][];
+            proposed: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            unplaced: number;
         };
         IntakeWarningView: {
             code: string;
@@ -1597,6 +1634,15 @@ export interface components {
         IntakeFile: {
             outcome: string;
             document: components["schemas"]["DocumentView"];
+        };
+        PlaceDocumentRequest: {
+            /**
+             * Format: uuid
+             * @description El proyecto de la empresa al que va el documento. Exactamente uno de projectId o companyWide.
+             */
+            projectId?: string;
+            /** @description Verdadero: sin proyecto, visible para toda la empresa. Exactamente uno de projectId o companyWide. */
+            companyWide?: boolean;
         };
         Upload: {
             document: components["schemas"]["DocumentView"];
@@ -1977,6 +2023,17 @@ export interface components {
         };
         KnownFiles: {
             sha256: string[];
+        };
+        /** @description Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. */
+        IntakeDocumentView: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            path?: string;
+            status: string;
+        };
+        IntakeDocuments: {
+            documents: components["schemas"]["IntakeDocumentView"][];
         };
         GapView: {
             text: string;
@@ -3135,6 +3192,32 @@ export interface operations {
             };
         };
     };
+    place: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     closeUpload: {
         parameters: {
             query?: never;
@@ -4020,6 +4103,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    unplacedDocuments: {
+        parameters: {
+            query: {
+                unplaced: boolean;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeDocuments"];
                 };
             };
         };

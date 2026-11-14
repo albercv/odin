@@ -39,6 +39,8 @@ import com.e2d.odin.application.intake.GetIntakeBatch;
 import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.IntakeEffects;
 import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
@@ -586,6 +588,24 @@ public class UseCaseConfiguration {
                     IntakeDecision decision, Optional<ProjectId> projectId) {
                 return transaction.execute(
                         status -> super.execute(actor, companyId, batchId, proposalId, decision, projectId));
+            }
+        };
+    }
+
+    @Bean
+    ListUnplacedDocuments listUnplacedDocuments(IntakeRepository intake, DocumentRepository documents) {
+        return new ListUnplacedDocuments(intake, documents);
+    }
+
+    @Bean
+    PlaceIntakeDocument placeIntakeDocument(IntakeEffects effects, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new PlaceIntakeDocument(effects) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId,
+                    Optional<ProjectId> projectId, boolean companyWide) {
+                transaction.executeWithoutResult(
+                        status -> super.execute(actor, companyId, batchId, documentId, projectId, companyWide));
             }
         };
     }

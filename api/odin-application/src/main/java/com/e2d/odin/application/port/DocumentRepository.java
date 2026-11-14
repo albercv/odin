@@ -79,6 +79,9 @@ public interface DocumentRepository {
     /** Los documentos READY, sin retirar y aún pendientes del lote, con su texto, solo por la ruta de la clasificación. */
     List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId);
 
+    /** Los documentos del lote aún pendientes y sin retirar, en cualquier estado (también los que fallaron al leerse). */
+    List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId);
+
     /** Los títulos de los documentos del lote, retirados y pendientes incluidos: la bandeja los muestra junto a cada propuesta. */
     java.util.Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId);
 

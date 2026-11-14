@@ -465,16 +465,34 @@ public final class Responses {
     }
 
     @Schema(description = "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; "
-            + "alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote.")
+            + "alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; "
+            + "proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos "
+            + "pendientes sin propuesta de proyecto por decidir (en revisión).")
     public record IntakeBatchView(UUID id, UUID companyId, String channel, String state, Instant createdAt,
             @Nullable Instant closedAt, int uploaded, int reading, int pending, int alreadyThere, int discarded,
-            List<IntakeWarningView> warnings) {
+            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced) {
         public static IntakeBatchView from(com.e2d.odin.application.intake.IntakeBatchView view) {
             var b = view.batch();
             return new IntakeBatchView(b.id().value(), b.companyId().value(), b.channel().name(), b.state().name(),
                     b.createdAt(), b.closedAt().orElse(null), view.counts().uploaded(), view.counts().reading(),
                     view.counts().pending(), b.alreadyThere(), b.discarded(),
-                    view.warnings().stream().map(IntakeWarningView::from).toList());
+                    view.warnings().stream().map(IntakeWarningView::from).toList(),
+                    view.proposed().entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced());
+        }
+    }
+
+    @Schema(description = "Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). "
+            + "path: la ruta de su carpeta al subirlo.")
+    public record IntakeDocumentView(UUID id, String title, @Nullable String path, String status) {
+        static IntakeDocumentView from(Document d) {
+            return new IntakeDocumentView(d.id().value(), d.title(), d.intakePath().orElse(null), d.status().name());
+        }
+    }
+
+    public record IntakeDocuments(List<IntakeDocumentView> documents) {
+        public static IntakeDocuments from(List<Document> documents) {
+            return new IntakeDocuments(documents.stream().map(IntakeDocumentView::from).toList());
         }
     }
 

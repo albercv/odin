@@ -86,6 +86,13 @@ public final class Requests {
             UUID projectId) {
     }
 
+    public record PlaceDocumentRequest(
+            @Schema(description = "El proyecto de la empresa al que va el documento. Exactamente uno de projectId o companyWide.")
+            UUID projectId,
+            @Schema(description = "Verdadero: sin proyecto, visible para toda la empresa. Exactamente uno de projectId o companyWide.")
+            Boolean companyWide) {
+    }
+
     public record CaseMarksRequest(
             @Schema(description = "De 1 a 500 documentos de la empresa.", requiredMode = Schema.RequiredMode.REQUIRED)
             List<UUID> documentIds,
