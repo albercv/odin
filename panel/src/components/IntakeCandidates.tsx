@@ -64,6 +64,8 @@ export function IntakeCandidates({ companyId, batchId, projects, onChanged, batc
   const { error, act } = useAction();
   const run = async (fn: () => Promise<unknown>) => { if (await act(fn)) { list.reload(); onChanged(); } };
   const decide: Decide = (d) => run(() => intake.confirmCandidates(companyId, batchId, [d]));
+  // a 409 may come with candidates just found in the texts: reload the list either way
+  const finish = async () => { await act(() => intake.closeList(companyId, batchId)); list.reload(); onChanged(); };
   const candidates = list.data?.candidates ?? [];
   const closed = !!batch && (!!batch.projectListClosedAt || batch.state === 'IN_REVIEW' || batch.state === 'CLOSED');
   const undecided = candidates.filter((c) => c.state === 'PROPOSED').length;
@@ -71,9 +73,9 @@ export function IntakeCandidates({ companyId, batchId, projects, onChanged, batc
     <Section title="Lista de proyectos" description="Importa la lista del programa de gestión o busca los proyectos en los textos. Cuando no quede ninguno por decidir, da la lista por terminada: hasta entonces no se proponen proyectos."
       actions={<Button disabled={closed} onClick={() => run(() => intake.discover(companyId, batchId))}>Buscar proyectos en los textos</Button>}>
       <div className={styles.body}>
-        {closed ? <p>Lista terminada: Odín está clasificando los documentos.</p>
+        {closed ? <p>{batch?.state === 'READING' ? 'Lista terminada: Odín está clasificando los documentos.' : 'Lista terminada.'}</p>
           : <label>Importar la lista de proyectos <input type="file" accept=".csv,.txt" onChange={(e) => { const file = e.target.files?.[0]; if (file) run(() => intake.importList(companyId, batchId, file)); }} /></label>}
-        {!closed && list.data && <FinishList batch={batch} undecided={undecided} finish={() => run(() => intake.closeList(companyId, batchId))} />}
+        {!closed && list.data && <FinishList batch={batch} undecided={undecided} finish={finish} />}
         <Notice message={list.error ?? error} />
       </div>
       {candidates.length === 0 && !list.error && <EmptyState title="Todavía no hay candidatos" />}

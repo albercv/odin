@@ -138,6 +138,20 @@ test('finishingTheListAsksTheApiToClassify', async () => {
   await waitFor(() => expect(called(calls, closeList)).toBe(true));
 });
 
+test('whenFinishingFindsNewCandidatesItSaysSoAndShowsThem', async () => {
+  let found: unknown = decided;
+  const calls = show({
+    [batchRoute]: reading(), [`GET ${base}/b1/project-candidates`]: () => found,
+    [closeList]: () => { found = candidates; return { status: 409, body: { detail: 'Falta 1 candidato por decidir' } }; },
+  });
+  const button = await screen.findByRole('button', { name: 'Lista terminada: clasificar' });
+  await waitFor(() => expect(button).toBeEnabled());
+  await userEvent.click(button);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Falta 1 candidato por decidir');
+  expect(await screen.findByRole('button', { name: 'Crear Calle Olmo 24' })).toBeInTheDocument();
+  expect(calls.filter((c) => c.key === `GET ${base}/b1/project-candidates`).length).toBeGreaterThan(1);
+});
+
 test('aFinishedListShowsItAndOffersNoMoreChanges', async () => {
   show({ [batchRoute]: reading({ projectListClosedAt: '2026-11-13T11:00:00Z' }) });
   expect(await screen.findByText('Lista terminada: Odín está clasificando los documentos.')).toBeInTheDocument();
