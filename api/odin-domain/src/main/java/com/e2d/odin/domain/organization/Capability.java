@@ -4,5 +4,6 @@ public enum Capability {
     SEARCH_KNOWLEDGE,
     SAVE_KNOWLEDGE_CARD,
     SIMILAR_CASES,
-    CASE_FILES
+    CASE_FILES,
+    UPLOAD_DOCUMENTS
 }

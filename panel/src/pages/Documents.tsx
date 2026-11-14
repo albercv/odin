@@ -68,6 +68,7 @@ function DocRow({ d, scannedDocumentsSupported, selected, onSelect, ...handlers 
         {d.topics.map((t) => <div key={t.id} className={styles.topic}>{t.name}{t.source === 'AI' && <AiMark />}</div>)}
         <TaggingStatus status={d.taggingStatus} />
       </Td>
+      <Td label="Subido por">{d.uploadedByName}</Td>
       <Td label="Motivo">{d.failureReason}</Td>
       <Td className={tableStyles.actions}><RowEnd d={d} {...handlers} /></Td>
     </Tr>
@@ -158,7 +159,7 @@ type TableProps = {
 
 function DocumentTable({ items, scannedDocumentsSupported, selected, toggle, reloadAfter, withdraw, setOpen }: TableProps) {
   return (
-    <Table columns={['Título', 'Estado', 'Temas', 'Motivo']}>
+    <Table columns={['Título', 'Estado', 'Temas', 'Subido por', 'Motivo']}>
       {items.map((d) => <DocRow key={d.id} d={d} scannedDocumentsSupported={scannedDocumentsSupported} selected={selected.has(d.id)} onSelect={() => toggle(d.id)}
         onWithdraw={() => withdraw(d)} onRestore={() => reloadAfter(() => api.restore(d.id))}
         onRetry={() => reloadAfter(() => api.retry(d.id))} onUnmark={() => reloadAfter(() => api.unsupersede(d.id))} onToggleCase={() => reloadAfter(() => api.markCase(d.id, !d.caseDocument))}

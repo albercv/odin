@@ -200,7 +200,7 @@ test('caseRouteOpensTheCaseScreenInsideTheShell', async () => {
 
 test('uploadRouteIsPublicAndNeverAsksForTheSession', async () => {
   history.pushState(null, '', '/subir/tok');
-  const calls = mockFetch({ 'GET /v1/upload-links/tok': () => ({ caseTitle: 'Expte', projectName: 'P', expiresAt: '2026-11-14T10:00:00Z' }) });
+  const calls = mockFetch({ 'GET /v1/upload-links/tok': () => ({ target: 'CASE', caseTitle: 'Expte', projectName: 'P', expiresAt: '2026-11-14T10:00:00Z' }) });
   render(<App />);
   expect(await screen.findByText('Expte')).toBeInTheDocument();
   expect(calls.some((c) => c.key.includes('/admin/'))).toBe(false);
