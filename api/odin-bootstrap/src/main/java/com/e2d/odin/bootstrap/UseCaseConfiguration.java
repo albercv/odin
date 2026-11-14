@@ -517,9 +517,10 @@ public class UseCaseConfiguration {
     /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
     @Bean
     ClassifyIntake classifyIntake(IntakeRepository intake, DocumentRepository documents,
-            ObjectProvider<ProjectProposer> proposer, IdGenerator ids, InstallationSettings installationSettings) {
+            ObjectProvider<ProjectProposer> proposer, IdGenerator ids, InstallationSettings installationSettings,
+            Clock clock) {
         return new ClassifyIntake(intake, documents, Optional.ofNullable(proposer.getIfAvailable()), ids,
-                installationSettings);
+                installationSettings, clock);
     }
 
     @Bean

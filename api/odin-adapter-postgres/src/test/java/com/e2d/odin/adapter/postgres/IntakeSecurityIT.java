@@ -151,9 +151,13 @@ class IntakeSecurityIT extends AbstractPostgresIT {
         assertThat(docs.intakeReadyDocuments(other, batch.id())).isEmpty();
         assertThat(docs.readerQueueBusy(company)).isTrue();
         assertThat(docs.readerQueueBusy(other)).isFalse();
-        assertThat(intake.findReading()).isEmpty();
+        assertThat(intake.findReadingOrInReview()).isEmpty();
         intake.save(batch.startReading());
-        assertThat(intake.findReading()).extracting(IntakeBatch::id).containsExactly(batch.id());
+        assertThat(intake.findReadingOrInReview()).extracting(IntakeBatch::id).containsExactly(batch.id());
+        intake.save(batch.startReading().finishReading());
+        assertThat(intake.findReadingOrInReview()).extracting(IntakeBatch::id).containsExactly(batch.id());
+        intake.save(batch.startReading().finishReading().close(NOW));
+        assertThat(intake.findReadingOrInReview()).isEmpty();
     }
 
     @Test

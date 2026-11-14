@@ -56,8 +56,9 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     }
 
     @Override
-    public synchronized List<IntakeBatch> findReading() {
-        return batches.values().stream().filter(b -> b.state() == IntakeState.READING).toList();
+    public synchronized List<IntakeBatch> findReadingOrInReview() {
+        return batches.values().stream()
+                .filter(b -> b.state() == IntakeState.READING || b.state() == IntakeState.IN_REVIEW).toList();
     }
 
     @Override

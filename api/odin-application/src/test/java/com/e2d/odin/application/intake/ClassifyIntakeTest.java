@@ -71,9 +71,11 @@ class ClassifyIntakeTest {
 
     private boolean reader = true;
 
+    private final MutableClock clock = new MutableClock();
+
     private ClassifyIntake classify(boolean withModel) {
         return new ClassifyIntake(intake, docs, withModel ? Optional.of(model) : Optional.empty(), ids,
-                new InstallationSettings("t", reader));
+                new InstallationSettings("t", reader), clock);
     }
 
     /** Un candidato confirmado y la lista terminada: lo que hace falta para clasificar. */
@@ -456,6 +458,46 @@ class ClassifyIntakeTest {
     }
 
     @Test
+    void aReadingBatchWithNothingPendingIsClosedEvenWithoutAList() {
+        Document gone = pending("a/uno.pdf", OLMO_TEXT);
+        docs.markWithdrawal(gone.withWithdrawal(Optional.of(clock.instant()), Optional.of(Actors.companyAdmin(company).userId())));
+
+        classify(false).execute();
+
+        assertThat(state()).isEqualTo(IntakeState.CLOSED);
+        assertThat(intake.find(company, batch.id()).orElseThrow().closedAt()).contains(clock.instant());
+    }
+
+    @Test
+    void anInReviewBatchIsClosedOnlyWhenNoDocumentIsPendingAndNoProposalIsOpen() {
+        confirmed(OLMO, olmoId);
+        Document d = pending("a/uno.pdf", OLMO_TEXT);
+        classify(false).execute();
+        assertThat(state()).isEqualTo(IntakeState.IN_REVIEW);
+
+        classify(false).execute();
+        assertThat(state()).isEqualTo(IntakeState.IN_REVIEW);
+
+        docs.markWithdrawal(d.withWithdrawal(Optional.of(clock.instant()), Optional.of(Actors.companyAdmin(company).userId())));
+        intake.proposals(company, batch.id()).forEach(p -> intake.save(p.reject(Actors.companyAdmin(company).userId(),
+                clock.instant())));
+        classify(false).execute();
+        assertThat(state()).isEqualTo(IntakeState.CLOSED);
+    }
+
+    @Test
+    void anInReviewBatchWithAnOpenProposalStaysOpenAlthoughNothingIsPending() {
+        confirmed(OLMO, olmoId);
+        Document d = pending("a/uno.pdf", OLMO_TEXT);
+        classify(false).execute();
+        docs.confirmIntake(company, d.id(), Optional.of(olmoId));
+
+        classify(false).execute();
+
+        assertThat(state()).isEqualTo(IntakeState.IN_REVIEW);
+    }
+
+    @Test
     void withoutAModelTheBatchStillFinishes() {
         confirmed(OLMO, olmoId);
         pending("a/uno.pdf", "Carta sin proyecto en el texto");
@@ -494,7 +536,8 @@ class ClassifyIntakeTest {
                 DecisionState.CONFIRMED, Optional.of(olmoId)));
         Document caso = pending("a/caso.pdf", "FICHA DE CASO\nCaso 2024-342\nGoteras en " + OLMO);
         failing.armed = true;
-        ClassifyIntake job = new ClassifyIntake(failing, docs, Optional.empty(), ids, new InstallationSettings("t", true));
+        ClassifyIntake job = new ClassifyIntake(failing, docs, Optional.empty(), ids, new InstallationSettings("t", true),
+                clock);
 
         assertThatThrownBy(job::execute).isInstanceOf(IllegalStateException.class);
 

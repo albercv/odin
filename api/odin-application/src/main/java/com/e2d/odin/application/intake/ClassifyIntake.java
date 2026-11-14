@@ -10,7 +10,9 @@ import com.e2d.odin.domain.intake.CaseFileRules;
 import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.DuplicateFinder;
 import com.e2d.odin.domain.intake.IntakeBatch;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.intake.IntakeProposal;
+import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.intake.ProjectMatch;
 import com.e2d.odin.domain.intake.ProjectRules;
 import com.e2d.odin.domain.intake.ProposalConfidence;
@@ -19,6 +21,7 @@ import com.e2d.odin.domain.intake.ProposalSource;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -52,18 +55,27 @@ public class ClassifyIntake {
     private final Optional<ProjectProposer> proposer;
     private final IdGenerator ids;
     private final InstallationSettings installation;
+    private final Clock clock;
 
     public ClassifyIntake(IntakeRepository intake, DocumentRepository documents, Optional<ProjectProposer> proposer,
-            IdGenerator ids, InstallationSettings installation) {
+            IdGenerator ids, InstallationSettings installation, Clock clock) {
         this.intake = intake;
         this.documents = documents;
         this.proposer = proposer;
         this.ids = ids;
         this.installation = installation;
+        this.clock = clock;
     }
 
+    /** Clasifica los lotes en lectura y cierra los que ya no tienen nada por decidir (si no, no tendrían salida). */
     public void execute() {
-        intake.findReading().forEach(this::classify);
+        for (IntakeBatch batch : intake.findReadingOrInReview()) {
+            if (batch.state() == IntakeState.READING) {
+                classify(batch);
+            } else {
+                IntakeBatches.closeIfDone(intake, documents, batch, clock.instant());
+            }
+        }
     }
 
     /** Lo que se sabe de un lote durante una pasada. */
@@ -85,8 +97,12 @@ public class ClassifyIntake {
 
     private void classify(IntakeBatch batch) {
         Run run = new Run(batch);
-        if (!batch.projectListClosed()
-                || IntakeBatches.counts(documents, installation, run.company(), batch.id()).reading() > 0) {
+        IntakeCounts counts = IntakeBatches.counts(documents, installation, run.company(), batch.id());
+        if (counts.pending() == 0) {
+            finish(batch); // vacío o todo retirado: no hay nada que clasificar ni que decidir
+            return;
+        }
+        if (!batch.projectListClosed() || counts.reading() > 0) {
             return;
         }
         // sin lector OCR no hay cola del lector que esperar: lo que espera al lector no se está leyendo
@@ -105,7 +121,13 @@ public class ClassifyIntake {
         links(run, all);
         duplicates(run, all, existing);
         saveNew(run, existing);
-        intake.save(batch.finishReading());
+        finish(batch);
+    }
+
+    private void finish(IntakeBatch batch) {
+        IntakeBatch inReview = batch.finishReading();
+        intake.save(inReview);
+        IntakeBatches.closeIfDone(intake, documents, inReview, clock.instant());
     }
 
     /** El proyecto propuesto de un documento solo cuenta para enlaces y duplicados si es uno solo. */

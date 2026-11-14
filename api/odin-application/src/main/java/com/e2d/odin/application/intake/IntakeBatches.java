@@ -5,6 +5,7 @@ import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeCounts;
@@ -12,6 +13,7 @@ import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.NotFoundException;
+import java.time.Instant;
 
 /** Lo común de los casos de uso del lote: el administrador de la empresa y un lote que es de esa empresa. */
 final class IntakeBatches {
@@ -40,5 +42,14 @@ final class IntakeBatches {
             IntakeBatchId batchId) {
         IntakeCounts counts = documents.intakeCounts(companyId, batchId);
         return installation.scannedDocumentsSupported() ? counts : counts.withoutReader();
+    }
+
+    /** Sin documentos pendientes ni propuestas por decidir, el lote en revisión se cierra. */
+    static void closeIfDone(IntakeRepository intake, DocumentRepository documents, IntakeBatch batch, Instant now) {
+        boolean pending = documents.intakeCounts(batch.companyId(), batch.id()).pending() > 0;
+        if (!pending && intake.proposals(batch.companyId(), batch.id()).stream()
+                .noneMatch(p -> p.state() == DecisionState.PROPOSED)) {
+            intake.save(batch.close(now));
+        }
     }
 }

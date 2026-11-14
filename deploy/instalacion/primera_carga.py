@@ -138,7 +138,7 @@ def presentar(api, a, libre, limite):
 
 
 def ejecutar(api, argv, libre=None, limite=LIMITE):
-    """Devuelve 0 si ha subido y cerrado la subida, 1 si la persona dijo que no."""
+    """Devuelve 0 si ha subido y cerrado la subida (o no había nada nuevo), 1 si la persona dijo que no."""
     a = leer_argumentos(argv)
     ficheros, lote = presentar(api, a, libre, limite)
     if not a.si and input("¿Seguir? (s/n) ").strip().lower() not in ("s", "si", "sí"):
@@ -147,10 +147,14 @@ def ejecutar(api, argv, libre=None, limite=LIMITE):
     huellas = {ruta: huella(f) for f, ruta in ficheros}
     presentes = ya_estan(api, lote, list(huellas.values()))
     cuentas = subir(api, lote, [(f, r) for f, r in ficheros if huellas[r] not in presentes])
-    api.admin("POST", f"{lote}/close-upload")
     print(f"Subidos: {cuentas['CREATED']}. Ya estaban: {cuentas['ALREADY_THERE'] + len(presentes)}. "
-          f"Descartados en el lote: {cuentas['DISCARDED_IN_BATCH']}.\n"
-          "Siguiente paso: abre el panel de Odín y entra en «Primera carga».")
+          f"Descartados en el lote: {cuentas['DISCARDED_IN_BATCH']}.")
+    if api.admin("GET", lote)["uploaded"] == 0:
+        # un lote sin ningún documento no se cierra: se queda abierto y la próxima vez se reutiliza
+        print("No hay nada nuevo que subir.")
+        return 0
+    api.admin("POST", f"{lote}/close-upload")
+    print("Siguiente paso: abre el panel de Odín y entra en «Primera carga».")
     return 0
 
 

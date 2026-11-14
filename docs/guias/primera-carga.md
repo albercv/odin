@@ -47,6 +47,8 @@ Corte de luz, red o terminal cerrada: vuelve a lanzar la misma orden. Odín preg
 
 La orden cuenta cuántos ficheros se han subido, cuántos ya estaban y cuántos se descartaron en esta carga, y cierra la subida. Odín empieza a leer los documentos. Entonces abre el panel de Odín y entra en **«Primera carga»**.
 
+Si todos los ficheros ya estaban en Odín, la orden dice **«No hay nada nuevo que subir»** y no cierra la subida: la carga vacía se queda abierta y la próxima orden sigue con ella.
+
 ## Los cuatro pasos del panel
 
 Nadie ve un documento hasta que tú lo confirmas.
@@ -58,8 +60,10 @@ Nadie ve un documento hasta que tú lo confirmas.
 
 En cada propuesta puedes confirmarla, corregir el proyecto, marcarla «de toda la empresa» o rechazarla.
 
-- **«No lo sé»** deja el documento oculto y pendiente, sin plazo. Puedes volver a él cuando lo sepas.
+- **«No lo sé»** deja el documento oculto y pendiente, sin plazo, y guarda quién lo dijo y cuándo. Puedes volver a él cuando lo sepas. Mientras quede alguno, la carga sigue abierta y **no se puede empezar otra primera carga**: la orden lo rechaza hasta que lo decidas.
 - **Descartar** retira el documento. No vuelve a entrar si repites la orden.
+
+La carga se cierra sola cuando no queda ningún documento pendiente ni ninguna propuesta por decidir.
 
 ## Cuánto tarda
 

@@ -117,11 +117,7 @@ public class IntakeEffects {
 
     /** Sin documentos pendientes ni propuestas por decidir, el lote se cierra. */
     void closeIfDone(IntakeBatch batch) {
-        boolean pending = documents.intakeCounts(batch.companyId(), batch.id()).pending() > 0;
-        if (!pending && intake.proposals(batch.companyId(), batch.id()).stream()
-                .noneMatch(p -> p.state() == DecisionState.PROPOSED)) {
-            intake.save(batch.close(clock.instant()));
-        }
+        IntakeBatches.closeIfDone(intake, documents, batch, clock.instant());
     }
 
     private void place(IntakeBatch batch, IntakeProposal p, Optional<ProjectId> project, boolean asProposed,

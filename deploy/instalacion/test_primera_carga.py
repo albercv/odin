@@ -50,7 +50,8 @@ class FalsoOdin(BaseHTTPRequestHandler):
         elif url.path == base:
             self.responder(200, {"batches": e["lotes"]})
         elif url.path == f"{base}/{LOTE}":
-            self.responder(200, {"id": LOTE, "state": "OPEN", "warnings": e["avisos"], "uploaded": 0})
+            self.responder(200, {"id": LOTE, "state": "OPEN", "warnings": e["avisos"],
+                                 "uploaded": e.get("ya_en_lote", 0) + len(e["subidos"])})
         elif url.path == f"{base}/{LOTE}/files":
             pedidas = urllib.parse.parse_qs(url.query)["sha256"]
             e["consultas"].append(pedidas)
@@ -159,6 +160,24 @@ class PrimeraCargaTest(unittest.TestCase):
             self.crear(f"f{i:03}.txt", str(i))
         self.lanzar()
         self.assertEqual([pc.TANDA, 1], [len(c) for c in self.estado["consultas"]])
+
+    def test_sinNadaNuevoNoCierraLaSubidaYElLoteVacioSeReutiliza(self):
+        self.crear("uno.txt", "1")
+        self.estado["conocidas"] = {hashlib.sha256(b"1").hexdigest()}
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertEqual([], self.estado["subidos"])
+        self.assertFalse(self.estado["cerrado"])
+        self.assertIn("No hay nada nuevo que subir", texto)
+
+    def test_unLoteReanudadoConDocumentosSeCierraAunqueNoHayaNadaNuevo(self):
+        self.estado["lotes"] = [{"id": LOTE, "state": "OPEN", "channel": "COMMAND"}]
+        self.estado["ya_en_lote"] = 2
+        self.crear("uno.txt", "1")
+        self.estado["conocidas"] = {hashlib.sha256(b"1").hexdigest()}
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertTrue(self.estado["cerrado"])
 
     def test_reutilizaUnLoteAbierto(self):
         self.estado["lotes"] = [{"id": LOTE, "state": "OPEN", "channel": "COMMAND"}]
