@@ -453,7 +453,7 @@
     "/v1/projects/{projectId}/upload-links" : {
       "post" : {
         "tags" : [ "project-upload-controller" ],
-        "operationId" : "uploadLink",
+        "operationId" : "issueProjectUploadLink",
         "parameters" : [ {
           "name" : "projectId",
           "in" : "path",
@@ -572,7 +572,7 @@
     "/v1/cases/{caseId}/upload-links" : {
       "post" : {
         "tags" : [ "case-file-controller" ],
-        "operationId" : "uploadLink_1",
+        "operationId" : "uploadLink",
         "parameters" : [ {
           "name" : "caseId",
           "in" : "path",
@@ -3595,7 +3595,8 @@
         "type" : "object",
         "properties" : {
           "target" : {
-            "type" : "string"
+            "type" : "string",
+            "enum" : [ "CASE", "PROJECT" ]
           },
           "caseTitle" : {
             "type" : "string"

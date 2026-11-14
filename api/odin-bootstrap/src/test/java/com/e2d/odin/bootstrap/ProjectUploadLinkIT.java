@@ -197,6 +197,36 @@ class ProjectUploadLinkIT {
                 .isInstanceOf(NotFoundException.class).hasMessage("Enlace no encontrado");
     }
 
+    @Test
+    void takingTheWorkerOutOfAClosedProjectStopsTheLiveLink() {
+        String project = project();
+        Actor marta = worker(List.of(project));
+        String token = tokenOf(issueUploadLink.forProject(marta, new ProjectId(UUID.fromString(project))));
+        send(token, "antes.txt", "antes de salir " + COUNTER.incrementAndGet());
+
+        assertThat(api.delete("/v1/admin/companies/" + company + "/projects/" + project + "/members/" + marta.userId().value(),
+                "Cookie", adminCookie).status()).isEqualTo(204);
+
+        assertThatThrownBy(() -> send(token, "despues.txt", "tras salir " + COUNTER.incrementAndGet()))
+                .isInstanceOf(NotFoundException.class).hasMessage("Enlace no encontrado");
+    }
+
+    @Test
+    void aFileAlreadyInTheGeneralAreaIsLinkedNotCreatedAgain() {
+        String project = project();
+        Actor marta = worker(List.of(project));
+        String text = "ya estaba en lo general " + COUNTER.incrementAndGet();
+        api.upload("/v1/admin/companies/" + company + "/documents", "general.txt",
+                text.getBytes(StandardCharsets.UTF_8), "Cookie", adminCookie);
+        long before = count("SELECT count(*) FROM document WHERE company_id = '" + company + "'");
+        String token = tokenOf(issueUploadLink.forProject(marta, new ProjectId(UUID.fromString(project))));
+
+        UploadReceipt receipt = send(token, "copia.txt", text);
+
+        assertThat(receipt.duplicate()).isTrue();
+        assertThat(count("SELECT count(*) FROM document WHERE company_id = '" + company + "'")).isEqualTo(before);
+    }
+
     private static int rlsCount(String table, String projectIds) {
         try (Connection c = DriverManager.getConnection(PG.getJdbcUrl(), "odin_app", "app-test-password")) {
             c.setAutoCommit(false);
