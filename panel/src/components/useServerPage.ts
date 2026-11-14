@@ -22,7 +22,7 @@ function useFetched<T>(fetchPage: Fetch<T>, query: string, page: number, size: n
       setLoading(false);
       const last = Math.max(1, Math.ceil(r.total / size));
       if (page > last) latest.current.onPast(last);
-    }, (e: Error) => { if (id === request.current) { setError(e.message); setLoading(false); } });
+    }, (e: Error) => { if (id === request.current) { setData({ items: [], total: 0 }); setError(e.message); setLoading(false); } });
   }, [query, page, size, ...extra]);
   return { data, loading, error };
 }
@@ -37,11 +37,12 @@ export function useServerPage<T>(fetchPage: Fetch<T>, deps: unknown[], initialSi
   const [at, setAt] = useState({ page: 1, key: '' });
   const [tick, setTick] = useState(0);
   const depsKey = JSON.stringify(deps);
+  if (at.key !== depsKey) setAt({ page: 1, key: depsKey });
   const page = at.key === depsKey ? at.page : 1;
   const setPage = (p: number) => setAt({ page: p, key: depsKey });
   const { data, loading, error } = useFetched(fetchPage, query, page, pageSize, [depsKey, tick], setPage);
   return {
-    items: data.items, total: data.total, page, pageSize, loading, error,
+    query, items: data.items, total: data.total, page, pageSize, loading, error,
     pageCount: Math.max(1, Math.ceil(data.total / pageSize)),
     setPage, reload: () => setTick((t) => t + 1),
     setQuery: (q: string) => { setQueryState(q); setPage(1); },

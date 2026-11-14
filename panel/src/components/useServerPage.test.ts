@@ -28,3 +28,14 @@ test('reloadKeepsThePageOrFallsToTheLastOne', async () => {
   await waitFor(() => expect(result.current.page).toBe(2));
   await waitFor(() => expect(result.current.items).toEqual(['o25']));
 });
+
+test('depsChangeResetsToPageOnePermanently', async () => {
+  const fetchPage = vi.fn(async (_q: string, offset: number) => ({ items: [`o${offset}`], total: 90 }));
+  const { result, rerender } = renderHook(({ w }) => useServerPage(fetchPage, [w]), { initialProps: { w: false } });
+  act(() => result.current.setPage(3));
+  await waitFor(() => expect(result.current.items).toEqual(['o50']));
+  rerender({ w: true });
+  rerender({ w: false });
+  await waitFor(() => expect(result.current.page).toBe(1));
+  await waitFor(() => expect(result.current.items).toEqual(['o0']));
+});

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, type S } from '../api/client';
 import { AiMark } from '../components/AiMark';
 import { DocumentDetail } from '../components/DocumentDetail';
@@ -114,7 +114,12 @@ function useSelection(markSelected: (ids: string[], caseDocument: boolean) => Pr
   const mark = async (caseDocument: boolean) => {
     if (await markSelected([...selected], caseDocument)) setSelected(new Set());
   };
-  return { selected, toggle, mark, clear };
+  // Tras recargar, la selección solo conserva lo que sigue a la vista.
+  const keepOnly = (ids: string[]) => setSelected((previous) => {
+    const next = new Set(ids.filter((id) => previous.has(id)));
+    return next.size === previous.size ? previous : next;
+  });
+  return { selected, toggle, mark, clear, keepOnly };
 }
 
 function useWithdraw(reloadAfter: (fn: () => Promise<unknown>) => Promise<unknown>) {
@@ -164,8 +169,9 @@ function DocumentTable({ items, scannedDocumentsSupported, selected, toggle, rel
 
 export function Documents({ companyId, scannedDocumentsSupported = false }: { companyId: string; scannedDocumentsSupported?: boolean }) {
   const [withdrawn, setWithdrawn] = useState(false);
-  const { selected, toggle, mark, clear } = useSelection((ids, caseDocument) => reloadAfter(() => api.markCases(companyId, ids, caseDocument)));
+  const { selected, toggle, mark, clear, keepOnly } = useSelection((ids, caseDocument) => reloadAfter(() => api.markCases(companyId, ids, caseDocument)));
   const list = useDocumentList(companyId, withdrawn, clear);
+  useEffect(() => keepOnly(list.items.map((d) => d.id)), [list.items]);
   const projects = useLoad(() => api.projects(companyId), [companyId]);
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState<Open>();
@@ -178,9 +184,9 @@ export function Documents({ companyId, scannedDocumentsSupported = false }: { co
       <PageHeader title="Documentos" actions={<HeaderActions onRefresh={list.reload} onUpload={() => setUploading(true)} withdrawn={withdrawn} onWithdrawn={toggleWithdrawn} />} />
       <Notice message={error ?? list.error} />
       <Section title={withdrawn ? 'Documentos retirados' : 'Documentos de la empresa'}>
-        <SearchBox label="Buscar documentos" onSearch={list.setQuery} resultCount={list.total} />
+        <SearchBox label="Buscar documentos" onSearch={list.setQuery} resultCount={list.loading ? undefined : list.total} />
         <PageSizeSelect value={list.pageSize} onChange={list.setPageSize} />
-        {!list.loading && list.items.length === 0 && <Empty withdrawn={withdrawn} />}
+        {!list.loading && !list.error && !list.query && list.items.length === 0 && <Empty withdrawn={withdrawn} />}
         <SelectionBar count={selected.size} onMark={mark} />
         <DocumentTable items={list.items} scannedDocumentsSupported={scannedDocumentsSupported} selected={selected} toggle={toggle} reloadAfter={reloadAfter} withdraw={withdraw} setOpen={setOpen} />
         <Pagination label="Páginas de documentos" page={list.page} pageCount={list.pageCount} onPage={list.setPage} />

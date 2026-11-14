@@ -15,7 +15,7 @@ const old = { ...base, id: 'd1', title: 'Póliza 2022', status: 'READY', project
 const renewed = { ...base, id: 'd2', title: 'Póliza 2024', status: 'READY', projectId: 'p1', uploadedAt: '2026-05-02T10:00:00Z' };
 const draft = { ...base, id: 'd3', title: 'Borrador', status: 'FAILED' };
 const marked = { ...old, supersededBy: { id: 'd2', title: 'Póliza 2024' }, supersededAt: '2026-06-01T09:00:00Z' };
-const candidatesUrl = 'GET /v1/admin/companies/c1/documents?offset=0&limit=10';
+const candidatesUrl = 'GET /v1/admin/companies/c1/documents?offset=0&limit=50';
 const routes = (documents: unknown[], more: Routes = {}): Routes => ({
   [list]: () => ({ documents, total: documents.length }), [candidatesUrl]: () => ({ documents, total: documents.length }), [projects]: () => [{ id: 'p1', name: 'Los Almendros' }], ...more,
 });
@@ -65,6 +65,43 @@ test('supersedeDialogFindsACandidateThatIsNotOnThePage', async () => {
   expect(await within(dialog).findByRole('radio', { name: /Póliza 2030/ })).toBeInTheDocument();
 });
 
+test('supersedeDialogShowsFirstTenReadyBeyondNonReadyOnesWithHint', async () => {
+  const failed = Array.from({ length: 10 }, (_, i) => ({ ...draft, id: `f${i}`, title: `Fallido ${i}` }));
+  show(routes([old, ...failed, renewed]));
+  const dialog = await openDialog('Póliza 2022');
+  expect(await within(dialog).findByRole('radio', { name: /Póliza 2024/ })).toBeInTheDocument();
+  expect(within(dialog).getByText('Escribe al menos 3 letras del título para afinar')).toBeInTheDocument();
+});
+
+test('supersedeDialogShowsSearchErrorAndNoFalseEmptyMessage', async () => {
+  show(routes([old], { [candidatesUrl]: () => ({ status: 500, body: { detail: 'Fallo del buscador' } }) }));
+  const dialog = await openDialog('Póliza 2022');
+  expect(await within(dialog).findByText('Fallo del buscador')).toBeInTheDocument();
+  expect(within(dialog).queryByText('Ningún documento listo coincide con la búsqueda.')).toBeNull();
+});
+
+test('supersedeDialogDropsStaleSearchResponses', async () => {
+  const slow: Record<string, (r: Response) => void> = {};
+  const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
+  const doc = (title: string) => ({ ...renewed, id: title, title });
+  vi.stubGlobal('fetch', vi.fn((url: string) => {
+    if (url.endsWith('/projects')) return Promise.resolve(json([]));
+    if (url.includes('q=')) return new Promise<Response>((res) => { slow[url.split('q=')[1]!] = res; });
+    return Promise.resolve(json({ documents: [old], total: 1, items: [] }));
+  }));
+  renderWithProviders(<Documents companyId="c1" />);
+  const dialog = await openDialog('Póliza 2022');
+  const box = within(dialog).getByRole('searchbox', { name: 'Buscar por título' });
+  fireEvent.change(box, { target: { value: 'pol' } });
+  await waitFor(() => expect(slow['pol']).toBeDefined());
+  fireEvent.change(box, { target: { value: 'poli' } });
+  await waitFor(() => expect(slow['poli']).toBeDefined());
+  slow['poli']!(json({ documents: [doc('Nueva')], total: 1 }));
+  await within(dialog).findByRole('radio', { name: /Nueva/ });
+  slow['pol']!(json({ documents: [doc('Vieja')], total: 1 }));
+  await new Promise((r) => setTimeout(r, 20));
+  expect(within(dialog).queryByRole('radio', { name: /Vieja/ })).toBeNull();
+});
 test('marksAsSupersededAfterTheConfirmationText', async () => {
   const calls = show(routes([old, renewed], { [supersede]: () => ({ status: 200, body: marked }) }));
   const dialog = await openDialog('Póliza 2022');
@@ -336,4 +373,76 @@ test('withdrawnToggleGoesBackToPageOne', async () => {
   await screen.findByText('Página 2 de 3');
   await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
   await waitFor(() => expect(calls.at(-1)?.key).toBe(withdrawnList));
+});
+
+const next25 = list.replace('offset=0', 'offset=25');
+const selectFirst = async () => {
+  await userEvent.click(await screen.findByRole('checkbox', { name: 'Seleccionar Doc 0' }));
+  expect(screen.getByText('1 seleccionado')).toBeInTheDocument();
+};
+const gone = () => waitFor(() => expect(screen.queryByText('1 seleccionado')).toBeNull());
+
+test('selectionClearsOnSearch', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [`${list}&q=poli`]: () => pageOf(1, 1) }));
+  await selectFirst();
+  search('poli');
+  await gone();
+});
+
+test('selectionClearsOnPageSizeChange', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [list.replace('limit=25', 'limit=50')]: () => pageOf(50) }));
+  await selectFirst();
+  await userEvent.selectOptions(screen.getByLabelText('Por página'), '50');
+  await gone();
+});
+
+test('selectionClearsOnWithdrawnToggle', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [withdrawnList]: () => pageOf(1, 1) }));
+  await selectFirst();
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  await gone();
+});
+
+test('selectionKeepsOnlyRowsStillInViewAfterReload', async () => {
+  let rows = pageOf(25);
+  show(routes([old], { [list]: () => rows }));
+  await selectFirst();
+  rows = { documents: [{ ...old, id: 'z9', title: 'Otro' }], total: 1 };
+  await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+  await screen.findByText('Otro');
+  await gone();
+});
+
+test('togglingWithdrawnTwiceReturnsToPageOne', async () => {
+  const calls = show(routes([old], { [list]: () => pageOf(25), [next25]: () => pageOf(25), [withdrawnList]: () => pageOf(1, 1) }));
+  await screen.findByText('Doc 0');
+  await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  await screen.findByText('Página 2 de 3');
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  await waitFor(() => expect(calls.at(-1)?.key).toBe(withdrawnList));
+  await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
+  await screen.findByText('Página 1 de 3');
+  expect(calls.at(-1)?.key).toBe(list);
+});
+
+test('failedLoadShowsOnlyTheErrorNotTheEmptyCompanyState', async () => {
+  show(routes([old], { [list]: () => ({ status: 500, body: { detail: 'Se cayó' } }) }));
+  expect(await screen.findByText('Se cayó')).toBeInTheDocument();
+  expect(screen.queryByText('Aún no hay documentos')).toBeNull();
+});
+
+test('searchWithoutResultsDoesNotShowTheEmptyCompanyState', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [`${list}&q=zzzz`]: () => ({ documents: [], total: 0 }) }));
+  await screen.findByText('Doc 0');
+  search('zzzz');
+  expect(await screen.findByText('Ningún resultado para «zzzz»')).toBeInTheDocument();
+  expect(screen.queryByText('Aún no hay documentos')).toBeNull();
+});
+
+test('laterFailureDoesNotLeaveOldRowsLookingCurrent', async () => {
+  show(routes([old], { [list]: () => pageOf(25), [`${list}&q=zzzz`]: () => ({ status: 500, body: { detail: 'Se cayó' } }) }));
+  await screen.findByText('Doc 0');
+  search('zzzz');
+  expect(await screen.findByText('Se cayó')).toBeInTheDocument();
+  expect(screen.queryByText('Doc 0')).toBeNull();
 });
