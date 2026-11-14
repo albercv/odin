@@ -35,6 +35,27 @@ class TextSimilarityTest {
     }
 
     @Test
+    void minHashEstimatesTheExactJaccard() {
+        // 64 funciones: error típico de 0,06; la tolerancia de 0,15 son unas 2,5 desviaciones
+        for (int shared : new int[] {0, 25, 50, 75, 90, 100}) {
+            Set<String> a = TextSimilarity.shingles(words("w", 104), 5);
+            Set<String> b = TextSimilarity.shingles(words("w", shared + 4).replace("w" + (shared + 3), "z"), 5);
+            Set<String> c = new java.util.HashSet<>(IntStream.range(0, 200).mapToObj(i -> "x" + i).toList());
+            Set<String> d = new java.util.HashSet<>(IntStream.range(200 - shared * 2, 400 - shared * 2)
+                    .mapToObj(i -> "x" + i).toList());
+            assertThat(estimate(c, d)).as("compartidas %d", shared).isCloseTo(TextSimilarity.jaccard(c, d),
+                    org.assertj.core.data.Offset.offset(0.15));
+            assertThat(estimate(a, b)).isCloseTo(TextSimilarity.jaccard(a, b), org.assertj.core.data.Offset.offset(0.15));
+        }
+    }
+
+    private static double estimate(Set<String> a, Set<String> b) {
+        long[] x = TextSimilarity.minHash(a);
+        long[] y = TextSimilarity.minHash(b);
+        return IntStream.range(0, x.length).filter(i -> x[i] == y[i]).count() / (double) x.length;
+    }
+
+    @Test
     void bandsFindTheAlmostEqualAndNotTheDifferent() {
         Set<String> a = TextSimilarity.shingles(words("palabra", 100), 5);
         Set<String> b = TextSimilarity.shingles(words("palabra", 98) + " otra cosa", 5);

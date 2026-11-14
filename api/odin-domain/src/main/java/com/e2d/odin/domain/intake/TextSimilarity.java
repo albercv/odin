@@ -55,7 +55,7 @@ public final class TextSimilarity {
 
     /** Firma MinHash: un hash por teja y 64 funciones lineales (a*h+b mod primo). */
     public static long[] minHash(Set<String> shingles) {
-        long[] base = shingles.stream().mapToLong(s -> hash64(s) % PRIME).toArray();
+        long[] base = shingles.stream().mapToLong(s -> Long.remainderUnsigned(hash64(s), PRIME)).toArray();
         long[] sig = new long[HASHES];
         for (int i = 0; i < HASHES; i++) {
             long min = Long.MAX_VALUE;
