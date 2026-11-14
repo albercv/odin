@@ -15,11 +15,21 @@ def build_context(data_dir, stack):
     corpus = puntuar.load_corpus(data_dir / "corpus")
     if (data_dir / "expedientes").is_dir():
         corpus |= puntuar.load_corpus(data_dir / "expedientes")
+    corpus |= _texts(data_dir)
     manifest = json.loads((data_dir / "manifiesto.json").read_text(encoding="utf-8"))
     key_rows = json.loads((data_dir / "claves.json").read_text(encoding="utf-8"))
     superseded = {old for old, _ in sustituciones.parejas(key_rows, manifest)}
     superseded |= _expediente_superseded(data_dir)
     return puntuar.Contexto(corpus, manifest, stack["doc_ruta"], stack["ficha_f"], superseded)
+
+
+def _texts(data_dir):
+    """Páginas de textos.json (Mirador): {ruta: {página: texto}}, con las páginas como enteros."""
+    path = data_dir / "textos.json"
+    if not path.is_file():
+        return {}
+    texts = json.loads(path.read_text(encoding="utf-8"))
+    return {source: {int(num): text for num, text in pages.items()} for source, pages in texts.items()}
 
 
 def _expediente_superseded(data_dir):

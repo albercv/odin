@@ -121,6 +121,29 @@ En `[[judges]]`, `think` (false por defecto) se envía a Ollama como `"think"` e
 - **Latencia estimada (jueces en paralelo):** por respuesta, el buscador más lento, más el redactor, más el juez más lento, como si los jueces corrieran en paralelo como en el producto. Las ejecuciones de caché usan su duración guardada, igual que su coste. Percentiles 50 y 95 con `statistics.quantiles`.
 - **Barrido:** un tramo de `single` por cada tope de turnos (un buscador `main`, réplica 0). La variación es la mitad del intervalo de acierto de `single` con la configuración por defecto. Una mezcla con un solo buscador se resuelve con su única respuesta, sin IA.
 
+## Batería de Mirador
+
+Mirador es una capa más del banco. Sus datos los produce otra rama y aquí solo se leen.
+
+- `ODIN_BANCO_MIRADOR`: carpeta absoluta con `manifiesto.json`, `claves.json`, `textos.json` y `bateria-mirador.json` (la entrega `entrega/banco/` de esa rama). Sin ella, o si no existe, el banco se para con un mensaje en español. `textos.json` pone las páginas que puntúan a los jueces, así que la capa no necesita `corpus/`.
+- `ODIN_BANCO_MIRADOR_DATOS`: carpeta `datos/` en formato CTO (`manifiesto.json` con `documentos`, `fichas` y `sustituciones`; `corpus/`; `expedientes.json` y `expedientes/`). Solo la usa la carga.
+
+Orden:
+
+```
+make banco-arriba
+make banco-cargar CARGAR_OPCIONES=--todas-las-capacidades
+ODIN_BANCO_MIRADOR=/ruta/mirador ODIN_BANCO_MIRADOR_DATOS=/ruta/datos make banco-cargar-mirador
+ODIN_BANCO_MIRADOR=/ruta/mirador make banco-comprobar CONFIG=banco/configs/mirador-humo.toml
+```
+
+- `make banco-cargar-mirador` ejecuta primero `banco/propietario.py` (D-099) y luego `banco/cargar_mirador.py`, todo por la API de administración con la clave de t01. Crea un proyecto nuevo en Ribera (código RIB) con t01 como único miembro; sube los documentos del manifiesto (los `caso-…` como caso) y los de sus expedientes; espera a que salgan de lectura (límite 3600 s); marca las `sustituciones` con `superseded-by`; crea las fichas y las revisa según su estado. Anota los ids en `banco/estado/carga.json` (escritura atómica, permisos 600). Se niega si el proyecto ya existe.
+- Precondición: la carga del archivo ficticio con todas las capacidades (`carga.json` con las claves de t01 y t02).
+- La API de esta rama no tiene una operación para asociar un documento a un expediente: los expedientes se suben al proyecto y su vínculo queda en `expedientes.json`, que lee el puntuador.
+- Lectura OCR: la rama de origen estima unos 19 min para los escaneos. No está medido aquí.
+- Configuraciones (sin lanzar nada): `banco/configs/mirador-humo.toml` (cinco preguntas fijas M01, M15, M24, M27 y M29; un buscador; 0,10 USD) y `banco/configs/mirador.toml` (batería completa; tres buscadores; 1,00 USD). Los dos usan un juez local (Ollama).
+- Nada con IA se lanza sin aprobación del propietario (D-094): `make banco-comprobar` solo comprueba. La medición (`make banco CONFIG=…`) espera a esa aprobación.
+
 ## Parar y reanudar
 
 Un experimento puede parar a mitad (límite de la suscripción, tres errores seguidos de `claude`, cuota, llamada de prueba fallida, presupuesto agotado) y continuar después en otra ventana, sin repetir ni volver a pagar lo ya hecho.
