@@ -202,6 +202,20 @@ class UploadByLinkTest {
     }
 
     @Test
+    void linkOfACaseThatMovedToGeneralIsNotFoundToUploadOrDescribe() {
+        Document c = caseDoc;
+        w.docs.save(new Document(c.id(), w.company, Optional.empty(), c.title(), c.filename(), c.format(), c.sha256(),
+                c.status(), c.failureReason(), c.paginated(), c.uploadedBy(), c.uploadedAt(), c.processingStartedAt(),
+                c.attemptCount(), Optional.empty(), Optional.empty(), java.util.List.of(), true));
+
+        assertThatThrownBy(() -> send("a.pdf", "uno")).isInstanceOf(NotFoundException.class)
+                .hasMessage("Enlace no encontrado");
+        assertThatThrownBy(() -> new DescribeUploadLink(w.resolve(), w.orgs).execute(token, HOME))
+                .isInstanceOf(NotFoundException.class).hasMessage("Enlace no encontrado");
+        assertThat(w.caseFiles.countEntries(w.company, caseDoc.id())).isZero();
+    }
+
+    @Test
     void uploadingTheCaseDocumentsOwnFileReturnsTheReceipt() {
         Document own = w.docs.get(caseDoc.id()).orElseThrow();
         w.store.store("texto".getBytes());
