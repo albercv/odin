@@ -9,7 +9,7 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
-/** V26: los enlaces de caso anteriores siguen válidos y las empresas existentes no reciben UPLOAD_DOCUMENTS. */
+/** V25: los enlaces de caso anteriores siguen válidos y las empresas existentes no reciben UPLOAD_DOCUMENTS. */
 class MigrationUploadLinksToProjectsIT {
 
     @Test
