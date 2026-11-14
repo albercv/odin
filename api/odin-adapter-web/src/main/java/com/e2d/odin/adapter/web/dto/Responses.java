@@ -429,13 +429,18 @@ public final class Responses {
         }
     }
 
-    public record UploadLinkInfo(String caseTitle, String projectName, Instant expiresAt) {
+    /** {@code caseTitle} solo viaja en un enlace de caso. */
+    public record UploadLinkInfo(String target, @Nullable String caseTitle, String projectName, Instant expiresAt) {
         public static UploadLinkInfo from(com.e2d.odin.application.link.UploadLinkInfo info) {
-            return new UploadLinkInfo(info.caseTitle().orElse(null), info.projectName(), info.expiresAt());
+            return new UploadLinkInfo(info.kind().name(), info.caseTitle().orElse(null), info.projectName(),
+                    info.expiresAt());
         }
     }
 
-    public record UploadReceipt(String filename) {
+    public record UploadReceipt(String filename, boolean duplicate) {
+        public static UploadReceipt from(com.e2d.odin.application.link.UploadReceipt receipt) {
+            return new UploadReceipt(receipt.filename(), receipt.duplicate());
+        }
     }
 
     public record CaseFileEventView(UUID id, UUID documentId, @Nullable String documentTitle, String action, UUID actorId,

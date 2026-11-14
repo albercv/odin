@@ -482,4 +482,12 @@ class IsolationTest extends WebTestSupport {
                 .satisfies(u -> org.assertj.core.api.Assertions.assertThat(u.groupAdmin() && u.active()).isTrue());
         org.assertj.core.api.Assertions.assertThat(w.users.findByEmail("gael-iso@e.test")).isEmpty();
     }
+
+    @Test
+    void keyOfOtherCompanyCannotIssueAProjectUploadLink() throws Exception {
+        CompanyId a = newCompany();
+        var projectOfA = Fixtures.companyWideProject(w.orgs, a);
+        mvc.perform(post("/v1/projects/" + projectOfA.value() + "/upload-links")
+                .header("Authorization", workerKey(newCompany()))).andExpect(status().isNotFound());
+    }
 }
