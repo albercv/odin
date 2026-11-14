@@ -65,6 +65,14 @@ test('groupAdminLandsOnTheFirstCompanyAndKeepsTheChoiceAcrossTabs', async () => 
   expect(calls.some((c) => c.key === 'GET /v1/admin/companies/c2/members')).toBe(true);
 });
 
+test('groupCompaniesFailingToLoadSaysSoInsteadOfNoCompanies', async () => {
+  mockFetch({ 'GET /v1/admin/companies': () => ({ status: 500, body: { detail: 'x' } }) });
+  shell();
+  await userEvent.click(await screen.findByRole('link', { name: 'Documentos' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('No se han podido cargar las empresas');
+  expect(screen.queryByRole('heading', { name: 'Todavía no hay empresas' })).toBeNull();
+});
+
 test('groupWithoutCompaniesShowsAnEmptyState', async () => {
   mockFetch({ 'GET /v1/admin/companies': () => [] });
   shell();

@@ -12,6 +12,7 @@ import { Review } from '../pages/Review';
 import { Topics } from '../pages/Topics';
 import { Usage } from '../pages/Usage';
 import { EmptyState } from '../ui/EmptyState';
+import { Notice } from '../components/Notice';
 import { withViewTransition } from '../ui/viewTransition';
 import { Sidebar, type Page } from './Sidebar';
 import styles from './AppShell.module.css';
@@ -72,7 +73,8 @@ function CompanyPage({ page, companyId, me, onPendingChanged }: CompanyPageProps
   );
 }
 
-function NoCompany({ loading }: { loading: boolean }) {
+function NoCompany({ loading, failed }: { loading: boolean; failed: boolean }) {
+  if (failed) return <Notice message="No se han podido cargar las empresas. Vuelve a intentarlo en un momento." />;
   if (loading) return <p>Cargando…</p>;
   return <EmptyState title="Todavía no hay empresas" description="Crea la primera en la pestaña Grupo." />;
 }
@@ -101,7 +103,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         {!route.caseId && page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} onProfileChanged={onProfileChanged} />}
         {!route.caseId && page === 'groupAdmins' && isGroup && <GroupAdmins me={me} />}
         {!route.caseId && page === 'companies' && <Companies onOpen={open} onChanged={groupCompanies.reload} />}
-        {needsCompany && !companyId && <NoCompany loading={isGroup && !groupCompanies.data && !groupCompanies.error} />}
+        {needsCompany && !companyId && <NoCompany loading={isGroup && !groupCompanies.data && !groupCompanies.error} failed={isGroup && !!groupCompanies.error} />}
         {route.caseId && companyId && <CaseFile key={route.caseId} companyId={companyId} caseId={route.caseId} />}
         {!route.caseId && needsCompany && companyId && <CompanyPage page={page} companyId={companyId} me={me} onPendingChanged={setPending} />}
       </main>
