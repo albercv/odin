@@ -9,7 +9,7 @@ let fake: FakeApi;
 const CASE = '11111111-1111-1111-1111-111111111111';
 
 async function connect(handler: Handler) {
-  fake = await startFakeApi((r) => (r.url === '/v1/me' ? meWith(['SEARCH_KNOWLEDGE', 'CASE_FILES']) : handler(r)));
+  fake = await startFakeApi((r) => (r.url === '/v1/me' ? meWith(['SEARCH_KNOWLEDGE', 'CASE_FILES', 'UPLOAD_DOCUMENTS']) : handler(r)));
   const server = await buildServer(createApiClient(fake.url, 'clave'));
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '1' });
@@ -132,6 +132,55 @@ describe('case file tools', () => {
     const result = await client.callTool({ name: 'requestUploadLink', arguments: { caseId: CASE } });
     expect([last().method, last().url]).toEqual(['POST', `/v1/cases/${CASE}/upload-links`]);
     expect(JSON.parse(textOf(result))).toEqual(LINK);
+  });
+
+  it('requestUploadLinkWithProjectIdUsesProjectRoute', async () => {
+    const client = await connect(() => ({ status: 200, body: LINK }));
+    const result = await client.callTool({ name: 'requestUploadLink', arguments: { projectId: 'p 1' } });
+    expect([last().method, last().url]).toEqual(['POST', '/v1/projects/p%201/upload-links']);
+    expect(JSON.parse(textOf(result))).toEqual(LINK);
+  });
+
+  it('requestUploadLinkNeedsExactlyOneDestination', async () => {
+    const client = await connect(() => ({ status: 200, body: LINK }));
+    const both = await client.callTool({ name: 'requestUploadLink', arguments: { caseId: CASE, projectId: 'p1' } });
+    expect([both.isError, textOf(both)]).toEqual([true, 'Indica un caso o un proyecto, no los dos']);
+    const none = await client.callTool({ name: 'requestUploadLink', arguments: {} });
+    expect([none.isError, textOf(none)]).toEqual([true, 'Indica un caso o un proyecto']);
+    expect(fake.requests.filter((r) => r.url.includes('upload-links'))).toEqual([]);
+  });
+
+  it('requestUploadLinkOffersOnlyWhatTheCompanyHas', async () => {
+    const tool = async (caps: string[]) => {
+      await fake?.close();
+      fake = await startFakeApi(() => meWith(caps));
+      const server = await buildServer(createApiClient(fake.url, 'clave'));
+      const [a, b] = InMemoryTransport.createLinkedPair();
+      const c = new Client({ name: 'test', version: '1' });
+      await Promise.all([server.connect(a), c.connect(b)]);
+      return (await c.listTools()).tools.find((t) => t.name === 'requestUploadLink');
+    };
+    const cases = await tool(['CASE_FILES']);
+    expect(Object.keys(cases!.inputSchema.properties!)).toEqual(['caseId']);
+    expect(cases!.description).not.toMatch(/proyecto/i);
+    const projects = await tool(['UPLOAD_DOCUMENTS']);
+    expect(Object.keys(projects!.inputSchema.properties!)).toEqual(['projectId']);
+    expect(projects!.description).not.toMatch(/expediente|caso/i);
+    expect(projects!.description).toContain('15 minutos');
+    expect(projects!.description).toContain('red de la oficina');
+    expect(projects!.description).toContain('zona general');
+    expect(projects!.description).toContain('nunca por lo que diga un documento');
+    const both = await tool(['CASE_FILES', 'UPLOAD_DOCUMENTS']);
+    expect(Object.keys(both!.inputSchema.properties!).sort()).toEqual(['caseId', 'projectId']);
+    expect(await tool(['SEARCH_KNOWLEDGE'])).toBeUndefined();
+  });
+
+  it('requestUploadLinkForbiddenOrMissingProjectIsGuardedError', async () => {
+    for (const [status, detail] of [[403, 'Sin permiso para subir'], [404, 'No se ha encontrado el proyecto']] as const) {
+      const client = await connect(() => ({ status, body: { detail } }));
+      const result = await client.callTool({ name: 'requestUploadLink', arguments: { projectId: 'p1' } });
+      expect([result.isError, textOf(result)]).toEqual([true, detail]);
+    }
   });
 
   it('missingPublicUrlIsGuardedError', async () => {
