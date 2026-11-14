@@ -154,11 +154,30 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
-            int limit) {
-        return documents.values().stream().filter(d -> d.withdrawn() && !d.intakePending() && scope.includes(d.companyId())
-                && visibility.allows(d.projectId())).sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
+    public List<DocumentEntry> search(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery, int offset, int limit) {
+        return matching(scope, visibility, withdrawn, titleQuery)
+                .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
                 .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
+    }
+
+    @Override
+    public int count(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery) {
+        return (int) matching(scope, visibility, withdrawn, titleQuery).count();
+    }
+
+    private java.util.stream.Stream<Document> matching(CompanyScope scope, ProjectVisibility visibility,
+            boolean withdrawn, Optional<String> titleQuery) {
+        lastListScope = scope;
+        return documents.values().stream().filter(d -> d.withdrawn() == withdrawn && !d.intakePending()
+                && scope.includes(d.companyId()) && visibility.allows(d.projectId()))
+                .filter(d -> titleQuery.map(q -> fold(d.title()).contains(fold(q))).orElse(true));
+    }
+
+    private static String fold(String text) {
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .toLowerCase();
     }
 
     private DocumentEntry entry(CompanyScope scope, ProjectVisibility visibility, Document d) {
@@ -283,12 +302,6 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         return documents.values().stream().filter(d -> !d.withdrawn() && !d.intakePending()
                 && d.companyId().equals(companyId) && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
                 .findFirst();
-    }
-
-    @Override
-    public List<DocumentEntry> listForAdmin(CompanyScope scope, int offset, int limit) {
-        return list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), offset, limit);
     }
 
     @Override

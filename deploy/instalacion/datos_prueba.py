@@ -346,8 +346,8 @@ def listar_documentos(api, empresa, pagina=100):
     docs = []
     while True:
         parte = api.admin("GET", f"/v1/admin/companies/{empresa}/documents?offset={len(docs)}&limit={pagina}")
-        docs += parte
-        if len(parte) < pagina:
+        docs += parte["documents"]
+        if len(parte["documents"]) < pagina or len(docs) >= parte["total"]:
             return docs
 
 

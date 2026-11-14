@@ -139,6 +139,18 @@ class ApiFalsa:
         return [{"id": "p1", "name": n} for n in self.proyectos]
 
 
+class EsperarTest(unittest.TestCase):
+
+    def test_leeLaListaDelAdministradorConSuTotal(self):
+        docs = [{"id": "a", "status": "READY", "title": "A"}, {"id": "b", "status": "READY", "title": "B"}]
+
+        class Api:
+            def admin(self, metodo, ruta, cuerpo=None, **opciones):
+                return {"documents": docs, "total": len(docs)}
+
+        self.assertEqual([docs[1]], ap.esperar(Api(), "c-ribera", {"b"}))
+
+
 CREDENCIALES = {"trabajadores": {"marta": {"clave": "k-marta", "proyectos": ["Calle Olmo 14"]},
                                  "javier": {"clave": "k-javier", "proyectos": ["Calle Pino 26"]}}}
 

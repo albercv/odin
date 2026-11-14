@@ -18,6 +18,16 @@ public interface KnowledgeCardRepository {
 
     List<KnowledgeCard> listByStatus(CompanyScope scope, ProjectVisibility visibility, CardStatus status);
 
+    /**
+     * Las fichas de un estado, de la más antigua a la más nueva. Con {@code query}, solo las que lo contienen en el
+     * título o el cuerpo, sin mayúsculas ni acentos y con {@code %} y {@code _} como texto.
+     */
+    List<KnowledgeCard> search(CompanyScope scope, ProjectVisibility visibility, CardStatus status,
+            Optional<String> query, int offset, int limit);
+
+    /** Cuántas fichas devuelve {@link #search} sin paginar. */
+    int count(CompanyScope scope, ProjectVisibility visibility, CardStatus status, Optional<String> query);
+
     /** Las fichas de un autor, de la más reciente a la más antigua, dentro de la empresa y los proyectos visibles. */
     List<KnowledgeCard> listByAuthor(CompanyScope scope, ProjectVisibility visibility, UserId authorId,
             Optional<CardStatus> status, int limit);

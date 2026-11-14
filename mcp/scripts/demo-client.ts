@@ -73,7 +73,7 @@ async function uploadFile(companyId: string, path: string, title: string, projec
 }
 async function waitReady(companyId: string, docId: string): Promise<void> {
   for (let i = 0; i < 60; i++) {
-    const docs = await json<{ id: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/documents`), 200);
+    const docs = (await json<{ documents: { id: string; status: string }[] }>(await http('GET', `/v1/admin/companies/${companyId}/documents?limit=500`), 200)).documents;
     const status = docs.find((d) => d.id === docId)?.status;
     if (status === 'READY') return;
     if (status === 'FAILED') throw new Error('el documento ha fallado');
@@ -152,7 +152,7 @@ async function createTopic(companyId: string, name: string, definition: string):
 }
 async function waitTagged(companyId: string, docId: string): Promise<void> {
   for (let i = 0; i < 60; i++) {
-    const docs = await json<{ id: string; taggingStatus: string | null }[]>(await http('GET', `/v1/admin/companies/${companyId}/documents`), 200);
+    const docs = (await json<{ documents: { id: string; taggingStatus: string | null }[] }>(await http('GET', `/v1/admin/companies/${companyId}/documents?limit=500`), 200)).documents;
     const status = docs.find((d) => d.id === docId)?.taggingStatus;
     if (status === 'DONE') return;
     if (status === 'FAILED') throw new Error('el etiquetado ha fallado');
@@ -313,7 +313,7 @@ async function uploadLinkStep(s: Awaited<ReturnType<typeof seedExpediente>>): Pr
   form.append('file', new Blob([readFileSync(join(FILE_DIR, 'nota-enlace-ficticia.txt'))], { type: 'text/plain' }), 'nota-enlace-ficticia.txt');
   const up = await fetch(`${PUBLIC_URL}/v1/upload-links/${token}/documents`, { method: 'POST', body: form });
   check(up.status === 200, `Paso 16b: la subida por el enlace responde HTTP 200 (HTTP ${up.status})`);
-  const docs = await json<{ id: string; filename: string }[]>(await http('GET', `/v1/admin/companies/${s.companyId}/documents`), 200);
+  const docs = (await json<{ documents: { id: string; filename: string }[] }>(await http('GET', `/v1/admin/companies/${s.companyId}/documents?limit=500`), 200)).documents;
   const id = docs.find((d) => d.filename === 'nota-enlace-ficticia.txt')?.id;
   if (!id) throw new Error('el documento subido por el enlace no aparece');
   await waitReady(s.companyId, id);
@@ -322,7 +322,7 @@ async function uploadLinkStep(s: Awaited<ReturnType<typeof seedExpediente>>): Pr
 
 async function waitStatus(companyId: string, docId: string, wanted: string): Promise<void> {
   for (let i = 0; i < 60; i++) {
-    const docs = await json<{ id: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/documents`), 200);
+    const docs = (await json<{ documents: { id: string; status: string }[] }>(await http('GET', `/v1/admin/companies/${companyId}/documents?limit=500`), 200)).documents;
     if (docs.find((d) => d.id === docId)?.status === wanted) return;
     await new Promise((r) => setTimeout(r, 1000));
   }
@@ -330,7 +330,7 @@ async function waitStatus(companyId: string, docId: string, wanted: string): Pro
 }
 
 async function addPhoto(s: Awaited<ReturnType<typeof seedExpediente>>, file: string, title: string): Promise<string> {
-  const project = (await json<{ id: string; projectId: string }[]>(await http('GET', `/v1/admin/companies/${s.companyId}/documents`), 200))
+  const project = ((await json<{ documents: { id: string; projectId: string }[] }>(await http('GET', `/v1/admin/companies/${s.companyId}/documents?limit=500`), 200)).documents)
     .find((d) => d.id === s.caseId)?.projectId;
   const id = await uploadFile(s.companyId, join(PHOTOS_DIR, file), title, project);
   await json(await http('POST', `/v1/admin/companies/${s.companyId}/cases/${s.caseId}/file/documents`, { documentIds: [id] }), 200);
@@ -416,7 +416,8 @@ async function prepare(): Promise<void> {
 async function confirm(): Promise<void> {
   const { companyId } = JSON.parse(readFileSync(STATE, 'utf8')) as { companyId: string };
   cookie = (await http('POST', '/v1/admin/session', ADMIN).then((r) => r.headers.get('set-cookie') ?? '')).split(';')[0] ?? '';
-  const cards = await json<{ title: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/cards?status=APPROVED`), 200);
+  const q = encodeURIComponent(CARD.title);
+  const { cards } = await json<{ cards: { title: string; status: string }[] }>(await http('GET', `/v1/admin/companies/${companyId}/cards?status=APPROVED&q=${q}&limit=50`), 200);
   check(cards.some((c) => c.title === CARD.title), 'Paso 9: la API confirma que la ficha está APPROVED');
   await confirmSuperseded(JSON.parse(readFileSync(STATE, 'utf8')) as State);
 }

@@ -19,6 +19,7 @@ import com.e2d.odin.domain.intake.ProposalSource;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
+import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
@@ -263,8 +264,31 @@ class IntakeSecurityIT extends AbstractPostgresIT {
 
         assertThat(docs.list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), 0, 10))
                 .extracting(e -> e.document().id()).containsExactly(digital.id());
-        assertThat(docs.listForAdmin(scope, 0, 10)).extracting(e -> e.document().id())
-                .containsExactlyInAnyOrder(digital.id(), scan.id());
+        for (PostgresDocumentRepository repo : List.of(docs, ownerDocs)) {
+            assertThat(adminList(repo, false, Optional.empty())).containsExactly(digital.id(), scan.id());
+            assertThat(adminList(repo, false, Optional.of("escaneo"))).containsExactly(scan.id());
+            assertThat(repo.count(scope, ProjectVisibility.all(), false, Optional.empty())).isEqualTo(2);
+        }
+    }
+
+    /** D1 en la lista paginada del administrador, su buscador y su total: con la RLS y con el filtro SQL solo. */
+    @Test
+    void adminListSearchAndTotalNeverIncludePendingDocuments() {
+        Document visible = newDocument(company, user, "Pendiente de pago", DocumentStatus.READY);
+        CompanyScope scope = CompanyScope.of(company);
+
+        for (PostgresDocumentRepository repo : List.of(docs, ownerDocs)) {
+            assertThat(adminList(repo, false, Optional.empty())).containsExactly(visible.id());
+            assertThat(adminList(repo, false, Optional.of("pendiente"))).containsExactly(visible.id());
+            assertThat(repo.count(scope, ProjectVisibility.all(), false, Optional.empty())).isEqualTo(1);
+            assertThat(repo.count(scope, ProjectVisibility.all(), false, Optional.of("pendiente"))).isEqualTo(1);
+        }
+    }
+
+    private List<DocumentId> adminList(PostgresDocumentRepository repo, boolean withdrawn,
+            Optional<String> title) {
+        return repo.search(CompanyScope.of(company), ProjectVisibility.all(), withdrawn, title, 0, 10).stream()
+                .map(e -> e.document().id()).toList();
     }
 
     @Test
@@ -274,7 +298,10 @@ class IntakeSecurityIT extends AbstractPostgresIT {
                 + withdrawn.id().value() + "', '" + pending.id().value() + "')");
         CompanyScope scope = CompanyScope.of(company);
 
-        assertThat(docs.listWithdrawn(scope, ProjectVisibility.all(), 0, 10)).extracting(e -> e.document().id())
-                .containsExactly(withdrawn.id());
+        for (PostgresDocumentRepository repo : List.of(docs, ownerDocs)) {
+            assertThat(adminList(repo, true, Optional.empty())).containsExactly(withdrawn.id());
+            assertThat(adminList(repo, true, Optional.of("pendiente"))).isEmpty();
+            assertThat(repo.count(scope, ProjectVisibility.all(), true, Optional.empty())).isEqualTo(1);
+        }
     }
 }

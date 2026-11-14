@@ -26,19 +26,19 @@ public class ListCompanyDocuments {
         this.tagging = tagging;
     }
 
-    public List<TaggedDocument> execute(Actor actor, CompanyId companyId, int offset, int limit) {
-        return execute(actor, companyId, offset, limit, false);
+    public record DocumentPage(List<TaggedDocument> documents, int total) {
     }
 
-    /** Con {@code withdrawn}, la lista trae solo los retirados. */
-    public List<TaggedDocument> execute(Actor actor, CompanyId companyId, int offset, int limit, boolean withdrawn) {
+    /** Con {@code withdrawn}, la lista trae solo los retirados. Un {@code query} en blanco es no buscar. */
+    public DocumentPage page(Actor actor, CompanyId companyId, int offset, int limit, boolean withdrawn,
+            Optional<String> query) {
         AccessPolicy.requireAdminOf(actor, companyId);
         int capped = WorkerAccess.cap(Optional.of(limit), 100, 500);
         CompanyScope scope = CompanyScope.of(companyId);
         ProjectVisibility everything = ProjectVisibility.all();
-        int from = Math.max(0, offset);
-        var entries = withdrawn ? documents.listWithdrawn(scope, everything, from, capped)
-                : documents.listForAdmin(scope, from, capped);
-        return TaggedDocuments.of(entries, scope, everything, topics.list(companyId), tagging);
+        Optional<String> title = query.map(String::strip).filter(q -> !q.isEmpty());
+        var entries = documents.search(scope, everything, withdrawn, title, Math.max(0, offset), capped);
+        return new DocumentPage(TaggedDocuments.of(entries, scope, everything, topics.list(companyId), tagging),
+                documents.count(scope, everything, withdrawn, title));
     }
 }

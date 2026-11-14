@@ -34,6 +34,7 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 
 public class PostgresDocumentRepository implements DocumentRepository {
 
@@ -111,11 +112,45 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
-            int limit) {
-        // Lo pendiente descartado en la bandeja se gestiona en la bandeja, no en la pestaña de retirados.
-        return list(pipeline, true, Sql.visibleDocument("d") + " AND NOT d.intake_pending", scope, visibility,
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), offset, limit);
+    public List<DocumentEntry> search(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery, int offset, int limit) {
+        String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
+                + SupersessionSql.joins("d.superseded_by", "d.company_id") + " WHERE " + searchFilter()
+                + " ORDER BY d.title, d.id OFFSET :offset LIMIT :limit";
+        return searchTransactions(withdrawn).inScope(scope, visibility,
+                jdbc -> bindSearch(Sql.scoped(jdbc.sql(sql), scope), visibility, withdrawn, titleQuery)
+                        .param("offset", offset).param("limit", limit).query((rs, n) -> entry(rs)).list());
+    }
+
+    @Override
+    public int count(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery) {
+        String sql = "SELECT count(*) FROM document d WHERE " + searchFilter();
+        return searchTransactions(withdrawn).inScope(scope, visibility,
+                jdbc -> bindSearch(Sql.scoped(jdbc.sql(sql), scope), visibility, withdrawn, titleQuery)
+                        .query(Integer.class).single());
+    }
+
+    /**
+     * Los retirados solo se ven en la sesión que activa {@code app.include_withdrawn}. Ninguna activa
+     * {@code app.include_intake}: lo pendiente no sale en la lista, el buscador ni el total (D1).
+     */
+    private ScopedTransactions searchTransactions(boolean withdrawn) {
+        return withdrawn ? tx.includeWithdrawn(true) : tx;
+    }
+
+    private static String searchFilter() {
+        return "(NOT :withdrawnOnly OR d.withdrawn_at IS NOT NULL) AND (CAST(:title AS text) IS NULL "
+                + "OR unaccent(lower(d.title)) LIKE unaccent(lower(CAST(:title AS text)))) AND "
+                + Sql.inScope("d.company_id") + " AND " + Sql.inVisibleProjects("d.project_id") + " AND "
+                + Sql.visibleDocument("d"); // con los escaneos enlazados: solo se ocultan al trabajador (D3)
+    }
+
+    private static StatementSpec bindSearch(StatementSpec spec, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery) {
+        String like = titleQuery.map(q -> "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                + "%").orElse(null);
+        return Sql.visible(spec, visibility).param("withdrawnOnly", withdrawn).param("title", like);
     }
 
     @Override
@@ -306,19 +341,11 @@ public class PostgresDocumentRepository implements DocumentRepository {
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
             int limit) {
-        return list(tx, false, Sql.listable("d"), scope, visibility, projectId, topicId, caseDocument, status, offset,
-                limit);
+        return list(tx, scope, visibility, projectId, topicId, caseDocument, status, offset, limit);
     }
 
-    /** La lista del administrador: como la del trabajador, pero con los escaneos enlazados (D3). */
-    @Override
-    public List<DocumentEntry> listForAdmin(CompanyScope scope, int offset, int limit) {
-        return list(tx, false, Sql.visibleDocument("d"), scope, ProjectVisibility.all(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), offset, limit);
-    }
-
-    private static List<DocumentEntry> list(ScopedTransactions transactions, boolean withdrawnOnly, String visibleFilter,
-            CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId, Optional<TopicId> topicId,
+    private static List<DocumentEntry> list(ScopedTransactions transactions, CompanyScope scope,
+            ProjectVisibility visibility, Optional<ProjectId> projectId, Optional<TopicId> topicId,
             Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset, int limit) {
         UUID project = projectId.map(ProjectId::value).orElse(null);
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
@@ -328,12 +355,12 @@ public class PostgresDocumentRepository implements DocumentRepository {
                       JOIN topic p ON p.id = x.topic_id AND p.deleted_at IS NULL
                       WHERE x.document_id = d.id AND x.topic_id = :topic AND x.state = 'ACTIVE'))
                   AND (CAST(:caseDocument AS boolean) IS NULL OR d.case_document = :caseDocument)
-                  AND (CAST(:status AS text) IS NULL OR d.status = :status) AND (NOT :withdrawnOnly OR d.withdrawn_at IS NOT NULL)
+                  AND (CAST(:status AS text) IS NULL OR d.status = :status)
                   AND %s AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
-                Sql.inVisibleProjects("d.project_id"), visibleFilter);
+                Sql.inVisibleProjects("d.project_id"), Sql.listable("d"));
         return transactions.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
-                .param("withdrawnOnly", withdrawnOnly).param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
+                .param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
                 .param("caseDocument", caseDocument.orElse(null))
                 .param("status", status.map(DocumentStatus::name).orElse(null)).param("offset", offset)
                 .param("limit", limit).query((rs, n) -> entry(rs)).list());

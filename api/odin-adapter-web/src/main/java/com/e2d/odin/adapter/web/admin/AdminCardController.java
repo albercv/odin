@@ -5,12 +5,12 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
 import com.e2d.odin.application.knowledge.ReviewCard;
+import io.swagger.v3.oas.annotations.Parameter;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ValidationException;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class AdminCardController {
 
+    private static final int MAX_QUERY = 100;
+
     private final ListCardsForReview list;
     private final ReviewCard review;
 
@@ -33,9 +35,16 @@ public class AdminCardController {
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/cards")
-    public List<Responses.CardView> list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
-            @PathVariable UUID companyId, @RequestParam(defaultValue = "PENDING") CardStatus status) {
-        return list.execute(actor, new CompanyId(companyId), status).stream().map(Responses.CardView::from).toList();
+    public Responses.CardPage list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @RequestParam(defaultValue = "PENDING") CardStatus status,
+            @RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "10") int limit,
+            @Parameter(description = "Texto del título o del cuerpo, sin mayúsculas ni acentos (hasta 100 caracteres)")
+            @RequestParam(required = false) String q) {
+        if (q != null && q.strip().length() > MAX_QUERY) {
+            throw new ValidationException("La búsqueda admite hasta " + MAX_QUERY + " caracteres");
+        }
+        var page = list.page(actor, new CompanyId(companyId), status, Optional.ofNullable(q), offset, limit);
+        return new Responses.CardPage(page.cards().stream().map(Responses.CardView::from).toList(), page.total());
     }
 
     @PostMapping("/v1/admin/cards/{cardId}/review")
