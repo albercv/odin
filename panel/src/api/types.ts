@@ -189,7 +189,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["uploadLink"];
+        post: operations["issueProjectUploadLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -253,7 +253,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["uploadLink_1"];
+        post: operations["uploadLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1400,7 +1400,8 @@ export interface components {
             password?: string;
         };
         UploadLinkInfo: {
-            target: string;
+            /** @enum {string} */
+            target: "CASE" | "PROJECT";
             caseTitle?: string;
             projectName: string;
             /** Format: date-time */
@@ -2072,7 +2073,7 @@ export interface operations {
             };
         };
     };
-    uploadLink: {
+    issueProjectUploadLink: {
         parameters: {
             query?: never;
             header?: never;
@@ -2168,7 +2169,7 @@ export interface operations {
             };
         };
     };
-    uploadLink_1: {
+    uploadLink: {
         parameters: {
             query?: never;
             header?: never;

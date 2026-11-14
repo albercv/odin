@@ -14,8 +14,8 @@ function description(cases: boolean, projects: boolean): string {
     `${WRITE_RULES} ` +
     (cases && projects ? 'Indica un caso o un proyecto, no los dos. ' : '') +
     'El enlace abre una página de Odín que muestra el destino antes de subir, donde el trabajador elige los ficheros. ' +
-    'Vale 15 minutos y solo funciona en la red de la oficina. ' +
-    'Desde el chat no se sube a la zona general de la empresa. ' +
+    'Vale 15 minutos y solo funciona en la red local. ' +
+    (projects ? 'Un enlace de proyecto sube solo a ese proyecto; nunca a lo general de la empresa. ' : '') +
     'Da el enlace tal cual, sin cambiarlo, y di cuándo caduca (expiresAt).'
   );
 }

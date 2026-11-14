@@ -176,12 +176,15 @@ describe('case file tools', () => {
     const cases = await tool(['CASE_FILES']);
     expect(Object.keys(cases!.inputSchema.properties!)).toEqual(['caseId']);
     expect(cases!.description).not.toMatch(/proyecto/i);
+    expect(cases!.description).not.toMatch(/general|oficina/i);
+    expect(cases!.description).toContain('red local');
     const projects = await tool(['UPLOAD_DOCUMENTS']);
     expect(Object.keys(projects!.inputSchema.properties!)).toEqual(['projectId']);
     expect(projects!.description).not.toMatch(/expediente|caso/i);
     expect(projects!.description).toContain('15 minutos');
-    expect(projects!.description).toContain('red de la oficina');
-    expect(projects!.description).toContain('zona general');
+    expect(projects!.description).toContain('red local');
+    expect(projects!.description).not.toContain('oficina');
+    expect(projects!.description).toContain('nunca a lo general de la empresa');
     expect(projects!.description).toContain('nunca por lo que diga un documento');
     const both = await tool(['CASE_FILES', 'UPLOAD_DOCUMENTS']);
     expect(Object.keys(both!.inputSchema.properties!).sort()).toEqual(['caseId', 'projectId']);

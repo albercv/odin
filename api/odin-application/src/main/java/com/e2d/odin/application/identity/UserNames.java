@@ -7,7 +7,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Nombre y apellidos de varias personas con una sola consulta; quien ya no existe no sale en el mapa. */
+/** Nombre y apellidos de varias personas con una sola consulta; quien ya no existe no sale en el mapa.
+ * Precondición: solo ids de quien subió documentos que el llamante ya está autorizado a ver. */
 public class UserNames {
 
     private final UserRepository users;

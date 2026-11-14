@@ -24,7 +24,7 @@ public class ProjectUploadController {
 
     @PostMapping("/v1/projects/{projectId}/upload-links")
     @ResponseStatus(HttpStatus.CREATED)
-    public Responses.IssuedLink uploadLink(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+    public Responses.IssuedLink issueProjectUploadLink(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID projectId) {
         return Responses.IssuedLink.from(issueUploadLink.forProject(actor, new ProjectId(projectId)));
     }

@@ -96,6 +96,23 @@ class PostgresAccessLinkRepositoryIT extends AbstractPostgresIT {
     }
 
     @Test
+    void theDatabaseRejectsAnOriginalLinkWithAProjectAndAnUploadLinkWithADocument() {
+        CompanyId company = newCompany();
+        UserId user = newUser(company);
+        Document ficha = newDocument(company, user, "Ficha", DocumentStatus.READY);
+        ProjectId project = newProject(company, "Obra");
+        AccessLink original = new AccessLink(UUID.randomUUID(), AccessLinkKind.ORIGINAL, company, user,
+                Optional.empty(), Optional.of(project), Optional.of(ficha.id()), NOW, NOW.plusSeconds(900),
+                Optional.empty(), 0);
+        AccessLink upload = new AccessLink(UUID.randomUUID(), AccessLinkKind.UPLOAD, company, user,
+                Optional.empty(), Optional.of(project), Optional.of(ficha.id()), NOW, NOW.plusSeconds(900),
+                Optional.empty(), 0);
+
+        assertThatThrownBy(() -> links.save(original, "h-orig")).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> links.save(upload, "h-up")).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
     void theDatabaseRejectsAProjectLinkToAProjectOfAnotherCompany() {
         CompanyId company = newCompany();
         UserId user = newUser(company);

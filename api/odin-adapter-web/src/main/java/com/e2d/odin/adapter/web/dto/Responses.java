@@ -440,9 +440,9 @@ public final class Responses {
     }
 
     /** {@code caseTitle} solo viaja en un enlace de caso. */
-    public record UploadLinkInfo(String target, @Nullable String caseTitle, String projectName, Instant expiresAt) {
+    public record UploadLinkInfo(com.e2d.odin.application.link.UploadTargetKind target, @Nullable String caseTitle, String projectName, Instant expiresAt) {
         public static UploadLinkInfo from(com.e2d.odin.application.link.UploadLinkInfo info) {
-            return new UploadLinkInfo(info.kind().name(), info.caseTitle().orElse(null), info.projectName(),
+            return new UploadLinkInfo(info.kind(), info.caseTitle().orElse(null), info.projectName(),
                     info.expiresAt());
         }
     }
