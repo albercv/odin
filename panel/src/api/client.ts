@@ -36,13 +36,20 @@ const co = (id: string) => `${a}/companies/${id}`;
 const PAGE_SIZE = 500;
 export const MAX_DOCUMENTS = 2000;
 
+export const documentPage = (companyId: string, { q = '', offset = 0, limit = PAGE_SIZE, withdrawn = false } = {}) => {
+  const query = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+  if (q.trim()) query.set('q', q.trim());
+  if (withdrawn) query.set('withdrawn', 'true');
+  return request<S['DocumentPage']>('GET', `${co(companyId)}/documents?${query}`);
+};
+
 // Recorre las páginas de la API con offset, como collectDocuments en el MCP.
 async function allDocuments(companyId: string, withdrawn = false) {
   const documents: S['DocumentView'][] = [];
   while (documents.length <= MAX_DOCUMENTS) {
-    const page = await request<S['DocumentView'][]>('GET', `${co(companyId)}/documents?offset=${documents.length}&limit=${PAGE_SIZE}${withdrawn ? '&withdrawn=true' : ''}`);
-    documents.push(...page);
-    if (page.length < PAGE_SIZE) break;
+    const page = await documentPage(companyId, { offset: documents.length, limit: PAGE_SIZE, withdrawn });
+    documents.push(...page.documents);
+    if (page.documents.length < PAGE_SIZE) break;
   }
   return { documents: documents.slice(0, MAX_DOCUMENTS), truncated: documents.length > MAX_DOCUMENTS };
 }
@@ -95,6 +102,7 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
+  documentPage,
   withdraw: (documentId: string) => request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/withdrawal`),
   restore: (documentId: string) => request<S['DocumentView']>('DELETE', `${a}/documents/${documentId}/withdrawal`),
   caseFile: (id: string, caseId: string) => request<S['CaseFileResponse']>('GET', `${co(id)}/cases/${caseId}/file`),

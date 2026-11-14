@@ -1671,6 +1671,11 @@ export interface components {
             reason?: string;
             gaps: components["schemas"]["GapView"][];
         };
+        DocumentPage: {
+            documents: components["schemas"]["DocumentView"][];
+            /** Format: int32 */
+            total: number;
+        };
         DeliveredVolumeView: {
             month: string;
             totals: components["schemas"]["DeliveryTotalView"][];
@@ -2573,6 +2578,8 @@ export interface operations {
                 limit?: number;
                 /** @description Si es true, devuelve solo los documentos retirados (con su paginación) */
                 withdrawn?: boolean;
+                /** @description Texto del título, sin mayúsculas ni acentos (hasta 100 caracteres) */
+                q?: string;
             };
             header?: never;
             path: {
@@ -2588,7 +2595,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DocumentView"][];
+                    "application/json": components["schemas"]["DocumentPage"];
                 };
             };
         };

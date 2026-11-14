@@ -211,6 +211,10 @@ public final class Responses {
         }
     }
 
+    /** Una página de la lista de documentos del administrador y cuántos hay en total con ese filtro. */
+    public record DocumentPage(List<DocumentView> documents, int total) {
+    }
+
     /** {@code taggingStatus} y {@code topics} solo van completos en la lista de la empresa; en el resto, nulo y vacío. */
     public record DocumentView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String filename,
             String format, String status, @Nullable String failureReason, boolean paginated, Instant uploadedAt,

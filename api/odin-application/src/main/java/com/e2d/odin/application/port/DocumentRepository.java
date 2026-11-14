@@ -34,9 +34,15 @@ public interface DocumentRepository {
     /** Escribe solo la retirada del documento. Al recuperar, si hay otro igual sin retirar en su proyecto, 409. */
     void markWithdrawal(Document document);
 
-    /** Solo los retirados, para la vista «Retirados» del administrador, con su paginación. */
-    List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
-            int limit);
+    /**
+     * La lista del administrador: con {@code withdrawn}, solo los retirados; con {@code titleQuery}, solo los que lo
+     * contienen en el título, sin mayúsculas ni acentos y con {@code %} y {@code _} como texto.
+     */
+    List<DocumentEntry> search(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery, int offset, int limit);
+
+    /** Cuántos documentos devuelve {@link #search} sin paginar. */
+    int count(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn, Optional<String> titleQuery);
 
     /** Pone la marca de sustituido con su propia orden: {@link #save} no la escribe ni la borra. */
     void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at);

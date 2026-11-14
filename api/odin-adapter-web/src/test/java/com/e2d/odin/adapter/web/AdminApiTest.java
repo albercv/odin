@@ -216,7 +216,7 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.supersededAt").doesNotExist());
         mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.id == '" + old.id().value() + "')].supersededBy.title")
+                .andExpect(jsonPath("$.documents[?(@.id == '" + old.id().value() + "')].supersededBy.title")
                         .value(current.title()));
     }
 
@@ -682,10 +682,10 @@ class AdminApiTest extends WebTestSupport {
         w.tagging.seedRow(tagged, com.e2d.odin.domain.topic.TaggingStatus.DONE);
 
         mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
-                .andExpect(status().isOk()).andExpect(jsonPath("$[0].taggingStatus").value("DONE"))
-                .andExpect(jsonPath("$[0].topics[0].id").value(water))
-                .andExpect(jsonPath("$[0].topics[0].name").value("Agua"))
-                .andExpect(jsonPath("$[0].topics[0].source").value("AI"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.documents[0].taggingStatus").value("DONE"))
+                .andExpect(jsonPath("$.documents[0].topics[0].id").value(water))
+                .andExpect(jsonPath("$.documents[0].topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$.documents[0].topics[0].source").value("AI"));
     }
 
     @Test
@@ -957,5 +957,22 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.detail").value("El administrador necesita correo"));
         mvc.perform(delete("/v1/admin/group-admins/" + UUID.randomUUID()).cookie(group))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void documentListSearchesByTitleAndGivesTheTotal() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Fixtures.titledDocument(w.docs, company, "Póliza seguro 2023");
+        Fixtures.titledDocument(w.docs, company, "Contrato");
+        String url = "/v1/admin/companies/" + company.value() + "/documents";
+
+        mvc.perform(get(url + "?q=poliza").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].title").value("Póliza seguro 2023"));
+        mvc.perform(get(url + "?limit=1").cookie(admin)).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.documents", hasSize(1)));
+        mvc.perform(get(url + "?q=" + "x".repeat(100)).cookie(admin)).andExpect(status().isOk());
+        mvc.perform(get(url + "?q=" + "x".repeat(101)).cookie(admin)).andExpect(status().isBadRequest());
     }
 }

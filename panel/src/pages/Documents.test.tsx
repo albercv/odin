@@ -16,7 +16,7 @@ const renewed = { ...base, id: 'd2', title: 'Póliza 2024', status: 'READY', pro
 const draft = { ...base, id: 'd3', title: 'Borrador', status: 'FAILED' };
 const marked = { ...old, supersededBy: { id: 'd2', title: 'Póliza 2024' }, supersededAt: '2026-06-01T09:00:00Z' };
 const routes = (documents: unknown[], more: Routes = {}): Routes => ({
-  [list]: () => documents, [projects]: () => [{ id: 'p1', name: 'Los Almendros' }], ...more,
+  [list]: () => ({ documents, total: documents.length }), [projects]: () => [{ id: 'p1', name: 'Los Almendros' }], ...more,
 });
 
 const show = (r: Routes, scannedDocumentsSupported = false) => {
@@ -249,7 +249,7 @@ test('cancellingTheConfirmationDoesNotWithdraw', async () => {
 
 test('withdrawnFilterListsOnlyWithdrawnAndRestores', async () => {
   const gone = { ...old, withdrawnAt: '2026-11-13T10:00:00Z' };
-  const calls = show(routes([renewed], { [withdrawnList]: () => [gone], [restoreUrl]: () => ({ status: 200, body: old }) }));
+  const calls = show(routes([renewed], { [withdrawnList]: () => ({ documents: [gone], total: 1 }), [restoreUrl]: () => ({ status: 200, body: old }) }));
   await screen.findByText('Póliza 2024');
   await userEvent.click(screen.getByRole('button', { name: 'Retirados' }));
   expect(await screen.findByText('Póliza 2022')).toBeInTheDocument();
@@ -260,7 +260,7 @@ test('withdrawnFilterListsOnlyWithdrawnAndRestores', async () => {
 
 test('restoreConflictShowsTheServerMessage', async () => {
   const gone = { ...old, withdrawnAt: '2026-11-13T10:00:00Z' };
-  show(routes([], { [withdrawnList]: () => [gone], [restoreUrl]: () => ({ status: 409, body: { detail: 'Ya hay un documento activo igual' } }) }));
+  show(routes([], { [withdrawnList]: () => ({ documents: [gone], total: 1 }), [restoreUrl]: () => ({ status: 409, body: { detail: 'Ya hay un documento activo igual' } }) }));
   await userEvent.click(await screen.findByRole('button', { name: 'Retirados' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Recuperar Póliza 2022' }));
   expect(await screen.findByText('Ya hay un documento activo igual')).toBeInTheDocument();
@@ -282,7 +282,7 @@ test('detailOffersTheOriginalDownload', async () => {
 
 test('withdrawnViewHasNoSelectionNorCaseLink', async () => {
   const gone = { ...old, caseDocument: true, withdrawnAt: '2026-11-13T10:00:00Z' };
-  show(routes([], { [withdrawnList]: () => [gone] }));
+  show(routes([], { [withdrawnList]: () => ({ documents: [gone], total: 1 }) }));
   await userEvent.click(await screen.findByRole('button', { name: 'Retirados' }));
   await screen.findByText('Póliza 2022');
   expect(screen.queryByRole('checkbox')).toBeNull();
