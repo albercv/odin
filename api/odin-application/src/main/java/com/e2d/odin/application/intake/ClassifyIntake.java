@@ -36,7 +36,8 @@ import java.util.stream.Collectors;
  * <p>
  * Primero las reglas; el modelo local solo para lo que no dé HIGH, y solo con la cola del lector de la empresa vacía,
  * para que el OCR y el modelo no estén cargados a la vez. Si hay modelo y la cola está ocupada, el lote espera.
- * Sin lista de proyectos confirmada no hay propuestas de proyecto (D6). No hay propuesta COMPANY_WIDE: las reglas del
+ * Un lote sin ningún proyecto confirmado no se clasifica y sigue en lectura (D6); varios candidatos sin desempate dan
+ * una propuesta LOW por candidato. No hay propuesta COMPANY_WIDE: las reglas del
  * estudio no tienen ninguna señal explícita de «de toda la empresa», así que lo decide la persona en la bandeja.
  */
 public class ClassifyIntake {
@@ -86,10 +87,13 @@ public class ClassifyIntake {
         if (proposer.isPresent() && !run.modelAllowed) {
             return;
         }
-        List<IntakeProposal> existing = intake.proposals(run.company(), batch.id());
         intake.candidates(run.company(), batch.id()).stream().filter(c -> c.state() == DecisionState.CONFIRMED)
                 .forEach(c -> run.confirmed.put(c.name(), c.projectId().orElseThrow()));
-        existing.stream().filter(p -> p.kind() == ProposalKind.PROJECT).forEach(p -> remember(run, p));
+        if (run.confirmed.isEmpty()) {
+            return;
+        }
+        List<IntakeProposal> existing = intake.proposals(run.company(), batch.id());
+        rememberUnambiguous(run, existing.stream().filter(p -> p.kind() == ProposalKind.PROJECT).toList());
         Set<DocumentId> done = existing.stream().map(IntakeProposal::documentId).collect(Collectors.toSet());
         List<IntakeDocument> all = documents.intakeReadyDocuments(run.company(), batch.id());
         all.stream().filter(d -> !done.contains(d.id())).forEach(d -> proposeFor(run, d));
@@ -99,8 +103,11 @@ public class ClassifyIntake {
         intake.save(batch.finishReading());
     }
 
-    private void remember(Run run, IntakeProposal project) {
-        project.targetProjectId().ifPresent(p -> run.projectOf.put(project.documentId(), p.value().toString()));
+    /** El proyecto propuesto de un documento solo cuenta para enlaces y duplicados si es uno solo. */
+    private void rememberUnambiguous(Run run, List<IntakeProposal> projects) {
+        projects.stream().collect(Collectors.groupingBy(IntakeProposal::documentId)).values().stream()
+                .filter(group -> group.size() == 1).map(group -> group.get(0))
+                .forEach(p -> p.targetProjectId().ifPresent(id -> run.projectOf.put(p.documentId(), id.value().toString())));
     }
 
     private void saveNew(Run run, List<IntakeProposal> existing) {
@@ -109,14 +116,14 @@ public class ClassifyIntake {
     }
 
     private static String key(IntakeProposal p) {
-        return p.documentId().value() + "/" + p.kind() + "/" + p.targetDocumentId().map(d -> d.value().toString()).orElse("");
+        return p.documentId().value() + "/" + p.kind() + "/" + p.targetDocumentId().map(d -> d.value().toString()).orElse("")
+                + "/" + p.targetProjectId().map(x -> x.value().toString()).orElse("");
     }
 
     private void proposeFor(Run run, IntakeDocument d) {
-        projectProposal(run, d).ifPresent(p -> {
-            run.made.add(p);
-            remember(run, p);
-        });
+        List<IntakeProposal> projects = projectProposals(run, d);
+        run.made.addAll(projects);
+        rememberUnambiguous(run, projects);
         CaseFileRules.CaseMark mark = CaseFileRules.detect(d.text());
         if (mark.caseFile() && !mark.reason().isBlank()) {
             run.made.add(proposal(run, d.id(), ProposalKind.CASE_MARK, Optional.empty(), Optional.empty(),
@@ -124,24 +131,37 @@ public class ClassifyIntake {
         }
     }
 
-    private Optional<IntakeProposal> projectProposal(Run run, IntakeDocument d) {
-        if (run.confirmed.isEmpty()) {
-            return Optional.empty();
-        }
+    /**
+     * Un HIGH de las reglas; si no, varios candidatos sin desempate (uno LOW por candidato, con su cita); si las reglas
+     * no encuentran ningún proyecto, el modelo (LOW); y, con un ganador LOW, ese.
+     */
+    private List<IntakeProposal> projectProposals(Run run, IntakeDocument d) {
         List<String> names = List.copyOf(run.confirmed.keySet());
         ProjectMatch match = ProjectRules.match(d.text(), names, folderOf(d));
         boolean usable = match.project().isPresent() && !match.reason().isBlank();
         if (usable && match.confidence() == ProposalConfidence.HIGH) {
-            return Optional.of(project(run, d, match.project().get(), ProposalConfidence.HIGH, match.source(),
+            return List.of(project(run, d, match.project().get(), ProposalConfidence.HIGH, match.source(),
                     match.reason()));
         }
-        Optional<String> byModel = run.modelAllowed ? ask(names, d.text()) : Optional.empty();
+        if (match.project().isEmpty() && match.candidates().size() > 1) {
+            return match.candidates().stream().map(c -> candidateProposal(run, d, c)).flatMap(Optional::stream)
+                    .toList();
+        }
+        Optional<String> byModel = run.modelAllowed && match.candidates().isEmpty() ? ask(names, d.text())
+                : Optional.empty();
         if (byModel.isPresent() && !beginning(d.text()).isBlank()) {
-            return Optional.of(project(run, d, byModel.get(), ProposalConfidence.LOW, ProposalSource.MODEL,
+            return List.of(project(run, d, byModel.get(), ProposalConfidence.LOW, ProposalSource.MODEL,
                     beginning(d.text())));
         }
-        return usable ? Optional.of(project(run, d, match.project().get(), ProposalConfidence.LOW, match.source(),
-                match.reason())) : Optional.empty();
+        return usable ? List.of(project(run, d, match.project().get(), ProposalConfidence.LOW, match.source(),
+                match.reason())) : List.of();
+    }
+
+    /** La cita propia de un candidato: la de las reglas con ese nombre como única lista. */
+    private Optional<IntakeProposal> candidateProposal(Run run, IntakeDocument d, String name) {
+        String reason = ProjectRules.match(d.text(), List.of(name), Optional.empty()).reason();
+        return reason.isBlank() ? Optional.empty()
+                : Optional.of(project(run, d, name, ProposalConfidence.LOW, ProposalSource.RULES, reason));
     }
 
     /** El modelo no debería lanzar, pero un fallo suyo no tumba el lote: no propone nada. */

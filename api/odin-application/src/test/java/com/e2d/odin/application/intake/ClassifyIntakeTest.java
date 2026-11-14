@@ -210,7 +210,7 @@ class ClassifyIntakeTest {
     }
 
     @Test
-    void withoutAConfirmedListThereAreNoProjectProposalsButTheCaseMarkStillIs() {
+    void withoutAConfirmedListNothingIsProposedAndTheBatchStaysInReadingUntilItIsConfirmed() {
         intake.save(new ProjectCandidate(company, batch.id(), OLMO, CandidateOrigin.DISCOVERED, 1,
                 DecisionState.PROPOSED, Optional.empty()));
         pending("a/uno.pdf", OLMO_TEXT);
@@ -218,9 +218,39 @@ class ClassifyIntakeTest {
 
         classify(true).execute();
 
-        assertThat(proposals(ProposalKind.PROJECT)).isEmpty();
-        assertThat(proposals(ProposalKind.COMPANY_WIDE)).isEmpty();
+        assertThat(intake.proposals(company, batch.id())).isEmpty();
+        assertThat(asked).isEmpty();
+        assertThat(state()).isEqualTo(IntakeState.READING);
+
+        confirmed(OLMO, olmoId);
+        classify(true).execute();
+
+        assertThat(proposals(ProposalKind.PROJECT)).hasSize(2);
         assertThat(proposals(ProposalKind.CASE_MARK)).hasSize(1);
+        assertThat(state()).isEqualTo(IntakeState.IN_REVIEW);
+    }
+
+    @Test
+    void anAmbiguousDocumentGetsOneLowProposalPerCandidateEachWithItsOwnReasonAndTheModelIsNotAsked() {
+        confirmed(OLMO, olmoId);
+        confirmed(HAYA, hayaId);
+        String text = "Informe general\nUna linea\nOtra linea\nObras en " + OLMO + " del bloque\nY tambien en " + HAYA + " del patio";
+        Document d = pending("a/uno.pdf", text);
+        modelAnswer = Optional.of(OLMO);
+
+        classify(true).execute();
+
+        List<IntakeProposal> ps = proposals(ProposalKind.PROJECT);
+        assertThat(ps).extracting(IntakeProposal::documentId).containsOnly(d.id());
+        assertThat(ps).extracting(p -> p.targetProjectId().orElseThrow()).containsExactlyInAnyOrder(olmoId, hayaId);
+        assertThat(ps).allSatisfy(p -> {
+            assertThat(p.confidence()).isEqualTo(ProposalConfidence.LOW);
+            assertThat(p.source()).isEqualTo(ProposalSource.RULES);
+        });
+        assertThat(ps).filteredOn(p -> p.targetProjectId().get().equals(olmoId)).singleElement()
+                .satisfies(p -> assertThat(p.reason()).contains(OLMO).doesNotContain(HAYA));
+        assertThat(ps).filteredOn(p -> p.targetProjectId().get().equals(hayaId)).singleElement()
+                .satisfies(p -> assertThat(p.reason()).contains(HAYA).doesNotContain(OLMO));
         assertThat(asked).isEmpty();
     }
 

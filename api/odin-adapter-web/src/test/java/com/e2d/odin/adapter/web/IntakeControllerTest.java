@@ -68,6 +68,7 @@ class IntakeControllerTest extends WebTestSupport {
 
         mvc.perform(post(batch + "/close-upload").cookie(admin)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("READING")).andExpect(jsonPath("$.uploaded").value(1));
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.warnings[*].code", hasItem("PROJECT_LIST_NOT_CONFIRMED")));
         mvc.perform(file("dos", admin)).andExpect(status().isConflict());
     }
 

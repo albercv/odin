@@ -4,7 +4,9 @@ import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
+import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.IntakeSettings;
@@ -37,6 +39,10 @@ public class GetIntakeBatch {
         }
         if (!settings.localModelConfigured()) {
             warnings.add(IntakeWarning.NO_LOCAL_MODEL);
+        }
+        if (batch.state() == IntakeState.READING && intake.candidates(companyId, batchId).stream()
+                .noneMatch(c -> c.state() == DecisionState.CONFIRMED)) {
+            warnings.add(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
         }
         return new IntakeBatchView(batch, documents.intakeCounts(companyId, batchId), warnings);
     }

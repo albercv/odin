@@ -5,5 +5,7 @@ public enum IntakeWarning {
     /** No hay lector OCR: los escaneos esperan. */
     NO_READER,
     /** No hay modelo local (ODIN_TAGGER_URL): solo propone con reglas. */
-    NO_LOCAL_MODEL
+    NO_LOCAL_MODEL,
+    /** El lote está en lectura y aún no hay ningún proyecto confirmado: no se clasifica. */
+    PROJECT_LIST_NOT_CONFIRMED
 }
