@@ -457,3 +457,17 @@ test('laterFailureDoesNotLeaveOldRowsLookingCurrent', async () => {
   expect(await screen.findByText('Se cayó')).toBeInTheDocument();
   expect(screen.queryByText('Doc 0')).toBeNull();
 });
+
+test('clearingAZeroResultSearchNeverFlashesTheEmptyState', async () => {
+  show(routes([old], { 'GET /v1/admin/companies/c1/documents?offset=0&limit=25&q=zzz': () => ({ documents: [], total: 0 }) }));
+  await screen.findByText('Póliza 2022');
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar documentos' }), { target: { value: 'zzz' } });
+  await screen.findByText(/Ningún resultado/);
+  let flashed = false;
+  const watch = new MutationObserver(() => { flashed ||= !!screen.queryByText('Aún no hay documentos'); });
+  watch.observe(document.body, { childList: true, subtree: true });
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar documentos' }), { target: { value: '' } });
+  await screen.findByText('Póliza 2022');
+  watch.disconnect();
+  expect(flashed).toBe(false);
+});

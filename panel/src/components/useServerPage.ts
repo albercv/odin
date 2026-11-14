@@ -4,27 +4,26 @@ type Fetch<T> = (q: string, offset: number, limit: number) => Promise<{ items: T
 
 type Data<T> = { items: T[]; total: number };
 
-/** Pide la página y descarta las respuestas que ya no son la última petición. */
+type Settled<T> = { key: string; data: Data<T>; error?: string };
+
+/** Pide la página y descarta las respuestas que ya no son la última petición. `loading` es cierto mientras el resultado guardado no sea el de la petición actual. */
 function useFetched<T>(fetchPage: Fetch<T>, query: string, page: number, size: number, extra: unknown[], onPast: (last: number) => void) {
-  const [data, setData] = useState<Data<T>>({ items: [], total: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
+  const [settled, setSettled] = useState<Settled<T>>();
+  const key = JSON.stringify([query, page, size, ...extra]);
   const latest = useRef({ fetchPage, onPast });
   latest.current = { fetchPage, onPast };
   const request = useRef(0);
   useEffect(() => {
     const id = ++request.current;
-    setLoading(true);
     latest.current.fetchPage(query, (page - 1) * size, size).then((r) => {
       if (id !== request.current) return;
-      setData(r);
-      setError(undefined);
-      setLoading(false);
+      setSettled({ key, data: r });
       const last = Math.max(1, Math.ceil(r.total / size));
       if (page > last) latest.current.onPast(last);
-    }, (e: Error) => { if (id === request.current) { setData({ items: [], total: 0 }); setError(e.message); setLoading(false); } });
-  }, [query, page, size, ...extra]);
-  return { data, loading, error };
+    }, (e: Error) => { if (id === request.current) setSettled({ key, data: { items: [], total: 0 }, error: e.message }); });
+  }, [key]);
+  const current = settled?.key === key;
+  return { data: settled?.data ?? { items: [], total: 0 }, loading: !current, error: current ? settled.error : undefined };
 }
 
 /**

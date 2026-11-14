@@ -36,7 +36,7 @@ public class ListCompanyDocuments {
         int capped = WorkerAccess.cap(Optional.of(limit), 100, 500);
         CompanyScope scope = CompanyScope.of(companyId);
         ProjectVisibility everything = ProjectVisibility.all();
-        Optional<String> title = query.map(String::trim).filter(q -> !q.isEmpty());
+        Optional<String> title = query.map(String::strip).filter(q -> !q.isEmpty());
         var entries = documents.search(scope, everything, withdrawn, title, Math.max(0, offset), capped);
         return new DocumentPage(TaggedDocuments.of(entries, scope, everything, topics.list(companyId), tagging),
                 documents.count(scope, everything, withdrawn, title));

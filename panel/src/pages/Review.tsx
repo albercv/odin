@@ -85,13 +85,13 @@ export function Review({ companyId, onPendingChanged }: Props) {
   const empty = !list.loading && !list.error && !list.query && list.total === 0;
   useEffect(() => { if (resolved && empty) emptyHeading.current?.focus(); }, [resolved, empty]);
   const names = { members: members.data ?? [], projects: projects.data ?? [] };
-  const paging = { page: list.page, pageCount: list.pageCount, onPage: list.setPage };
+  const paging = { page: list.page, pageCount: list.pageCount, onPage: (p: number) => { setResolved(false); list.setPage(p); } };
   return (
     <div>
       <PageHeader title="Revisión de fichas"
         description="Las fichas que la gente guarda desde su IA esperan aquí. Cuando apruebas una, la IA de la empresa ya puede citarla." />
       <Notice message={list.error ?? members.error ?? projects.error} />
-      <SearchBox label="Buscar fichas" onSearch={list.setQuery} resultCount={list.loading ? undefined : list.total} />
+      <SearchBox label="Buscar fichas" onSearch={(q) => { setResolved(false); list.setQuery(q); }} resultCount={list.loading ? undefined : list.total} />
       {empty && <EmptyState headingRef={emptyHeading} title="No hay fichas pendientes." description="Las nuevas aparecerán aquí cuando alguien guarde una desde su IA." />}
       {members.data && projects.data && current && (
         <div className={styles.review}>
