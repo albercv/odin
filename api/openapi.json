@@ -450,6 +450,33 @@
         }
       }
     },
+    "/v1/projects/{projectId}/upload-links" : {
+      "post" : {
+        "tags" : [ "project-upload-controller" ],
+        "operationId" : "uploadLink",
+        "parameters" : [ {
+          "name" : "projectId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedLink"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/documents/{documentId}/original-links" : {
       "post" : {
         "tags" : [ "worker-controller" ],
@@ -545,7 +572,7 @@
     "/v1/cases/{caseId}/upload-links" : {
       "post" : {
         "tags" : [ "case-file-controller" ],
-        "operationId" : "uploadLink",
+        "operationId" : "uploadLink_1",
         "parameters" : [ {
           "name" : "caseId",
           "in" : "path",
@@ -2696,9 +2723,12 @@
         "properties" : {
           "filename" : {
             "type" : "string"
+          },
+          "duplicate" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "filename" ]
+        "required" : [ "duplicate", "filename" ]
       },
       "SimilarCasesRequestBody" : {
         "type" : "object",
@@ -2954,16 +2984,6 @@
         },
         "required" : [ "hits", "noSource" ]
       },
-      "OriginalLinkRequest" : {
-        "type" : "object",
-        "properties" : {
-          "page" : {
-            "type" : "integer",
-            "format" : "int32",
-            "description" : "Página en la que abre el visor de PDF; si falta, abre por la primera."
-          }
-        }
-      },
       "IssuedLink" : {
         "type" : "object",
         "properties" : {
@@ -2976,6 +2996,16 @@
           }
         },
         "required" : [ "expiresAt", "url" ]
+      },
+      "OriginalLinkRequest" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Página en la que abre el visor de PDF; si falta, abre por la primera."
+          }
+        }
       },
       "VerifyCitation" : {
         "type" : "object",
@@ -3560,6 +3590,9 @@
       "UploadLinkInfo" : {
         "type" : "object",
         "properties" : {
+          "target" : {
+            "type" : "string"
+          },
           "caseTitle" : {
             "type" : "string"
           },
@@ -3571,7 +3604,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "caseTitle", "expiresAt", "projectName" ]
+        "required" : [ "expiresAt", "projectName", "target" ]
       },
       "Me" : {
         "type" : "object",

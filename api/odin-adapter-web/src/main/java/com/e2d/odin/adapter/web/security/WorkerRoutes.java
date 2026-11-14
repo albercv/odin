@@ -30,6 +30,7 @@ public final class WorkerRoutes {
             route("POST", "/v1/cases/{caseId}/file/documents", WorkerTool.CASE_FILE),
             route("DELETE", "/v1/cases/{caseId}/file/documents/{documentId}", WorkerTool.CASE_FILE),
             route("POST", "/v1/cases/{caseId}/upload-links", WorkerTool.CASE_FILE),
+            route("POST", "/v1/projects/{projectId}/upload-links", WorkerTool.CASE_FILE),
             route("POST", "/v1/documents/{documentId}/original-links", WorkerTool.CASE_FILE));
 
     /** Los dos primeros segmentos de cada ruta: una sola lista, así prefijos y rutas no pueden divergir. */

@@ -197,7 +197,8 @@ class AccessLinkIT {
         Reply sent = upload(token, "propio.txt", "mismo contenido", OFFICE);
 
         assertThat(sent.status()).isEqualTo(200);
-        assertThat(sent.body()).doesNotContain("otro proyecto", "existe", "duplic");
+        assertThat(sent.body()).doesNotContain("otro proyecto", "existe");
+        assertThat(sent.json().get("duplicate").asBoolean()).isFalse();
         assertThat(entries(caseId)).hasSize(1).doesNotContain(hiddenElsewhere);
         assertThat(strings("SELECT project_id FROM document WHERE id = '" + entries(caseId).get(0) + "'"))
                 .containsExactly(projectA);
@@ -544,7 +545,8 @@ class AccessLinkIT {
         Reply sent = upload(token, "nuevo.txt", text, OFFICE);
 
         assertThat(sent.status()).isEqualTo(200);
-        assertThat(sent.body()).doesNotContain("retirado", "duplic");
+        assertThat(sent.body()).doesNotContain("retirado");
+        assertThat(sent.json().get("duplicate").asBoolean()).isFalse();
         assertThat(entries(caseId)).hasSize(1).doesNotContain(old);
     }
 

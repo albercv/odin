@@ -43,8 +43,8 @@ public class AccessLinkController {
     public Responses.UploadReceipt uploadByLink(HttpServletRequest request, @PathVariable String token,
             @RequestParam("file") MultipartFile file) throws IOException {
         String address = clientAddress(request);
-        return new Responses.UploadReceipt(
-                uploadByLink.execute(token, address, file.getOriginalFilename(), file.getBytes()).filename());
+        return Responses.UploadReceipt.from(
+                uploadByLink.execute(token, address, file.getOriginalFilename(), file.getBytes()));
     }
 
     @GetMapping("/v1/originals/{token}")
