@@ -2407,6 +2407,32 @@
             "default" : "PENDING",
             "enum" : [ "PENDING", "APPROVED", "REJECTED" ]
           }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 10
+          }
+        }, {
+          "name" : "q",
+          "in" : "query",
+          "description" : "Texto del título o del cuerpo, sin mayúsculas ni acentos (hasta 100 caracteres)",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -2414,10 +2440,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/CardView"
-                  }
+                  "$ref" : "#/components/schemas/CardPage"
                 }
               }
             }
@@ -4410,6 +4433,22 @@
           }
         },
         "required" : [ "action", "actorId", "at", "documentId", "id" ]
+      },
+      "CardPage" : {
+        "type" : "object",
+        "properties" : {
+          "cards" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CardView"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "cards", "total" ]
       }
     }
   }

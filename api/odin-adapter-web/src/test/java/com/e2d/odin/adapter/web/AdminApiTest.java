@@ -555,7 +555,8 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(status().isCreated());
         mvc.perform(get("/v1/admin/companies/" + id + "/projects").cookie(group)).andExpect(jsonPath("$", hasSize(1)));
         mvc.perform(get("/v1/admin/companies/" + id + "/cards?status=PENDING").cookie(group))
-                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.cards", hasSize(0)))
+                .andExpect(jsonPath("$.total").value(0));
         mvc.perform(post("/v1/admin/cards/" + UUID.randomUUID() + "/review").cookie(group)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"APPROVE\"}"))
                 .andExpect(status().isNotFound());
@@ -974,5 +975,31 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.documents", hasSize(1)));
         mvc.perform(get(url + "?q=" + "x".repeat(100)).cookie(admin)).andExpect(status().isOk());
         mvc.perform(get(url + "?q=" + "x".repeat(101)).cookie(admin)).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void cardListSearchesPagesAndGivesTheTotal() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Fixtures.card(w.cards, company, com.e2d.odin.domain.knowledge.CardStatus.PENDING, "Póliza", "a");
+        Fixtures.card(w.cards, company, com.e2d.odin.domain.knowledge.CardStatus.PENDING, "Contrato", "b");
+        String url = "/v1/admin/companies/" + company.value() + "/cards";
+
+        mvc.perform(get(url + "?q=poliza").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.cards[0].title").value("Póliza"));
+        mvc.perform(get(url + "?limit=10&offset=1").cookie(admin)).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.cards", hasSize(1)));
+        mvc.perform(get(url + "?q=" + "x".repeat(100)).cookie(admin)).andExpect(status().isOk());
+        mvc.perform(get(url + "?q=" + "x".repeat(101)).cookie(admin)).andExpect(status().isBadRequest());
+        mvc.perform(get(url + "?q=" + "  " + "x".repeat(100)).cookie(admin)).andExpect(status().isOk());
+    }
+
+    @Test
+    void documentListMeasuresTheTrimmedQuery() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents?q=  " + "x".repeat(100))
+                .cookie(admin)).andExpect(status().isOk());
     }
 }

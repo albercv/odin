@@ -22,8 +22,8 @@ test('switchingLoadsTheOtherCompany', async () => {
   const me = { userId: 'u2', displayName: 'Bea', firstName: 'Bea', personCode: 'BBBB', role: 'COMPANY_ADMIN' as const, companyId: 'c1', companies: [acme, beta], scannedDocumentsSupported: false };
   const calls = mockFetch({
     'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
-    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
-    'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
+    'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
     'GET /v1/admin/companies/c1/projects': () => [],
     'GET /v1/admin/companies/c2/projects': () => [],
     'GET /v1/admin/companies/c1/members': () => [],
@@ -40,7 +40,7 @@ test('choosingACompanyOpensIt', async () => {
   const me = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', role: 'GROUP_ADMIN' as const, companies: [acme, beta], scannedDocumentsSupported: false };
   const calls = mockFetch({
     'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
-    'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
     'GET /v1/admin/companies/c2/projects': () => [],
     'GET /v1/admin/companies/c2/members': () => [],
   });

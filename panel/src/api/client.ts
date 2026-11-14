@@ -43,6 +43,12 @@ export const documentPage = (companyId: string, { q = '', offset = 0, limit = PA
   return request<S['DocumentPage']>('GET', `${co(companyId)}/documents?${query}`);
 };
 
+export const cardPage = (companyId: string, { q = '', offset = 0, limit = 10 } = {}) => {
+  const query = new URLSearchParams({ status: 'PENDING', offset: String(offset), limit: String(limit) });
+  if (q.trim()) query.set('q', q.trim());
+  return request<S['CardPage']>('GET', `${co(companyId)}/cards?${query}`);
+};
+
 // Recorre las páginas de la API con offset, como collectDocuments en el MCP.
 async function allDocuments(companyId: string, withdrawn = false) {
   const documents: S['DocumentView'][] = [];
@@ -129,7 +135,9 @@ export const api = {
   supersede: (documentId: string, replacementId: string) =>
     request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/superseded-by`, { replacementId }),
   unsupersede: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/superseded-by`),
-  pendingCards: (id: string) => request<S['CardView'][]>('GET', `${co(id)}/cards?status=PENDING`),
+  // Hasta el tope de la API (50): lo que el menú y la página de revisión necesitan hasta que Review pagine.
+  pendingCards: (id: string) => cardPage(id, { limit: 50 }).then((page) => page.cards),
+  cardPage,
   topics: (id: string) => request<S['TopicView'][]>('GET', `${co(id)}/topics`),
   createTopic: (id: string, b: S['TopicRequest']) => request<S['TopicView']>('POST', `${co(id)}/topics`, b),
   updateTopic: (id: string, topicId: string, b: S['TopicPatch']) => request<S['TopicView']>('PATCH', `${co(id)}/topics/${topicId}`, b),

@@ -107,8 +107,13 @@ public final class Fixtures {
     }
 
     public static KnowledgeCard card(InMemoryKnowledgeCardRepository cards, CompanyId company, CardStatus status) {
-        KnowledgeCard c = new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), "Titulo",
-                "Cuerpo original", Optional.empty(), new UserId(UUID.randomUUID()), NOW, status, Optional.empty());
+        return card(cards, company, status, "Titulo", "Cuerpo original");
+    }
+
+    public static KnowledgeCard card(InMemoryKnowledgeCardRepository cards, CompanyId company, CardStatus status,
+            String title, String body) {
+        KnowledgeCard c = new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), title,
+                body, Optional.empty(), new UserId(UUID.randomUUID()), NOW, status, Optional.empty());
         cards.save(c);
         return c;
     }

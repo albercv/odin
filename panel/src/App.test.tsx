@@ -67,7 +67,7 @@ test('coverHashWithoutCoverShowsLogin', async () => {
 test('shellShowsPendingCountAndCompanyName', async () => {
   mockFetch({
     'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', personCode: 'BEA1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] }),
-    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [{ id: 'k1', title: 'F', body: 'B', status: 'PENDING' }],
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [{ id: 'k1', title: 'F', body: 'B', status: 'PENDING' }], total: 1 }),
     'GET /v1/admin/companies/c1/projects': () => [],
     'GET /v1/admin/companies/c1/members': () => [],
   });
@@ -93,7 +93,7 @@ test('companyAdminGoesToOwnCompanyWithoutCapabilityControls', async () => {
     'GET /v1/admin/companies': () => [company],
     'GET /v1/admin/companies/c1/projects': () => [],
     'GET /v1/admin/companies/c1/members': () => [],
-    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
   });
   render(<App />);
   expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
@@ -189,7 +189,7 @@ test('caseRouteOpensTheCaseScreenInsideTheShell', async () => {
   history.pushState(null, '', '/casos/k9?empresa=c1');
   mockFetch({
     'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', companyId: 'c1', personCode: 'BEA1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }] }),
-    'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
     'GET /v1/admin/companies/c1/cases/k9/file': () => ({ caseDocument: { id: 'k9', title: 'Expte 9', status: 'READY' }, documents: [], pendingDocuments: 0 }),
     'GET /v1/admin/companies/c1/cases/k9/events': () => [],
   });
@@ -209,8 +209,8 @@ test('uploadRouteIsPublicAndNeverAsksForTheSession', async () => {
 
 const twoCompanies = {
   'GET /v1/admin/me': () => ({ userId: 'u', displayName: 'Bea', role: 'COMPANY_ADMIN', personCode: 'BEA1', companies: [{ id: 'c1', name: 'Acme', code: 'ACM' }, { id: 'c2', name: 'Beta', code: 'BET' }] }),
-  'GET /v1/admin/companies/c1/cards?status=PENDING': () => [],
-  'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
+  'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
+  'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
   'GET /v1/admin/companies/c2/cases/k2/file': () => ({ caseDocument: { id: 'k2', title: 'Expte 2', status: 'READY' }, documents: [], pendingDocuments: 0 }),
   'GET /v1/admin/companies/c2/cases/k2/events': () => [],
   'GET /v1/admin/companies/c1/documents?offset=0&limit=25': () => page([]),
