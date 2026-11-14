@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 import { App } from './App';
 import { Documents } from './pages/Documents';
 import { Keys } from './components/Keys';
-import { mockFetch, type Routes } from './mockApi';
+import { mockFetch } from './mockApi';
 import { mockDialog } from './ui/dialogMock';
 import { BrandProvider } from './theme/BrandContext';
 import { NEUTRAL_BRAND } from './theme/brand';
@@ -137,7 +137,7 @@ const page = (documents: unknown[]) => ({ documents, total: documents.length });
 
 test('documentsListShowsStatusAndReason', async () => {
   const calls = mockFetch({
-    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => page([
+    'GET /v1/admin/companies/c1/documents?offset=0&limit=25': () => page([
       { id: 'd1', title: 'Contrato', filename: 'c.pdf', status: 'FAILED', failureReason: 'Fichero ilegible', pagesWithoutText: [], topics: [] },
       { id: 'd2', title: 'Manual', filename: 'm.txt', status: 'READY', pagesWithoutText: [], topics: [] },
     ]),
@@ -158,29 +158,15 @@ test('documentsListShowsStatusAndReason', async () => {
 const docs = (from: number, n: number) =>
   Array.from({ length: n }, (_, i) => ({ id: `d${from + i}`, title: `Doc ${from + i}`, filename: 'f.pdf', status: 'READY', pagesWithoutText: [], topics: [] }));
 
-test('documentsListWalksAllPagesAndRefreshes', async () => {
-  const calls = mockFetch({
-    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => page(docs(0, 500)),
-    'GET /v1/admin/companies/c1/documents?offset=500&limit=500': () => page(docs(500, 20)),
-    'GET /v1/admin/companies/c1/projects': () => [],
-  });
+test('documentsListPagesOnTheServerAndRefreshes', async () => {
+  const url = 'GET /v1/admin/companies/c1/documents?offset=0&limit=25';
+  const calls = mockFetch({ [url]: () => ({ documents: docs(0, 25), total: 60 }), 'GET /v1/admin/companies/c1/projects': () => [] });
   render(<Documents companyId="c1" />);
-  expect(await screen.findByText('Doc 519')).toBeInTheDocument();
+  expect(await screen.findByText('Doc 24')).toBeInTheDocument();
+  expect(screen.getByText('Página 1 de 3')).toBeInTheDocument();
   expect(screen.queryByText(/lista está cortada/)).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
-  await waitFor(() => expect(calls.filter((c) => c.key.endsWith('offset=500&limit=500'))).toHaveLength(2));
-});
-
-test('documentsListWarnsWhenTruncated', async () => {
-  const routes: Routes = { 'GET /v1/admin/companies/c1/projects': () => [] };
-  for (let offset = 0; offset <= 2000; offset += 500) {
-    routes[`GET /v1/admin/companies/c1/documents?offset=${offset}&limit=500`] = () => page(docs(offset, 500));
-  }
-  mockFetch(routes);
-  render(<Documents companyId="c1" />);
-  expect(await screen.findByText(/La lista está cortada: se muestran los primeros 2000 documentos/)).toBeInTheDocument();
-  expect(screen.getByText('Doc 1999')).toBeInTheDocument();
-  expect(screen.queryByText('Doc 2000')).toBeNull();
+  await waitFor(() => expect(calls.filter((c) => c.key === url)).toHaveLength(2));
 });
 
 test('hashChangeDoesNotBreakHookOrder', async () => {
@@ -227,9 +213,9 @@ const twoCompanies = {
   'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
   'GET /v1/admin/companies/c2/cases/k2/file': () => ({ caseDocument: { id: 'k2', title: 'Expte 2', status: 'READY' }, documents: [], pendingDocuments: 0 }),
   'GET /v1/admin/companies/c2/cases/k2/events': () => [],
-  'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => page([]),
+  'GET /v1/admin/companies/c1/documents?offset=0&limit=25': () => page([]),
   'GET /v1/admin/companies/c1/projects': () => [],
-  'GET /v1/admin/companies/c2/documents?offset=0&limit=500': () => page([]),
+  'GET /v1/admin/companies/c2/documents?offset=0&limit=25': () => page([]),
   'GET /v1/admin/companies/c2/projects': () => [],
 };
 
