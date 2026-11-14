@@ -30,7 +30,7 @@ Qué hace con la carpeta:
 
 1. **Tu correo** y **tu contraseña**. La contraseña no se ve al escribirla y no se guarda en ningún sitio.
 2. **El resumen:** la empresa, cuántos ficheros y cuánto ocupan, lo que se salta y los avisos.
-3. **«¿Seguir? (s/n)»**. Escribe `s` para subir. Con `n` no se sube nada. Para no recibir esta pregunta, añade `ARGS="--si"`.
+3. **«¿Seguir? (s/n)»**. Escribe `s` para subir. Con `n` no se sube nada. Para no recibir esta pregunta, añade `ARGS="--si"`; sin la pregunta, si Odín está en sus puertos de siempre (8080, 8088 y 8090), la orden pide además `CONFIRMAR_INSTALACION=PROPIETARIO` delante de `make`.
 
 ## Los avisos
 
@@ -59,7 +59,7 @@ Nadie ve un documento hasta que tú lo confirmas.
 3. **Parejas:** escaneos y su copia en texto, y versiones que sustituyen a otras.
 4. **Fichas y expedientes:** documentos de casos y enlaces a sus fichas.
 
-En cada propuesta puedes confirmarla, corregir el proyecto, marcarla «de toda la empresa» o rechazarla.
+En cada propuesta puedes confirmarla, corregir el proyecto, marcarla «de toda la empresa» o rechazarla. **«Ver el original»** abre el documento para decidir viéndolo; también en «Sin ubicar». Un grupo de más de 500 documentos se confirma en partes de 500, cada una todo o nada: si una falla, el panel dice cuántas se aplicaron. Un documento que aún se está leyendo no se puede decidir: espera a que termine.
 
 - **«No lo sé»** deja el documento oculto y pendiente, sin plazo, y guarda quién lo dijo y cuándo. Puedes volver a él cuando lo sepas. Mientras quede alguno, la carga sigue abierta y **no se puede empezar otra primera carga**: la orden lo rechaza hasta que lo decidas.
 - **Descartar** retira el documento. No vuelve a entrar si repites la orden en esta misma carga; en una primera carga nueva, sí, porque para ella es un fichero que falta.
