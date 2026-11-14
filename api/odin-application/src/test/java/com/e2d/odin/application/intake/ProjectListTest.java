@@ -106,6 +106,21 @@ class ProjectListTest {
     }
 
     @Test
+    void aDiscoveredNameRepeatedInTheImportedListEndsAsOneImportedProposedCandidate() {
+        pendingDocument("Comunidad: Calle Haya 2");
+        pendingDocument("Comunidad: Calle Olmo 24");
+        list.discover(admin, company, batch.id());
+
+        importText("Calle Haya 2\nCalle Pino 7");
+
+        assertThat(intake.candidates(company, batch.id())).extracting(ProjectCandidate::name,
+                ProjectCandidate::origin, ProjectCandidate::state).containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple("Calle Haya 2", CandidateOrigin.IMPORTED, DecisionState.PROPOSED),
+                org.assertj.core.groups.Tuple.tuple("Calle Pino 7", CandidateOrigin.IMPORTED, DecisionState.PROPOSED),
+                org.assertj.core.groups.Tuple.tuple("Calle Olmo 24", CandidateOrigin.DISCOVERED, DecisionState.REJECTED));
+    }
+
+    @Test
     void discoveryProposesTheNamesOfTheReadPendingDocumentsWithTheirCount() {
         pendingDocument("Comunidad: Calle Haya 2\nnada");
         pendingDocument("COMUNIDAD DE PROPIETARIOS CALLE HAYA 2, Puerto Albar");

@@ -31,6 +31,9 @@ import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.GetIntakeBatch;
 import com.e2d.odin.application.intake.ImportProjectList;
 import com.e2d.odin.application.intake.ListProjectCandidates;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.ProjectCandidate;
+import com.e2d.odin.application.intake.ProjectDecision;
 import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.document.WithdrawDocument;
@@ -497,8 +500,15 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ImportProjectList importProjectList(IntakeRepository intake) {
-        return new ImportProjectList(intake);
+    ImportProjectList importProjectList(IntakeRepository intake, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ImportProjectList(intake) {
+            @Override
+            public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
+                    byte[] content) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId, content));
+            }
+        };
     }
 
     @Bean
@@ -508,8 +518,15 @@ public class UseCaseConfiguration {
 
     @Bean
     ConfirmProjectCandidates confirmProjectCandidates(IntakeRepository intake, OrganizationRepository organizations,
-            CreateProject createProject) {
-        return new ConfirmProjectCandidates(intake, organizations, createProject);
+            CreateProject createProject, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ConfirmProjectCandidates(intake, organizations, createProject) {
+            @Override
+            public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
+                    List<ProjectDecision> decisions) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId, decisions));
+            }
+        };
     }
 
     @Bean

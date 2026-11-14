@@ -41,16 +41,41 @@ public class ImportProjectList {
             throw new ValidationException("La lista no tiene ningún nombre");
         }
         List<ProjectCandidate> existing = intake.candidates(companyId, batchId);
-        existing.stream().filter(c -> c.origin() == CandidateOrigin.DISCOVERED && c.state() == DecisionState.PROPOSED)
-                .forEach(c -> intake.save(c.reject()));
-        Set<String> known = existing.stream().map(c -> ProjectRules.normalize(c.name())).collect(Collectors.toSet());
+        Map<String, Integer> counts = rejectLeftoverDiscovered(existing, names);
+        Set<String> known = existing.stream().filter(c -> !isLeftover(c)).map(c -> ProjectRules.normalize(c.name()))
+                .collect(Collectors.toSet());
         names.forEach((key, name) -> {
             if (!known.contains(key)) {
-                intake.save(new ProjectCandidate(companyId, batchId, name, CandidateOrigin.IMPORTED, 0,
-                        DecisionState.PROPOSED, Optional.empty()));
+                intake.save(new ProjectCandidate(companyId, batchId, name, CandidateOrigin.IMPORTED,
+                        counts.getOrDefault(key, 0), DecisionState.PROPOSED, Optional.empty()));
             }
         });
         return intake.candidates(companyId, batchId);
+    }
+
+    private static boolean isLeftover(ProjectCandidate c) {
+        return c.origin() == CandidateOrigin.DISCOVERED && c.state() == DecisionState.PROPOSED;
+    }
+
+    /**
+     * Los DISCOVERED aún propuestos se rechazan, salvo que la lista importada repita el nombre: ese pasa a IMPORTED y
+     * conserva su recuento. Devuelve los recuentos de los repetidos, por nombre normalizado.
+     */
+    private Map<String, Integer> rejectLeftoverDiscovered(List<ProjectCandidate> existing, Map<String, String> names) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (ProjectCandidate c : existing) {
+            if (!isLeftover(c)) {
+                continue;
+            }
+            String key = ProjectRules.normalize(c.name());
+            if (names.containsKey(key)) {
+                counts.put(key, c.documentCount());
+            }
+            if (!names.containsKey(key) || !names.get(key).equals(c.name())) {
+                intake.save(c.reject());
+            }
+        }
+        return counts;
     }
 
     private static String decode(byte[] content) {
