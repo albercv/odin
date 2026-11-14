@@ -177,6 +177,44 @@ test('confirmingAGroupAsksWithTheDialogAndSendsAllIds', async () => {
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/proposals/confirm`)?.body).toEqual({ proposalIds: ['a', 'b'] }));
 });
 
+test('confirmIsDisabledUntilTheProjectNameIsKnown', async () => {
+  show({ [`GET /v1/admin/companies/c1/projects`]: () => ({ status: 500, body: { detail: 'No cargan los proyectos' } }) });
+  await step('2. Proyectos');
+  expect(await screen.findByRole('button', { name: 'Confirmar grupo Proyecto sin nombre' })).toBeDisabled();
+});
+
+test('confirmIsDisabledWhenTheGroupProjectIsNotInTheList', async () => {
+  show({ [`GET /v1/admin/companies/c1/projects`]: () => [otra] });
+  await step('2. Proyectos');
+  expect(await screen.findByRole('button', { name: 'Confirmar grupo Proyecto sin nombre' })).toBeDisabled();
+});
+
+const many = (n: number) => ({ ...projectGroup, proposals: Array.from({ length: n }, (_, i) => item(`m${i}`, `Doc ${i}`, 'Calle Olmo 24')) });
+const confirmKey = `POST ${base}/b1/proposals/confirm`;
+
+test('aGroupOverFiveHundredIsConfirmedInPartsOfAtMostFiveHundred', async () => {
+  const calls = show({ [`GET ${base}/b1/proposals`]: () => ({ groups: [many(1001)] }), [confirmKey]: () => ({ confirmed: 1 }) });
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Confirmar grupo Calle Olmo 24' }));
+  expect(screen.getByRole('dialog').getAttribute('aria-label')).toContain('Va en partes de hasta 500 propuestas y cada parte es todo o nada.');
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
+  await waitFor(() => expect(calls.filter((c) => c.key === confirmKey).map((c) => (c.body as { proposalIds: string[] }).proposalIds.length)).toEqual([500, 500, 1]));
+});
+
+test('whenAPartFailsItStopsSaysHowManyWereAppliedAndRefreshes', async () => {
+  let n = 0;
+  const calls = show({
+    [`GET ${base}/b1/proposals`]: () => ({ groups: [many(1001)] }),
+    [confirmKey]: () => (++n === 2 ? { status: 409, body: { detail: 'Confirma antes el proyecto de «Doc 7»' } } : { confirmed: 500 }),
+  });
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Confirmar grupo Calle Olmo 24' }));
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Se aplicaron 1 de 3 partes (500 propuestas); la siguiente falló: Confirma antes el proyecto de «Doc 7»');
+  expect(calls.filter((c) => c.key === confirmKey)).toHaveLength(2);
+  await waitFor(() => expect(calls.filter((c) => c.key === `GET ${base}/b1/proposals`).length).toBeGreaterThan(1));
+});
+
 const decide = async (button: string, expected: unknown, extra = async () => {}) => {
   const key = `POST ${base}/b1/proposals/a/decide`;
   const calls = show({ [key]: () => ({ id: 'a', state: 'CONFIRMED' }) });
