@@ -133,12 +133,14 @@ test('issuedKeyShownOnceWithCopy', async () => {
   expect(screen.queryByText('odin_ab.SECRETO')).toBeNull();
 });
 
+const page = (documents: unknown[]) => ({ documents, total: documents.length });
+
 test('documentsListShowsStatusAndReason', async () => {
   const calls = mockFetch({
-    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => [
+    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => page([
       { id: 'd1', title: 'Contrato', filename: 'c.pdf', status: 'FAILED', failureReason: 'Fichero ilegible', pagesWithoutText: [], topics: [] },
       { id: 'd2', title: 'Manual', filename: 'm.txt', status: 'READY', pagesWithoutText: [], topics: [] },
-    ],
+    ]),
     'GET /v1/admin/companies/c1/projects': () => [],
     'POST /v1/admin/documents/d1/retry': () => ({ id: 'd1', status: 'RECEIVED' }),
   });
@@ -158,8 +160,8 @@ const docs = (from: number, n: number) =>
 
 test('documentsListWalksAllPagesAndRefreshes', async () => {
   const calls = mockFetch({
-    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => docs(0, 500),
-    'GET /v1/admin/companies/c1/documents?offset=500&limit=500': () => docs(500, 20),
+    'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => page(docs(0, 500)),
+    'GET /v1/admin/companies/c1/documents?offset=500&limit=500': () => page(docs(500, 20)),
     'GET /v1/admin/companies/c1/projects': () => [],
   });
   render(<Documents companyId="c1" />);
@@ -172,7 +174,7 @@ test('documentsListWalksAllPagesAndRefreshes', async () => {
 test('documentsListWarnsWhenTruncated', async () => {
   const routes: Routes = { 'GET /v1/admin/companies/c1/projects': () => [] };
   for (let offset = 0; offset <= 2000; offset += 500) {
-    routes[`GET /v1/admin/companies/c1/documents?offset=${offset}&limit=500`] = () => docs(offset, 500);
+    routes[`GET /v1/admin/companies/c1/documents?offset=${offset}&limit=500`] = () => page(docs(offset, 500));
   }
   mockFetch(routes);
   render(<Documents companyId="c1" />);
@@ -225,9 +227,9 @@ const twoCompanies = {
   'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
   'GET /v1/admin/companies/c2/cases/k2/file': () => ({ caseDocument: { id: 'k2', title: 'Expte 2', status: 'READY' }, documents: [], pendingDocuments: 0 }),
   'GET /v1/admin/companies/c2/cases/k2/events': () => [],
-  'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => [],
+  'GET /v1/admin/companies/c1/documents?offset=0&limit=500': () => page([]),
   'GET /v1/admin/companies/c1/projects': () => [],
-  'GET /v1/admin/companies/c2/documents?offset=0&limit=500': () => [],
+  'GET /v1/admin/companies/c2/documents?offset=0&limit=500': () => page([]),
   'GET /v1/admin/companies/c2/projects': () => [],
 };
 

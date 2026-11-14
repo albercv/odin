@@ -1135,6 +1135,14 @@
             "type" : "boolean",
             "default" : false
           }
+        }, {
+          "name" : "q",
+          "in" : "query",
+          "description" : "Texto del título, sin mayúsculas ni acentos (hasta 100 caracteres)",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -1142,10 +1150,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/DocumentView"
-                  }
+                  "$ref" : "#/components/schemas/DocumentPage"
                 }
               }
             }
@@ -4329,6 +4334,22 @@
           }
         },
         "required" : [ "gaps", "withheld" ]
+      },
+      "DocumentPage" : {
+        "type" : "object",
+        "properties" : {
+          "documents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DocumentView"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "documents", "total" ]
       },
       "DeliveredVolumeView" : {
         "type" : "object",
