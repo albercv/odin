@@ -430,4 +430,30 @@ class IntakeControllerTest extends WebTestSupport {
                 .andExpect(status().isUnauthorized());
         mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.projectListClosedAt").doesNotExist());
     }
+
+    @Test
+    void theAdminOpensTheOriginalOfAPendingDocumentOfTheBatchAndNobodyElseDoes() throws Exception {
+        oneProposedOneUnplaced();
+        String original = batch + "/documents/" + first.id().value() + "/original";
+        mvc.perform(get(original).cookie(admin)).andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().bytes("uno".getBytes()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
+
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        String id = batch.substring(batch.lastIndexOf('/') + 1);
+        mvc.perform(get(original).cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(get("/v1/admin/companies/" + otherCompany.value() + "/intake-batches/" + id + "/documents/"
+                + first.id().value() + "/original").cookie(other)).andExpect(status().isNotFound());
+        mvc.perform(get(original).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(get(original)).andExpect(status().isUnauthorized());
+
+        String body = mvc.perform(post(batches).cookie(admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"channel\":\"PANEL\"}")).andExpect(status().isCreated()).andReturn().getResponse()
+                .getContentAsString();
+        String otherBatch = batches + "/" + com.jayway.jsonpath.JsonPath.<String>read(body, "$.id");
+        mvc.perform(get(otherBatch + "/documents/" + first.id().value() + "/original").cookie(admin))
+                .andExpect(status().isNotFound());
+    }
 }

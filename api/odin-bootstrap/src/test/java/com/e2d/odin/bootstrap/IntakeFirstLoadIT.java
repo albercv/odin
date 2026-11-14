@@ -93,7 +93,7 @@ class IntakeFirstLoadIT {
         awaitBatch(batch, view -> view.get("state").asString().equals("IN_REVIEW"));
         Set<String> all = documentIds();
 
-        assertNobodySees(all, "pendiente");
+        assertNobodySeesPending(batch, all);
         JsonNode groups = proposals(batch);
         assertProjectProposalsMatchTruth(groups, projectIds);
         for (String project : List.of("calle abeto 16", "calle olmo 47", "calle olmo 4")) {
@@ -214,11 +214,17 @@ class IntakeFirstLoadIT {
 
     // ---------- D1: lo que ve un trabajador ----------
 
-    private void assertNobodySees(Set<String> documents, String why) {
+    /** Lo pendiente: su administrador abre el original desde la bandeja; ningún trabajador lo ve ni lo abre. */
+    private void assertNobodySeesPending(String batch, Set<String> documents) {
+        String one = documents.iterator().next();
+        String tray = base + "/" + batch + "/documents/" + one + "/original";
+        assertThat(api.get(tray, "Cookie", cookie).status()).isEqualTo(200);
         for (String worker : workerKeys.keySet()) {
-            assertThat(visibleTo(worker)).as(worker + " con todo " + why).isEmpty();
+            assertThat(visibleTo(worker)).as(worker + " con todo pendiente").isEmpty();
+            assertThat(api.get(tray, "Authorization", workerKeys.get(worker)).status()).isEqualTo(401);
             for (String document : documents) {
                 assertThat(readable(worker, document)).as(worker + " lee " + document).isFalse();
+                assertThat(originalLinkStatus(worker, document)).as(worker + " abre " + document).isEqualTo(404);
             }
         }
     }

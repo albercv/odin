@@ -44,6 +44,7 @@ import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.IntakeEffects;
 import com.e2d.odin.application.intake.ListIntakeProposals;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -619,6 +620,12 @@ public class UseCaseConfiguration {
     @Bean
     ListUnplacedDocuments listUnplacedDocuments(IntakeRepository intake, DocumentRepository documents) {
         return new ListUnplacedDocuments(intake, documents);
+    }
+
+    @Bean
+    OpenIntakeOriginal openIntakeOriginal(IntakeRepository intake, DocumentRepository documents,
+            OriginalFileStore files) {
+        return new OpenIntakeOriginal(intake, documents, files);
     }
 
     @Bean

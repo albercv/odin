@@ -260,6 +260,16 @@ test('unplacedScansSayTheyAreWaitingForTheReader', async () => {
   expect(within(section).getByText('No se pudo leer este documento.')).toBeInTheDocument();
 });
 
+test('proposalsAndUnplacedDocumentsLinkTheirPendingOriginal', async () => {
+  const docs = { documents: [{ id: 'u1', title: 'Escaneo suelto', path: 'cliente/varios', status: 'READY' }] };
+  show({ [`GET ${base}/b1/documents?unplaced=true`]: () => docs });
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Ver documentos de Calle Olmo 24' }));
+  expect(screen.getByRole('link', { name: 'Ver el original de Factura 12' })).toHaveAttribute('href', `${base}/b1/documents/d-a/original`);
+  const section = screen.getByRole('region', { name: 'Sin ubicar' });
+  expect(await within(section).findByRole('link', { name: 'Ver el original de Escaneo suelto' })).toHaveAttribute('href', `${base}/b1/documents/u1/original`);
+});
+
 test('pairsStepShowsOnlyPairKindsWithTheTitleOfTheOtherDocument', async () => {
   show({});
   await step('3. Parejas');

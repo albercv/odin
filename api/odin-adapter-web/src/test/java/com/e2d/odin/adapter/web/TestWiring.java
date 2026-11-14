@@ -46,6 +46,7 @@ import com.e2d.odin.application.intake.IntakeEffects;
 import com.e2d.odin.application.intake.ListIntakeProposals;
 import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.GetIntakeBatch;
 import com.e2d.odin.application.intake.ImportProjectList;
@@ -366,6 +367,10 @@ public class TestWiring {
 
     @Bean ListProjectCandidates listProjectCandidates() {
         return new ListProjectCandidates(intake, docs);
+    }
+
+    @Bean OpenIntakeOriginal openIntakeOriginal() {
+        return new OpenIntakeOriginal(intake, docs, files);
     }
 
     @Bean CloseProjectList closeProjectList() {

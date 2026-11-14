@@ -14,6 +14,7 @@ import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
@@ -618,5 +619,31 @@ class ConfirmIntakeTest {
         assertThat(view.proposed()).containsEntry(ProposalKind.PROJECT, 1).containsEntry(ProposalKind.CASE_MARK, 1)
                 .doesNotContainKey(ProposalKind.CASE_LINK);
         assertThat(view.unplaced()).isEqualTo(2);
+    }
+
+    @Test
+    void theAdminOpensTheOriginalOfAPendingDocumentOfTheBatchOnly() {
+        InMemoryOriginalFileStore store = new InMemoryOriginalFileStore();
+        OpenIntakeOriginal open = new OpenIntakeOriginal(intake, docs, store);
+        Document d = pending("Acta");
+        docs.save(new Document(d.id(), company, Optional.empty(), "Acta", "acta.pdf", d.format(),
+                store.store("contenido del acta".getBytes()), DocumentStatus.READY, Optional.empty(), true,
+                d.uploadedBy(), d.uploadedAt(), Optional.empty(), 0, Optional.empty(), Optional.empty())
+                .withIntake(batch.id(), "Cliente/acta.pdf"));
+
+        assertThat(open.execute(admin, company, batch.id(), d.id()).content()).isEqualTo("contenido del acta".getBytes());
+        assertThat(open.execute(admin, company, batch.id(), d.id()).filename()).isEqualTo("acta.pdf");
+
+        IntakeBatch other = new StartIntake(intake, orgs, ids, clock).execute(admin, company, IntakeChannel.PANEL);
+        assertThatThrownBy(() -> open.execute(admin, company, other.id(), d.id())).isInstanceOf(NotFoundException.class);
+        Document confirmed = Fixtures.readyDocument(docs, company, "Ya confirmado");
+        assertThatThrownBy(() -> open.execute(admin, company, batch.id(), confirmed.id()))
+                .isInstanceOf(NotFoundException.class);
+        for (Actor intruder : List.of(Actors.companyAdmin(Fixtures.company(orgs)), Actors.worker(company))) {
+            assertThatThrownBy(() -> open.execute(intruder, company, batch.id(), d.id()))
+                    .isInstanceOf(ForbiddenException.class);
+        }
+        place(d, Optional.of(olmo), false);
+        assertThatThrownBy(() -> open.execute(admin, company, batch.id(), d.id())).isInstanceOf(NotFoundException.class);
     }
 }

@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import styles from './Intake.module.css';
 
 export type Decision = S['DecideProposalRequest'];
-type Props = { kind: string; item: S['IntakeProposalItem']; projectKind: boolean; projects: S['ProjectView'][]; decide: (id: string, d: Decision) => void };
+type Props = { kind: string; item: S['IntakeProposalItem']; projectKind: boolean; projects: S['ProjectView'][]; decide: (id: string, d: Decision) => void; original: string };
 
 function CorrectProject({ title, projects, onCorrect }: { title: string; projects: S['ProjectView'][]; onCorrect: (projectId: string) => void }) {
   const [projectId, setProjectId] = useState('');
@@ -26,13 +26,13 @@ const relation = (kind: string, item: S['IntakeProposalItem']) =>
   item.targetTitle && RELATION[kind] ? `${item.title} ${RELATION[kind]} ${item.targetTitle}` : undefined;
 
 /** One proposal with its literal reason; the projectKind ones can also go company-wide, to another project or stay hidden. */
-export function IntakeProposalRow({ kind, item, projectKind, projects, decide }: Props) {
+export function IntakeProposalRow({ kind, item, projectKind, projects, decide, original }: Props) {
   const { id, title } = item;
   const button = (text: string, decision: Decision, variant: 'primary' | 'secondary' | 'ghost' = 'secondary') =>
     <Button variant={variant} aria-label={`${text} ${title}`} onClick={() => decide(id, decision)}>{text}</Button>;
   return (
     <li className={styles.row}>
-      <p><strong>{title}</strong></p>
+      <p><strong>{title}</strong> <a href={original} target="_blank" rel="noreferrer" aria-label={`Ver el original de ${title}`}>Ver el original</a></p>
       {relation(kind, item) && <p>{relation(kind, item)}</p>}
       {item.caseNumber && <p>{`Caso ${item.caseNumber}`}</p>}
       <p className={styles.reason}>{item.reason}</p>

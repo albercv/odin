@@ -63,6 +63,9 @@ async function allDocuments(companyId: string, withdrawn = false) {
 }
 
 export const originalUrl = (documentId: string) => `${a}/documents/${documentId}/original`;
+/** The original of a pending document of a batch: only its admin opens it, from the tray. */
+export const intakeOriginalUrl = (companyId: string, batchId: string, documentId: string) =>
+  `${ib(companyId, batchId)}/documents/${documentId}/original`;
 
 export const uploadLinks = {
   info: (token: string) => request<S['UploadLinkInfo']>('GET', `/v1/upload-links/${encodeURIComponent(token)}`, undefined, true),

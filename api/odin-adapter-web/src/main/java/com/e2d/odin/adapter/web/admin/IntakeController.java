@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web.admin;
 
 import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
+import com.e2d.odin.adapter.web.link.OriginalResponse;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
@@ -13,6 +14,7 @@ import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.ListIntakeProposals;
 import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.ProposalFilter;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
@@ -37,6 +39,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -72,13 +75,14 @@ public class IntakeController {
     private final ListUnplacedDocuments unplaced;
     private final PlaceIntakeDocument placeDocument;
     private final CloseProjectList closeProjectList;
+    private final OpenIntakeOriginal openOriginal;
 
     public IntakeController(StartIntake start, ListOpenIntakeBatches openBatches, AddFileToIntake addFile, CloseIntakeUpload closeUpload,
             GetIntakeBatch get, ImportProjectList importList, ListProjectCandidates candidates,
             ConfirmProjectCandidates confirmCandidates, ListIntakeProposals proposals,
             ConfirmIntakeProposals confirmProposals, DecideIntakeProposal decideProposal,
             DiscardIntakeDocument discardDocument, ListUnplacedDocuments unplaced, PlaceIntakeDocument placeDocument,
-            CloseProjectList closeProjectList) {
+            CloseProjectList closeProjectList, OpenIntakeOriginal openOriginal) {
         this.start = start;
         this.openBatches = openBatches;
         this.addFile = addFile;
@@ -94,6 +98,7 @@ public class IntakeController {
         this.unplaced = unplaced;
         this.placeDocument = placeDocument;
         this.closeProjectList = closeProjectList;
+        this.openOriginal = openOriginal;
     }
 
     @PostMapping(BATCHES)
@@ -232,6 +237,14 @@ public class IntakeController {
         }
         return Responses.IntakeDocuments.from(
                 this.unplaced.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId)));
+    }
+
+    /** El original de un documento pendiente del lote, para decidir viéndolo. */
+    @GetMapping(BATCHES + "/{batchId}/documents/{documentId}/original")
+    public ResponseEntity<Resource> original(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId, @PathVariable UUID documentId) {
+        return OriginalResponse.of(openOriginal.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId),
+                new DocumentId(documentId)));
     }
 
     @PostMapping(BATCHES + "/{batchId}/documents/{documentId}/place")

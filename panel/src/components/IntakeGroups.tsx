@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { intake, type S } from '../api/client';
+import { intake, intakeOriginalUrl, type S } from '../api/client';
 import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
@@ -73,7 +73,7 @@ function GroupCard({ group, label, projects, run, ids }: GroupProps) {
       </div>
       {open && (
         <ul className={styles.items}>
-          {group.proposals.map((p) => <IntakeProposalRow key={p.id} kind={group.kind} item={p} projectKind={group.kind === 'PROJECT' || group.kind === 'COMPANY_WIDE'} projects={projects} decide={decide} />)}
+          {group.proposals.map((p) => <IntakeProposalRow key={p.id} kind={group.kind} item={p} projectKind={group.kind === 'PROJECT' || group.kind === 'COMPANY_WIDE'} projects={projects} decide={decide} original={intakeOriginalUrl(ids.company, ids.batch, p.documentId)} />)}
         </ul>
       )}
     </div>
