@@ -135,8 +135,7 @@ export const api = {
   supersede: (documentId: string, replacementId: string) =>
     request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/superseded-by`, { replacementId }),
   unsupersede: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/superseded-by`),
-  // Hasta el tope de la API (50): lo que el menú y la página de revisión necesitan hasta que Review pagine.
-  pendingCards: (id: string) => cardPage(id, { limit: 50 }).then((page) => page.cards),
+  pendingCount: (id: string) => cardPage(id, { limit: 10 }).then((page) => page.total),
   cardPage,
   topics: (id: string) => request<S['TopicView'][]>('GET', `${co(id)}/topics`),
   createTopic: (id: string, b: S['TopicRequest']) => request<S['TopicView']>('POST', `${co(id)}/topics`, b),
