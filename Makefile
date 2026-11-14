@@ -44,6 +44,7 @@ EXP = experimentos/2026-11-12-archivo-ficticio
 BANCO_ENV = PILA_PROYECTO=odin-banco PILA_ESTADO=$(CURDIR)/banco/estado ODIN_API_PORT=48080 ODIN_PANEL_PORT=48088 ODIN_MCP_PORT=48090
 CONFIG ?= banco/configs/piloto.toml
 ARCHIVOS ?= ficticio
+CARGAR_OPCIONES ?=
 EXPEDIENTES ?=
 
 banco-arriba:
@@ -55,7 +56,7 @@ banco-cargar:
 	@if [ -n "$(EXPEDIENTES)" ] && [ ! -f $(EXP)/pila/cargar_expedientes.py ]; then echo "EXPEDIENTES=1 pide $(EXP)/pila/cargar_expedientes.py, que no existe en esta rama"; exit 1; fi; \
 	D=$(EXP)/datos; if [ "$(ARCHIVOS)" != ficticio ]; then D=$$($(BANCO_ENV) python3 banco/capas.py fusionar --archivos "$(ARCHIVOS)") || exit 1; fi; \
 	if [ -n "$(EXPEDIENTES)" ] && [ ! -f "$$D/expedientes.json" ]; then echo "sin expedientes.json en $$D"; exit 1; fi; \
-	$(BANCO_ENV) python3 $(EXP)/pila/cargar.py --manifiesto $$D/manifiesto.json --corpus $$D/corpus --marcar || exit 1; \
+	$(BANCO_ENV) python3 $(EXP)/pila/cargar.py --manifiesto $$D/manifiesto.json --corpus $$D/corpus --marcar $(CARGAR_OPCIONES) || exit 1; \
 	if [ -n "$(EXPEDIENTES)" ]; then $(BANCO_ENV) python3 $(EXP)/pila/cargar_expedientes.py --mapa "$(CURDIR)/banco/estado/carga.json" --datos "$$D" --marcar-casos || exit 1; fi
 
 banco-abajo:
