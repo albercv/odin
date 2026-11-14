@@ -76,6 +76,12 @@ public interface DocumentRepository {
     /** El texto (páginas unidas) de cada documento ya leído y sin retirar del lote, pendientes incluidos. */
     List<String> intakeTexts(CompanyId companyId, IntakeBatchId batchId);
 
+    /** Los documentos READY, sin retirar y aún pendientes del lote, con su texto, solo por la ruta de la clasificación. */
+    List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId);
+
+    /** Si algún documento de la empresa, sin retirar, espera al lector OCR o lo está pasando. */
+    boolean readerQueueBusy(CompanyId companyId);
+
     /**
      * Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. Con {@code caseDocument}, solo los
      * que tienen esa marca de ficha de caso.

@@ -6,6 +6,7 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.application.port.IntakeDocument;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -220,6 +221,22 @@ public class InMemoryDocumentRepository implements DocumentRepository {
                 && d.status() == DocumentStatus.READY)
                 .map(d -> pagesOf(d.id()).stream().map(DocumentPage::text).collect(java.util.stream.Collectors.joining("\n")))
                 .toList();
+    }
+
+    @Override
+    public List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn() && d.intakePending()
+                && d.status() == DocumentStatus.READY)
+                .map(d -> new IntakeDocument(d.id(), d.intakePath(), pagesOf(d.id()).stream()
+                        .map(DocumentPage::text).collect(java.util.stream.Collectors.joining("\n")),
+                        pagesOf(d.id()).stream().anyMatch(p -> p.readerName().equals("unlimited-ocr-2")))).toList();
+    }
+
+    @Override
+    public boolean readerQueueBusy(CompanyId companyId) {
+        return documents.values().stream().anyMatch(d -> d.companyId().equals(companyId) && !d.withdrawn()
+                && (d.status() == DocumentStatus.PENDING_READER || d.status() == DocumentStatus.READER_PROCESSING));
     }
 
     @Override

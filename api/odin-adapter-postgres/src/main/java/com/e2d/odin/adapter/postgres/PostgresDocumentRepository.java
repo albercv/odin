@@ -6,6 +6,7 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.application.port.IntakeDocument;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -217,6 +218,28 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 WHERE d.company_id = :company AND d.intake_batch_id = :batch AND d.withdrawn_at IS NULL
                 AND d.status = 'READY' GROUP BY d.id ORDER BY d.seq""")
                 .param("company", companyId.value()).param("batch", batchId.value()).query(String.class).list());
+    }
+
+    @Override
+    public List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT d.id, d.intake_path, string_agg(p.text, E'\\n' ORDER BY p.number) AS text,
+                       bool_or(p.reader_name = 'unlimited-ocr-2') AS scan
+                FROM document d JOIN document_page p ON p.document_id = d.id
+                WHERE d.company_id = :company AND d.intake_batch_id = :batch AND d.withdrawn_at IS NULL
+                AND d.status = 'READY' AND d.intake_pending GROUP BY d.id ORDER BY d.seq""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> new IntakeDocument(new DocumentId(Sql.uuid(rs, "id")),
+                        Optional.ofNullable(rs.getString("intake_path")), rs.getString("text"), rs.getBoolean("scan")))
+                .list());
+    }
+
+    @Override
+    public boolean readerQueueBusy(CompanyId companyId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT EXISTS (SELECT 1 FROM document WHERE company_id = :company AND withdrawn_at IS NULL
+                AND status IN ('PENDING_READER', 'READER_PROCESSING'))""")
+                .param("company", companyId.value()).query(Boolean.class).single());
     }
 
     @Override

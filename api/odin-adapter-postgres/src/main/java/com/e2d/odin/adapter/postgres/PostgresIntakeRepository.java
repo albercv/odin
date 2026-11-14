@@ -75,6 +75,12 @@ public class PostgresIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public List<IntakeBatch> findReading() {
+        return tx.inScope(CompanyScope.all(), ALL, jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
+                + " FROM intake_batch WHERE state = 'READING' ORDER BY created_at").query((rs, n) -> batch(rs)).list());
+    }
+
+    @Override
     public void save(ProjectCandidate c) {
         tx.runInScope(CompanyScope.of(c.companyId()), ALL, jdbc -> jdbc.sql("""
                 INSERT INTO intake_project_candidate (company_id, batch_id, name, origin, document_count, state, project_id)

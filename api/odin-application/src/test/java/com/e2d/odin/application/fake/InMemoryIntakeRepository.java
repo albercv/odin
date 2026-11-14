@@ -49,6 +49,11 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public synchronized List<IntakeBatch> findReading() {
+        return batches.values().stream().filter(b -> b.state() == IntakeState.READING).toList();
+    }
+
+    @Override
     public synchronized void save(ProjectCandidate candidate) {
         candidates.put(candidate.batchId().value() + "/" + candidate.name(), candidate);
     }

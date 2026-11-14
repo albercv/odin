@@ -19,6 +19,9 @@ public interface IntakeRepository {
     /** El lote abierto o en lectura de la empresa, si lo hay. */
     Optional<IntakeBatch> findActive(CompanyId companyId);
 
+    /** Los lotes en lectura de todas las empresas: es lo que recorre la clasificación. */
+    List<IntakeBatch> findReading();
+
     /** Suma uno al recuento de «ya estaban» o de «descartados en este lote», sin pisar a otra subida en marcha. */
     void countFile(CompanyId companyId, IntakeBatchId id, boolean discarded);
 
