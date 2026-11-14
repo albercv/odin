@@ -1,4 +1,4 @@
-.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
+.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -39,6 +39,10 @@ tagger-model:
 # Batería del etiquetado con el modelo real (el Ollama de ODIN_TAGGER_URL). Fuera de make check; escribe api/odin-adapter-tagger-ollama/target/tagging-battery.json.
 tagging-battery:
 	cd api && mvn -q -am -pl odin-adapter-tagger-ollama verify -Dgroups=model -DexcludedGroups=
+
+# Batería de la propuesta de proyecto con el modelo real (los 15 documentos que las reglas no resuelven). Fuera de make check.
+project-proposer-battery:
+	cd api && mvn -q -am -pl odin-adapter-tagger-ollama verify -Dgroups=model -DexcludedGroups= -Dit.test=ProjectProposerBatteryIT -Dfailsafe.failIfNoSpecifiedTests=false
 
 # Instalación del propietario (D-056): datos de prueba, vaciarla, volver a una copia y conector de Claude Desktop.
 # Van con cerrojo (data/instalacion.lock). INSTALACION_PROYECTO e INSTALACION_ENV eligen otra pila.
