@@ -146,7 +146,8 @@ test('focusMovesToTheNextCardTitleAfterResolving', async () => {
 test('focusMovesToTheEmptyStateWhenTheQueueIsDone', async () => {
   show([card(1)]);
   await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
-  expect(await screen.findByRole('heading', { name: 'No hay fichas pendientes.' })).toHaveFocus();
+  const heading = await screen.findByRole('heading', { name: 'No hay fichas pendientes.' }, { timeout: 5000 }); // margen: suite en paralelo
+  await waitFor(() => expect(heading).toHaveFocus(), { timeout: 5000 });
 });
 
 const many = (n: number) => Array.from({ length: n }, (_, i) => card(i + 1));
@@ -200,4 +201,39 @@ test('badgeIsNotCappedAt50', async () => {
   const { onPendingChanged } = show(many(120));
   await screen.findByRole('button', { name: /Ficha 10/ });
   await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(120));
+});
+
+const search = (value: string) => fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar fichas' }), { target: { value } });
+
+test('clearingASearchNeverReportsTheFilteredTotalToTheBadge', async () => {
+  const cards = [...many(12), { ...card(13), body: 'Reparar el tejado' }];
+  const { onPendingChanged } = show(cards);
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(13));
+  search('tejado');
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 10/ })).toBeNull());
+  search('');
+  await screen.findByRole('button', { name: /Ficha 10/ });
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(13));
+  expect(onPendingChanged.mock.calls.map((c) => c[0])).not.toContain(1);
+});
+
+test('searchingAfterApprovingDoesNotStealFocusFromTheSearchBox', async () => {
+  show([card(1), card(2), { ...card(3), body: 'Reparar el tejado' }]);
+  await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 1$/ })).toBeNull());
+  const box = screen.getByRole('searchbox', { name: 'Buscar fichas' });
+  box.focus();
+  search('tejado');
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 2/ })).toBeNull());
+  expect(box).toHaveFocus();
+});
+
+test('pagingAfterApprovingKeepsFocusOnTheButton', async () => {
+  show(many(25));
+  await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 1$/ })).toBeNull());
+  const next = screen.getByRole('button', { name: /Siguiente/ });
+  await userEvent.click(next);
+  await screen.findByText('Página 2 de 3');
+  expect(next).toHaveFocus();
 });

@@ -55,7 +55,7 @@
 ### 3.2 API de documentos
 
 - `GET /v1/admin/companies/{companyId}/documents?q=&offset=&limit=&withdrawn=` responde `DocumentPage { documents: DocumentView[], total: int }`.
-  - Hoy responde una lista; el cambio de forma solo afecta al panel, porque el MCP usa la API del trabajador.
+  - Hoy responde una lista; el cambio de forma afecta al panel y a los guiones de `deploy/instalacion` (adaptados), no al MCP, que usa la API del trabajador.
   - `total` es el número de documentos con los mismos filtros (empresa, retirados y `q`), no solo los de la página.
 - **`q`:**
   - opcional;

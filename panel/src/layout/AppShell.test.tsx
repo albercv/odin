@@ -49,7 +49,7 @@ const shell = () => renderWithProviders(<AppShell me={me} onLogout={() => {}} on
 test('groupAdminLandsOnTheFirstCompanyAndKeepsTheChoiceAcrossTabs', async () => {
   const calls = mockFetch({
     'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
-    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }), 'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=50': () => ({ cards: [], total: 0 }),
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }), 'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }),
     'GET /v1/admin/companies/c1/projects': () => [], 'GET /v1/admin/companies/c1/members': () => [],
     'GET /v1/admin/companies/c2/projects': () => [], 'GET /v1/admin/companies/c2/members': () => [],
   });

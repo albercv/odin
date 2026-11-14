@@ -3,6 +3,7 @@ import os
 import stat
 import tempfile
 import unittest
+import urllib.parse
 from pathlib import Path
 
 import datos_prueba as dp
@@ -223,10 +224,25 @@ class ReintentarTest(unittest.TestCase):
                 if metodo == "POST":
                     reintentos.append(ruta)
                     return {}
-                return documentos[ruta.split("/")[4]] if "offset=0" in ruta else []
+                docs = documentos[ruta.split("/")[4]] if "offset=0" in ruta else []
+                return {"documents": docs, "total": len(documentos[ruta.split("/")[4]])}
 
         self.assertEqual(2, dp.reintentar_fallidos(Api()))
         self.assertEqual(["/v1/admin/documents/a/retry", "/v1/admin/documents/c/retry"], reintentos)
+
+
+class ListarDocumentosTest(unittest.TestCase):
+
+    def test_unaListaEnVariasPaginasDevuelveTodosLosDocumentos(self):
+        todos = [{"id": str(i), "status": "READY"} for i in range(5)]
+
+        class Api:
+            def admin(self, metodo, ruta, cuerpo=None, **opciones):
+                consulta = urllib.parse.parse_qs(urllib.parse.urlparse(ruta).query)
+                desde, tam = int(consulta["offset"][0]), int(consulta["limit"][0])
+                return {"documents": todos[desde:desde + tam], "total": len(todos)}
+
+        self.assertEqual(todos, dp.listar_documentos(Api(), "c1", pagina=2))
 
 
 class CarpetaDeDatosTest(unittest.TestCase):
