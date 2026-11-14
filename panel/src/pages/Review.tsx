@@ -54,12 +54,11 @@ function useResolvedCards(items: S['CardView'][], reload: () => void) {
   return { current, leavingId, setSelected, resolve };
 }
 
-/** El número del menú es el total sin filtrar: con búsqueda activa no se toca, salvo para restar una resolución. */
-function useBadge(total: number, ready: boolean, searching: boolean, onPendingChanged?: (count: number) => void) {
-  const known = useRef(0);
-  const report = (n: number) => { known.current = n; onPendingChanged?.(n); };
-  useEffect(() => { if (ready && !searching) report(total); }, [total, ready, searching]);
-  return () => { if (searching) report(Math.max(0, known.current - 1)); };
+/** El número del menú es el total sin filtrar del servidor: con una búsqueda activa, tras resolver una ficha se le vuelve a pedir. */
+function useBadge(companyId: string, list: { total: number; ready: boolean; searching: boolean }, onPendingChanged?: (count: number) => void) {
+  const { total, ready, searching } = list;
+  useEffect(() => { if (ready && !searching) onPendingChanged?.(total); }, [total, ready, searching]);
+  return () => { if (searching) api.pendingCount(companyId).then((n) => onPendingChanged?.(n), () => undefined); };
 }
 
 function useReviewList(companyId: string, onPendingChanged?: (count: number) => void) {
@@ -67,7 +66,7 @@ function useReviewList(companyId: string, onPendingChanged?: (count: number) => 
     const r = await api.cardPage(companyId, { q, offset, limit });
     return { items: r.cards, total: r.total };
   }, [companyId], PAGE_SIZE);
-  const resolvedInSearch = useBadge(list.total, !list.loading && !list.error, !!list.query, onPendingChanged);
+  const resolvedInSearch = useBadge(companyId, { total: list.total, ready: !list.loading && !list.error, searching: !!list.query }, onPendingChanged);
   return { list, resolvedInSearch };
 }
 

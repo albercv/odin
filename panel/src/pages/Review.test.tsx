@@ -186,6 +186,16 @@ test('searchFiltersByCardText', async () => {
   expect(calls.some((c) => c.key.endsWith('&q=tejado'))).toBe(true);
 });
 
+test('resolvingDuringASearchAsksTheServerForTheUnfilteredCount', async () => {
+  const cards = [...many(12), { ...card(13), body: 'Reparar el tejado' }];
+  const { onPendingChanged } = show(cards);
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(13));
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar fichas' }), { target: { value: 'tejado' } });
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 1$/ })).toBeNull());
+  await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(12));
+});
+
 test('badgeIsNotCappedAt50', async () => {
   const { onPendingChanged } = show(many(120));
   await screen.findByRole('button', { name: /Ficha 10/ });
