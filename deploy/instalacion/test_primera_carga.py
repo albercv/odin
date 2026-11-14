@@ -73,6 +73,10 @@ class FalsoOdin(BaseHTTPRequestHandler):
             self.responder(500, {"detail": "disco lleno"})
         elif self.path == f"{base}/{LOTE}/files":
             ruta = re.search(rb'name="path"\r\n\r\n(.*?)\r\n--', cuerpo, re.S).group(1).decode()
+            if ruta.endswith(".xlsx"):
+                return self.responder(415, {"detail": "Ese formato no se admite"})
+            if ruta.endswith(".enorme"):
+                return self.responder(413, {"detail": "El fichero supera el límite"})
             e["subidos"].append(ruta)
             self.responder(201, {"outcome": "CREATED", "document": {}})
         elif self.path == f"{base}/{LOTE}/close-upload":
@@ -136,7 +140,40 @@ class PrimeraCargaTest(unittest.TestCase):
         self.assertEqual(["pequeno.txt"], [ruta for _, ruta in ficheros])
         self.assertEqual(["grande.bin"], [ruta for ruta, _ in saltados])
 
+    def test_saltaLosVaciosYLosNombresConSaltoDeLineaSinRomper(self):
+        self.crear("vacio.txt", "")
+        self.crear("mal\nnombre.txt")
+        self.crear("bien.txt")
+        ficheros, saltados = pc.recorrer(self.carpeta)
+        self.assertEqual(["bien.txt"], [ruta for _, ruta in ficheros])
+        self.assertEqual({"vacio.txt": "está vacío", "mal\nnombre.txt": "el nombre tiene un salto de línea"},
+                         dict(saltados))
+
+    def test_saltaLosNombresQueNoSonUtf8SinRomper(self):
+        self.crear("bien.txt")
+        malo = "mal\udcff.txt"  # un byte que no es UTF-8, tal como lo da os.walk en Linux
+        with mock.patch("os.walk", return_value=[(str(self.carpeta), [], ["bien.txt", malo])]):
+            ficheros, saltados = pc.recorrer(self.carpeta)
+        self.assertEqual(["bien.txt"], [ruta for _, ruta in ficheros])
+        self.assertEqual([(malo, "el nombre no está en UTF-8")], saltados)
+        self.assertEqual("mal\\udcff.txt", pc.mostrar(malo))
+
     # subir, saltar, reanudar
+
+    def test_unFicheroQueLaApiNoAdmiteSeSaltaConSuMotivoYSigue(self):
+        self.crear("hoja.xlsx")
+        self.crear("plano.enorme")
+        self.crear("dos.txt", "2")
+        self.crear("vacio.txt", "")
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertEqual(["dos.txt"], self.estado["subidos"])
+        self.assertTrue(self.estado["cerrado"])
+        self.assertIn("Se salta: hoja.xlsx: Ese formato no se admite", texto)
+        self.assertIn("Se salta: plano.enorme: El fichero supera el límite", texto)
+        final = texto[texto.rindex("Saltados"):]
+        for ruta in ("hoja.xlsx", "plano.enorme", "vacio.txt"):
+            self.assertIn(ruta, final)
 
     def test_subeConSuRutaRelativaYCierraLaSubida(self):
         self.crear("A/uno.txt", "1")

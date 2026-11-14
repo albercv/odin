@@ -21,21 +21,47 @@ FACTOR_ESPACIO = 3  # el original, sus páginas leídas y los índices
 
 
 def recorrer(carpeta, limite=LIMITE):
-    """Los ficheros subibles como (ruta absoluta, ruta relativa) y los saltados por tamaño como (ruta, motivo).
-    Sin enlaces simbólicos, ocultos (.algo) ni basura del sistema."""
+    """Los ficheros subibles como (ruta absoluta, ruta relativa) y los saltados como (ruta, motivo): vacíos, por
+    tamaño o con un nombre que no se puede mandar. Sin enlaces simbólicos, ocultos (.algo) ni basura del sistema."""
     ficheros, saltados = [], []
     for raiz, dirs, nombres in os.walk(carpeta):
         dirs[:] = sorted(d for d in dirs if not d.startswith(".") and not (Path(raiz) / d).is_symlink())
         for nombre in sorted(nombres):
             f = Path(raiz) / nombre
-            if nombre.startswith(".") or nombre in BASURA or f.is_symlink() or not f.is_file():
+            if nombre.startswith(".") or nombre in BASURA:
                 continue
             ruta = f.relative_to(carpeta).as_posix()
-            if f.stat().st_size > limite:
-                saltados.append((ruta, "supera el límite de subida"))
+            motivo = motivo_del_nombre(ruta)
+            if motivo is None and (f.is_symlink() or not f.is_file()):
+                continue
+            motivo = motivo or motivo_del_tamano(f.stat().st_size, limite)
+            if motivo:
+                saltados.append((ruta, motivo))
             else:
                 ficheros.append((f, ruta))
     return sorted(ficheros, key=lambda x: x[1]), saltados
+
+
+def motivo_del_nombre(ruta):
+    """Un salto de línea rompería los campos de la petición y un nombre que no es UTF-8 no se puede mandar."""
+    if "\r" in ruta or "\n" in ruta:
+        return "el nombre tiene un salto de línea"
+    try:
+        ruta.encode("utf-8")
+    except UnicodeEncodeError:
+        return "el nombre no está en UTF-8"
+    return None
+
+
+def motivo_del_tamano(tamano, limite):
+    if tamano == 0:
+        return "está vacío"
+    return "supera el límite de subida" if tamano > limite else None
+
+
+def mostrar(ruta):
+    """La ruta escribible en la terminal aunque no sea UTF-8 o lleve saltos de línea."""
+    return ruta.encode("utf-8", "backslashreplace").decode("utf-8").replace("\r", "\\r").replace("\n", "\\n")
 
 
 def huella(fichero):
@@ -98,17 +124,25 @@ def resumen(empresa, ficheros, saltados, avisos, reutiliza):
               f"Ficheros: {len(ficheros)} ({sum(f.stat().st_size for f, _ in ficheros) // 2**20} MB)"]
     if reutiliza:
         lineas.append("Hay una primera carga abierta sin cerrar: se sigue con ella.")
-    lineas += [f"Se salta {ruta}: {motivo}." for ruta, motivo in saltados]
+    lineas += [f"Se salta: {mostrar(ruta)}: {motivo}" for ruta, motivo in saltados]
     return lineas + [f"AVISO: {a}" for a in avisos]
 
 
+SE_SALTA = (400, 413, 415)  # lo que Odín no admite de un fichero (vacío, demasiado grande, formato): se salta y sigue
+
+
 def subir(api, base, ficheros):
-    """Sube de uno en uno los que faltan. Devuelve los recuentos por resultado."""
-    cuentas = {"CREATED": 0, "ALREADY_THERE": 0, "DISCARDED_IN_BATCH": 0}
+    """Sube de uno en uno los que faltan. Devuelve los recuentos por resultado y los que Odín no admitió."""
+    cuentas, saltados = {"CREATED": 0, "ALREADY_THERE": 0, "DISCARDED_IN_BATCH": 0}, []
     for f, ruta in ficheros:
         cuerpo = dp.multipart(f.name.replace('"', "'"), f.read_bytes(), campos={"path": ruta})
-        cuentas[api.admin("POST", f"{base}/files", binario=cuerpo)["outcome"]] += 1
-    return cuentas
+        respuesta, datos = api.pedir("POST", f"{base}/files", binario=cuerpo, esperado=(200, 201) + SE_SALTA)
+        if respuesta.status in SE_SALTA:
+            saltados.append((ruta, (datos or {}).get("detail") or f"HTTP {respuesta.status}"))
+            print(f"Se salta: {mostrar(ruta)}: {saltados[-1][1]}")
+        else:
+            cuentas[datos["outcome"]] += 1
+    return cuentas, saltados
 
 
 def leer_argumentos(argv):
@@ -124,7 +158,7 @@ def leer_argumentos(argv):
 
 
 def presentar(api, a, libre, limite):
-    """Entra, elige empresa y lote, y enseña el resumen. Devuelve (ficheros, base del lote)."""
+    """Entra, elige empresa y lote, y enseña el resumen. Devuelve (ficheros, saltados, base del lote)."""
     ficheros, saltados = recorrer(a.carpeta, limite)
     pedir_sesion(api, a.correo)
     empresa = empresa_de(api, a.empresa)
@@ -134,21 +168,24 @@ def presentar(api, a, libre, limite):
     libre = shutil.disk_usage(a.carpeta).free if libre is None else libre
     avisos = avisos_de_partida(api, empresa["id"], lote, tamano, libre)
     print("\n".join(resumen(empresa, ficheros, saltados, avisos, reutiliza)))
-    return ficheros, f"{base}/{lote}"
+    return ficheros, saltados, f"{base}/{lote}"
 
 
 def ejecutar(api, argv, libre=None, limite=LIMITE):
     """Devuelve 0 si ha subido y cerrado la subida (o no había nada nuevo), 1 si la persona dijo que no."""
     a = leer_argumentos(argv)
-    ficheros, lote = presentar(api, a, libre, limite)
+    ficheros, saltados, lote = presentar(api, a, libre, limite)
     if not a.si and input("¿Seguir? (s/n) ").strip().lower() not in ("s", "si", "sí"):
         print("No se ha subido nada.")
         return 1
     huellas = {ruta: huella(f) for f, ruta in ficheros}
     presentes = ya_estan(api, lote, list(huellas.values()))
-    cuentas = subir(api, lote, [(f, r) for f, r in ficheros if huellas[r] not in presentes])
+    cuentas, rechazados = subir(api, lote, [(f, r) for f, r in ficheros if huellas[r] not in presentes])
     print(f"Subidos: {cuentas['CREATED']}. Ya estaban: {cuentas['ALREADY_THERE'] + len(presentes)}. "
           f"Descartados en el lote: {cuentas['DISCARDED_IN_BATCH']}.")
+    if saltados + rechazados:
+        print(f"Saltados ({len(saltados + rechazados)}):")
+        print("\n".join(f"Se salta: {mostrar(ruta)}: {motivo}" for ruta, motivo in saltados + rechazados))
     if api.admin("GET", lote)["uploaded"] == 0:
         # un lote sin ningún documento no se cierra: se queda abierto y la próxima vez se reutiliza
         print("No hay nada nuevo que subir.")

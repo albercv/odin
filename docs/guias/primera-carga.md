@@ -22,7 +22,8 @@ Qué hace con la carpeta:
 
 - Sube también las subcarpetas y guarda la ruta de cada fichero, que luego sirve de pista para ordenarlo.
 - Se salta lo oculto (lo que empieza por punto), los accesos directos, y `.DS_Store`, `Thumbs.db` y `desktop.ini`.
-- Se salta, avisándote, lo que pese más que el límite de subida (50 MB si nadie lo cambió).
+- Se salta, avisándote, lo que pese más que el límite de subida (50 MB si nadie lo cambió), los ficheros vacíos y los que tienen en el nombre un salto de línea o letras que no están en UTF-8.
+- Si Odín no admite un fichero (por ejemplo una hoja de cálculo, un `.zip` o un formato que no lee), lo salta con su motivo (`Se salta: <ruta>: <motivo>`) y sigue con el resto. Al final enseña la lista de todo lo saltado. Si quieres esos documentos en Odín, conviértelos a PDF o a texto y vuelve a lanzar la orden: solo sube lo que falta.
 - No toca ni borra nada de tu carpeta.
 
 ## Qué te pregunta
