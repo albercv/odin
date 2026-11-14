@@ -64,6 +64,18 @@ class AdminApiTest extends WebTestSupport {
     }
 
     @Test
+    void documentListNamesWhoUploadedEachOne() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        mvc.perform(upload(company, admin, "contenido-uno".getBytes())).andExpect(status().isCreated());
+        Fixtures.readyDocument(w.docs, company, "de alguien que ya no existe");
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.title=='Manual' && @.uploadedByName=='Admin Pérez')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.uploadedByName==null)]").isNotEmpty());
+    }
+
+    @Test
     void uploadAcceptsCaseDocumentField() throws Exception {
         CompanyId company = newCompany();
         Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));

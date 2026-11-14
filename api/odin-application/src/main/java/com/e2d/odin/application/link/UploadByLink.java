@@ -1,21 +1,26 @@
 package com.e2d.odin.application.link;
 
 import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.document.UploadOutcome;
+import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.domain.link.AccessLinkKind;
 import com.e2d.odin.domain.shared.ConflictException;
 
-/** Sube un fichero al proyecto del caso y lo añade a su expediente, con la persona del enlace como autora. */
+/** Sube un fichero al proyecto del enlace (y, si es de un caso, a su expediente), con la persona del enlace como autora. */
 public class UploadByLink {
 
     private final ResolveLink resolve;
     private final AccessLinkRepository links;
     private final UploadToCaseFile uploadToCaseFile;
+    private final UploadToProject uploadToProject;
 
-    public UploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile) {
+    public UploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile,
+            UploadToProject uploadToProject) {
         this.resolve = resolve;
         this.links = links;
         this.uploadToCaseFile = uploadToCaseFile;
+        this.uploadToProject = uploadToProject;
     }
 
     /**
@@ -28,7 +33,13 @@ public class UploadByLink {
         if (!links.reserveUpload(resolved.link(), LinkSettings.MAX_UPLOADS)) {
             throw new ConflictException("Este enlace ya admitió " + LinkSettings.MAX_UPLOADS + " ficheros");
         }
-        uploadToCaseFile.execute(resolved.actor(), resolved.target(), filename, filename, content);
-        return new UploadReceipt(filename);
+        UploadOutcome stored = switch (resolved.target()) {
+            case LinkTarget.CaseTarget c ->
+                    uploadToCaseFile.execute(resolved.actor(), c.caseDocument(), filename, filename, content);
+            case LinkTarget.ProjectTarget p ->
+                    uploadToProject.execute(resolved.actor(), p.project(), filename, filename, content);
+            case LinkTarget.OriginalTarget o -> throw new IllegalStateException("Un enlace de subida no lleva a un original");
+        };
+        return new UploadReceipt(filename, stored.duplicate());
     }
 }

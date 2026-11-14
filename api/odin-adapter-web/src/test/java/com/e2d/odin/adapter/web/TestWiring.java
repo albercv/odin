@@ -11,12 +11,14 @@ import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.link.ResolveLink;
 import com.e2d.odin.application.link.UploadByLink;
 import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
+import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
@@ -304,7 +306,11 @@ public class TestWiring {
     }
 
     @Bean UploadByLink uploadByLink() {
-        return new UploadByLink(resolveLink(), links, uploadToCaseFile());
+        return new UploadByLink(resolveLink(), links, uploadToCaseFile(), uploadToProject());
+    }
+
+    @Bean UploadToProject uploadToProject() {
+        return new UploadToProject(uploadDocument(), docs);
     }
 
     @Bean UploadToCaseFile uploadToCaseFile() {
@@ -317,6 +323,10 @@ public class TestWiring {
 
     @Bean UploadDocument uploadDocument() {
         return new UploadDocument(docs, orgs, files, detector, new UploadSettings(MAX_UPLOAD), ids, clock);
+    }
+
+    @Bean UserNames userNames() {
+        return new UserNames(users);
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {

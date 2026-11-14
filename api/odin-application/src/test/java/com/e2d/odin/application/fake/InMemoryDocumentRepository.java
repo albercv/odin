@@ -74,10 +74,23 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public void save(Document document) {
         Document stored = documents.get(document.id());
+        if (stored == null && beforeNewDocument != null) {
+            var race = beforeNewDocument;
+            beforeNewDocument = null;
+            race.accept(document);
+            throw new com.e2d.odin.domain.shared.ConflictException("Ya existe un registro con esos datos");
+        }
         // Como el upsert de PostgreSQL: guardar no escribe ni borra la marca de sustituido ni la de caso (la primera vez sí guarda la de caso).
         documents.put(document.id(), stored == null ? document.withSupersession(Optional.empty(), Optional.empty())
                 : document.withSupersession(stored.supersededBy(), stored.supersededAt())
                         .withCaseDocument(stored.caseDocument()));
+    }
+
+    private java.util.function.Consumer<Document> beforeNewDocument;
+
+    /** Antes de guardar el siguiente documento nuevo, otra subida idéntica se cuela y gana el índice único. */
+    public void raceWith(java.util.function.Consumer<Document> otherUpload) {
+        beforeNewDocument = otherUpload;
     }
 
     @Override
