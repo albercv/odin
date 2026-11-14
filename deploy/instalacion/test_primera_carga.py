@@ -314,6 +314,50 @@ class PrimeraCargaTest(unittest.TestCase):
             codigo, texto = self.lanzar_main()
         self.assertEqual(0, codigo, texto)
 
+    # D-099: la guarda del propietario (nunca se conecta: conectar está sustituido)
+
+    def guarda(self, url, *argumentos, **variables):
+        entorno = {k: v for k, v in os.environ.items() if k not in ("INSTALACION_PROYECTO", "CONFIRMAR_INSTALACION")}
+        entorno |= {"PRIMERA_CARGA_API_URL": url, **variables} if url else variables
+        if not url:
+            entorno.pop("PRIMERA_CARGA_API_URL", None)
+        conectar = mock.Mock(side_effect=RuntimeError("conectado"))
+        salida = io.StringIO()
+        with mock.patch.object(pc.dp, "leer_entorno", return_value={}), mock.patch.dict(os.environ, entorno, clear=True), \
+                mock.patch.object(pc.dp, "conectar", conectar), \
+                mock.patch("sys.argv", ["primera_carga.py", str(self.carpeta), *argumentos]), \
+                contextlib.redirect_stdout(salida), contextlib.redirect_stderr(salida):
+            try:
+                pc.main()
+                return None, conectar.called
+            except SystemExit as fin:
+                return str(fin.code), conectar.called
+
+    def test_unaPilaDeEnsayoNoVaALosPuertosDelPropietario(self):
+        for puerto in sorted(dp.PUERTOS_PROPIETARIO):
+            motivo, conectada = self.guarda(f"http://127.0.0.1:{puerto}", INSTALACION_PROYECTO="odin-prueba")
+            self.assertIn("puertos de la instalación del propietario", motivo)
+            self.assertFalse(conectada)
+
+    def test_conSiHaciaElPropietarioPideConfirmarInstalacion(self):
+        for url in ("http://127.0.0.1:8080", None):  # None: el puerto por defecto de deploy/.env
+            motivo, conectada = self.guarda(url, "--si")
+            self.assertIn("CONFIRMAR_INSTALACION=PROPIETARIO", motivo)
+            self.assertFalse(conectada)
+        motivo, conectada = self.guarda("http://127.0.0.1:8080", "--si", CONFIRMAR_INSTALACION="PROPIETARIO")
+        self.assertIsNone(motivo)
+        self.assertTrue(conectada)
+
+    def test_elCaminoInteractivoHaciaElPropietarioNoCambia(self):
+        motivo, conectada = self.guarda("http://127.0.0.1:8080")
+        self.assertIsNone(motivo)
+        self.assertTrue(conectada)
+
+    def test_unaPilaDeEnsayoEnSusPuertosSigueConSi(self):
+        motivo, conectada = self.guarda("http://127.0.0.1:48080", "--si", INSTALACION_PROYECTO="odin-primera-carga")
+        self.assertIsNone(motivo)
+        self.assertTrue(conectada)
+
 
 if __name__ == "__main__":
     unittest.main()

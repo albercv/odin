@@ -2,7 +2,9 @@
 """Primera carga: sube la carpeta del archivo de una empresa a Odín por la API (vía de la orden).
 La lanza el administrador de la empresa en el servidor de la oficina: make primera-carga CARPETA=/ruta [ARGS=--si].
 Pide su correo y su contraseña (getpass); la contraseña no se guarda ni se muestra. Nada sale del equipo.
-Variables: INSTALACION_ENV (por defecto deploy/.env) y PRIMERA_CARGA_API_URL (por defecto el puerto de ODIN_API_PORT en ese fichero)."""
+Variables: INSTALACION_ENV (por defecto deploy/.env) y PRIMERA_CARGA_API_URL (por defecto el puerto de ODIN_API_PORT en ese fichero).
+D-099: INSTALACION_PROYECTO distinto de odin no va a los puertos del propietario, y --si hacia ellos pide
+CONFIRMAR_INSTALACION=PROPIETARIO."""
 import argparse
 import getpass
 import hashlib
@@ -195,10 +197,21 @@ def ejecutar(api, argv, libre=None, limite=LIMITE):
     return 0
 
 
+def proteger(url, si):
+    """D-099 con proteger_propietario de datos_prueba.py sobre el puerto de destino: una pila de ensayo nunca va a los
+    puertos del propietario, y sin la pregunta «¿Seguir?» (--si) escribir en su instalación pide
+    CONFIRMAR_INSTALACION=PROPIETARIO. El camino interactivo no cambia."""
+    puerto = str(urllib.parse.urlsplit(url).port)
+    if puerto in dp.PUERTOS_PROPIETARIO:
+        dp.proteger_propietario({"ODIN_API_PORT": puerto}, os.environ.get("INSTALACION_PROYECTO", "odin"), escribe=si)
+
+
 def main():
     entorno = dp.leer_entorno(dp.PRINCIPAL / os.environ.get("INSTALACION_ENV", "deploy/.env"))
+    url = os.environ.get("PRIMERA_CARGA_API_URL") or f"http://127.0.0.1:{entorno.get('ODIN_API_PORT', '8080')}"
+    proteger(url, leer_argumentos(sys.argv[1:]).si)
     try:
-        api = dp.conectar(entorno, os.environ.get("PRIMERA_CARGA_API_URL"))
+        api = dp.conectar(entorno, url)
         return ejecutar(api, sys.argv[1:], limite=int(entorno.get("ODIN_UPLOAD_MAX_BYTES", LIMITE)))
     except KeyboardInterrupt:
         print("\nInterrumpida. Vuelve a lanzar la misma orden: sigue donde se quedó.", file=sys.stderr)
