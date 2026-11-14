@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
-import { normalizeText, usePagedList } from './usePagedList';
+import { includesText, usePagedList } from './usePagedList';
 
-const matches = (s: string, q: string) => normalizeText(s).includes(q);
+const matches = includesText;
 const nums = Array.from({ length: 25 }, (_, i) => `item${i + 1}`);
 
 it('usePagedListNewSearchGoesBackToPageOne', () => {
@@ -34,4 +34,27 @@ it('usePagedListEmptyQueryShowsAll', () => {
   const { result } = renderHook(() => usePagedList(nums, matches, 10));
   expect(result.current.visible).toHaveLength(10);
   expect(result.current.pageCount).toBe(3);
+});
+
+it('usePagedListSetPageClampsToValidRange', () => {
+  const { result } = renderHook(() => usePagedList(nums, matches, 10));
+  act(() => result.current.setPage(99));
+  expect(result.current.page).toBe(3);
+  act(() => result.current.setPage(0));
+  expect(result.current.page).toBe(1);
+});
+
+it('usePagedListClampedPageDoesNotComeBackWhenListGrows', () => {
+  const { result, rerender } = renderHook(({ items }) => usePagedList(items, matches, 10), {
+    initialProps: { items: nums },
+  });
+  act(() => result.current.setPage(3));
+  rerender({ items: nums.slice(0, 20) });
+  act(() => result.current.setPage(2));
+  rerender({ items: nums });
+  expect(result.current.page).toBe(2);
+});
+
+it('includesTextIgnoresCaseAndAccentsOfText', () => {
+  expect(includesText('Ángel', 'angel')).toBe(true);
 });
