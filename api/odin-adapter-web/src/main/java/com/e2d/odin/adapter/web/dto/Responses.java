@@ -450,6 +450,25 @@ public final class Responses {
     public record CaseMarksResult(int updated) {
     }
 
+    public record IntakeBatchView(UUID id, UUID companyId, String channel, String state, Instant createdAt,
+            @Nullable Instant closedAt, int uploaded, int reading) {
+        public static IntakeBatchView from(com.e2d.odin.application.intake.IntakeBatchView view) {
+            var b = view.batch();
+            return new IntakeBatchView(b.id().value(), b.companyId().value(), b.channel().name(), b.state().name(),
+                    b.createdAt(), b.closedAt().orElse(null), view.counts().uploaded(), view.counts().reading());
+        }
+    }
+
+    @Schema(description = "outcome: CREATED, ALREADY_THERE (la huella ya estaba) o DISCARDED_IN_BATCH (se descartó en este lote).")
+    public record IntakeFile(String outcome, DocumentView document) {
+        public static IntakeFile from(com.e2d.odin.application.intake.IntakeFileResult r) {
+            return new IntakeFile(r.outcome().name(), DocumentView.from(r.entry()));
+        }
+    }
+
+    public record KnownFiles(List<String> sha256) {
+    }
+
     public record Upload(DocumentView document, boolean duplicate) {
         public static Upload from(UploadOutcome o) {
             return new Upload(DocumentView.from(o.entry()), o.duplicate());

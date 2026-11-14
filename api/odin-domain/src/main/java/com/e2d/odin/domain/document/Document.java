@@ -3,6 +3,7 @@ package com.e2d.odin.domain.document;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Instant;
 import java.util.List;
@@ -28,10 +29,26 @@ public record Document(
         List<Integer> pagesWithoutText,
         boolean caseDocument,
         Optional<Instant> withdrawnAt,
-        Optional<UserId> withdrawnBy) {
+        Optional<UserId> withdrawnBy,
+        Optional<IntakeBatchId> intakeBatchId,
+        boolean intakePending,
+        Optional<String> intakePath,
+        Optional<DocumentId> scanOf) {
 
     /** Tope de saltos al seguir las marcas de sustituido; evita que una cadena circular cuelgue las lecturas. */
     public static final int MAX_SUPERSESSION_CHAIN = 50;
+
+    public Document(DocumentId id, CompanyId companyId, Optional<ProjectId> projectId, String title,
+            String filename, DocumentFormat format, String sha256, DocumentStatus status,
+            Optional<String> failureReason, boolean paginated, UserId uploadedBy, Instant uploadedAt,
+            Optional<Instant> processingStartedAt, int attemptCount, Optional<DocumentId> supersededBy,
+            Optional<Instant> supersededAt, List<Integer> pagesWithoutText, boolean caseDocument,
+            Optional<Instant> withdrawnAt, Optional<UserId> withdrawnBy) {
+        this(id, companyId, projectId, title, filename, format, sha256, status, failureReason, paginated,
+                uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
+                pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy, Optional.empty(), false, Optional.empty(),
+                Optional.empty());
+    }
 
     public Document(DocumentId id, CompanyId companyId, Optional<ProjectId> projectId, String title,
             String filename, DocumentFormat format, String sha256, DocumentStatus status,
@@ -86,19 +103,27 @@ public record Document(
     public Document withWithdrawal(Optional<Instant> newWithdrawnAt, Optional<UserId> newWithdrawnBy) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
                 paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
-                pagesWithoutText, caseDocument, newWithdrawnAt, newWithdrawnBy);
+                pagesWithoutText, caseDocument, newWithdrawnAt, newWithdrawnBy, intakeBatchId, intakePending, intakePath, scanOf);
     }
 
     public Document withSupersession(Optional<DocumentId> newSupersededBy, Optional<Instant> newSupersededAt) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
                 paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, newSupersededBy,
-                newSupersededAt, pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy);
+                newSupersededAt, pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy, intakeBatchId, intakePending, intakePath, scanOf);
     }
 
     public Document withCaseDocument(boolean newCaseDocument) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
                 paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
-                pagesWithoutText, newCaseDocument, withdrawnAt, withdrawnBy);
+                pagesWithoutText, newCaseDocument, withdrawnAt, withdrawnBy, intakeBatchId, intakePending, intakePath, scanOf);
+    }
+
+    /** El documento de una primera carga: pendiente de confirmar, sin proyecto y con la ruta de su carpeta. */
+    public Document withIntake(IntakeBatchId batchId, String path) {
+        return new Document(id, companyId, Optional.empty(), title, filename, format, sha256, status, failureReason,
+                paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
+                pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy, Optional.of(batchId), true,
+                Optional.of(path), scanOf);
     }
 
     public Document startProcessing(Instant now) {
@@ -108,7 +133,7 @@ public record Document(
     public Document markReady(boolean isPaginated, List<Integer> blankPages) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, DocumentStatus.READY,
                 Optional.empty(), isPaginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount,
-                supersededBy, supersededAt, blankPages, caseDocument, withdrawnAt, withdrawnBy);
+                supersededBy, supersededAt, blankPages, caseDocument, withdrawnAt, withdrawnBy, intakeBatchId, intakePending, intakePath, scanOf);
     }
 
     public Document markFailed(String reason) {
@@ -142,6 +167,6 @@ public record Document(
             Optional<Instant> startedAt, int attempts) {
         return new Document(id, companyId, projectId, title, filename, format, sha256, newStatus, reason,
                 isPaginated, uploadedBy, uploadedAt, startedAt, attempts, supersededBy, supersededAt,
-                pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy);
+                pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy, intakeBatchId, intakePending, intakePath, scanOf);
     }
 }

@@ -13,6 +13,7 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class UploadDocument {
 
@@ -57,7 +59,20 @@ public class UploadDocument {
         projectId.ifPresent(id -> organizations.findProject(companyId, id)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado")));
         return store(actor, companyId, projectId, title, filename, content, caseDocument,
-                sha256 -> documents.findBySha256(companyId, sha256), documents::save);
+                sha256 -> documents.findBySha256(companyId, sha256), documents::save, UnaryOperator.identity());
+    }
+
+    /**
+     * La subida de una primera carga: el documento nace pendiente, sin proyecto y con su ruta. La huella se busca en la
+     * empresa y, aunque esté retirada, en el propio lote, para que reanudar no devuelva lo que se descartó.
+     */
+    public UploadOutcome executeForIntake(Actor actor, CompanyId companyId, IntakeBatchId batchId, String path,
+            String title, String filename, byte[] content) {
+        AccessPolicy.requireAdminOf(actor, companyId);
+        organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
+        return store(actor, companyId, Optional.empty(), title, filename, content, false,
+                sha256 -> documents.findBySha256ForIntake(companyId, batchId, sha256), documents::save,
+                d -> d.withIntake(batchId, path));
     }
 
     /**
@@ -68,12 +83,13 @@ public class UploadDocument {
     public UploadOutcome executeForCase(Actor actor, CompanyId companyId, Optional<ProjectId> projectId,
             String title, String filename, byte[] content, Consumer<Document> persist) {
         return store(actor, companyId, projectId, title, filename, content, false,
-                sha256 -> documents.findBySha256InProject(companyId, projectId, sha256), persist);
+                sha256 -> documents.findBySha256InProject(companyId, projectId, sha256), persist,
+                UnaryOperator.identity());
     }
 
     private UploadOutcome store(Actor actor, CompanyId companyId, Optional<ProjectId> projectId, String title,
             String filename, byte[] content, boolean caseDocument, Function<String, Optional<Document>> duplicate,
-            Consumer<Document> persist) {
+            Consumer<Document> persist, UnaryOperator<Document> shape) {
         String cleanTitle = Validation.requireText(title, "el título");
         String cleanFilename = Validation.requireText(filename, "el nombre del fichero");
         DocumentFormat format = detectFormat(content);
@@ -82,9 +98,9 @@ public class UploadDocument {
         if (existing.isPresent()) {
             return new UploadOutcome(requeueIfFailed(existing.get()), true);
         }
-        Document document = new Document(new DocumentId(ids.newId()), companyId, projectId, cleanTitle, cleanFilename,
-                format, sha256, DocumentStatus.RECEIVED, Optional.empty(), false, actor.userId(), clock.instant(),
-                Optional.empty(), 0, Optional.empty(), Optional.empty(), List.of(), caseDocument);
+        Document document = shape.apply(new Document(new DocumentId(ids.newId()), companyId, projectId, cleanTitle,
+                cleanFilename, format, sha256, DocumentStatus.RECEIVED, Optional.empty(), false, actor.userId(),
+                clock.instant(), Optional.empty(), 0, Optional.empty(), Optional.empty(), List.of(), caseDocument));
         return persistOrLinkTheOneThatWon(document, duplicate, persist);
     }
 
@@ -111,10 +127,11 @@ public class UploadDocument {
     }
 
     private DocumentEntry requeueIfFailed(Document existing) {
-        if (existing.status() == DocumentStatus.FAILED) {
+        if (existing.status() == DocumentStatus.FAILED && !existing.withdrawn()) {
             documents.save(existing.requeue().resetAttempts());
         }
-        return documents.findEntry(CompanyScope.of(existing.companyId()), ProjectVisibility.all(), existing.id())
-                .orElseThrow();
+        // también lo pendiente y lo retirado: la subida de una primera carga puede devolver cualquiera de los dos
+        return documents.findEntryIncludingWithdrawn(CompanyScope.of(existing.companyId()), ProjectVisibility.all(),
+                existing.id()).orElseThrow();
     }
 }

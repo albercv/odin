@@ -25,6 +25,11 @@ import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.StartIntake;
+import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
@@ -463,6 +468,27 @@ public class UseCaseConfiguration {
             IdGenerator ids,
             Clock clock) {
         return new UploadDocument(documents, organizations, files, detector, uploadSettings, ids, clock);
+    }
+
+    @Bean
+    StartIntake startIntake(IntakeRepository intake, OrganizationRepository organizations, IdGenerator ids,
+            Clock clock) {
+        return new StartIntake(intake, organizations, ids, clock);
+    }
+
+    @Bean
+    AddFileToIntake addFileToIntake(IntakeRepository intake, UploadDocument upload) {
+        return new AddFileToIntake(intake, upload);
+    }
+
+    @Bean
+    CloseIntakeUpload closeIntakeUpload(IntakeRepository intake) {
+        return new CloseIntakeUpload(intake);
+    }
+
+    @Bean
+    GetIntakeBatch getIntakeBatch(IntakeRepository intake, DocumentRepository documents) {
+        return new GetIntakeBatch(intake, documents);
     }
 
     @Bean

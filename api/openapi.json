@@ -1096,6 +1096,189 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "start",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StartIntakeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeBatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/files" : {
+      "get" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "knownFiles",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "sha256",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KnownFiles"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "addFile",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "path",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Documento nuevo, pendiente de confirmar",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeFile"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "No se creó nada: ya estaba o se descartó en este lote",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeFile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "closeUpload",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeBatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/documents" : {
       "get" : {
         "tags" : [ "admin-document-controller" ],
@@ -2240,6 +2423,41 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}" : {
+      "get" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeBatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/gaps" : {
       "get" : {
         "tags" : [ "usage-controller" ],
@@ -3359,6 +3577,66 @@
         },
         "required" : [ "id", "key", "prefix" ]
       },
+      "StartIntakeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "channel" : {
+            "type" : "string",
+            "description" : "Quién sube: el comando de la IA o el panel.",
+            "enum" : [ "COMMAND", "PANEL" ]
+          }
+        },
+        "required" : [ "channel" ]
+      },
+      "IntakeBatchView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "companyId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "channel" : {
+            "type" : "string"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "closedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "uploaded" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "reading" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "channel", "companyId", "createdAt", "id", "reading", "state", "uploaded" ]
+      },
+      "IntakeFile" : {
+        "type" : "object",
+        "description" : "outcome: CREATED, ALREADY_THERE (la huella ya estaba) o DISCARDED_IN_BATCH (se descartó en este lote).",
+        "properties" : {
+          "outcome" : {
+            "type" : "string"
+          },
+          "document" : {
+            "$ref" : "#/components/schemas/DocumentView"
+          }
+        },
+        "required" : [ "document", "outcome" ]
+      },
       "Upload" : {
         "type" : "object",
         "properties" : {
@@ -4291,6 +4569,18 @@
           }
         },
         "required" : [ "createdAt", "id", "label", "prefix" ]
+      },
+      "KnownFiles" : {
+        "type" : "object",
+        "properties" : {
+          "sha256" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "sha256" ]
       },
       "GapView" : {
         "type" : "object",

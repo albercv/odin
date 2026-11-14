@@ -420,6 +420,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["knownFiles"];
+        put?: never;
+        post: operations["addFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/documents": {
         parameters: {
             query?: never;
@@ -844,6 +892,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["projects_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1305,6 +1369,34 @@ export interface components {
             prefix: string;
             key: string;
         };
+        StartIntakeRequest: {
+            /**
+             * @description Quién sube: el comando de la IA o el panel.
+             * @enum {string}
+             */
+            channel: "COMMAND" | "PANEL";
+        };
+        IntakeBatchView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            companyId: string;
+            channel: string;
+            state: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            closedAt?: string;
+            /** Format: int32 */
+            uploaded: number;
+            /** Format: int32 */
+            reading: number;
+        };
+        /** @description outcome: CREATED, ALREADY_THERE (la huella ya estaba) o DISCARDED_IN_BATCH (se descartó en este lote). */
+        IntakeFile: {
+            outcome: string;
+            document: components["schemas"]["DocumentView"];
+        };
         Upload: {
             document: components["schemas"]["DocumentView"];
             duplicate: boolean;
@@ -1657,6 +1749,9 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             revokedAt?: string;
+        };
+        KnownFiles: {
+            sha256: string[];
         };
         GapView: {
             text: string;
@@ -2566,6 +2661,121 @@ export interface operations {
             };
         };
     };
+    start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    knownFiles: {
+        parameters: {
+            query: {
+                sha256: string[];
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnownFiles"];
+                };
+            };
+        };
+    };
+    addFile: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description No se creó nada: ya estaba o se descartó en este lote */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeFile"];
+                };
+            };
+            /** @description Documento nuevo, pendiente de confirmar */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeFile"];
+                };
+            };
+        };
+    };
+    closeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
     list_3: {
         parameters: {
             query?: {
@@ -3355,6 +3565,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectView"][];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
                 };
             };
         };

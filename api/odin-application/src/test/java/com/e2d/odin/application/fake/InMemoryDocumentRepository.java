@@ -6,6 +6,8 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -17,6 +19,7 @@ import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class InMemoryDocumentRepository implements DocumentRepository {
 
@@ -116,7 +120,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
-        return visible(scope, visibility, id).filter(d -> !d.withdrawn());
+        return visible(scope, visibility, id).filter(d -> !d.withdrawn() && !d.intakePending());
     }
 
     private Optional<Document> visible(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
@@ -151,8 +155,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
             int limit) {
-        return documents.values().stream().filter(d -> d.withdrawn() && scope.includes(d.companyId()) && visibility.allows(d.projectId()))
-                .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
+        return documents.values().stream().filter(d -> d.withdrawn() && !d.intakePending() && scope.includes(d.companyId())
+                && visibility.allows(d.projectId())).sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
                 .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
     }
 
@@ -186,6 +190,29 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public Optional<Document> findBySha256ForIntake(CompanyId companyId, IntakeBatchId batchId, String sha256) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId) && d.sha256().equals(sha256)
+                && (!d.withdrawn() || d.intakeBatchId().equals(Optional.of(batchId))))
+                .min(Comparator.comparing(Document::withdrawn));
+    }
+
+    @Override
+    public Set<String> existingSha256ForIntake(CompanyId companyId, IntakeBatchId batchId,
+            Collection<String> sha256s) {
+        return sha256s.stream().filter(sha -> findBySha256ForIntake(companyId, batchId, sha).isPresent())
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public IntakeCounts intakeCounts(CompanyId companyId, IntakeBatchId batchId) {
+        List<Document> mine = documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()).toList();
+        long reading = mine.stream().filter(d -> Set.of(DocumentStatus.RECEIVED, DocumentStatus.PROCESSING,
+                DocumentStatus.PENDING_READER, DocumentStatus.READER_PROCESSING).contains(d.status())).count();
+        return new IntakeCounts(mine.size(), (int) reading);
+    }
+
+    @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
         return documents.values().stream().filter(d -> !d.withdrawn() && d.companyId().equals(companyId)
@@ -205,8 +232,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
             int limit) {
         lastListScope = scope;
         return documents.values().stream()
-                .filter(d -> !d.withdrawn() && scope.includes(d.companyId()) && visibility.allows(d.projectId())
-                        && status.map(d.status()::equals).orElse(true))
+                .filter(d -> !d.withdrawn() && !d.intakePending() && scope.includes(d.companyId())
+                        && visibility.allows(d.projectId()) && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
                 .filter(d -> caseDocument.map(flag -> d.caseDocument() == flag).orElse(true))
                 .filter(d -> topicId.isEmpty() || activeTopic.test(d.id(), topicId.get()))

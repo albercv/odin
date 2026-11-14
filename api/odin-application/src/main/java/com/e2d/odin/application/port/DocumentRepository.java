@@ -4,6 +4,8 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -12,6 +14,7 @@ import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -57,6 +60,18 @@ public interface DocumentRepository {
 
     /** Busca solo en ese proyecto y entre los documentos sin proyecto; si hay varios, el más antiguo. */
     Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId, String sha256);
+
+    /**
+     * Para la primera carga, el más antiguo de la empresa sin contar lo retirado, o, si no hay, el retirado dentro de
+     * ese lote. Ve también lo pendiente.
+     */
+    Optional<Document> findBySha256ForIntake(CompanyId companyId, IntakeBatchId batchId, String sha256);
+
+    /** De esas huellas, las que {@link #findBySha256ForIntake} encontraría: ya están en la empresa o se retiraron en el lote. */
+    Set<String> existingSha256ForIntake(CompanyId companyId, IntakeBatchId batchId, Collection<String> sha256s);
+
+    /** Recuentos de los documentos del lote: subidos (sin retirar) y los que aún no se han leído. */
+    IntakeCounts intakeCounts(CompanyId companyId, IntakeBatchId batchId);
 
     /**
      * Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. Con {@code caseDocument}, solo los
