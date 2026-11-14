@@ -79,6 +79,21 @@ public interface DocumentRepository {
     /** Los documentos READY, sin retirar y aún pendientes del lote, con su texto, solo por la ruta de la clasificación. */
     List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId);
 
+    /** Los documentos del lote aún pendientes y sin retirar, en cualquier estado (también los que fallaron al leerse). */
+    List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId);
+
+    /** Los títulos de los documentos del lote, retirados y pendientes incluidos: la bandeja los muestra junto a cada propuesta. */
+    java.util.Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId);
+
+    /**
+     * Saca un documento pendiente de lo pendiente (D1): lo deja en ese proyecto, o sin proyecto, y visible para quien lo
+     * ve. Si ya está confirmado o retirado, o hay otro igual y visible en ese proyecto, 409 y no cambia nada.
+     */
+    void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId);
+
+    /** Pone {@code scan_of}: el documento es el escaneo del original (D3). Solo sobre documentos visibles, no pendientes. */
+    void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId);
+
     /** Si algún documento de la empresa, sin retirar, espera al lector OCR o lo está pasando. */
     boolean readerQueueBusy(CompanyId companyId);
 

@@ -35,7 +35,14 @@ import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.ConfirmIntakeProposals;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.DecideIntakeProposal;
+import com.e2d.odin.application.intake.DiscardIntakeDocument;
+import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.GetIntakeBatch;
 import com.e2d.odin.application.intake.ImportProjectList;
 import com.e2d.odin.application.intake.ListProjectCandidates;
@@ -355,6 +362,34 @@ public class TestWiring {
 
     @Bean ConfirmProjectCandidates confirmProjectCandidates() {
         return new ConfirmProjectCandidates(intake, orgs, createProject());
+    }
+
+    @Bean IntakeEffects intakeEffects() {
+        return new IntakeEffects(intake, docs, orgs, markCaseDocuments(), supersedeDocument(), addToCaseFiles(), clock);
+    }
+
+    @Bean ListUnplacedDocuments listUnplacedDocuments() {
+        return new ListUnplacedDocuments(intake, docs);
+    }
+
+    @Bean PlaceIntakeDocument placeIntakeDocument() {
+        return new PlaceIntakeDocument(intakeEffects());
+    }
+
+    @Bean ListIntakeProposals listIntakeProposals() {
+        return new ListIntakeProposals(intake, docs);
+    }
+
+    @Bean ConfirmIntakeProposals confirmIntakeProposals() {
+        return new ConfirmIntakeProposals(intake, intakeEffects());
+    }
+
+    @Bean DecideIntakeProposal decideIntakeProposal() {
+        return new DecideIntakeProposal(intake, intakeEffects());
+    }
+
+    @Bean DiscardIntakeDocument discardIntakeDocument() {
+        return new DiscardIntakeDocument(docs, withdrawDocument(), intakeEffects());
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {

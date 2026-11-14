@@ -71,6 +71,28 @@ public final class Requests {
             List<ProjectDecisionRequest> decisions) {
     }
 
+    public record ConfirmProposalsRequest(
+            @Schema(description = "De 1 a 500 propuestas del lote, todo o nada.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) List<UUID> proposalIds) {
+    }
+
+    public record DecideProposalRequest(
+            @Schema(description = "CONFIRM la confirma, CORRECT_PROJECT la lleva a otro proyecto (projectId), COMPANY_WIDE "
+                    + "deja el documento sin proyecto para toda la empresa, DONT_KNOW lo deja pendiente y oculto, "
+                    + "REJECT la rechaza.",
+                    allowableValues = {"CONFIRM", "CORRECT_PROJECT", "COMPANY_WIDE", "DONT_KNOW", "REJECT"},
+                    requiredMode = Schema.RequiredMode.REQUIRED) String decision,
+            @Schema(description = "Solo con CORRECT_PROJECT: el proyecto de la empresa al que va el documento.")
+            UUID projectId) {
+    }
+
+    public record PlaceDocumentRequest(
+            @Schema(description = "El proyecto de la empresa al que va el documento. Exactamente uno de projectId o companyWide.")
+            UUID projectId,
+            @Schema(description = "Verdadero: sin proyecto, visible para toda la empresa. Exactamente uno de projectId o companyWide.")
+            Boolean companyWide) {
+    }
+
     public record CaseMarksRequest(
             @Schema(description = "De 1 a 500 documentos de la empresa.", requiredMode = Schema.RequiredMode.REQUIRED)
             List<UUID> documentIds,

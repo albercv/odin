@@ -234,6 +234,44 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && d.intakePending() && !d.withdrawn()).toList();
+    }
+
+    @Override
+    public Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)))
+                .collect(Collectors.toMap(Document::id, Document::title));
+    }
+
+    @Override
+    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId) {
+        Document d = documents.get(id);
+        if (d == null || !d.companyId().equals(companyId) || !d.intakePending() || d.withdrawn()) {
+            throw new ConflictException("El documento ya no está pendiente");
+        }
+        // Como el índice único de huella de lo visible (V26).
+        boolean twin = documents.values().stream().anyMatch(o -> !o.id().equals(id) && !o.withdrawn()
+                && !o.intakePending() && o.companyId().equals(companyId) && o.projectId().equals(projectId)
+                && o.sha256().equals(d.sha256()));
+        if (twin) {
+            throw new ConflictException("Ya hay un documento igual en ese proyecto: descarta este");
+        }
+        documents.put(id, d.confirmedIn(projectId));
+    }
+
+    @Override
+    public void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId) {
+        Document d = documents.get(scanId);
+        if (d == null || !d.companyId().equals(companyId) || d.intakePending() || d.withdrawn()) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+        documents.put(scanId, d.scanOf(originalId));
+    }
+
+    @Override
     public boolean readerQueueBusy(CompanyId companyId) {
         return documents.values().stream().anyMatch(d -> d.companyId().equals(companyId) && !d.withdrawn()
                 && (d.status() == DocumentStatus.PENDING_READER || d.status() == DocumentStatus.READER_PROCESSING));

@@ -11,7 +11,10 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.shared.IntakeSettings;
 import java.util.ArrayList;
+import com.e2d.odin.domain.intake.ProposalKind;
 import java.util.Collection;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -44,7 +47,12 @@ public class GetIntakeBatch {
                 .noneMatch(c -> c.state() == DecisionState.CONFIRMED)) {
             warnings.add(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
         }
-        return new IntakeBatchView(batch, documents.intakeCounts(companyId, batchId), warnings);
+        Map<ProposalKind, Integer> proposed = new EnumMap<>(ProposalKind.class);
+        intake.proposals(companyId, batchId).stream().filter(p -> p.state() == DecisionState.PROPOSED)
+                .forEach(p -> proposed.merge(p.kind(), 1, Integer::sum));
+        int unplaced = batch.state() == IntakeState.IN_REVIEW
+                ? UnplacedDocuments.find(intake, documents, companyId, batchId).size() : 0;
+        return new IntakeBatchView(batch, documents.intakeCounts(companyId, batchId), warnings, proposed, unplaced);
     }
 
     /** De esas huellas, las que ya están en la empresa o se descartaron en el lote: el cliente no las vuelve a subir. */

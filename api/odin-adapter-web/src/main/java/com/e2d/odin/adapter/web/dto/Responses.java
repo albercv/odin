@@ -465,16 +465,34 @@ public final class Responses {
     }
 
     @Schema(description = "uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; "
-            + "alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote.")
+            + "alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; "
+            + "proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos "
+            + "pendientes sin propuesta de proyecto por decidir (en revisión).")
     public record IntakeBatchView(UUID id, UUID companyId, String channel, String state, Instant createdAt,
             @Nullable Instant closedAt, int uploaded, int reading, int pending, int alreadyThere, int discarded,
-            List<IntakeWarningView> warnings) {
+            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced) {
         public static IntakeBatchView from(com.e2d.odin.application.intake.IntakeBatchView view) {
             var b = view.batch();
             return new IntakeBatchView(b.id().value(), b.companyId().value(), b.channel().name(), b.state().name(),
                     b.createdAt(), b.closedAt().orElse(null), view.counts().uploaded(), view.counts().reading(),
                     view.counts().pending(), b.alreadyThere(), b.discarded(),
-                    view.warnings().stream().map(IntakeWarningView::from).toList());
+                    view.warnings().stream().map(IntakeWarningView::from).toList(),
+                    view.proposed().entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced());
+        }
+    }
+
+    @Schema(description = "Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). "
+            + "path: la ruta de su carpeta al subirlo.")
+    public record IntakeDocumentView(UUID id, String title, @Nullable String path, String status) {
+        static IntakeDocumentView from(Document d) {
+            return new IntakeDocumentView(d.id().value(), d.title(), d.intakePath().orElse(null), d.status().name());
+        }
+    }
+
+    public record IntakeDocuments(List<IntakeDocumentView> documents) {
+        public static IntakeDocuments from(List<Document> documents) {
+            return new IntakeDocuments(documents.stream().map(IntakeDocumentView::from).toList());
         }
     }
 
@@ -498,6 +516,48 @@ public final class Responses {
     public record ProjectCandidates(List<ProjectCandidateView> candidates) {
         public static ProjectCandidates from(List<com.e2d.odin.domain.intake.ProjectCandidate> candidates) {
             return new ProjectCandidates(candidates.stream().map(ProjectCandidateView::from).toList());
+        }
+    }
+
+    @Schema(description = "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. "
+            + "targetDocumentId: el otro documento de una pareja o la ficha de un enlace. caseNumber: el número de caso. "
+            + "source: RULES, FOLDER o MODEL.")
+    public record IntakeProposalItem(UUID id, UUID documentId, String title, @Nullable UUID targetDocumentId,
+            @Nullable String caseNumber, String source, String reason) {
+        static IntakeProposalItem from(com.e2d.odin.application.intake.IntakeProposalItem i) {
+            com.e2d.odin.domain.intake.IntakeProposal p = i.proposal();
+            return new IntakeProposalItem(p.id(), p.documentId().value(), i.title(),
+                    p.targetDocumentId().map(d -> d.value()).orElse(null), p.caseNumber().orElse(null),
+                    p.source().name(), p.reason());
+        }
+    }
+
+    @Schema(description = "kind: PROJECT, COMPANY_WIDE, CASE_MARK, CASE_LINK, SAME_AS_SCAN o SUPERSEDES. confidence: HIGH "
+            + "o LOW. projectId: el proyecto propuesto, si la clase lo tiene.")
+    public record IntakeProposalGroup(String kind, String confidence, @Nullable UUID projectId,
+            List<IntakeProposalItem> proposals) {
+        static IntakeProposalGroup from(com.e2d.odin.application.intake.IntakeProposalGroup g) {
+            return new IntakeProposalGroup(g.kind().name(), g.confidence().name(),
+                    g.projectId().map(ProjectId::value).orElse(null),
+                    g.items().stream().map(IntakeProposalItem::from).toList());
+        }
+    }
+
+    public record IntakeProposalGroups(List<IntakeProposalGroup> groups) {
+        public static IntakeProposalGroups from(List<com.e2d.odin.application.intake.IntakeProposalGroup> groups) {
+            return new IntakeProposalGroups(groups.stream().map(IntakeProposalGroup::from).toList());
+        }
+    }
+
+    public record ConfirmedProposals(int confirmed) {
+    }
+
+    @Schema(description = "state: PROPOSED (sigue sin decidir, con «no lo sé»), CONFIRMED o REJECTED. decidedBy y decidedAt: "
+            + "quién y cuándo, si está decidida.")
+    public record DecidedProposal(UUID id, String state, @Nullable UUID decidedBy, @Nullable Instant decidedAt) {
+        public static DecidedProposal from(com.e2d.odin.domain.intake.IntakeProposal p) {
+            return new DecidedProposal(p.id(), p.state().name(), p.decidedBy().map(UserId::value).orElse(null),
+                    p.decidedAt().orElse(null));
         }
     }
 
