@@ -109,3 +109,15 @@ it('searchBoxPendingTimerCallsLatestCallback', () => {
   expect(first).not.toHaveBeenCalled();
   expect(second).toHaveBeenCalledWith('abc');
 });
+
+test('escapeWithTextClearsAndStopsPropagationButEmptyLetsItThrough', () => {
+  const outer = vi.fn();
+  render(<div onKeyDown={outer}><SearchBox label="Buscar" onSearch={() => {}} /></div>);
+  const box = screen.getByRole('searchbox', { name: 'Buscar' });
+  fireEvent.change(box, { target: { value: 'abc' } });
+  fireEvent.keyDown(box, { key: 'Escape' });
+  expect(box).toHaveValue('');
+  expect(outer).not.toHaveBeenCalled();
+  fireEvent.keyDown(box, { key: 'Escape' });
+  expect(outer).toHaveBeenCalledTimes(1);
+});

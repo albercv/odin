@@ -42,7 +42,7 @@ export function SearchBox({ label, onSearch, resultCount, minLength = 3, delayMs
       <input
         type="search" aria-label={label} placeholder={label} value={text}
         onChange={(e) => change(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Escape') clear(); }}
+        onKeyDown={(e) => { if (e.key === 'Escape' && text) { e.preventDefault(); e.stopPropagation(); clear(); } }}
       />
       <p aria-live="polite" className={styles.count}>
         {active && resultCount !== undefined ? countText(resultCount, active) : ''}
