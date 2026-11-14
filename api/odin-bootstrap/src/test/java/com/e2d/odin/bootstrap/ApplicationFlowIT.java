@@ -332,7 +332,8 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(saved.status()).isEqualTo(201);
         assertThat(saved.json().get("status").asString()).isEqualTo("PENDING");
         JsonNode pending = api.get("/v1/admin/companies/" + companyA + "/cards", "Cookie", adminCookie).json();
-        assertThat(pending).hasSize(1);
+        assertThat(pending.get("cards")).hasSize(1);
+        assertThat(pending.get("total").asInt()).isEqualTo(1);
         Reply review = api.post("/v1/admin/cards/" + saved.json().get("id").asString() + "/review",
                 map("decision", "APPROVE"), "Cookie", adminCookie);
         assertThat(review.json().get("status").asString()).isEqualTo("APPROVED");

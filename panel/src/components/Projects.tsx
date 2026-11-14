@@ -4,12 +4,15 @@ import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { RowAction, RowActions } from '../ui/RowActions';
 import { Section } from '../ui/Section';
+import { Pagination } from '../ui/Pagination';
+import { SearchBox } from '../ui/SearchBox';
 import { Table, Td, Tr, tableStyles } from '../ui/Table';
 import { NameDialog } from './NameDialog';
 import { Notice } from './Notice';
 import { ProjectMembers, whoSees } from './ProjectMembers';
 import { RenameForm } from './RenameForm';
 import { useAction, useLoad } from './useLoad';
+import { includesText, usePagedList } from './usePagedList';
 
 type Panel = 'rename' | 'access' | undefined;
 type RowProps = { project: S['ProjectView']; companyId: string; onChanged: () => void };
@@ -55,16 +58,22 @@ function ProjectRow(props: RowProps) {
   );
 }
 
+const NONE: S['ProjectView'][] = [];
+const byName = (p: S['ProjectView'], q: string) => includesText(p.name, q);
+
 /** `version` changes when something elsewhere (a person's accesses, a removal) altered the project members. */
 export function Projects({ companyId, version = 0 }: { companyId: string; version?: number }) {
   const list = useLoad(() => api.projects(companyId), [companyId, version]);
   const [adding, setAdding] = useState(false);
+  const paged = usePagedList(list.data ?? NONE, byName, 10);
   return (
     <Section title="Proyectos" description="Un proyecto nuevo nace cerrado: solo lo ven sus miembros." actions={<Button icon="plus" onClick={() => setAdding(true)}>Nuevo proyecto</Button>}>
       <Notice message={list.error} />
+      <SearchBox label="Buscar proyectos" onSearch={paged.setQuery} resultCount={paged.total} />
       <Table columns={['Proyecto', 'Quién lo ve']}>
-        {list.data?.map((p) => <ProjectRow key={p.id} project={p} companyId={companyId} onChanged={list.reload} />)}
+        {paged.visible.map((p) => <ProjectRow key={p.id} project={p} companyId={companyId} onChanged={list.reload} />)}
       </Table>
+      <Pagination label="Páginas de proyectos" page={paged.page} pageCount={paged.pageCount} onPage={paged.setPage} />
       <NameDialog title="Nuevo proyecto" label="Nombre del proyecto" submitLabel="Crear proyecto" open={adding}
         onSubmit={(name) => api.createProject(companyId, name)} onClose={() => setAdding(false)} onDone={list.reload} />
     </Section>

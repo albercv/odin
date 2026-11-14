@@ -44,10 +44,9 @@ describe('Sidebar', () => {
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['Acme', 'Beta']);
   });
 
-  it('noCompanyChosenShowsThePrompt', () => {
-    show({ isGroup: true, switcher: { companies: [acme, beta], currentId: '', onChange: () => {} } });
-    expect(screen.getByRole('combobox', { name: 'Empresa' })).toHaveValue('');
-    expect(screen.getByRole('option', { name: 'Elige una empresa' })).toBeInTheDocument();
+  it('neverOffersAnEmptyOption', () => {
+    show({ isGroup: true, switcher: { companies: [acme, beta], currentId: 'c1', onChange: () => {} } });
+    expect(screen.queryByRole('option', { name: 'Elige una empresa' })).toBeNull();
   });
 
   it('companyAdminWithOneCompanyShowsTheNameNotTheSwitcher', () => {
