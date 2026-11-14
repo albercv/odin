@@ -416,7 +416,8 @@ async function prepare(): Promise<void> {
 async function confirm(): Promise<void> {
   const { companyId } = JSON.parse(readFileSync(STATE, 'utf8')) as { companyId: string };
   cookie = (await http('POST', '/v1/admin/session', ADMIN).then((r) => r.headers.get('set-cookie') ?? '')).split(';')[0] ?? '';
-  const cards = await json<{ title: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/cards?status=APPROVED`), 200);
+  const q = encodeURIComponent(CARD.title);
+  const { cards } = await json<{ cards: { title: string; status: string }[] }>(await http('GET', `/v1/admin/companies/${companyId}/cards?status=APPROVED&q=${q}&limit=50`), 200);
   check(cards.some((c) => c.title === CARD.title), 'Paso 9: la API confirma que la ficha está APPROVED');
   await confirmSuperseded(JSON.parse(readFileSync(STATE, 'utf8')) as State);
 }

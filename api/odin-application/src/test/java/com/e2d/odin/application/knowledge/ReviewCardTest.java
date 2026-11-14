@@ -152,11 +152,11 @@ class ReviewCardTest {
 
     @Test
     void limitIsBetweenTenAndFifty() {
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 55; i++) {
             Fixtures.card(cards, companyA, CardStatus.PENDING);
         }
 
         assertThat(list.page(adminA, companyA, CardStatus.PENDING, Optional.empty(), 0, 1).cards()).hasSize(10);
-        assertThat(list.page(adminA, companyA, CardStatus.PENDING, Optional.empty(), 0, 500).cards()).hasSize(12);
+        assertThat(list.page(adminA, companyA, CardStatus.PENDING, Optional.empty(), 0, 500).cards()).hasSize(50);
     }
 }

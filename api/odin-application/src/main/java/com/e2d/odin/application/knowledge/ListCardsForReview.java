@@ -32,7 +32,7 @@ public class ListCardsForReview {
         AccessPolicy.requireAdminOf(actor, companyId);
         CompanyScope scope = CompanyScope.of(companyId);
         ProjectVisibility everything = ProjectVisibility.all();
-        Optional<String> text = query.map(String::trim).filter(q -> !q.isEmpty());
+        Optional<String> text = query.map(String::strip).filter(q -> !q.isEmpty());
         int capped = Math.max(DEFAULT_LIMIT, WorkerAccess.cap(Optional.of(limit), DEFAULT_LIMIT, MAX_LIMIT));
         return new CardPage(cards.search(scope, everything, status, text, Math.max(0, offset), capped),
                 cards.count(scope, everything, status, text));
