@@ -52,3 +52,8 @@ test('choosingACompanyOpensIt', async () => {
   expect(screen.getByRole('link', { name: 'Empresa' })).toHaveAttribute('aria-current', 'page');
   await waitFor(() => expect(calls.some((c) => c.key === 'GET /v1/admin/companies/c2/members')).toBe(true));
 });
+
+test('neverOffersAnEmptyOption', () => {
+  render(<CompanySwitcher companies={[acme, beta]} currentId="c1" onChange={() => {}} />);
+  expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Acme', 'Beta']);
+});
