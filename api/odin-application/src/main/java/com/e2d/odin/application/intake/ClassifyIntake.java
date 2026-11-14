@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Trabajo periódico de la primera carga: cuando un lote en lectura ya no tiene nada por leer, escribe las propuestas de
@@ -98,7 +99,7 @@ public class ClassifyIntake {
         List<IntakeDocument> all = documents.intakeReadyDocuments(run.company(), batch.id());
         all.stream().filter(d -> !done.contains(d.id())).forEach(d -> proposeFor(run, d));
         links(run, all);
-        duplicates(run, all);
+        duplicates(run, all, existing);
         saveNew(run, existing);
         intake.save(batch.finishReading());
     }
@@ -215,11 +216,15 @@ public class ClassifyIntake {
         return Pattern.compile("(?i)\\bcaso\\s*:?\\s*" + parts[0] + "\\s*[-–]\\s*" + parts[1] + "\\b");
     }
 
-    private void duplicates(Run run, List<IntakeDocument> all) {
-        // solo entre documentos con un único proyecto propuesto: sin él (o con varios) no se compara con nadie
-        List<DuplicateFinder.Candidate> candidates = all.stream().filter(d -> run.projectOf.containsKey(d.id()))
-                .map(d -> new DuplicateFinder.Candidate(d.id().value().toString(), run.projectOf.get(d.id()), d.scan(),
-                        d.text())).toList();
+    private void duplicates(Run run, List<IntakeDocument> all, List<IntakeProposal> existing) {
+        // un documento con un único proyecto propuesto se compara en ese proyecto; sin ninguna propuesta de proyecto, en el
+        // grupo "" (como en el estudio); los ambiguos (varias propuestas) no se comparan con nadie
+        Set<DocumentId> proposed = Stream.concat(existing.stream(), run.made.stream())
+                .filter(p -> p.kind() == ProposalKind.PROJECT).map(IntakeProposal::documentId).collect(Collectors.toSet());
+        List<DuplicateFinder.Candidate> candidates = all.stream()
+                .filter(d -> run.projectOf.containsKey(d.id()) || !proposed.contains(d.id()))
+                .map(d -> new DuplicateFinder.Candidate(d.id().value().toString(), run.projectOf.getOrDefault(d.id(), ""),
+                        d.scan(), d.text())).toList();
         for (DuplicateFinder.Duplicate dup : DuplicateFinder.find(candidates)) {
             if (!dup.reason().isBlank()) {
                 run.made.add(proposal(run, new DocumentId(java.util.UUID.fromString(dup.documentId())), dup.kind(),

@@ -16,6 +16,7 @@ import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.intake.CandidateOrigin;
 import com.e2d.odin.domain.intake.DecisionState;
+import com.e2d.odin.domain.intake.DuplicateFinder;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeChannel;
 import com.e2d.odin.domain.intake.IntakeProposal;
@@ -450,18 +451,69 @@ class ClassifyIntakeTest {
         assertThat(failing.proposals(company, batch.id())).extracting(IntakeProposal::documentId).containsOnly(caso.id());
     }
 
+    private static final String NO_PROJECT_BODY = "Acta de la junta\nIncluye una derrama de 1.200 euros acordada el 12 de marzo de 2024 para el "
+            + "arreglo del tejado del bloque segundo con la empresa constructora local";
+
     @Test
-    void documentsWithoutAProposedProjectAreNeverComparedAmongThemselves() {
+    void documentsWithNoProjectProposalAreComparedAmongThemselvesAndAScanOfOneGetsSameAsScan() {
         confirmed(OLMO, olmoId);
-        String body = "Acta de la junta\nIncluye una derrama de 1.200 euros acordada el 12 de marzo de 2024 para el "
-                + "arreglo del tejado del bloque segundo con la empresa constructora local";
-        pending(batch, "a/acta.pdf", body, "pdfbox", DocumentStatus.READY);
-        pending(batch, "a/acta-escaneada.pdf", body, "unlimited-ocr-2", DocumentStatus.READY);
+        Document original = pending(batch, "a/acta.pdf", NO_PROJECT_BODY, "pdfbox", DocumentStatus.READY);
+        Document scan = pending(batch, "a/acta-escaneada.pdf", NO_PROJECT_BODY, "unlimited-ocr-2", DocumentStatus.READY);
 
         classify(false).execute();
 
+        assertThat(proposals(ProposalKind.PROJECT)).isEmpty();
+        IntakeProposal p = proposals(ProposalKind.SAME_AS_SCAN).get(0);
+        assertThat(p.documentId()).isEqualTo(scan.id());
+        assertThat(p.targetDocumentId()).contains(original.id());
+    }
+
+    @Test
+    void anAmbiguousDocumentAndItsAmbiguousTwinAreExcludedFromDuplicates() {
+        confirmed(OLMO, olmoId);
+        confirmed(HAYA, hayaId);
+        String ambiguous = "Informe general\nUna linea\nOtra linea\nObras en " + OLMO + " del bloque\nY tambien en " + HAYA
+                + " del patio\n" + NO_PROJECT_BODY;
+        pending(batch, "a/acta.pdf", ambiguous, "pdfbox", DocumentStatus.READY);
+        pending(batch, "a/acta-escaneada.pdf", ambiguous, "unlimited-ocr-2", DocumentStatus.READY);
+
+        classify(false).execute();
+
+        assertThat(proposals(ProposalKind.PROJECT)).hasSize(4).allMatch(p -> p.confidence() == ProposalConfidence.LOW);
         assertThat(proposals(ProposalKind.SAME_AS_SCAN)).isEmpty();
         assertThat(proposals(ProposalKind.SUPERSEDES)).isEmpty();
-        assertThat(proposals(ProposalKind.PROJECT)).isEmpty();
+    }
+
+    private static final String LONG_BODY = NO_PROJECT_BODY + ". Se aprueba el presupuesto de 8.400 euros el 3 de junio de 2024 "
+            + "para la sustitucion de la caldera central, la revision de los bajantes del patio interior, la pintura de la escalera "
+            + "y el cambio de las luminarias del portal, con la empresa de mantenimiento habitual y un plazo de ejecucion de tres meses";
+
+    @Test
+    void aDocumentWithoutProjectIsNeverComparedWithOneOfAProposedProject() {
+        confirmed(OLMO, olmoId);
+        String withProject = OLMO_TEXT + "\n" + LONG_BODY;
+        // control: el mismo par, comparado en un solo grupo, sí es una pareja de escaneo
+        assertThat(DuplicateFinder.find(List.of(new DuplicateFinder.Candidate("a", "", false, LONG_BODY),
+                new DuplicateFinder.Candidate("b", "", true, withProject)))).extracting(DuplicateFinder.Duplicate::kind)
+                .containsExactly(ProposalKind.SAME_AS_SCAN);
+        pending(batch, "a/acta.pdf", LONG_BODY, "pdfbox", DocumentStatus.READY);
+        pending(batch, "a/acta-escaneada.pdf", withProject, "unlimited-ocr-2", DocumentStatus.READY);
+
+        classify(false).execute();
+
+        assertThat(proposals(ProposalKind.PROJECT)).hasSize(1);
+        assertThat(proposals(ProposalKind.SAME_AS_SCAN)).isEmpty();
+    }
+
+    @Test
+    void theSamePairInsideOneProposedProjectIsProposedAsSameAsScan() {
+        confirmed(OLMO, olmoId);
+        String withProject = OLMO_TEXT + "\n" + LONG_BODY;
+        pending(batch, "a/acta.pdf", withProject, "pdfbox", DocumentStatus.READY);
+        pending(batch, "a/acta-escaneada.pdf", withProject, "unlimited-ocr-2", DocumentStatus.READY);
+
+        classify(false).execute();
+
+        assertThat(proposals(ProposalKind.SAME_AS_SCAN)).hasSize(1);
     }
 }
