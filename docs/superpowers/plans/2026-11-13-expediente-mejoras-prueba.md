@@ -1,7 +1,7 @@
 # Plan de prueba: mejoras del expediente (D-093), con el formato de D-094
 
 - **Fecha:** 2026-11-13. **Autor:** CTO 2. **Revisión:** el CEO o otro CTO, antes de pedir el sí (D-094, punto 2).
-- **Estado:** propuesta. **No se lanza** hasta que el propietario decida gastar en ella la medición con IA de la semana (D-094, punto 6).
+- **Estado:** aprobada por el propietario como medición de la semana (D-104, 2026-11-14). Tope dentro de la ejecución: **4,6 USD**, porque el CTO 3 mide después Valtierno con 0,4 y entre los dos no se pasa de 5. Se añaden las 2 preguntas del propietario (`bateria-conector.json`), una vez y solo informativas. Código: `feature/expediente-mejoras` en 37f7563 (5708afa más el arreglo del ejecutor), con el guion ajustado en esta rama.
 - **Diseño y código:**
   - diseño en `docs/superpowers/specs/2026-11-13-expediente-mejoras-design.md`;
   - plan de implementación en `docs/superpowers/plans/2026-11-13-expediente-mejoras.md`.
