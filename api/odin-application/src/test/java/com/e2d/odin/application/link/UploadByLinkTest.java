@@ -152,7 +152,8 @@ class UploadByLinkTest {
     void describeGivesCaseAndProjectNames() {
         UploadLinkInfo info = new DescribeUploadLink(w.resolve(), w.orgs).execute(token, HOME);
 
-        assertThat(info.caseTitle()).isEqualTo(caseDoc.title());
+        assertThat(info.kind()).isEqualTo(UploadTargetKind.CASE);
+        assertThat(info.caseTitle()).contains(caseDoc.title());
         assertThat(info.projectName()).isEqualTo("Proyecto");
         assertThat(info.expiresAt()).isEqualTo(w.clock.instant().plus(Duration.ofMinutes(15)));
     }

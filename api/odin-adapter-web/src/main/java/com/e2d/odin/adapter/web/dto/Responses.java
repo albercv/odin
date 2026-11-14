@@ -431,7 +431,7 @@ public final class Responses {
 
     public record UploadLinkInfo(String caseTitle, String projectName, Instant expiresAt) {
         public static UploadLinkInfo from(com.e2d.odin.application.link.UploadLinkInfo info) {
-            return new UploadLinkInfo(info.caseTitle(), info.projectName(), info.expiresAt());
+            return new UploadLinkInfo(info.caseTitle().orElse(null), info.projectName(), info.expiresAt());
         }
     }
 

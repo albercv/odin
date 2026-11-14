@@ -8,6 +8,7 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.link.AccessLink;
 import com.e2d.odin.domain.link.AccessLinkKind;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.ProjectId;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
@@ -36,13 +37,24 @@ public class LinkIssuer {
 
     /** {@code pathBeforeToken} precede al token en la URL; {@code fragment} va después, con su almohadilla, si lo hay. */
     IssuedLink issue(AccessLinkKind kind, Actor actor, DocumentId target, String pathBeforeToken, String fragment) {
+        boolean upload = kind == AccessLinkKind.UPLOAD;
+        return issue(kind, actor, upload ? Optional.of(target) : Optional.empty(), Optional.empty(),
+                upload ? Optional.empty() : Optional.of(target), pathBeforeToken, fragment);
+    }
+
+    /** El enlace de subida a un proyecto: lleva el proyecto y ningún caso. */
+    IssuedLink issueForProject(Actor actor, ProjectId project, String pathBeforeToken) {
+        return issue(AccessLinkKind.UPLOAD, actor, Optional.empty(), Optional.of(project), Optional.empty(),
+                pathBeforeToken, "");
+    }
+
+    private IssuedLink issue(AccessLinkKind kind, Actor actor, Optional<DocumentId> caseId, Optional<ProjectId> projectId,
+            Optional<DocumentId> documentId, String pathBeforeToken, String fragment) {
         String prefix = settings.urlOf(pathBeforeToken);
         String token = tokens.randomToken(TOKEN_BYTES);
         Instant now = clock.instant();
-        boolean upload = kind == AccessLinkKind.UPLOAD;
-        AccessLink link = new AccessLink(ids.newId(), kind, actor.requireCompany(), actor.userId(),
-                upload ? Optional.of(target) : Optional.empty(), Optional.empty(), upload ? Optional.empty() : Optional.of(target), now,
-                now.plus(settings.ttl()), Optional.empty(), 0);
+        AccessLink link = new AccessLink(ids.newId(), kind, actor.requireCompany(), actor.userId(), caseId, projectId,
+                documentId, now, now.plus(settings.ttl()), Optional.empty(), 0);
         links.save(link, secrets.hash(token));
         return new IssuedLink(prefix + token + fragment, link.expiresAt());
     }
