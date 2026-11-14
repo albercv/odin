@@ -118,14 +118,45 @@ class ReviewCardTest {
         Fixtures.card(cards, companyA, CardStatus.APPROVED);
         Fixtures.card(cards, companyB, CardStatus.PENDING);
 
-        assertThat(list.execute(adminA, companyA, CardStatus.PENDING)).isEqualTo(List.of(mine));
+        var page = list.page(adminA, companyA, CardStatus.PENDING, Optional.empty(), 0, 10);
+
+        assertThat(page.cards()).isEqualTo(List.of(mine));
+        assertThat(page.total()).isEqualTo(1);
     }
 
     @Test
     void otherCompanyAdminCannotListCards() {
         Fixtures.card(cards, companyA, CardStatus.PENDING);
 
-        assertThatThrownBy(() -> list.execute(Actors.companyAdmin(companyB), companyA, CardStatus.PENDING))
+        assertThatThrownBy(() -> list.page(Actors.companyAdmin(companyB), companyA, CardStatus.PENDING, Optional.empty(), 0, 10))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void searchesTitleAndBodyWithoutAccentsAndCountsBeyondThePage() {
+        KnowledgeCard first = Fixtures.card(cards, companyA, CardStatus.PENDING, "Póliza", "Cuerpo");
+        KnowledgeCard second = Fixtures.card(cards, companyA, CardStatus.PENDING, "Otra", "Vence en OCTUBRE");
+        Fixtures.card(cards, companyA, CardStatus.PENDING, "Nada", "Nada");
+        Fixtures.card(cards, companyB, CardStatus.PENDING, "Póliza ajena", "x");
+
+        var byTitle = list.page(adminA, companyA, CardStatus.PENDING, Optional.of("  poliza "), 0, 10);
+        var byBody = list.page(adminA, companyA, CardStatus.PENDING, Optional.of("octubre"), 0, 10);
+        var paged = list.page(adminA, companyA, CardStatus.PENDING, Optional.of(" "), 1, 10);
+
+        assertThat(byTitle.cards()).containsExactly(first);
+        assertThat(byTitle.total()).isEqualTo(1);
+        assertThat(byBody.cards()).containsExactly(second);
+        assertThat(paged.cards()).hasSize(2);
+        assertThat(paged.total()).isEqualTo(3);
+    }
+
+    @Test
+    void limitIsBetweenTenAndFifty() {
+        for (int i = 0; i < 12; i++) {
+            Fixtures.card(cards, companyA, CardStatus.PENDING);
+        }
+
+        assertThat(list.page(adminA, companyA, CardStatus.PENDING, Optional.empty(), 0, 1).cards()).hasSize(10);
+        assertThat(list.page(adminA, companyA, CardStatus.PENDING, Optional.empty(), 0, 500).cards()).hasSize(12);
     }
 }

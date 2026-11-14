@@ -91,7 +91,7 @@ public class AdminDocumentController {
             @RequestParam(defaultValue = "false") boolean withdrawn,
             @Parameter(description = "Texto del título, sin mayúsculas ni acentos (hasta 100 caracteres)")
             @RequestParam(required = false) String q) {
-        if (q != null && q.length() > MAX_QUERY) {
+        if (q != null && q.strip().length() > MAX_QUERY) {
             throw new ValidationException("La búsqueda admite hasta " + MAX_QUERY + " caracteres");
         }
         var page = list.page(actor, new CompanyId(companyId), offset, limit, withdrawn, Optional.ofNullable(q));

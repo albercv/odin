@@ -466,6 +466,10 @@ public final class Responses {
         }
     }
 
+    /** Una página de fichas para revisar y cuántas hay en total con ese filtro. */
+    public record CardPage(List<CardView> cards, int total) {
+    }
+
     public record CardView(UUID id, UUID companyId, @Nullable UUID projectId, String title, String body,
             @Nullable String originalBody, UUID authorId, Instant createdAt, String status, @Nullable ReviewView review) {
         public static CardView from(KnowledgeCard c) {

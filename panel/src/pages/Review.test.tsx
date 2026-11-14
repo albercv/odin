@@ -12,7 +12,7 @@ const projects = [{ id: 'p1', companyId: 'c1', name: 'Garajes Plaza Sol' }];
 
 function show(cards: unknown[], onPendingChanged = vi.fn()) {
   const calls = mockFetch({
-    'GET /v1/admin/companies/c1/cards?status=PENDING': () => cards,
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=50': () => ({ cards, total: cards.length }),
     'GET /v1/admin/companies/c1/members': () => members,
     'GET /v1/admin/companies/c1/projects': () => projects,
     'POST /v1/admin/cards/k1/review': () => ({}),
