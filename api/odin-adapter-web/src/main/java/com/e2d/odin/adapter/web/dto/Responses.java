@@ -474,7 +474,7 @@ public final class Responses {
         static IntakeWarningView from(com.e2d.odin.application.intake.IntakeWarning warning) {
             return switch (warning) {
                 case NO_READER -> new IntakeWarningView(warning.name(),
-                        "No hay lector OCR: los escaneos esperarán hasta que lo haya");
+                        "No hay lector OCR: los escaneos no se leen y esperan en «Sin ubicar»; el resto se clasifica");
                 case NO_LOCAL_MODEL -> new IntakeWarningView(warning.name(),
                         "No hay modelo local: solo se propondrá con las reglas");
                 case PROJECT_LIST_NOT_CONFIRMED -> new IntakeWarningView(warning.name(),

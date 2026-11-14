@@ -5,6 +5,7 @@ import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.IntakeDocument;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.ProjectProposer;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.intake.CaseFileRules;
 import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.DuplicateFinder;
@@ -50,13 +51,15 @@ public class ClassifyIntake {
     private final DocumentRepository documents;
     private final Optional<ProjectProposer> proposer;
     private final IdGenerator ids;
+    private final InstallationSettings installation;
 
     public ClassifyIntake(IntakeRepository intake, DocumentRepository documents, Optional<ProjectProposer> proposer,
-            IdGenerator ids) {
+            IdGenerator ids, InstallationSettings installation) {
         this.intake = intake;
         this.documents = documents;
         this.proposer = proposer;
         this.ids = ids;
+        this.installation = installation;
     }
 
     public void execute() {
@@ -82,10 +85,13 @@ public class ClassifyIntake {
 
     private void classify(IntakeBatch batch) {
         Run run = new Run(batch);
-        if (!batch.projectListClosed() || documents.intakeCounts(run.company(), batch.id()).reading() > 0) {
+        if (!batch.projectListClosed()
+                || IntakeBatches.counts(documents, installation, run.company(), batch.id()).reading() > 0) {
             return;
         }
-        run.modelAllowed = proposer.isPresent() && !documents.readerQueueBusy(run.company());
+        // sin lector OCR no hay cola del lector que esperar: lo que espera al lector no se está leyendo
+        boolean readerBusy = installation.scannedDocumentsSupported() && documents.readerQueueBusy(run.company());
+        run.modelAllowed = proposer.isPresent() && !readerBusy;
         if (proposer.isPresent() && !run.modelAllowed) {
             return;
         }

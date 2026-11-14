@@ -51,7 +51,8 @@ public class GetIntakeBatch {
                 .forEach(p -> proposed.merge(p.kind(), 1, Integer::sum));
         int unplaced = batch.state() == IntakeState.IN_REVIEW
                 ? UnplacedDocuments.find(intake, documents, companyId, batchId).size() : 0;
-        return new IntakeBatchView(batch, documents.intakeCounts(companyId, batchId), warnings, proposed, unplaced);
+        return new IntakeBatchView(batch, IntakeBatches.counts(documents, installation, companyId, batchId), warnings,
+                proposed, unplaced);
     }
 
     /** De esas huellas, las que ya están en la empresa o se descartaron en el lote: el cliente no las vuelve a subir. */

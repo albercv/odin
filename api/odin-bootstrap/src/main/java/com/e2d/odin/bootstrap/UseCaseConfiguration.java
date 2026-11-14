@@ -517,8 +517,9 @@ public class UseCaseConfiguration {
     /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
     @Bean
     ClassifyIntake classifyIntake(IntakeRepository intake, DocumentRepository documents,
-            ObjectProvider<ProjectProposer> proposer, IdGenerator ids) {
-        return new ClassifyIntake(intake, documents, Optional.ofNullable(proposer.getIfAvailable()), ids);
+            ObjectProvider<ProjectProposer> proposer, IdGenerator ids, InstallationSettings installationSettings) {
+        return new ClassifyIntake(intake, documents, Optional.ofNullable(proposer.getIfAvailable()), ids,
+                installationSettings);
     }
 
     @Bean
@@ -552,8 +553,8 @@ public class UseCaseConfiguration {
     /** Sin transacción: lo que descubre se queda aunque falten candidatos por decidir (lo ve el administrador). */
     @Bean
     CloseProjectList closeProjectList(IntakeRepository intake, DocumentRepository documents,
-            ListProjectCandidates candidates, Clock clock) {
-        return new CloseProjectList(intake, documents, candidates, clock);
+            ListProjectCandidates candidates, InstallationSettings installationSettings, Clock clock) {
+        return new CloseProjectList(intake, documents, candidates, installationSettings, clock);
     }
 
     @Bean

@@ -243,7 +243,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
                 && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()).toList();
         long reading = mine.stream().filter(d -> Set.of(DocumentStatus.RECEIVED, DocumentStatus.PROCESSING,
                 DocumentStatus.PENDING_READER, DocumentStatus.READER_PROCESSING).contains(d.status())).count();
-        return new IntakeCounts(mine.size(), (int) reading, (int) mine.stream().filter(Document::intakePending).count());
+        return new IntakeCounts(mine.size(), (int) reading, (int) mine.stream().filter(Document::intakePending).count(),
+                (int) mine.stream().filter(d -> d.status() == DocumentStatus.PENDING_READER).count());
     }
 
     @Override

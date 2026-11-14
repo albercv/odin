@@ -11,6 +11,7 @@ import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.port.ProjectProposer;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
@@ -68,8 +69,11 @@ class ClassifyIntakeTest {
         hayaId = Fixtures.project(orgs, company);
     }
 
+    private boolean reader = true;
+
     private ClassifyIntake classify(boolean withModel) {
-        return new ClassifyIntake(intake, docs, withModel ? Optional.of(model) : Optional.empty(), ids);
+        return new ClassifyIntake(intake, docs, withModel ? Optional.of(model) : Optional.empty(), ids,
+                new InstallationSettings("t", reader));
     }
 
     /** Un candidato confirmado y la lista terminada: lo que hace falta para clasificar. */
@@ -434,6 +438,24 @@ class ClassifyIntakeTest {
     }
 
     @Test
+    void withoutAReaderTheScansWaitingForItDoNotHoldTheBatchOrTheModelAndStayUnplaced() {
+        reader = false;
+        confirmed(OLMO, olmoId);
+        Document ready = pending("a/uno.pdf", "Carta sin proyecto en el texto");
+        Document scan = pending(batch, "a/escaneo.pdf", "", "stub", DocumentStatus.PENDING_READER);
+        Fixtures.document(docs, company, DocumentStatus.PENDING_READER);
+        modelAnswer = Optional.of(OLMO);
+
+        classify(true).execute();
+
+        assertThat(state()).isEqualTo(IntakeState.IN_REVIEW);
+        assertThat(asked).hasSize(1);
+        assertThat(proposals(ProposalKind.PROJECT)).extracting(IntakeProposal::documentId).containsExactly(ready.id());
+        assertThat(new ListUnplacedDocuments(intake, docs).execute(Actors.companyAdmin(company), company, batch.id()))
+                .extracting(Document::id).containsExactly(scan.id());
+    }
+
+    @Test
     void withoutAModelTheBatchStillFinishes() {
         confirmed(OLMO, olmoId);
         pending("a/uno.pdf", "Carta sin proyecto en el texto");
@@ -472,7 +494,7 @@ class ClassifyIntakeTest {
                 DecisionState.CONFIRMED, Optional.of(olmoId)));
         Document caso = pending("a/caso.pdf", "FICHA DE CASO\nCaso 2024-342\nGoteras en " + OLMO);
         failing.armed = true;
-        ClassifyIntake job = new ClassifyIntake(failing, docs, Optional.empty(), ids);
+        ClassifyIntake job = new ClassifyIntake(failing, docs, Optional.empty(), ids, new InstallationSettings("t", true));
 
         assertThatThrownBy(job::execute).isInstanceOf(IllegalStateException.class);
 

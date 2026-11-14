@@ -369,7 +369,7 @@ public class TestWiring {
     }
 
     @Bean CloseProjectList closeProjectList() {
-        return new CloseProjectList(intake, docs, listProjectCandidates(), clock);
+        return new CloseProjectList(intake, docs, listProjectCandidates(), installationSettings(), clock);
     }
 
     @Bean ConfirmProjectCandidates confirmProjectCandidates() {

@@ -222,6 +222,21 @@ class IntakeUploadTest {
     }
 
     @Test
+    void withoutAReaderTheScansWaitingForItAreNotCountedAsBeingRead() {
+        Document scan = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PENDING_READER);
+        docs.save(scan.withIntake(batch.id(), "a/escaneo.pdf"));
+        Document text = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PROCESSING);
+        docs.save(text.withIntake(batch.id(), "a/texto.pdf"));
+        GetIntakeBatch withReader = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
+                new IntakeSettings(true));
+        GetIntakeBatch withoutReader = new GetIntakeBatch(intake, docs, new InstallationSettings("t", false),
+                new IntakeSettings(true));
+
+        assertThat(withReader.execute(admin, company, batch.id()).counts().reading()).isEqualTo(2);
+        assertThat(withoutReader.execute(admin, company, batch.id()).counts().reading()).isEqualTo(1);
+    }
+
+    @Test
     void aSecondActiveBatchIsAConflict() {
         assertThatThrownBy(() -> start.execute(admin, company, IntakeChannel.COMMAND))
                 .isInstanceOf(ConflictException.class);

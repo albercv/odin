@@ -1,10 +1,13 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -30,5 +33,12 @@ final class IntakeBatches {
             throw new ConflictException("La lista de proyectos ya está terminada: no se puede cambiar");
         }
         return batch;
+    }
+
+    /** Los recuentos del lote con la definición de «leyendo» de la primera carga: sin lector, lo escaneado espera. */
+    static IntakeCounts counts(DocumentRepository documents, InstallationSettings installation, CompanyId companyId,
+            IntakeBatchId batchId) {
+        IntakeCounts counts = documents.intakeCounts(companyId, batchId);
+        return installation.scannedDocumentsSupported() ? counts : counts.withoutReader();
     }
 }

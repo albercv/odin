@@ -122,7 +122,7 @@ class IntakeUploadIT extends AbstractPostgresIT {
 
         assertThat(docs.findBySha256ForIntake(other, batch.id(), d.sha256())).isEmpty();
         assertThat(docs.existingSha256ForIntake(other, batch.id(), List.of(d.sha256()))).isEmpty();
-        assertThat(docs.intakeCounts(other, batch.id())).isEqualTo(new IntakeCounts(0, 0, 0));
+        assertThat(docs.intakeCounts(other, batch.id())).isEqualTo(new IntakeCounts(0, 0, 0, 0));
     }
 
     @Test
@@ -132,8 +132,9 @@ class IntakeUploadIT extends AbstractPostgresIT {
         docs.save(read.markReady(true, List.of()));
         Document gone = pendingDocument(batch, "a/tres.pdf");
         docs.markWithdrawal(gone.withWithdrawal(Optional.of(NOW), Optional.of(user)));
+        docs.save(pendingDocument(batch, "a/escaneo.pdf").awaitReader());
 
-        assertThat(docs.intakeCounts(company, batch.id())).isEqualTo(new IntakeCounts(2, 1, 2));
+        assertThat(docs.intakeCounts(company, batch.id())).isEqualTo(new IntakeCounts(3, 2, 3, 1));
     }
 
     private final UploadDocument upload = new UploadDocument(docs, orgs, new InMemoryOriginalFileStore(),

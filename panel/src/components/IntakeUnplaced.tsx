@@ -10,6 +10,8 @@ import styles from './Intake.module.css';
 
 type Place = S['PlaceDocumentRequest'];
 
+const STATUS: Record<string, string> = { FAILED: 'No se pudo leer este documento.', PENDING_READER: 'Esperando al lector OCR.' };
+
 function UnplacedRow({ doc, projects, place, discard }: { doc: S['IntakeDocumentView']; projects: S['ProjectView'][]; place: (p: Place) => void; discard: () => void }) {
   const [projectId, setProjectId] = useState('');
   const { title } = doc;
@@ -17,7 +19,7 @@ function UnplacedRow({ doc, projects, place, discard }: { doc: S['IntakeDocument
     <li className={styles.row}>
       <p><strong>{title}</strong></p>
       {doc.path && <p className={styles.reason}>{doc.path}</p>}
-      {doc.status === 'FAILED' && <p className={styles.reason}>No se pudo leer este documento.</p>}
+      {STATUS[doc.status] && <p className={styles.reason}>{STATUS[doc.status]}</p>}
       <div className={styles.tools}>
         <select aria-label={`Proyecto de ${title}`} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
           <option value="">Un proyecto…</option>

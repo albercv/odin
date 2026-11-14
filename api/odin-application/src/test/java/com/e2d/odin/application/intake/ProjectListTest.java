@@ -12,6 +12,7 @@ import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.intake.ProjectDecision.Action;
 import com.e2d.odin.application.organization.CreateProject;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.CandidateOrigin;
@@ -44,7 +45,8 @@ class ProjectListTest {
     private final ConfirmProjectCandidates confirm = new ConfirmProjectCandidates(intake, orgs,
             new CreateProject(orgs, ids));
     private final MutableClock clock = new MutableClock();
-    private final CloseProjectList closeList = new CloseProjectList(intake, docs, list, clock);
+    private final CloseProjectList closeList = new CloseProjectList(intake, docs, list,
+            new InstallationSettings("t", true), clock);
     private final CompanyId company = Fixtures.company(orgs);
     private final CompanyId other = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);
@@ -311,6 +313,21 @@ class ProjectListTest {
 
         assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class)
                 .hasMessage("Aún se están leyendo 2 documentos");
+    }
+
+    @Test
+    void withoutAReaderTheScansWaitingForItDoNotHoldTheList() {
+        reading();
+        Document scan = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PENDING_READER);
+        docs.save(scan.withIntake(batch.id(), "a/escaneo.pdf"));
+        CloseProjectList withoutReader = new CloseProjectList(intake, docs, list, new InstallationSettings("t", false),
+                clock);
+
+        assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class)
+                .hasMessage("Aún se está leyendo 1 documento");
+        withoutReader.execute(admin, company, batch.id());
+
+        assertThat(stored().projectListClosed()).isTrue();
     }
 
     @Test

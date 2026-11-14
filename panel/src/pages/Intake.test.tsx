@@ -213,6 +213,15 @@ test('unplacedDocumentsCanBePlacedOrDiscarded', async () => {
   await waitFor(() => expect(called(calls, `POST ${base}/b1/documents/u1/withdraw`)).toBe(true));
 });
 
+test('unplacedScansSayTheyAreWaitingForTheReader', async () => {
+  const docs = { documents: [{ id: 'u2', title: 'Escaneo 9', path: 'cliente', status: 'PENDING_READER' }, { id: 'u3', title: 'Roto', status: 'FAILED' }] };
+  show({ [`GET ${base}/b1/documents?unplaced=true`]: () => docs });
+  await step('2. Proyectos');
+  const section = await screen.findByRole('region', { name: 'Sin ubicar' });
+  expect(within(section).getByText('Esperando al lector OCR.')).toBeInTheDocument();
+  expect(within(section).getByText('No se pudo leer este documento.')).toBeInTheDocument();
+});
+
 test('pairsStepShowsOnlyPairKindsWithTheTitleOfTheOtherDocument', async () => {
   show({});
   await step('3. Parejas');

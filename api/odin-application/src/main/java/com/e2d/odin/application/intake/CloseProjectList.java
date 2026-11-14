@@ -2,6 +2,7 @@ package com.e2d.odin.application.intake;
 
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatch;
@@ -22,13 +23,15 @@ public class CloseProjectList {
     private final IntakeRepository intake;
     private final DocumentRepository documents;
     private final ListProjectCandidates candidates;
+    private final InstallationSettings installation;
     private final Clock clock;
 
     public CloseProjectList(IntakeRepository intake, DocumentRepository documents, ListProjectCandidates candidates,
-            Clock clock) {
+            InstallationSettings installation, Clock clock) {
         this.intake = intake;
         this.documents = documents;
         this.candidates = candidates;
+        this.installation = installation;
         this.clock = clock;
     }
 
@@ -37,7 +40,7 @@ public class CloseProjectList {
         if (batch.state() != IntakeState.READING) {
             throw new ConflictException("La lista se termina cuando la subida está cerrada");
         }
-        int reading = documents.intakeCounts(companyId, batchId).reading();
+        int reading = IntakeBatches.counts(documents, installation, companyId, batchId).reading();
         if (reading > 0) {
             throw new ConflictException(reading == 1 ? "Aún se está leyendo 1 documento"
                     : "Aún se están leyendo " + reading + " documentos");

@@ -33,7 +33,7 @@ Qué hace con la carpeta:
 
 ## Los avisos
 
-- **Sin lector OCR:** los documentos escaneados esperan a que el lector esté instalado. Los de texto se leen igual.
+- **Sin lector OCR:** los documentos de texto se leen y se clasifican igual; los escaneados no se leen. Salen en el panel, en «Sin ubicar», con «Esperando al lector OCR» y sin propuestas. Puedes colocarlos a mano (sin su texto) o descartarlos. Si los dejas, la carga sigue abierta hasta que haya lector y los decidas.
 - **Sin modelo local:** Odín no podrá proponer proyectos para los documentos que no se reconocen por su carpeta o su contenido. Los decides tú a mano.
 - **Poco espacio en el disco:** haz sitio antes de seguir.
 - **Hay una primera carga abierta sin cerrar:** la orden sigue con ella y no abre otra.
