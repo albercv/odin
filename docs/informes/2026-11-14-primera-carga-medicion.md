@@ -67,7 +67,7 @@ Sobre los 845 documentos del lote, con la propuesta tal como sale de la API, ant
 | Versión nueva (sustituye a) | Precisión 0,837 y cobertura 0,837 (36 de 43 pares) | 0,83 y 0,83 (38 de 46) | 0,83 o más en precisión. Cumple |
 | Enlace a ficha de caso | 6 propuestos | Sin medir | Se mide con el archivo ampliado del encargo 13. **Sin medir aquí** (no hay verdad de enlaces) |
 
-- **Por qué la cobertura de escaneos es 0,80.**
+- **Por qué la cobertura de escaneos es 0,80** (resuelto en el apartado 8, donde pasa a 1,00).
   - Los 4 escaneos no enlazados son los de documentos sin proyecto propuesto: `scan-0001`, `scan-0002` y `scan-0003` (normas, sin proyecto) y `scan-0030` (procedimiento de «Procedimientos generales», que no salió como candidato). Comprobado en la base de la segunda ejecución: los 14 escaneos sin enlace son esos 4 y los 10 que no tienen original en la carpeta.
   - `ClassifyIntake` solo compara entre documentos con un único proyecto propuesto (spec, `SAME_AS_SCAN` y `SUPERSEDES` «solo entre documentos del mismo proyecto propuesto»). No he comprobado cómo trataba el estudio estos casos. Es una decisión de diseño con una consecuencia medida: hay que decidir si se acepta, o si los documentos sin proyecto se comparan en su propio grupo.
 - **Versiones:** 7 de las 43 propuestas no están en la verdad. El estudio tuvo 8 falsos positivos y los atribuyó a cadenas de pólizas de 2022, 2024 y 2025 de una misma comunidad que la verdad no anota; aquí no se han revisado una a una, así que esa explicación no está comprobada para estos 7.
@@ -108,7 +108,7 @@ Por la API, en las dos ejecuciones, con 845 documentos del lote. Cada trabajador
 
 ## 6. Lo que no salió como esperaba
 
-1. **Cobertura de escaneos de 0,80, no 1,00** (apartado 3). Por diseño, pero incumple el criterio literal del spec. Hace falta una decisión de quien lo definió.
+1. **Cobertura de escaneos de 0,80, no 1,00** (apartado 3). Por diseño, pero incumplía el criterio literal del spec. Resuelto en el apartado 8: con el cambio decidido, 1,00.
 2. **Un `SIGKILL` deja el cerrojo de la instalación.** `data/pilas/<proyecto>/instalacion.lock` queda sin borrar porque `cerrojo.sh` limpia con un `trap` que un `SIGKILL` no ejecuta. La propia orden dice cómo quitarlo (`rmdir`). Con Ctrl-C no ocurre. Se ha borrado a mano en las dos ejecuciones antes de relanzar. No lo he tocado.
 3. **Nombres descubiertos con la mayúscula del texto.** La prueba pequeña lo enseñó: se descubre «calle Olmo 47» si el texto lo trae así. El administrador confirma el nombre tal cual. Es cosmético, pero crea un proyecto con ese nombre.
 4. **La orden no se puede relanzar después de cerrar la subida.** Con el lote ya en lectura, la orden contesta «Ya hay una primera carga en curso» y no sube nada. Es lo que dice su texto y lo esperado, pero significa que reanudar solo vale hasta cerrar la subida. Lo vi en una prueba previa con una carpeta pequeña, que terminó antes de poder cortarla.
@@ -142,3 +142,4 @@ Por la API, en las dos ejecuciones, con 845 documentos del lote. Cada trabajador
   - **Tiempos y memoria,** sin cambios fuera del ruido: lectura 231 s y clasificación 35 s (±5 s), subida cortada en 7 s sin duplicados (845 documentos y 845 SHA-256), pico del OCR de 7,8 GB, pico de Ollama de 7,8 a 8,0 GB y suma de residentes de 14,7 y 15,2 GB.
   - **Nada más.** Las demás cifras de acierto coinciden con las de la primera medición.
 - **Nota.** Las propuestas de escaneo sobre documentos sin proyecto son nuevas, y no hay selección de por medio: son las mismas 20 parejas de la verdad. No se ha medido el efecto en un archivo con muchos documentos sin proyecto, donde comparar entre sí documentos sin contexto puede dar más falsos positivos.
+- **Nota sobre los ficheros de resultados.** Los cuatro `medicion-*.json` decían al principio `ejecuciones: 1` y «36 GB» fijos en el guion; se han corregido a mano el número de ejecuciones (2 por serie) y el número de la ejecución, y el guion ahora los recibe (`--ejecucion`, `--ejecuciones`) y lee la memoria con `sysctl hw.memsize`. Las cifras medidas no se han tocado.
