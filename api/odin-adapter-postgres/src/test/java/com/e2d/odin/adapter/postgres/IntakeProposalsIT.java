@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.intake.DecisionState;
@@ -18,10 +19,12 @@ import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 /** Las propuestas nuevas son idempotentes en la base y se guardan todas o ninguna. */
 class IntakeProposalsIT extends AbstractPostgresIT {
@@ -85,5 +88,40 @@ class IntakeProposalsIT extends AbstractPostgresIT {
 
         assertThat(intake.proposals(company, batch.id())).singleElement()
                 .satisfies(x -> assertThat(x.state()).isEqualTo(DecisionState.CONFIRMED));
+    }
+
+    @Test
+    void aDontKnowIsStoredWithWhoAndWhenAndADecidedProposalWithoutThemIsRefused() {
+        IntakeProposal p = proposal(document.id(), ProposalKind.PROJECT, Optional.of(project));
+        intake.addProposals(List.of(p));
+        UserId admin = newUser(company);
+
+        intake.save(p.dontKnow(admin, NOW));
+
+        assertThat(intake.proposals(company, batch.id())).singleElement().satisfies(x -> {
+            assertThat(x.state()).isEqualTo(DecisionState.DONT_KNOW);
+            assertThat(x.decidedBy()).contains(admin);
+            assertThat(x.decidedAt()).contains(NOW);
+        });
+        for (String state : List.of("CONFIRMED", "REJECTED", "DONT_KNOW")) {
+            assertThatThrownBy(() -> JdbcClient.create(Db.owner()).sql("UPDATE intake_proposal SET state = '" + state
+                    + "', decided_by = NULL, decided_at = now() WHERE id = '" + p.id() + "'").update())
+                    .as(state + " sin quién").isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        }
+    }
+
+    @Test
+    void placingADocumentStoresWhoAndWhen() {
+        UserId admin = newUser(company);
+        JdbcClient.create(Db.owner()).sql("UPDATE document SET intake_pending = true, intake_batch_id = '"
+                + batch.id().value() + "' WHERE id = '" + document.id().value() + "'").update();
+
+        docs.confirmIntake(company, document.id(), Optional.of(project), admin, NOW);
+
+        Map<String, Object> row = JdbcClient.create(Db.owner()).sql("SELECT intake_pending, intake_placed_by, "
+                + "intake_placed_at FROM document WHERE id = '" + document.id().value() + "'").query().singleRow();
+        assertThat(row.get("intake_pending")).isEqualTo(false);
+        assertThat(row.get("intake_placed_by")).isEqualTo(admin.value());
+        assertThat(((java.sql.Timestamp) row.get("intake_placed_at")).toInstant()).isEqualTo(NOW);
     }
 }

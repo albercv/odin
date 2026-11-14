@@ -575,9 +575,10 @@ public class UseCaseConfiguration {
     @Bean
     IntakeEffects intakeEffects(IntakeRepository intake, DocumentRepository documents,
             OrganizationRepository organizations, MarkCaseDocuments markCaseDocuments,
-            SupersedeDocument supersedeDocument, AddToCaseFiles addToCaseFiles, Clock clock) {
+            SupersedeDocument supersedeDocument, AddToCaseFiles addToCaseFiles,
+            InstallationSettings installationSettings, Clock clock) {
         return new IntakeEffects(intake, documents, organizations, markCaseDocuments, supersedeDocument,
-                addToCaseFiles, clock);
+                addToCaseFiles, installationSettings, clock);
     }
 
     @Bean

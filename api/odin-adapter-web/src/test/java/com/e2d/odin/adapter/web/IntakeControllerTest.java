@@ -175,11 +175,14 @@ class IntakeControllerTest extends WebTestSupport {
         org.assertj.core.api.Assertions.assertThat(w.orgs.listProjects(company)).isEmpty();
     }
 
+    /** Subido y ya leído: en revisión nada se está leyendo (con la lectura en marcha, decidir da 409). */
     private com.e2d.odin.domain.document.Document uploaded(String content) throws Exception {
         String body = mvc.perform(file(content, admin)).andExpect(status().isCreated()).andReturn().getResponse()
                 .getContentAsString();
-        return w.docs.get(new com.e2d.odin.domain.shared.DocumentId(java.util.UUID.fromString(
-                com.jayway.jsonpath.JsonPath.<String>read(body, "$.document.id")))).orElseThrow();
+        var read = w.docs.get(new com.e2d.odin.domain.shared.DocumentId(java.util.UUID.fromString(
+                com.jayway.jsonpath.JsonPath.<String>read(body, "$.document.id")))).orElseThrow().markReady(false, List.of());
+        w.docs.save(read);
+        return read;
     }
 
     private com.e2d.odin.domain.intake.IntakeProposal proposal(com.e2d.odin.domain.document.Document d,
@@ -273,7 +276,8 @@ class IntakeControllerTest extends WebTestSupport {
         postJson(decide, "{\"decision\":\"OTRA\"}").andExpect(status().isBadRequest());
         postJson(decide, "{\"decision\":\"CORRECT_PROJECT\"}").andExpect(status().isBadRequest());
         postJson(decide, "{\"decision\":\"DONT_KNOW\"}").andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("PROPOSED"));
+                .andExpect(jsonPath("$.state").value("DONT_KNOW")).andExpect(jsonPath("$.decidedBy").exists())
+                .andExpect(jsonPath("$.decidedAt").exists());
         postJson(decide, "{\"decision\":\"COMPANY_WIDE\"}").andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("REJECTED")).andExpect(jsonPath("$.decidedAt").exists());
         org.assertj.core.api.Assertions.assertThat(w.docs.get(second.id()).orElseThrow().projectId()).isEmpty();

@@ -4,10 +4,11 @@ import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
-import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -48,8 +49,17 @@ final class IntakeBatches {
     static void closeIfDone(IntakeRepository intake, DocumentRepository documents, IntakeBatch batch, Instant now) {
         boolean pending = documents.intakeCounts(batch.companyId(), batch.id()).pending() > 0;
         if (!pending && intake.proposals(batch.companyId(), batch.id()).stream()
-                .noneMatch(p -> p.state() == DecisionState.PROPOSED)) {
+                .noneMatch(IntakeProposal::open)) {
             intake.save(batch.close(now));
         }
+    }
+
+    /** En cola o leyéndose: lo reclamará un lector. Sin lector OCR, lo que espera al lector no está en ninguna cola. */
+    static boolean beingRead(Document d, InstallationSettings installation) {
+        return switch (d.status()) {
+            case RECEIVED, PROCESSING, READER_PROCESSING -> true;
+            case PENDING_READER -> installation.scannedDocumentsSupported();
+            case READY, FAILED -> false;
+        };
     }
 }

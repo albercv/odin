@@ -3,7 +3,6 @@ package com.e2d.odin.application.intake;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.document.Document;
-import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.intake.ProposalKind;
@@ -22,7 +21,7 @@ final class UnplacedDocuments {
     static List<Document> find(IntakeRepository intake, DocumentRepository documents, CompanyId companyId,
             IntakeBatchId batchId) {
         Set<DocumentId> withProposal = intake.proposals(companyId, batchId).stream()
-                .filter(p -> p.state() == DecisionState.PROPOSED && placement(p))
+                .filter(p -> p.open() && placement(p))
                 .map(IntakeProposal::documentId).collect(Collectors.toSet());
         return documents.intakePendingDocuments(companyId, batchId).stream()
                 .filter(d -> !withProposal.contains(d.id())).toList();

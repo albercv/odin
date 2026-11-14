@@ -490,7 +490,7 @@ class ClassifyIntakeTest {
         confirmed(OLMO, olmoId);
         Document d = pending("a/uno.pdf", OLMO_TEXT);
         classify(false).execute();
-        docs.confirmIntake(company, d.id(), Optional.of(olmoId));
+        docs.confirmIntake(company, d.id(), Optional.of(olmoId), Actors.companyAdmin(company).userId(), clock.instant());
 
         classify(false).execute();
 

@@ -20,6 +20,7 @@ import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
 import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.domain.document.Document;
@@ -116,7 +117,7 @@ class IntakeConfirmationIT {
         IntakeEffects effects = config.intakeEffects(intake, docs, organizations,
                 new MarkCaseDocuments(docs, caseFiles, clock), new SupersedeDocument(docs, clock),
                 new AddToCaseFiles(organizations, new PostgresProjectMemberRepository(tx), docs, caseFiles,
-                        new RandomUuidGenerator(), clock), clock);
+                        new RandomUuidGenerator(), clock), new InstallationSettings("t", true), clock);
         confirm = config.confirmIntakeProposals(intake, effects, transactionManager);
         decide = config.decideIntakeProposal(intake, effects, transactionManager);
         place = config.placeIntakeDocument(effects, transactionManager);
@@ -246,7 +247,8 @@ class IntakeConfirmationIT {
 
         assertThat(seenBy(CompanyScope.of(company), ProjectVisibility.all(), d, "cuarzo")).isFalse();
         assertThat(stored(d).intakePending()).isTrue();
-        assertThat(stored(p).state()).isEqualTo(DecisionState.PROPOSED);
+        assertThat(stored(p).state()).isEqualTo(DecisionState.DONT_KNOW);
+        assertThat(stored(p).decidedBy()).contains(admin.userId());
     }
 
     @Test

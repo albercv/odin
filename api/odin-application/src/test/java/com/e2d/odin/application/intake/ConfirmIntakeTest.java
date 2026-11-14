@@ -18,6 +18,7 @@ import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
@@ -86,8 +87,16 @@ class ConfirmIntakeTest {
                 return super.execute(actor, companyId, assignments);
             }
         };
+        this.spy = spy;
+        effects(true);
+    }
+
+    private AddToCaseFiles spy;
+
+    /** Los casos de uso con o sin lector OCR en la instalación. */
+    private void effects(boolean reader) {
         IntakeEffects effects = new IntakeEffects(intake, docs, orgs, new MarkCaseDocuments(docs, files, clock),
-                new SupersedeDocument(docs, clock), spy, clock);
+                new SupersedeDocument(docs, clock), spy, new InstallationSettings("t", reader), clock);
         confirm = new ConfirmIntakeProposals(intake, effects);
         decide = new DecideIntakeProposal(intake, effects);
         discard = new DiscardIntakeDocument(docs, new WithdrawDocument(docs, clock), effects);
@@ -173,16 +182,60 @@ class ConfirmIntakeTest {
     }
 
     @Test
-    void dontKnowKeepsTheDocumentPendingAndTheProposalUndecided() {
+    void dontKnowKeepsTheDocumentPendingTheProposalOpenAndRecordsWhoAndWhen() {
         Document d = pending("Dudoso");
         IntakeProposal p = project(d, olmo, ProposalConfidence.LOW);
 
         decide.execute(admin, company, batch.id(), p.id(), IntakeDecision.DONT_KNOW, Optional.empty());
 
         assertThat(stored(d).intakePending()).isTrue();
-        assertThat(stored(p).state()).isEqualTo(DecisionState.PROPOSED);
-        assertThat(stored(p).decidedAt()).isEmpty();
+        assertThat(stored(p).state()).isEqualTo(DecisionState.DONT_KNOW);
+        assertThat(stored(p).decidedBy()).contains(admin.userId());
+        assertThat(stored(p).decidedAt()).contains(clock.instant());
         assertThat(intake.find(company, batch.id()).orElseThrow().state()).isEqualTo(IntakeState.IN_REVIEW);
+        assertThat(list.execute(admin, company, batch.id(), ProposalFilter.none()).get(0).items())
+                .extracting(i -> i.proposal().id()).containsExactly(p.id());
+        assertThat(unplaced.execute(admin, company, batch.id())).isEmpty();
+
+        decide.execute(admin, company, batch.id(), p.id(), IntakeDecision.CONFIRM, Optional.empty());
+
+        assertThat(stored(p).state()).isEqualTo(DecisionState.CONFIRMED);
+        assertThat(intake.find(company, batch.id()).orElseThrow().state()).isEqualTo(IntakeState.CLOSED);
+    }
+
+    @Test
+    void aDocumentStillBeingReadCannotBeConfirmedNorPlaced() {
+        Document reading = withStatus(pending("Leyéndose"), DocumentStatus.PROCESSING);
+        IntakeProposal p = project(reading, olmo, ProposalConfidence.HIGH);
+        Document queued = withStatus(pending("En cola"), DocumentStatus.RECEIVED);
+
+        assertThatThrownBy(() -> confirm(p)).isInstanceOf(ConflictException.class)
+                .hasMessage("«Leyéndose» se está leyendo; espera a que termine");
+        assertThatThrownBy(() -> place(queued, Optional.of(olmo), false)).isInstanceOf(ConflictException.class)
+                .hasMessage("«En cola» se está leyendo; espera a que termine");
+        assertThat(stored(reading).intakePending()).isTrue();
+        assertThat(stored(queued).intakePending()).isTrue();
+        assertThat(stored(p).state()).isEqualTo(DecisionState.PROPOSED);
+    }
+
+    @Test
+    void aScanWaitingForTheReaderIsBeingReadOnlyWhenThereIsAReader() {
+        Document waiting = withStatus(pending("Escaneo"), DocumentStatus.PENDING_READER);
+        pending("Para que siga abierto");
+
+        assertThatThrownBy(() -> place(waiting, Optional.of(olmo), false)).isInstanceOf(ConflictException.class);
+        effects(false);
+        place(waiting, Optional.of(olmo), false);
+
+        assertThat(stored(waiting).projectId()).contains(olmo);
+    }
+
+    private Document withStatus(Document d, DocumentStatus status) {
+        Document changed = new Document(d.id(), company, Optional.empty(), d.title(), d.filename(), d.format(),
+                d.sha256(), status, Optional.empty(), true, d.uploadedBy(), d.uploadedAt(), Optional.empty(), 0,
+                Optional.empty(), Optional.empty()).withIntake(batch.id(), "Cliente/" + d.title());
+        docs.save(changed);
+        return changed;
     }
 
     @Test
@@ -540,6 +593,7 @@ class ConfirmIntakeTest {
 
         assertThat(stored(inProject).projectId()).contains(olmo);
         assertThat(stored(inProject).intakePending()).isFalse();
+        assertThat(docs.placedBy(inProject.id())).isEqualTo(java.util.Map.entry(admin.userId(), clock.instant()));
         assertThat(visibleTo(inProject, ProjectVisibility.of(Set.of(haya)))).isFalse();
         assertThat(stored(everyone).projectId()).isEmpty();
         assertThat(visibleTo(everyone, ProjectVisibility.of(Set.of()))).isTrue();
@@ -564,7 +618,8 @@ class ConfirmIntakeTest {
         project(proposed, olmo, ProposalConfidence.LOW);
         pending("Para que siga abierto");
 
-        assertThatThrownBy(() -> place(broken, Optional.of(olmo), false)).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> place(broken, Optional.of(olmo), false)).isInstanceOf(ConflictException.class)
+                .hasMessage("«Roto» no se pudo leer: descártalo y, si lo necesitas, súbelo de nuevo desde Documentos");
         assertThatThrownBy(() -> place(proposed, Optional.of(olmo), false)).isInstanceOf(ConflictException.class)
                 .hasMessageContaining("decídelo en su propuesta");
         assertThat(stored(broken).intakePending()).isTrue();

@@ -1634,7 +1634,7 @@ export interface components {
              */
             projectId?: string;
         };
-        /** @description state: PROPOSED (sigue sin decidir, con «no lo sé»), CONFIRMED o REJECTED. decidedBy y decidedAt: quién y cuándo, si está decidida. */
+        /** @description state: PROPOSED, CONFIRMED, REJECTED o DONT_KNOW («no lo sé»: sigue abierta y se puede decidir después). decidedBy y decidedAt: quién y cuándo, si está decidida o con «no lo sé». */
         DecidedProposal: {
             /** Format: uuid */
             id: string;

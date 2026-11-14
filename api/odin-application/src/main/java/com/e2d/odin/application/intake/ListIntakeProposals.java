@@ -3,7 +3,6 @@ package com.e2d.odin.application.intake;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.identity.Actor;
-import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.intake.ProposalConfidence;
@@ -39,7 +38,7 @@ public class ListIntakeProposals {
         IntakeBatches.require(intake, actor, companyId, batchId);
         Map<DocumentId, String> titles = new java.util.HashMap<>(documents.intakeTitles(companyId, batchId));
         List<IntakeProposal> proposed = intake.proposals(companyId, batchId).stream()
-                .filter(p -> p.state() == DecisionState.PROPOSED).filter(filter::matches).toList();
+                .filter(IntakeProposal::open).filter(filter::matches).toList();
         titles.putAll(documents.titlesOf(companyId, proposed.stream().flatMap(p -> p.targetDocumentId().stream())
                 .filter(t -> !titles.containsKey(t)).distinct().toList()));
         Map<Key, List<IntakeProposalItem>> groups = new LinkedHashMap<>();

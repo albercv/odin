@@ -10,6 +10,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
@@ -98,7 +99,7 @@ public interface DocumentRepository {
      * Saca un documento pendiente de lo pendiente (D1): lo deja en ese proyecto, o sin proyecto, y visible para quien lo
      * ve. Si ya está confirmado o retirado, o hay otro igual y visible en ese proyecto, 409 y no cambia nada.
      */
-    void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId);
+    void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId, UserId by, Instant at);
 
     /** Pone {@code scan_of}: el documento es el escaneo del original (D3). Solo sobre documentos visibles, no pendientes. */
     void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId);

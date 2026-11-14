@@ -8,7 +8,7 @@ public enum IntakeDecision {
     CORRECT_PROJECT,
     /** El documento queda sin proyecto, visible para toda la empresa. */
     COMPANY_WIDE,
-    /** Dejarlo pendiente y oculto: un aviso, sin plazo (D-080). */
+    /** Dejarlo pendiente y oculto, sin plazo (D-080): queda quién y cuándo, y se puede decidir después. */
     DONT_KNOW,
     REJECT
 }

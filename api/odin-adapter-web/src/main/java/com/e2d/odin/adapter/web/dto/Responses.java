@@ -589,8 +589,8 @@ public final class Responses {
     public record ConfirmedProposals(int confirmed) {
     }
 
-    @Schema(description = "state: PROPOSED (sigue sin decidir, con «no lo sé»), CONFIRMED o REJECTED. decidedBy y decidedAt: "
-            + "quién y cuándo, si está decidida.")
+    @Schema(description = "state: PROPOSED, CONFIRMED, REJECTED o DONT_KNOW («no lo sé»: sigue abierta y se puede decidir "
+            + "después). decidedBy y decidedAt: quién y cuándo, si está decidida o con «no lo sé».")
     public record DecidedProposal(UUID id, String state, @Nullable UUID decidedBy, @Nullable Instant decidedAt) {
         public static DecidedProposal from(com.e2d.odin.domain.intake.IntakeProposal p) {
             return new DecidedProposal(p.id(), p.state().name(), p.decidedBy().map(UserId::value).orElse(null),

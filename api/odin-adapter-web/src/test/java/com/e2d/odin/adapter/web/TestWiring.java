@@ -382,7 +382,8 @@ public class TestWiring {
     }
 
     @Bean IntakeEffects intakeEffects() {
-        return new IntakeEffects(intake, docs, orgs, markCaseDocuments(), supersedeDocument(), addToCaseFiles(), clock);
+        return new IntakeEffects(intake, docs, orgs, markCaseDocuments(), supersedeDocument(), addToCaseFiles(),
+                installationSettings(), clock);
     }
 
     @Bean ListUnplacedDocuments listUnplacedDocuments() {

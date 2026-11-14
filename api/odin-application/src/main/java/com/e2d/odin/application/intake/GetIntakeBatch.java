@@ -4,8 +4,8 @@ import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
-import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.application.shared.InstallationSettings;
@@ -47,7 +47,7 @@ public class GetIntakeBatch {
             warnings.add(IntakeWarning.PROJECT_LIST_NOT_CONFIRMED);
         }
         Map<ProposalKind, Integer> proposed = new EnumMap<>(ProposalKind.class);
-        intake.proposals(companyId, batchId).stream().filter(p -> p.state() == DecisionState.PROPOSED)
+        intake.proposals(companyId, batchId).stream().filter(IntakeProposal::open)
                 .forEach(p -> proposed.merge(p.kind(), 1, Integer::sum));
         int unplaced = batch.state() == IntakeState.IN_REVIEW
                 ? UnplacedDocuments.find(intake, documents, companyId, batchId).size() : 0;

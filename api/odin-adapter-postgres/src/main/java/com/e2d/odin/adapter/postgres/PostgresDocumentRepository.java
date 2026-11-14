@@ -304,14 +304,16 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId) {
+    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId, UserId by,
+            Instant at) {
         int updated;
         try {
             updated = pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
-                    UPDATE document SET project_id = :project, intake_pending = false
+                    UPDATE document SET project_id = :project, intake_pending = false, intake_placed_by = :by,
+                        intake_placed_at = :at
                     WHERE id = :id AND company_id = :company AND intake_pending AND withdrawn_at IS NULL""")
                     .param("project", projectId.map(ProjectId::value).orElse(null)).param("id", id.value())
-                    .param("company", companyId.value()).update());
+                    .param("company", companyId.value()).param("by", by.value()).param("at", Sql.ts(at)).update());
         } catch (ConflictException e) {
             // el índice único de huella de lo visible (V26): alguien subió el mismo fichero a ese proyecto
             throw new ConflictException("Ya hay un documento igual en ese proyecto: descarta este");
