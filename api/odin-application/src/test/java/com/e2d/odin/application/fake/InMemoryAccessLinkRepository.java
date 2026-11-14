@@ -57,12 +57,12 @@ public class InMemoryAccessLinkRepository implements AccessLinkRepository {
     }
 
     private static AccessLink bound(AccessLink l, String address) {
-        return new AccessLink(l.id(), l.kind(), l.companyId(), l.userId(), l.caseId(), l.documentId(), l.createdAt(),
+        return new AccessLink(l.id(), l.kind(), l.companyId(), l.userId(), l.caseId(), l.projectId(), l.documentId(), l.createdAt(),
                 l.expiresAt(), Optional.of(address), l.uploadCount());
     }
 
     private static AccessLink counted(AccessLink l) {
-        return new AccessLink(l.id(), l.kind(), l.companyId(), l.userId(), l.caseId(), l.documentId(), l.createdAt(),
+        return new AccessLink(l.id(), l.kind(), l.companyId(), l.userId(), l.caseId(), l.projectId(), l.documentId(), l.createdAt(),
                 l.expiresAt(), l.boundAddress(), l.uploadCount() + 1);
     }
 
