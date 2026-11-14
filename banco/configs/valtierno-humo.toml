@@ -1,0 +1,30 @@
+# D-104 (medición de la semana): el expediente grande de Valtierno sobre el código de las mejoras del expediente (D-093).
+# Pregunta: ¿usa la IA el expediente cuando es grande, y lo lee entero solo cuando la pregunta lo pide (D-078)?
+# Tope conjunto con el CTO 2: 5 USD; el de Valtierno, 0,4 entre humo y completa.
+name = "valtierno-humo"
+archives = ["ficticio", "generalidad"]
+battery = ["generalidad-expediente"]
+mode = "explore"
+repetitions = 1
+budgetUsd = 0.08
+concurrency = 4
+ownerApproval = "D-104"
+sample = { size = 4, strata = "tipo", seed = 7, include = ["GX01", "GX07", "GX12", "GX13"] }
+
+[[searchers]]
+approach = "main"
+count = 1
+model = "haiku"
+
+[combiner]
+kind = "single"
+
+[[judges]]
+rubric = "strict"
+count = 1
+model = "ollama:qwen3.5:9b"
+think = false
+timeoutS = 120
+
+[judging]
+aggregation = "majority"
