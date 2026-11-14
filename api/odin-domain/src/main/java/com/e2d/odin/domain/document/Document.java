@@ -126,6 +126,21 @@ public record Document(
                 Optional.of(path), scanOf);
     }
 
+    /** Sale de lo pendiente (D1): queda en ese proyecto, o sin proyecto si es de toda la empresa, y visible. */
+    public Document confirmedIn(Optional<ProjectId> newProjectId) {
+        return new Document(id, companyId, newProjectId, title, filename, format, sha256, status, failureReason,
+                paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
+                pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy, intakeBatchId, false, intakePath, scanOf);
+    }
+
+    /** Es el escaneo de otro documento (D3). */
+    public Document scanOf(DocumentId original) {
+        return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
+                paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
+                pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy, intakeBatchId, intakePending, intakePath,
+                Optional.of(original));
+    }
+
     public Document startProcessing(Instant now) {
         return copy(DocumentStatus.PROCESSING, Optional.empty(), paginated, Optional.of(now), attemptCount + 1);
     }

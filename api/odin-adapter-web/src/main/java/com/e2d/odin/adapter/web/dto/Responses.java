@@ -501,6 +501,48 @@ public final class Responses {
         }
     }
 
+    @Schema(description = "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. "
+            + "targetDocumentId: el otro documento de una pareja o la ficha de un enlace. caseNumber: el número de caso. "
+            + "source: RULES, FOLDER o MODEL.")
+    public record IntakeProposalItem(UUID id, UUID documentId, String title, @Nullable UUID targetDocumentId,
+            @Nullable String caseNumber, String source, String reason) {
+        static IntakeProposalItem from(com.e2d.odin.application.intake.IntakeProposalItem i) {
+            com.e2d.odin.domain.intake.IntakeProposal p = i.proposal();
+            return new IntakeProposalItem(p.id(), p.documentId().value(), i.title(),
+                    p.targetDocumentId().map(d -> d.value()).orElse(null), p.caseNumber().orElse(null),
+                    p.source().name(), p.reason());
+        }
+    }
+
+    @Schema(description = "kind: PROJECT, COMPANY_WIDE, CASE_MARK, CASE_LINK, SAME_AS_SCAN o SUPERSEDES. confidence: HIGH "
+            + "o LOW. projectId: el proyecto propuesto, si la clase lo tiene.")
+    public record IntakeProposalGroup(String kind, String confidence, @Nullable UUID projectId,
+            List<IntakeProposalItem> proposals) {
+        static IntakeProposalGroup from(com.e2d.odin.application.intake.IntakeProposalGroup g) {
+            return new IntakeProposalGroup(g.kind().name(), g.confidence().name(),
+                    g.projectId().map(ProjectId::value).orElse(null),
+                    g.items().stream().map(IntakeProposalItem::from).toList());
+        }
+    }
+
+    public record IntakeProposalGroups(List<IntakeProposalGroup> groups) {
+        public static IntakeProposalGroups from(List<com.e2d.odin.application.intake.IntakeProposalGroup> groups) {
+            return new IntakeProposalGroups(groups.stream().map(IntakeProposalGroup::from).toList());
+        }
+    }
+
+    public record ConfirmedProposals(int confirmed) {
+    }
+
+    @Schema(description = "state: PROPOSED (sigue sin decidir, con «no lo sé»), CONFIRMED o REJECTED. decidedBy y decidedAt: "
+            + "quién y cuándo, si está decidida.")
+    public record DecidedProposal(UUID id, String state, @Nullable UUID decidedBy, @Nullable Instant decidedAt) {
+        public static DecidedProposal from(com.e2d.odin.domain.intake.IntakeProposal p) {
+            return new DecidedProposal(p.id(), p.state().name(), p.decidedBy().map(UserId::value).orElse(null),
+                    p.decidedAt().orElse(null));
+        }
+    }
+
     public record KnownFiles(List<String> sha256) {
     }
 

@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -232,6 +233,44 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 .query((rs, n) -> new IntakeDocument(new DocumentId(Sql.uuid(rs, "id")),
                         Optional.ofNullable(rs.getString("intake_path")), rs.getString("text"), rs.getBoolean("scan")))
                 .list());
+    }
+
+    @Override
+    public java.util.Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT id, title FROM document WHERE company_id = :company AND intake_batch_id = :batch""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "id")), rs.getString("title"))).list()
+                .stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
+    @Override
+    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId) {
+        int updated;
+        try {
+            updated = pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                    UPDATE document SET project_id = :project, intake_pending = false
+                    WHERE id = :id AND company_id = :company AND intake_pending AND withdrawn_at IS NULL""")
+                    .param("project", projectId.map(ProjectId::value).orElse(null)).param("id", id.value())
+                    .param("company", companyId.value()).update());
+        } catch (ConflictException e) {
+            // el índice único de huella de lo visible (V26): alguien subió el mismo fichero a ese proyecto
+            throw new ConflictException("Ya hay un documento igual en ese proyecto: descarta este");
+        }
+        if (updated == 0) {
+            throw new ConflictException("El documento ya no está pendiente");
+        }
+    }
+
+    @Override
+    public void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId) {
+        int updated = tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                UPDATE document SET scan_of = :original WHERE id = :id AND company_id = :company""")
+                .param("original", originalId.value()).param("id", scanId.value())
+                .param("company", companyId.value()).update());
+        if (updated == 0) {
+            throw new NotFoundException("Documento no encontrado");
+        }
     }
 
     @Override

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.shared.CompanyId;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -149,5 +150,153 @@ class IntakeControllerTest extends WebTestSupport {
         mvc.perform(get(candidates).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
         mvc.perform(get(candidates)).andExpect(status().isUnauthorized());
         org.assertj.core.api.Assertions.assertThat(w.orgs.listProjects(company)).isEmpty();
+    }
+
+    private com.e2d.odin.domain.document.Document uploaded(String content) throws Exception {
+        String body = mvc.perform(file(content, admin)).andExpect(status().isCreated()).andReturn().getResponse()
+                .getContentAsString();
+        return w.docs.get(new com.e2d.odin.domain.shared.DocumentId(java.util.UUID.fromString(
+                com.jayway.jsonpath.JsonPath.<String>read(body, "$.document.id")))).orElseThrow();
+    }
+
+    private com.e2d.odin.domain.intake.IntakeProposal proposal(com.e2d.odin.domain.document.Document d,
+            com.e2d.odin.domain.shared.ProjectId project) {
+        var p = new com.e2d.odin.domain.intake.IntakeProposal(java.util.UUID.randomUUID(), company,
+                new com.e2d.odin.domain.intake.IntakeBatchId(java.util.UUID.fromString(
+                        batch.substring(batch.lastIndexOf('/') + 1))), d.id(),
+                com.e2d.odin.domain.intake.ProposalKind.PROJECT, Optional.of(project), Optional.empty(),
+                Optional.empty(), com.e2d.odin.domain.intake.ProposalConfidence.HIGH,
+                com.e2d.odin.domain.intake.ProposalSource.RULES, "Calle Olmo 24",
+                com.e2d.odin.domain.intake.DecisionState.PROPOSED, Optional.empty(), Optional.empty());
+        w.intake.save(p);
+        return p;
+    }
+
+    private void inReview() throws Exception {
+        mvc.perform(post(batch + "/close-upload").cookie(admin)).andExpect(status().isOk());
+        var id = new com.e2d.odin.domain.intake.IntakeBatchId(java.util.UUID.fromString(
+                batch.substring(batch.lastIndexOf('/') + 1)));
+        w.intake.save(w.intake.find(company, id).orElseThrow().finishReading());
+    }
+
+    private com.e2d.odin.domain.shared.ProjectId olmo;
+    private com.e2d.odin.domain.document.Document first;
+    private com.e2d.odin.domain.document.Document second;
+    private com.e2d.odin.domain.document.Document third;
+    private com.e2d.odin.domain.intake.IntakeProposal firstProposal;
+    private com.e2d.odin.domain.intake.IntakeProposal secondProposal;
+
+    private void threeProposals() throws Exception {
+        olmo = com.e2d.odin.application.fake.Fixtures.project(w.orgs, company);
+        first = uploaded("uno");
+        second = uploaded("dos");
+        third = uploaded("tres");
+        firstProposal = proposal(first, olmo);
+        secondProposal = proposal(second, olmo);
+        proposal(third, olmo);
+        inReview();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postJson(String path, String json) throws Exception {
+        return mvc.perform(post(path).cookie(admin).contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    @Test
+    void proposalsAreListedGroupedAndFiltered() throws Exception {
+        threeProposals();
+
+        mvc.perform(get(batch + "/proposals").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.groups", hasSize(1))).andExpect(jsonPath("$.groups[0].kind").value("PROJECT"))
+                .andExpect(jsonPath("$.groups[0].confidence").value("HIGH"))
+                .andExpect(jsonPath("$.groups[0].projectId").value(olmo.value().toString()))
+                .andExpect(jsonPath("$.groups[0].proposals", hasSize(3)))
+                .andExpect(jsonPath("$.groups[0].proposals[0].reason").value("Calle Olmo 24"));
+        mvc.perform(get(batch + "/proposals").param("kind", "CASE_MARK").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.groups", hasSize(0)));
+        mvc.perform(get(batch + "/proposals").param("kind", "OTRA").cookie(admin)).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aGroupIsConfirmedOnceAndAnEmptyGroupIsRefused() throws Exception {
+        threeProposals();
+        String body = "{\"proposalIds\":[\"" + firstProposal.id() + "\"]}";
+
+        postJson(batch + "/proposals/confirm", body).andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmed").value(1));
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().projectId()).contains(olmo);
+        postJson(batch + "/proposals/confirm", body).andExpect(status().isConflict());
+        postJson(batch + "/proposals/confirm", "{\"proposalIds\":[]}").andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void proposalsAreDecidedOneByOne() throws Exception {
+        threeProposals();
+        String decide = batch + "/proposals/" + secondProposal.id() + "/decide";
+
+        postJson(decide, "{\"decision\":\"OTRA\"}").andExpect(status().isBadRequest());
+        postJson(decide, "{\"decision\":\"CORRECT_PROJECT\"}").andExpect(status().isBadRequest());
+        postJson(decide, "{\"decision\":\"DONT_KNOW\"}").andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("PROPOSED"));
+        postJson(decide, "{\"decision\":\"COMPANY_WIDE\"}").andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("REJECTED")).andExpect(jsonPath("$.decidedAt").exists());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(second.id()).orElseThrow().projectId()).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(second.id()).orElseThrow().intakePending()).isFalse();
+    }
+
+    @Test
+    void discardingWithdrawsTheDocumentAndTheBatchClosesWhenNothingIsLeft() throws Exception {
+        threeProposals();
+        postJson(batch + "/proposals/confirm", "{\"proposalIds\":[\"" + firstProposal.id() + "\","
+                + "\"" + secondProposal.id() + "\"]}").andExpect(status().isOk());
+
+        mvc.perform(post(batch + "/documents/" + third.id().value() + "/withdraw").cookie(admin))
+                .andExpect(status().isNoContent());
+
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(third.id()).orElseThrow().withdrawn()).isTrue();
+        mvc.perform(get(batch + "/proposals").cookie(admin)).andExpect(jsonPath("$.groups", hasSize(0)));
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.state").value("CLOSED"));
+    }
+
+    @Test
+    void anAdminOfAnotherCompanyIsRefusedTheConfirmationRoutes() throws Exception {
+        threeProposals();
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        String id = batch.substring(batch.lastIndexOf('/') + 1);
+        String ownPath = "/v1/admin/companies/" + otherCompany.value() + "/intake-batches/" + id;
+        String body = "{\"proposalIds\":[\"" + firstProposal.id() + "\"]}";
+
+        for (String root : List.of(batch, ownPath)) {
+            // con la empresa del lote, 403; con la suya, el lote no existe: 404
+            int refused = root.equals(batch) ? 403 : 404;
+            mvc.perform(get(root + "/proposals").cookie(other)).andExpect(status().is(refused));
+            mvc.perform(post(root + "/proposals/confirm").cookie(other).contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().is(refused));
+            mvc.perform(post(root + "/proposals/" + firstProposal.id() + "/decide").cookie(other)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"CONFIRM\"}"))
+                    .andExpect(status().is(refused));
+            mvc.perform(post(root + "/documents/" + first.id().value() + "/withdraw").cookie(other))
+                    .andExpect(status().is(refused));
+        }
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().intakePending()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().withdrawn()).isFalse();
+    }
+
+    @Test
+    void aWorkerKeyAndAnAnonymousCallerAreRefusedTheConfirmationRoutes() throws Exception {
+        threeProposals();
+        String worker = workerKey(company);
+        String json = "{\"proposalIds\":[\"" + firstProposal.id() + "\"]}";
+
+        mvc.perform(get(batch + "/proposals").header("Authorization", worker)).andExpect(status().isUnauthorized());
+        mvc.perform(post(batch + "/proposals/confirm").header("Authorization", worker)
+                .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isUnauthorized());
+        mvc.perform(post(batch + "/proposals/" + firstProposal.id() + "/decide").header("Authorization", worker)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"CONFIRM\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post(batch + "/documents/" + first.id().value() + "/withdraw").header("Authorization", worker))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get(batch + "/proposals")).andExpect(status().isUnauthorized());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().intakePending()).isTrue();
     }
 }

@@ -1133,6 +1133,104 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals/{proposalId}/decide" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "decideProposal",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "proposalId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DecideProposalRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecidedProposal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals/confirm" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "confirmProposals",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmProposalsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfirmedProposals"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import" : {
       "post" : {
         "tags" : [ "intake-controller" ],
@@ -1371,6 +1469,42 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/withdraw" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "discard",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
           }
         }
       }
@@ -2582,6 +2716,63 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/IntakeBatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals" : {
+      "get" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "proposals",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "kind",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "confidence",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "project",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeProposalGroups"
                 }
               }
             }
@@ -3821,6 +4012,68 @@
         },
         "required" : [ "code", "message" ]
       },
+      "DecideProposalRequest" : {
+        "type" : "object",
+        "properties" : {
+          "decision" : {
+            "type" : "string",
+            "description" : "CONFIRM la confirma, CORRECT_PROJECT la lleva a otro proyecto (projectId), COMPANY_WIDE deja el documento sin proyecto para toda la empresa, DONT_KNOW lo deja pendiente y oculto, REJECT la rechaza.",
+            "enum" : [ "CONFIRM", "CORRECT_PROJECT", "COMPANY_WIDE", "DONT_KNOW", "REJECT" ]
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Solo con CORRECT_PROJECT: el proyecto de la empresa al que va el documento."
+          }
+        },
+        "required" : [ "decision" ]
+      },
+      "DecidedProposal" : {
+        "type" : "object",
+        "description" : "state: PROPOSED (sigue sin decidir, con «no lo sé»), CONFIRMED o REJECTED. decidedBy y decidedAt: quién y cuándo, si está decidida.",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "decidedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "decidedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "id", "state" ]
+      },
+      "ConfirmProposalsRequest" : {
+        "type" : "object",
+        "properties" : {
+          "proposalIds" : {
+            "type" : "array",
+            "description" : "De 1 a 500 propuestas del lote, todo o nada.",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          }
+        },
+        "required" : [ "proposalIds" ]
+      },
+      "ConfirmedProposals" : {
+        "type" : "object",
+        "properties" : {
+          "confirmed" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "confirmed" ]
+      },
       "ProjectCandidateView" : {
         "type" : "object",
         "description" : "origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado.",
@@ -4835,6 +5088,72 @@
           }
         },
         "required" : [ "createdAt", "id", "label", "prefix" ]
+      },
+      "IntakeProposalGroup" : {
+        "type" : "object",
+        "description" : "kind: PROJECT, COMPANY_WIDE, CASE_MARK, CASE_LINK, SAME_AS_SCAN o SUPERSEDES. confidence: HIGH o LOW. projectId: el proyecto propuesto, si la clase lo tiene.",
+        "properties" : {
+          "kind" : {
+            "type" : "string"
+          },
+          "confidence" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "proposals" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IntakeProposalItem"
+            }
+          }
+        },
+        "required" : [ "confidence", "kind", "proposals" ]
+      },
+      "IntakeProposalGroups" : {
+        "type" : "object",
+        "properties" : {
+          "groups" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IntakeProposalGroup"
+            }
+          }
+        },
+        "required" : [ "groups" ]
+      },
+      "IntakeProposalItem" : {
+        "type" : "object",
+        "description" : "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace. caseNumber: el número de caso. source: RULES, FOLDER o MODEL.",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "targetDocumentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "caseNumber" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "id", "reason", "source", "title" ]
       },
       "KnownFiles" : {
         "type" : "object",
