@@ -177,7 +177,7 @@ class IntakeSecurityIT extends AbstractPostgresIT {
     @Test
     void guardOfTheProjectConstraintIsIdempotent() throws Exception {
         String migration = java.nio.file.Files.readString(java.nio.file.Path.of(
-                "src/main/resources/db/migration/V25__intake.sql"));
+                "src/main/resources/db/migration/V26__intake.sql"));
         var m = java.util.regex.Pattern.compile("DO \\$\\$.*?END \\$\\$;", java.util.regex.Pattern.DOTALL).matcher(migration);
         assertThat(m.find()).isTrue();
 
