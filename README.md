@@ -10,6 +10,13 @@ Piezas:
 
 Diseño: `docs/superpowers/specs/2026-11-09-api-central-design.md`.
 
+## Repositorio
+
+- Privado en GitHub (`albercv/odin`). Solo entra quien invite el propietario.
+- Ramas (gitflow): `develop` integra lo aprobado y es la que se sube; `main` recibe los cierres de sprint. Cada trabajo va en `feature/<nombre>`, que sale de `develop`, y cada tarea en `task/<feature>/<tarea>`, que se mezcla con `--no-ff` en su feature. Una feature entra en `develop` solo con el visto bueno del propietario.
+- Lo que está en construcción vive en sus ramas `feature/…` y no se sube hasta que entra en `develop`.
+- Nunca se suben `deploy/.env`, `data/` ni documentos reales: los excluye `.gitignore`, y antes de cada subida se revisa el historial en busca de claves.
+
 ## Requisitos
 
 - Para usarlo: Docker con Docker Compose.
