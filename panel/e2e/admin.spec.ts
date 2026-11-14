@@ -495,30 +495,46 @@ async function workersAskAndSaveCard(page: Page): Promise<void> {
   }
 }
 
+const LINK_PROJECT = 'Proyecto del enlace de caso e2e';
+const LINK_CASE = 'caso-e2e-3';
+
+// Una ficha de caso dentro de un proyecto del que el trabajador es miembro (D-111: sin proyecto no hay enlace de subida).
+async function caseInProjectOf(page: Page, companyId: string, worker: string): Promise<string> {
+  const { id: projectId } = await apiJson<{ id: string }>(page, 'post', `/v1/admin/companies/${companyId}/projects`, { name: LINK_PROJECT });
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/projects/${projectId}/members/${worker}`);
+  const response = await page.request.post(`${API}/v1/admin/companies/${companyId}/documents?projectId=${projectId}&caseDocument=true&title=${LINK_CASE}`,
+    { multipart: { file: { name: `${LINK_CASE}.txt`, mimeType: 'text/plain', buffer: Buffer.from('Ficha de caso ficticia del enlace: humedad en el garaje.') } } });
+  expect(response.ok(), `subir la ficha ${response.status()}`).toBeTruthy();
+  return ((await response.json()) as { document: { id: string } }).document.id;
+}
+
 // El trabajador pide el enlace con su clave real (la API); la página pública se abre sin sesión y sube un fichero.
 async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<void> {
   const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
   const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
   await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES'] });
   const documents = await apiJson<{ id: string; title: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/documents`);
-  const caseId = documents.find((d) => d.title === CASE_FILES[1])?.id ?? '';
+  const generalCaseId = documents.find((d) => d.title === CASE_FILES[1])?.id ?? '';
   const members = await apiJson<{ userId: string; displayName: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/members`);
   const worker = members.find((m) => m.displayName === ASKERS[0])?.userId ?? '';
+  const caseId = await caseInProjectOf(page, companyId, worker);
   const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${worker}/keys`, { label: 'enlace e2e' });
+  const noLink = await page.request.post(`${API}/v1/cases/${generalCaseId}/upload-links`, { headers: { Authorization: `Bearer ${key}` } });
+  expect(noLink.status(), 'una ficha de caso sin proyecto no da enlace de subida').toBe(404);
   const link = await apiJson<{ url: string }>(page, 'post', `/v1/cases/${caseId}/upload-links`, undefined, { Authorization: `Bearer ${key}` });
   const token = link.url.split('/').pop() ?? '';
   const visitorContext = await browser.newContext();
   const visitor = await visitorContext.newPage();
   await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/${token}`);
   await expect(visitor.getByText('Caso', { exact: true })).toBeVisible();
-  await expect(visitor.getByText(CASE_FILES[1] ?? '')).toBeVisible();
+  await expect(visitor.getByText(LINK_CASE)).toBeVisible();
   await visitor.getByLabel('Elegir ficheros').setInputFiles({ name: 'foto-e2e.txt', mimeType: 'text/plain', buffer: Buffer.from('Foto ficticia enviada por el enlace.') });
   await expect(visitor.getByText('recibido: foto-e2e.txt')).toBeVisible();
   await expect(visitor.getByRole('link')).toHaveCount(0);
   expect((await new AxeBuilder({ page: visitor }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
   await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/token-que-no-existe`);
   await expect(visitor.getByRole('alert')).toBeVisible();
-  await expect(visitor.getByText(CASE_FILES[1] ?? '')).toHaveCount(0);
+  await expect(visitor.getByText(LINK_CASE)).toHaveCount(0);
   await visitorContext.close();
   console.log('✓ Admin 20b: página pública de subida por enlace, sin sesión: caso y proyecto, recibido y enlace no válido sin datos del caso');
 }

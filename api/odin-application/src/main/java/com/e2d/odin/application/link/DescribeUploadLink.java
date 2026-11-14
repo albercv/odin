@@ -11,8 +11,6 @@ import java.util.Optional;
 /** Lo que la página de subida dice antes de subir: en qué proyecto, y en qué caso si lo hay, entrará el documento. */
 public class DescribeUploadLink {
 
-    private static final String GENERAL = "General";
-
     private final ResolveLink resolve;
     private final OrganizationRepository organizations;
 
@@ -34,8 +32,7 @@ public class DescribeUploadLink {
     }
 
     private String projectNameOf(Document caseDocument) {
-        return caseDocument.projectId().map(id -> organizations.findProject(caseDocument.companyId(), id)
-                .map(Project::name).orElseThrow(() -> new NotFoundException("Enlace no encontrado")))
-                .orElse(GENERAL);
+        return organizations.findProject(caseDocument.companyId(), caseDocument.projectId().orElseThrow())
+                .map(Project::name).orElseThrow(() -> new NotFoundException("Enlace no encontrado"));
     }
 }

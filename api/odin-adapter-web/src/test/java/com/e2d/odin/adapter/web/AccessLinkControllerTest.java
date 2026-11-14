@@ -83,4 +83,18 @@ class AccessLinkControllerTest extends WebTestSupport {
         mvc.perform(upload(token, "otro-contenido")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.duplicate").value(false));
     }
+
+    @Test
+    void caseLinkIs404IdenticallyForACaseWithoutProjectAndAMissingCase() throws Exception {
+        Document general = Fixtures.readyDocument(w.docs, company, "ficha");
+        w.docs.markCaseDocuments(company, Set.of(general.id()), true);
+        String withoutProject = general.id().value().toString();
+        String missing = java.util.UUID.randomUUID().toString();
+        String a = mvc.perform(post("/v1/cases/" + withoutProject + "/upload-links").header(AUTH, key))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+        String b = mvc.perform(post("/v1/cases/" + missing + "/upload-links").header(AUTH, key))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+        // el cuerpo solo difiere en `instance`, que repite la ruta pedida
+        org.assertj.core.api.Assertions.assertThat(a.replace(withoutProject, "X")).isEqualTo(b.replace(missing, "X"));
+    }
 }

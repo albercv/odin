@@ -224,6 +224,16 @@ class AccessLinkIT {
     }
 
     @Test
+    void uploadLinkOfACaseWithoutProjectIsNotFound() {
+        Worker marta = worker(List.of(project()));
+        String caseId = adminUpload("ficha.txt", null, true, unique("Ficha")).json().get("document").get("id").asString();
+
+        Reply reply = api.post("/v1/cases/" + caseId + "/upload-links", map(), "Authorization", marta.bearer());
+
+        assertThat(reply.status()).isEqualTo(404);
+    }
+
+    @Test
     void expiredLinkIsNotFound() {
         String project = project();
         Worker marta = worker(List.of(project));

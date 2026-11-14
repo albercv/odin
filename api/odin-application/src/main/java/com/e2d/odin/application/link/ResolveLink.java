@@ -1,6 +1,5 @@
 package com.e2d.odin.application.link;
 
-import com.e2d.odin.application.casefile.CaseFileAccess;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.port.DocumentRepository;
@@ -73,8 +72,8 @@ public class ResolveLink {
             return new LinkTarget.ProjectTarget(
                     ProjectUploadAccess.require(actor, organizations, projectMembers, link.projectId().get()));
         }
-        return new LinkTarget.CaseTarget(CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers)
-                .caseDocument(documents, link.caseId().orElseThrow()));
+        return new LinkTarget.CaseTarget(CaseUploadAccess.require(actor, organizations, projectMembers, documents,
+                link.caseId().orElseThrow()));
     }
 
     private LinkTarget visibleOriginal(Actor actor, AccessLink link) {

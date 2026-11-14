@@ -67,6 +67,13 @@ final class LinkWorld {
         return docs.get(d.id()).orElseThrow();
     }
 
+    /** Una ficha de caso de lo general de la empresa, sin proyecto. */
+    Document caseInGeneral() {
+        Document d = Fixtures.readyDocument(docs, company, "texto");
+        docs.markCaseDocuments(company, Set.of(d.id()), true);
+        return docs.get(d.id()).orElseThrow();
+    }
+
     ResolveLink resolve() {
         var actors = new ResolveActor(new InMemoryAccessKeyRepository(), users, memberships, null, secrets);
         return new ResolveLink(links, actors, orgs, members, docs, secrets, clock);
