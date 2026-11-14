@@ -10,14 +10,24 @@ const card = (n: number, authorId = 'u1') => ({
 const members = [{ userId: 'u1', displayName: 'Jorge Salas', roles: ['WORKER'], active: true }];
 const projects = [{ id: 'p1', companyId: 'c1', name: 'Garajes Plaza Sol' }];
 
-function show(cards: unknown[], onPendingChanged = vi.fn()) {
-  const calls = mockFetch({
-    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=50': () => ({ cards, total: cards.length }),
+const base = 'GET /v1/admin/companies/c1/cards?status=PENDING';
+// Servidor falso: pagina de 10 en 10 sobre `pending`; aprobar una ficha la quita de la lista.
+function show(cards: { id: string; title: string; body: string }[], onPendingChanged = vi.fn()) {
+  let pending = cards;
+  const page = (offset: number, q = '') => {
+    const found = pending.filter((c) => `${c.title} ${c.body}`.includes(q));
+    return { cards: found.slice(offset, offset + 10), total: found.length };
+  };
+  const review = (id: string) => () => { pending = pending.filter((c) => c.id !== id); return {}; };
+  const routes: Record<string, () => unknown> = {
     'GET /v1/admin/companies/c1/members': () => members,
     'GET /v1/admin/companies/c1/projects': () => projects,
-    'POST /v1/admin/cards/k1/review': () => ({}),
-    'POST /v1/admin/cards/k2/review': () => ({}),
-  });
+    [`${base}&offset=0&limit=10`]: () => page(0),
+    [`${base}&offset=10&limit=10`]: () => page(10),
+    [`${base}&offset=0&limit=10&q=tejado`]: () => page(0, 'tejado'),
+  };
+  cards.forEach((c) => { routes[`POST /v1/admin/cards/${c.id}/review`] = review(c.id); });
+  const calls = mockFetch(routes);
   renderWithProviders(<Review companyId="c1" onPendingChanged={onPendingChanged} />);
   return { calls, onPendingChanged };
 }
@@ -83,7 +93,7 @@ test('rejectRequiresAReason', async () => {
 test('resolvedCardLeavesTheQueueAndTheCountDrops', async () => {
   const { calls, onPendingChanged } = show([card(1), card(2)]);
   await screen.findByRole('heading', { name: 'Ficha 1' });
-  expect(onPendingChanged).toHaveBeenLastCalledWith(2);
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(2));
   await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
   expect(await screen.findByRole('status')).toHaveTextContent('Ficha aprobada');
   expect(sent(calls, 'k1')).toEqual({ decision: 'APPROVE' });
@@ -137,4 +147,57 @@ test('focusMovesToTheEmptyStateWhenTheQueueIsDone', async () => {
   show([card(1)]);
   await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
   expect(await screen.findByRole('heading', { name: 'No hay fichas pendientes.' })).toHaveFocus();
+});
+
+const many = (n: number) => Array.from({ length: n }, (_, i) => card(i + 1));
+
+test('pagesTenCardsAtATime', async () => {
+  show(many(15));
+  expect(await screen.findByRole('button', { name: /Ficha 10/ })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Ficha 11/ })).toBeNull();
+  expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
+});
+
+test('resolvingTheOnlyCardOfTheLastPageGoesBack', async () => {
+  const { onPendingChanged } = show(many(11));
+  await screen.findByRole('button', { name: /Ficha 10/ });
+  await userEvent.click(screen.getByRole('button', { name: /Siguiente/ }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
+  expect(await screen.findByRole('button', { name: /Ficha 10/ })).toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'Páginas de fichas' })).toBeNull();
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(10));
+});
+
+test('badgeDropsFrom15To14', async () => {
+  const { onPendingChanged } = show(many(15));
+  await screen.findByRole('button', { name: /Ficha 10/ });
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(15));
+  await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(14));
+});
+
+test('searchFiltersByCardText', async () => {
+  const cards = [...many(12), { ...card(13), body: 'Reparar el tejado' }];
+  const { calls } = show(cards);
+  await screen.findByRole('button', { name: /Ficha 10/ });
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar fichas' }), { target: { value: 'tejado' } });
+  expect(await screen.findByRole('button', { name: /Ficha 13/ })).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 1$/ })).toBeNull());
+  expect(calls.some((c) => c.key.endsWith('&q=tejado'))).toBe(true);
+});
+
+test('resolvingDuringASearchAsksTheServerForTheUnfilteredCount', async () => {
+  const cards = [...many(12), { ...card(13), body: 'Reparar el tejado' }];
+  const { onPendingChanged } = show(cards);
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(13));
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar fichas' }), { target: { value: 'tejado' } });
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Ficha 1$/ })).toBeNull());
+  await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(12));
+});
+
+test('badgeIsNotCappedAt50', async () => {
+  const { onPendingChanged } = show(many(120));
+  await screen.findByRole('button', { name: /Ficha 10/ });
+  await waitFor(() => expect(onPendingChanged).toHaveBeenLastCalledWith(120));
 });

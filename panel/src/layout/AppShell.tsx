@@ -47,7 +47,7 @@ function usePendingCount(companyId: string) {
   const [pending, setPending] = useState(0);
   useEffect(() => {
     setPending(0);
-    if (companyId) api.pendingCards(companyId).then((cards) => setPending(cards.length), () => undefined);
+    if (companyId) api.pendingCount(companyId).then(setPending, () => undefined);
   }, [companyId]);
   return [pending, setPending] as const;
 }
