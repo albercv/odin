@@ -450,18 +450,47 @@ class ClassifyIntakeTest {
         assertThat(failing.proposals(company, batch.id())).extracting(IntakeProposal::documentId).containsOnly(caso.id());
     }
 
+    private static final String NO_PROJECT_BODY = "Acta de la junta\nIncluye una derrama de 1.200 euros acordada el 12 de marzo de 2024 para el "
+            + "arreglo del tejado del bloque segundo con la empresa constructora local";
+
     @Test
-    void documentsWithoutAProposedProjectAreNeverComparedAmongThemselves() {
+    void documentsWithNoProjectProposalAreComparedAmongThemselvesAndAScanOfOneGetsSameAsScan() {
         confirmed(OLMO, olmoId);
-        String body = "Acta de la junta\nIncluye una derrama de 1.200 euros acordada el 12 de marzo de 2024 para el "
-                + "arreglo del tejado del bloque segundo con la empresa constructora local";
-        pending(batch, "a/acta.pdf", body, "pdfbox", DocumentStatus.READY);
-        pending(batch, "a/acta-escaneada.pdf", body, "unlimited-ocr-2", DocumentStatus.READY);
+        Document original = pending(batch, "a/acta.pdf", NO_PROJECT_BODY, "pdfbox", DocumentStatus.READY);
+        Document scan = pending(batch, "a/acta-escaneada.pdf", NO_PROJECT_BODY, "unlimited-ocr-2", DocumentStatus.READY);
+
+        classify(false).execute();
+
+        assertThat(proposals(ProposalKind.PROJECT)).isEmpty();
+        IntakeProposal p = proposals(ProposalKind.SAME_AS_SCAN).get(0);
+        assertThat(p.documentId()).isEqualTo(scan.id());
+        assertThat(p.targetDocumentId()).contains(original.id());
+    }
+
+    @Test
+    void anAmbiguousDocumentIsExcludedFromDuplicatesEvenWithATwinWithoutProject() {
+        confirmed(OLMO, olmoId);
+        confirmed(HAYA, hayaId);
+        String ambiguous = "Informe general\nUna linea\nOtra linea\nObras en " + OLMO + " del bloque\nY tambien en " + HAYA
+                + " del patio\n" + NO_PROJECT_BODY;
+        pending(batch, "a/acta.pdf", ambiguous, "pdfbox", DocumentStatus.READY);
+        pending(batch, "a/acta-escaneada.pdf", ambiguous, "unlimited-ocr-2", DocumentStatus.READY);
+
+        classify(false).execute();
+
+        assertThat(proposals(ProposalKind.PROJECT)).hasSize(4).allMatch(p -> p.confidence() == ProposalConfidence.LOW);
+        assertThat(proposals(ProposalKind.SAME_AS_SCAN)).isEmpty();
+        assertThat(proposals(ProposalKind.SUPERSEDES)).isEmpty();
+    }
+
+    @Test
+    void aDocumentWithoutProjectIsNeverComparedWithOneOfAProposedProject() {
+        confirmed(OLMO, olmoId);
+        pending(batch, "a/acta.pdf", NO_PROJECT_BODY, "pdfbox", DocumentStatus.READY);
+        pending(batch, "a/acta-escaneada.pdf", OLMO_TEXT + NO_PROJECT_BODY, "unlimited-ocr-2", DocumentStatus.READY);
 
         classify(false).execute();
 
         assertThat(proposals(ProposalKind.SAME_AS_SCAN)).isEmpty();
-        assertThat(proposals(ProposalKind.SUPERSEDES)).isEmpty();
-        assertThat(proposals(ProposalKind.PROJECT)).isEmpty();
     }
 }

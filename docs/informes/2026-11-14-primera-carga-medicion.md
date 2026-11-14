@@ -12,7 +12,7 @@
 - **El recorrido funciona de principio a fin y sin fugas (D1).**
   - Subida cortada con `SIGKILL` y relanzada: 845 documentos distintos y 845 SHA-256 distintos en la base, ninguno duplicado (2 de 2).
   - Cero fugas con la clave de cuatro trabajadores, antes y después de confirmar, en lista, lectura, búsqueda, enlace al original y cita verificada (2 de 2).
-- **Las cifras del estudio se cumplen salvo una:** los escaneos enlazados tienen precisión 1,00 pero cobertura 0,80 (16 de 20), no 1,00. Es por diseño del clasificador, no un fallo de ejecución: ver el apartado 3.
+- **Las cifras del estudio se cumplen salvo una, que se corrigió después:** en la primera medición los escaneos enlazados tenían precisión 1,00 y cobertura 0,80 (16 de 20). Se cambió `ClassifyIntake` (los documentos sin propuesta de proyecto se comparan entre sí) y, medido de nuevo, dan 1,00 y 1,00 (20 de 20). Ver el apartado 8. Los apartados 2 a 5 son de la primera medición.
 - **El tiempo lo pone el OCR,** como decía el estudio: 231 s de unos 275 s del recorrido de la orden a la última confirmación.
 - **Memoria:** el OCR y el modelo, cargados a la vez, suman unos 14,7 GB de huella física. El estudio decía «más de 12 GB».
 - **Defectos de producto:** ninguno que impida el recorrido. Hay tres hallazgos menores y una brecha frente al criterio de aceptación (apartado 6).
@@ -63,7 +63,7 @@ Sobre los 845 documentos del lote, con la propuesta tal como sale de la API, ant
 | Ficha de caso y su número | 241 de 241 fichas reales; 241 de 241 números; 0 falsas | 239 de 239 | 100 %. Cumple |
 | Tipo de documento | No se mide: el producto no propone tipo (el spec lo deja solo para proponer) | 825 de 825 | Ver «Lo que no salió» |
 | Copias exactas | 40 ficheros repetidos que no entran: 845 documentos y 845 SHA-256 distintos en la base | 1,00 y 1,00 | Cumple |
-| Escaneo de un documento digital | **Precisión 1,00 (16 de 16), cobertura 0,80 (16 de 20)** | 1,00 y 1,00 (21 de 21) | 1,00 y 1,00. **No cumple en cobertura** |
+| Escaneo de un documento digital | **Precisión 1,00 (16 de 16), cobertura 0,80 (16 de 20)** | 1,00 y 1,00 (21 de 21) | 1,00 y 1,00. **No cumple en cobertura (corregido: apartado 8)** |
 | Versión nueva (sustituye a) | Precisión 0,837 y cobertura 0,837 (36 de 43 pares) | 0,83 y 0,83 (38 de 46) | 0,83 o más en precisión. Cumple |
 | Enlace a ficha de caso | 6 propuestos | Sin medir | Se mide con el archivo ampliado del encargo 13. **Sin medir aquí** (no hay verdad de enlaces) |
 
@@ -122,3 +122,23 @@ Por la API, en las dos ejecuciones, con 845 documentos del lote. Cada trabajador
 2. `python3 experimentos/2026-11-13-primera-carga/parte_c/medir.py --salida medicion-N.json` (escribe en `parte_c/resultados/`).
 3. `experimentos/2026-11-13-primera-carga/parte_c/pila.sh down` (`down -v`).
 4. La prueba pequeña va en `make check` (`IntakeFirstLoadIT`; los recursos salen de `parte_c/subconjunto_extremo_a_extremo.py`) y las pruebas de las funciones que miden, en `parte_c/test_medir.py`.
+
+## 8. Corrección: documentos sin propuesta de proyecto (segunda medición)
+
+- **Qué cambió.** La primera medición dio cobertura 0,80 en escaneos (16 de 20) porque `ClassifyIntake` solo comparaba entre documentos con un único proyecto propuesto, y los 4 escaneos no enlazados eran de documentos sin ninguna propuesta de proyecto. Por decisión del coordinador (el spec, apartado 9, pide cobertura 1,00 y el estudio la alcanzó así), ahora esos documentos se comparan entre sí, en el grupo «sin proyecto». Siguen fuera de duplicados los ambiguos (varias propuestas de proyecto), nunca se compara entre dos proyectos propuestos distintos y los enlaces a caso no cambian (mismo proyecto propuesto).
+- **Pruebas.** En `ClassifyIntakeTest`, la prueba anterior (que afirmaba lo contrario) se sustituye por tres: un escaneo y su gemelo digital sin proyecto dan `SAME_AS_SCAN`; un documento ambiguo con su gemelo sigue excluido; y un documento sin proyecto no se compara con uno de un proyecto propuesto. En rojo con el código anterior (la primera fallaba con «Index 0 out of bounds» por no haber propuesta), en verde tras el cambio.
+- **Medición.** 2 recorridos completos más, sobre pilas nuevas, mismo equipo, modelos y reglas que antes (`medicion-corregida-1.json` y `-2.json`). Los resultados del apartado 3 de la primera medición se conservan arriba tal cual.
+
+| Clase | Primera medición | Segunda medición (2 de 2) | Estudio |
+|---|---|---|---|
+| Escaneo de un documento digital | precisión 1,00 (16 de 16), cobertura 0,80 (16 de 20) | **precisión 1,00 y cobertura 1,00 (20 de 20)** | 1,00 y 1,00 |
+| Versión nueva | 0,837 y 0,837 (36 de 43) | 0,837 y 0,837 (36 de 43), sin cambio | 0,83 y 0,83 |
+| Proyecto alta, ficha de caso y número | 826 de 826; 241 de 241 | igual | |
+| Propuestas por clase | proyecto 826, ficha 241, enlace 6, escaneo 16, versión 43 | escaneo 20, el resto igual | |
+
+- **Qué más cambió.**
+  - **El orden de la confirmación.** Al confirmar el grupo de escaneos antes de colocar lo que no tenía proyecto, la API lo rechazó entero con 409 «Confirma antes el proyecto de «scan-0001.pdf»» (una prueba intermedia con este mismo cambio, 2 de 2: 1.116 propuestas confirmadas y ninguna de escaneo). Es la regla del producto: una pareja exige que sus dos documentos tengan ya proyecto confirmado. El guion ahora confirma los grupos de proyecto, coloca los 19 documentos sin ubicar y confirma después el resto: 826 y 310 propuestas, 1.136 en total, sin errores (2 de 2), en 64 clics y 19 colocaciones.
+  - **Lo que ve el trabajador.** Al enlazarse 4 escaneos más, salen de la lista y la búsqueda (se leen por su identificador): t1 26 en lista y 30 legibles, t2 25 y 30, t3 9 y 12 (antes 29, 28 y 12). D1 igual: 0 fugas antes y después, 0 faltas (2 de 2).
+  - **Tiempos y memoria,** sin cambios fuera del ruido: lectura 231 s y clasificación 35 s (±5 s), subida cortada en 7 s sin duplicados (845 documentos y 845 SHA-256), pico del OCR de 7,8 GB, pico de Ollama de 7,8 a 8,0 GB y suma de residentes de 14,7 y 15,2 GB.
+  - **Nada más.** Las demás cifras de acierto coinciden con las de la primera medición.
+- **Nota.** Las propuestas de escaneo sobre documentos sin proyecto son nuevas, y no hay selección de por medio: son las mismas 20 parejas de la verdad. No se ha medido el efecto en un archivo con muchos documentos sin proyecto, donde comparar entre sí documentos sin contexto puede dar más falsos positivos.
