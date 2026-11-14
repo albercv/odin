@@ -38,8 +38,7 @@ public class ListCompanyDocuments {
         ProjectVisibility everything = ProjectVisibility.all();
         int from = Math.max(0, offset);
         var entries = withdrawn ? documents.listWithdrawn(scope, everything, from, capped)
-                : documents.list(scope, everything, Optional.empty(), Optional.empty(), Optional.empty(), from,
-                        capped);
+                : documents.listForAdmin(scope, from, capped);
         return TaggedDocuments.of(entries, scope, everything, topics.list(companyId), tagging);
     }
 }

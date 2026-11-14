@@ -37,8 +37,8 @@ final class SupersessionSql {
                     )
                     SELECT id AS current_id, title AS current_title FROM chain WHERE superseded_by IS NULL
                 ) sc ON true""".formatted(supersededByColumn, companyColumn, Sql.inScope("sd.company_id"),
-                Sql.inVisibleProjects("sd.project_id"), Sql.notWithdrawn("sd.withdrawn_at"),
-                Sql.inScope("n.company_id"), Sql.inVisibleProjects("n.project_id"), Sql.notWithdrawn("n.withdrawn_at"),
+                Sql.inVisibleProjects("sd.project_id"), Sql.visibleDocument("sd"),
+                Sql.inScope("n.company_id"), Sql.inVisibleProjects("n.project_id"), Sql.visibleDocument("n"),
                 Document.MAX_SUPERSESSION_CHAIN);
     }
 

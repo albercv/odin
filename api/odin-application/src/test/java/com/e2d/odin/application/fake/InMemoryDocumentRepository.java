@@ -194,6 +194,12 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public List<DocumentEntry> listForAdmin(CompanyScope scope, int offset, int limit) {
+        return list(scope, ProjectVisibility.all(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), offset, limit);
+    }
+
+    @Override
     public List<DocumentEntry> list(CompanyScope scope, ProjectVisibility visibility, Optional<ProjectId> projectId,
             Optional<TopicId> topicId, Optional<Boolean> caseDocument, Optional<DocumentStatus> status, int offset,
             int limit) {
