@@ -21,9 +21,16 @@ public final class WorkerRoutes {
             route("GET", "/v1/documents/{documentId}/pages/{pageNumber}", WorkerTool.READ_PAGE),
             route("GET", "/v1/documents", WorkerTool.LIST_DOCUMENTS),
             route("POST", "/v1/citations/verify", WorkerTool.VERIFY_CITATION),
+            route("POST", "/v1/citations/verify-batch", WorkerTool.VERIFY_CITATION),
             route("POST", "/v1/cards", WorkerTool.SAVE_CARD),
             route("GET", "/v1/me/cards", WorkerTool.MY_CARDS),
-            route("GET", "/v1/me/questions", WorkerTool.MY_QUESTIONS));
+            route("GET", "/v1/me/questions", WorkerTool.MY_QUESTIONS),
+            route("GET", "/v1/cases/{caseId}/file", WorkerTool.CASE_FILE),
+            route("GET", "/v1/cases/{caseId}/file/text", WorkerTool.CASE_FILE),
+            route("POST", "/v1/cases/{caseId}/file/documents", WorkerTool.CASE_FILE),
+            route("DELETE", "/v1/cases/{caseId}/file/documents/{documentId}", WorkerTool.CASE_FILE),
+            route("POST", "/v1/cases/{caseId}/upload-links", WorkerTool.CASE_FILE),
+            route("POST", "/v1/documents/{documentId}/original-links", WorkerTool.CASE_FILE));
 
     /** Los dos primeros segmentos de cada ruta: una sola lista, así prefijos y rutas no pueden divergir. */
     private static final List<String> PREFIXES = ROUTES.stream()

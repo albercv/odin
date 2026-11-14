@@ -11,7 +11,7 @@ import styles from './Usage.module.css';
 
 const TOOLS: Record<string, string> = {
   DESCRIBE_ME: 'Perfil', SEARCH: 'Búsqueda', SIMILAR_CASES: 'Casos parecidos', READ_PAGE: 'Leer página', LIST_DOCUMENTS: 'Listar documentos',
-  VERIFY_CITATION: 'Verificar cita', SAVE_CARD: 'Guardar ficha', MY_CARDS: 'Mis fichas', MY_QUESTIONS: 'Mis preguntas',
+  VERIFY_CITATION: 'Verificar cita', SAVE_CARD: 'Guardar ficha', MY_CARDS: 'Mis fichas', MY_QUESTIONS: 'Mis preguntas', CASE_FILE: 'Expediente',
 };
 const DELIVERED_TEXT = 'Odín no usa ninguna IA externa. La IA de cada trabajador es suya, y Odín no ve lo que gasta. Esto es el volumen de texto que Odín le entrega: no son tokens ni un coste.';
 

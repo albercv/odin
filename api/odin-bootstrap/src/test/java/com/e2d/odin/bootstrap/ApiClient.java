@@ -15,7 +15,12 @@ import tools.jackson.databind.json.JsonMapper;
 
 final class ApiClient {
 
-    record Reply(int status, String contentType, String body, String setCookie) {
+    record Reply(int status, String contentType, String body, String setCookie, Map<String, String> headers,
+            byte[] bytes) {
+        String header(String name) {
+            return headers.get(name.toLowerCase());
+        }
+
         JsonNode json() {
             return MAPPER.readTree(body);
         }
@@ -28,7 +33,11 @@ final class ApiClient {
     private final String base;
 
     ApiClient(int port) {
-        this.base = "http://localhost:" + port;
+        this("localhost", port);
+    }
+
+    ApiClient(String host, int port) {
+        this.base = "http://" + host + ":" + port;
     }
 
     Reply get(String path, String... headers) {
@@ -71,10 +80,13 @@ final class ApiClient {
 
     private Reply send(HttpRequest.Builder request, String... headers) {
         try {
-            HttpResponse<String> response = http.send(request.headers(headers.length == 0 ? new String[] {"X-T", "1"}
-                    : headers).build(), BodyHandlers.ofString());
+            HttpResponse<byte[]> response = http.send(request.headers(headers.length == 0 ? new String[] {"X-T", "1"}
+                    : headers).build(), BodyHandlers.ofByteArray());
+            Map<String, String> received = new java.util.HashMap<>();
+            response.headers().map().forEach((name, values) -> received.put(name.toLowerCase(), values.get(0)));
             return new Reply(response.statusCode(), response.headers().firstValue("Content-Type").orElse(""),
-                    response.body(), response.headers().firstValue("Set-Cookie").orElse(""));
+                    new String(response.body(), StandardCharsets.UTF_8),
+                    response.headers().firstValue("Set-Cookie").orElse(""), received, response.body());
         } catch (IOException e) {
             throw new IllegalStateException(e);
         } catch (InterruptedException e) {

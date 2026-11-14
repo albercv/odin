@@ -6,6 +6,7 @@
 .env
 *.env.local
 # compilados y dependencias
+__pycache__/
 target/
 node_modules/
 dist/
@@ -18,3 +19,4 @@ playwright-report/
 # copias de trabajo de git para desarrollar en paralelo
 .worktrees/
 api/odin-adapter-web/.m2/
+__pycache__/

@@ -14,6 +14,8 @@ import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class VerifyCitationTest {
@@ -86,5 +88,31 @@ class VerifyCitationTest {
 
         assertThat(verify.execute(member, d.id(), 1, "franquicia")).isTrue();
         assertThat(verify.execute(Actors.worker(companyA), d.id(), 1, "franquicia")).isFalse();
+    }
+
+    @Test
+    void batchKeepsOrderAndHidesInvisible() {
+        Document d = Fixtures.readyDocument(docs, companyA, "La franquicia es de 300 euros");
+        Document other = Fixtures.readyDocument(docs, companyB, "La franquicia es de 300 euros");
+        Document failed = Fixtures.readyDocument(docs, companyA, "La franquicia es de 300 euros");
+        docs.save(failed.markFailed("roto"));
+        Document withdrawn = Fixtures.readyDocument(docs, companyA, "La franquicia es de 300 euros");
+        Actor worker = Actors.worker(companyA);
+        docs.save(withdrawn.withWithdrawal(Optional.of(Fixtures.NOW), Optional.of(worker.userId())));
+
+        var result = verify.executeAll(worker, List.of(
+                new CitationCheck(d.id(), 1, "franquicia es de 300"), new CitationCheck(d.id(), 1, "inventada"),
+                new CitationCheck(other.id(), 1, "franquicia"), new CitationCheck(failed.id(), 1, "franquicia"),
+                new CitationCheck(withdrawn.id(), 1, "franquicia")));
+
+        assertThat(result).containsExactly(true, false, false, false, false);
+    }
+
+    @Test
+    void adminCannotVerifyBatch() {
+        Document d = Fixtures.readyDocument(docs, companyA, "texto");
+
+        assertThatThrownBy(() -> verify.executeAll(Actors.companyAdmin(companyA),
+                List.of(new CitationCheck(d.id(), 1, "texto")))).isInstanceOf(ForbiddenException.class);
     }
 }

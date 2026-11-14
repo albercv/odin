@@ -4,6 +4,7 @@ import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
+import com.e2d.odin.application.link.IssueOriginalLink;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.organization.DescribeMe;
 import com.e2d.odin.application.search.ListDocuments;
@@ -13,6 +14,7 @@ import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.SearchRequest;
 import com.e2d.odin.application.search.SimilarCasesRequest;
 import com.e2d.odin.application.search.FindSimilarCases;
+import com.e2d.odin.application.search.CitationCheck;
 import com.e2d.odin.application.search.VerifyCitation;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.knowledge.CardStatus;
@@ -23,6 +25,7 @@ import com.e2d.odin.domain.topic.TopicId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class WorkerController {
 
+    private static final int MAX_CITATIONS = 20;
     private static final int MAX_QUERIES = 10;
     private static final int MAX_QUERY_LENGTH = 500;
 
@@ -48,10 +52,12 @@ public class WorkerController {
     private final SaveKnowledgeCard saveCard;
     private final ListMyKnowledgeCards listMyCards;
     private final ListMyQuestions listMyQuestions;
+    private final IssueOriginalLink issueOriginalLink;
 
     public WorkerController(DescribeMe describeMe, SearchKnowledge search, FindSimilarCases findSimilarCases,
             ListDocuments listDocuments, ReadPage readPage, VerifyCitation verifyCitation,
-            SaveKnowledgeCard saveCard, ListMyKnowledgeCards listMyCards, ListMyQuestions listMyQuestions) {
+            SaveKnowledgeCard saveCard, ListMyKnowledgeCards listMyCards, ListMyQuestions listMyQuestions,
+            IssueOriginalLink issueOriginalLink) {
         this.describeMe = describeMe;
         this.search = search;
         this.findSimilarCases = findSimilarCases;
@@ -61,6 +67,7 @@ public class WorkerController {
         this.saveCard = saveCard;
         this.listMyCards = listMyCards;
         this.listMyQuestions = listMyQuestions;
+        this.issueOriginalLink = issueOriginalLink;
     }
 
     @GetMapping("/v1/me")
@@ -72,7 +79,8 @@ public class WorkerController {
     public Responses.SearchResponse search(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @RequestBody Requests.SearchRequest request) {
         SearchRequest searchRequest = new SearchRequest(validQueries(request.queries()),
-                Optional.ofNullable(request.projectId()).map(ProjectId::new), Optional.ofNullable(request.limit()));
+                Optional.ofNullable(request.projectId()).map(ProjectId::new), Optional.ofNullable(request.limit()),
+                Optional.ofNullable(request.caseId()).map(DocumentId::new));
         return Responses.SearchResponse.from(search.execute(actor, searchRequest));
     }
 
@@ -100,6 +108,14 @@ public class WorkerController {
         return Responses.Page.from(readPage.execute(actor, new DocumentId(documentId), pageNumber));
     }
 
+    @PostMapping("/v1/documents/{documentId}/original-links")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Responses.IssuedLink originalLink(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID documentId, @RequestBody(required = false) Requests.OriginalLinkRequest request) {
+        Optional<Integer> page = Optional.ofNullable(request).map(Requests.OriginalLinkRequest::page);
+        return Responses.IssuedLink.from(issueOriginalLink.execute(actor, new DocumentId(documentId), page));
+    }
+
     @PostMapping("/v1/citations/verify")
     public Responses.Verification verify(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @RequestBody Requests.VerifyCitation request) {
@@ -108,6 +124,24 @@ public class WorkerController {
         }
         return new Responses.Verification(verifyCitation.execute(actor, new DocumentId(request.documentId()),
                 request.pageNumber(), request.quote()));
+    }
+
+    @PostMapping("/v1/citations/verify-batch")
+    public Responses.Verifications verifyBatch(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestBody Requests.VerifyCitations request) {
+        List<Requests.VerifyCitation> citations = request.citations();
+        boolean valid = citations != null && !citations.isEmpty() && citations.size() <= MAX_CITATIONS
+                && citations.stream().allMatch(c -> c != null && c.documentId() != null && c.pageNumber() != null
+                        && c.quote() != null);
+        if (!valid) {
+            throw new ValidationException("Indica de 1 a " + MAX_CITATIONS
+                    + " citas, cada una con documento, página y texto");
+        }
+        List<Boolean> verified = verifyCitation.executeAll(actor, citations.stream()
+                .map(c -> new CitationCheck(new DocumentId(c.documentId()), c.pageNumber(), c.quote())).toList());
+        return new Responses.Verifications(IntStream.range(0, citations.size())
+                .mapToObj(i -> new Responses.VerificationResult(citations.get(i).documentId(),
+                        citations.get(i).pageNumber(), verified.get(i))).toList());
     }
 
     @PostMapping("/v1/cards")

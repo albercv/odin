@@ -9,10 +9,14 @@ export type SimilarCasesResponse = components['schemas']['SimilarCasesResponse']
 export type Hit = components['schemas']['Hit'];
 export type SearchRequest = components['schemas']['SearchRequest'];
 export type SearchResponse = components['schemas']['SearchResponse'];
-export type VerifyCitationRequest = components['schemas']['VerifyCitation'];
-export type Verification = components['schemas']['Verification'];
+export type VerifyCitationsRequest = components['schemas']['VerifyCitations'];
+export type Verifications = components['schemas']['Verifications'];
 export type MyCard = components['schemas']['MyCardView'];
 export type MyQuestion = components['schemas']['MyQuestionView'];
+export type CaseFile = components['schemas']['CaseFileResponse'];
+export type CaseFileText = components['schemas']['CaseFileTextResponse'];
+export type CaseFileAdded = components['schemas']['CaseFileAdded'];
+export type IssuedLink = components['schemas']['IssuedLink'];
 export type SaveCardRequest = components['schemas']['SaveCard'];
 
 export class ApiError extends Error {
@@ -36,10 +40,16 @@ export interface ApiClient {
   ): Promise<WorkerDocumentView[]>;
   similarCases(body: SimilarCasesRequest): Promise<SimilarCasesResponse>;
   readPage(documentId: string, pageNumber: number): Promise<Page>;
-  verifyCitation(body: VerifyCitationRequest): Promise<Verification>;
+  verifyCitations(body: VerifyCitationsRequest): Promise<Verifications>;
   saveCard(body: SaveCardRequest): Promise<SavedCard>;
   myCards(status?: string): Promise<MyCard[]>;
   myQuestions(limit?: number): Promise<MyQuestion[]>;
+  caseFile(caseId: string): Promise<CaseFile>;
+  caseFileText(caseId: string, cursor?: string): Promise<CaseFileText>;
+  addToCaseFile(caseId: string, documentIds: string[]): Promise<CaseFileAdded>;
+  removeFromCaseFile(caseId: string, documentId: string): Promise<void>;
+  requestUploadLink(caseId: string): Promise<IssuedLink>;
+  originalLink(documentId: string, page?: number): Promise<IssuedLink>;
 }
 
 export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
@@ -47,6 +57,7 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
   const call = async <T>(method: string, path: string, body?: unknown): Promise<T> => {
     const response = await send(base + path, method, accessKey, body);
     if (!response.ok) throw new ApiError(response.status, await problemDetail(response));
+    if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
   };
   const enc = encodeURIComponent;
@@ -62,10 +73,27 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
       ),
     similarCases: (body) => call('POST', '/v1/similar-cases', body),
     readPage: (documentId, pageNumber) => call('GET', `/v1/documents/${enc(documentId)}/pages/${pageNumber}`),
-    verifyCitation: (body) => call('POST', '/v1/citations/verify', body),
+    verifyCitations: (body) => call('POST', '/v1/citations/verify-batch', body),
     saveCard: (body) => call('POST', '/v1/cards', body),
     myCards: (status) => call('GET', `/v1/me/cards${status ? `?status=${enc(status)}` : ''}`),
     myQuestions: (limit) => call('GET', `/v1/me/questions${limit ? `?limit=${limit}` : ''}`),
+    ...caseFileCalls(call),
+    originalLink: (documentId, page) => call('POST', `/v1/documents/${enc(documentId)}/original-links`, page === undefined ? {} : { page }),
+  };
+}
+
+type Call = <T>(method: string, path: string, body?: unknown) => Promise<T>;
+
+function caseFileCalls(call: Call): Pick<ApiClient, 'caseFile' | 'caseFileText' | 'addToCaseFile' | 'removeFromCaseFile' | 'requestUploadLink'> {
+  const enc = encodeURIComponent;
+  return {
+    caseFile: (caseId) => call('GET', `/v1/cases/${enc(caseId)}/file`),
+    caseFileText: (caseId, cursor) =>
+      call('GET', `/v1/cases/${enc(caseId)}/file/text${cursor ? `?cursor=${enc(cursor)}` : ''}`),
+    addToCaseFile: (caseId, documentIds) => call('POST', `/v1/cases/${enc(caseId)}/file/documents`, { documentIds }),
+    removeFromCaseFile: (caseId, documentId) =>
+      call('DELETE', `/v1/cases/${enc(caseId)}/file/documents/${enc(documentId)}`),
+    requestUploadLink: (caseId) => call('POST', `/v1/cases/${enc(caseId)}/upload-links`, {}),
   };
 }
 

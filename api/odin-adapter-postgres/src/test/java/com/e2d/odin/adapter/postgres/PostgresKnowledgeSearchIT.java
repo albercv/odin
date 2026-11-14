@@ -1,6 +1,7 @@
 package com.e2d.odin.adapter.postgres;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentPage;
@@ -98,6 +99,28 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         List<SearchHit> hits = find(CompanyScope.of(c), "póliza seguro daños", "2025");
         assertThat(hits).isNotEmpty();
         assertThat(hits).allSatisfy(h -> assertThat(h.rank()).isLessThan(100));
+    }
+
+    @Test
+    void caseNumberInAnyFormFindsTheCaseCardAndTheEmailBeforeALongMinutes() {
+        CompanyId c = newCompany();
+        page(c, "Acta", DocumentStatus.READY, "expediente nº expediente nº expediente nº expediente nº expediente nº "
+                + "expediente nº expediente nº expediente nº expediente nº del asunto tratado en la junta");
+        page(c, "Caso 2024-530", DocumentStatus.READY, "Caso 2024-530 filtración en la azotea");
+        page(c, "Correo", DocumentStatus.READY, "Expte. 2024/530 adjunto el presupuesto de la reparación");
+        List<SearchHit> hits = find(CompanyScope.of(c), "expediente nº 530");
+        assertThat(hits.subList(0, 2)).extracting(SearchHit::title).containsExactlyInAnyOrder("Caso 2024-530",
+                "Correo");
+    }
+
+    /** Límite aceptado: la ficha del caso 530 puede ir por delante del importe, pero este tiene que salir. */
+    @Test
+    void amountIsNotHiddenByCaseNumbersForTheSameDigits() {
+        CompanyId c = newCompany();
+        page(c, "Factura", DocumentStatus.READY, "Total de la reparación: 530 euros con IVA incluido");
+        page(c, "Caso 2024-530", DocumentStatus.READY, "Caso 2024-530 filtración en la azotea");
+        List<SearchHit> hits = find(CompanyScope.of(c), "530 euros");
+        assertThat(hits).extracting(SearchHit::title).contains("Factura");
     }
 
     @Test
@@ -346,6 +369,19 @@ class PostgresKnowledgeSearchIT extends AbstractPostgresIT {
         Document d = page(company, title, DocumentStatus.READY, texts);
         docs.markCaseDocuments(company, Set.of(d.id()), true);
         return d;
+    }
+
+    @Test
+    void caseDocumentFlagsCaseCards() {
+        CompanyId c = newCompany();
+        caseDocument(c, "Ficha del caso", "la franquicia del seguro");
+        page(c, "Documento normal", DocumentStatus.READY, "la franquicia del seguro");
+        card(c, CardStatus.APPROVED, "Ficha aprobada", "la franquicia del seguro");
+
+        List<SearchHit> hits = find(CompanyScope.of(c), "franquicia");
+
+        assertThat(hits).extracting(SearchHit::title, SearchHit::caseDocument).containsExactlyInAnyOrder(
+                tuple("Ficha del caso", true), tuple("Documento normal", false), tuple("Ficha aprobada", false));
     }
 
     private SimilarCasesResult cases(CompanyId company, ProjectVisibility visibility, String... terms) {

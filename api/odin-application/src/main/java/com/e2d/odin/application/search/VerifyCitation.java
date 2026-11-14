@@ -10,6 +10,8 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.search.QuoteMatcher;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
+import com.e2d.odin.domain.shared.ProjectVisibility;
+import java.util.List;
 
 public class VerifyCitation {
 
@@ -30,6 +32,22 @@ public class VerifyCitation {
         if (documents.findById(actor.scope(), content, id).filter(d -> d.status() != DocumentStatus.READY).isPresent()) {
             throw new NotFoundException("Documento no encontrado");
         }
+        return pageContains(actor, content, id, pageNumber, quote);
+    }
+
+    public List<Boolean> executeAll(Actor actor, List<CitationCheck> checks) {
+        var content = WorkerAccess.require(actor, organizations, projectMembers, Capability.SEARCH_KNOWLEDGE)
+                .content();
+        return checks.stream().map(c -> isReady(actor, content, c.documentId())
+                && pageContains(actor, content, c.documentId(), c.pageNumber(), c.quote())).toList();
+    }
+
+    private boolean isReady(Actor actor, ProjectVisibility content, DocumentId id) {
+        return documents.findById(actor.scope(), content, id).filter(d -> d.status() == DocumentStatus.READY)
+                .isPresent();
+    }
+
+    private boolean pageContains(Actor actor, ProjectVisibility content, DocumentId id, int pageNumber, String quote) {
         return documents.findPage(actor.scope(), content, id, pageNumber)
                 .map(page -> QuoteMatcher.containsLiteral(page.text(), quote)).orElse(false);
     }

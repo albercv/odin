@@ -1,4 +1,4 @@
-import type { S } from '../api/client';
+import { originalUrl, type S } from '../api/client';
 import { STATUS } from '../pages/documentStatus';
 import { formatDate, projectName } from '../pages/reviewNames';
 import { FormDialog } from '../ui/FormDialog';
@@ -24,6 +24,7 @@ export function DocumentDetail({ document: d, projects, onClose }: Props) {
           </div>
         )}
       </dl>
+      <p><a href={originalUrl(d.id)} download>Descargar original</a></p>
       <DocumentTopics documentId={d.id} companyId={d.companyId} />
     </FormDialog>
   );

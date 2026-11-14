@@ -27,7 +27,11 @@ odin:
   setup-token: ${ODIN_SETUP_TOKEN:}
   panel-origin: ${ODIN_PANEL_ORIGIN:}
   originals-dir: ${ODIN_ORIGINALS_DIR}
+  public-url: ${ODIN_PUBLIC_URL:}
+  link-ttl: ${ODIN_LINK_TTL:PT15M}
+  trusted-proxies: ${ODIN_TRUSTED_PROXIES:}
   upload-max-bytes: ${ODIN_UPLOAD_MAX_BYTES:52428800}
+  case-file-chunk-chars: ${ODIN_CASE_FILE_CHUNK_CHARS:30000}
   reader:
     url: ${ODIN_READER_URL:}
     timeout: ${ODIN_READER_TIMEOUT:PT30M}
