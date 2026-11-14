@@ -237,11 +237,14 @@ class HerramientasTest(Base):
 
 
 class EjecutorTest(unittest.TestCase):
-    def test_current_executor_reports_the_cases_it_cannot_read(self):
-        fallos = comprobacion.fallos_ejecutor()
-        self.assertIn("el ejecutor falla con un evento cuyo message es texto: 'str' object has no attribute 'get'", fallos)
-        self.assertTrue(any("una llamada a herramienta sin nombre" in f for f in fallos))
-        self.assertTrue(any("bloques que no son objetos" in f for f in fallos))
+    def test_current_executor_reads_every_odd_event(self):
+        self.assertEqual(comprobacion.fallos_ejecutor(), [])
+
+    def test_a_broken_executor_is_reported_case_by_case(self):
+        with mock.patch("banco.medir_path.ejecutar.leer_consultas", side_effect=AttributeError("'str' object has no attribute 'get'")):
+            fallos = comprobacion.fallos_ejecutor()
+        self.assertTrue(fallos)
+        self.assertTrue(all("el ejecutor falla con" in f for f in fallos))
 
     def test_passing_executor_has_no_failures(self):
         with mock.patch("banco.medir_path.ejecutar.leer_consultas", return_value=[]):
@@ -286,9 +289,10 @@ class RedireccionTest(unittest.TestCase):
 
 class CheckAndReportTest(Base):
     def test_check_flattens_the_sections(self):
-        mensajes = comprobacion.check(self.cfg(budget=9), self.layout, http=FakeOdin())
+        with mock.patch("banco.medir_path.ejecutar.leer_consultas", side_effect=AttributeError("roto")):
+            mensajes = comprobacion.check(self.cfg(budget=9), self.layout, http=FakeOdin())
         self.assertTrue(any("D-094" in m for m in mensajes))
-        self.assertIn("'str' object has no attribute 'get'", " ".join(mensajes))
+        self.assertIn("el ejecutor falla con", " ".join(mensajes))
 
     def test_previa_writes_the_report_with_config_sha(self):
         path = self.tmp / "experimento.toml"
@@ -318,10 +322,8 @@ class CheckAndReportTest(Base):
         with self.assertRaises(OSError):
             comprobacion._http("GET", "http://example.com/v1/me", {})
 
-    def test_whole_check_on_real_data_fails_only_on_the_executor_bug(self):
-        mensajes = comprobacion.check(self.cfg(), self.layout, http=FakeOdin())
-        self.assertTrue(mensajes)
-        self.assertTrue(all("el ejecutor falla" in m for m in mensajes))
+    def test_whole_check_on_real_data_passes(self):
+        self.assertEqual(comprobacion.check(self.cfg(), self.layout, http=FakeOdin()), [])
 
     def test_cli_comprobar_exits_one_with_the_report(self):
         from banco import banco
