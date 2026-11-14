@@ -11,6 +11,7 @@ import { GroupAdmins } from '../pages/GroupAdmins';
 import { Review } from '../pages/Review';
 import { Topics } from '../pages/Topics';
 import { Usage } from '../pages/Usage';
+import { EmptyState } from '../ui/EmptyState';
 import { withViewTransition } from '../ui/viewTransition';
 import { Sidebar, type Page } from './Sidebar';
 import styles from './AppShell.module.css';
@@ -71,13 +72,20 @@ function CompanyPage({ page, companyId, me, onPendingChanged }: CompanyPageProps
   );
 }
 
+function NoCompany({ loading }: { loading: boolean }) {
+  if (loading) return <p>Cargando…</p>;
+  return <EmptyState title="Todavía no hay empresas" description="Crea la primera en la pestaña Grupo." />;
+}
+
 export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: Props) {
   const isGroup = me.role === 'GROUP_ADMIN';
-  const { companyId, setCompanyId, onLinkedCompany } = useCompanyId(me);
+  const { companyId: chosenId, setCompanyId, onLinkedCompany } = useCompanyId(me);
   const { route, leave } = useCaseRoute(onLinkedCompany);
+  const groupCompanies = useGroupCompanies(isGroup);
+  // A group admin starts on the first company of the list, once it has loaded.
+  const companyId = chosenId || (isGroup ? groupCompanies.data?.[0]?.id ?? '' : '');
   const [page, setPageNow] = useState<Page>(isGroup && !route.caseId ? 'companies' : 'company');
   const [pending, setPending] = usePendingCount(companyId);
-  const groupCompanies = useGroupCompanies(isGroup);
   const companies: S['CompanyRef'][] = isGroup ? groupCompanies.data ?? [] : me.companies;
   const setPage = (next: Page) => withViewTransition(() => { leave(); setPageNow(next); });
   const open = (id: string) => { setCompanyId(id); setPage('company'); };
@@ -93,7 +101,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         {!route.caseId && page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} onProfileChanged={onProfileChanged} />}
         {!route.caseId && page === 'groupAdmins' && isGroup && <GroupAdmins me={me} />}
         {!route.caseId && page === 'companies' && <Companies onOpen={open} onChanged={groupCompanies.reload} />}
-        {needsCompany && !companyId && <p>Elige una empresa en el menú.</p>}
+        {needsCompany && !companyId && <NoCompany loading={isGroup && !groupCompanies.data && !groupCompanies.error} />}
         {route.caseId && companyId && <CaseFile key={route.caseId} companyId={companyId} caseId={route.caseId} />}
         {!route.caseId && needsCompany && companyId && <CompanyPage page={page} companyId={companyId} me={me} onPendingChanged={setPending} />}
       </main>

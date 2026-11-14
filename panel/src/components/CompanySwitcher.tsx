@@ -13,7 +13,6 @@ export function CompanySwitcher({ companies, currentId, onChange }: SwitcherProp
       <label htmlFor={id}>Empresa</label>
       <div className={styles.control}>
         <select id={id} value={currentId} onChange={(e) => onChange(e.target.value)}>
-          {!currentId && <option value="">Elige una empresa</option>}
           {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <Icon name="chevronDown" />
