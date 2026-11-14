@@ -320,6 +320,31 @@ async function uploadLinkStep(s: Awaited<ReturnType<typeof seedExpediente>>): Pr
   check((await caseFile(s.worker.key, s.caseId)).documents.some((d) => d.id === id), 'Paso 16c: el documento subido por el enlace aparece en el expediente');
 }
 
+async function postUpload(token: string, name: string, text: string): Promise<{ status: number; body: { filename?: string; duplicate?: boolean } }> {
+  const form = new FormData();
+  form.append('file', new Blob([text], { type: 'text/plain' }), name);
+  const r = await fetch(`${PUBLIC_URL}/v1/upload-links/${token}/documents`, { method: 'POST', body: form });
+  return { status: r.status, body: await r.json().catch(() => ({})) as { filename?: string; duplicate?: boolean } };
+}
+
+async function projectUploadLinkStep(s: Awaited<ReturnType<typeof seedExpediente>>): Promise<void> {
+  await json(await http('PUT', `/v1/admin/companies/${s.companyId}/capabilities`,
+    { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES', 'UPLOAD_DOCUMENTS'] }), 200);
+  const docs = await json<{ id: string; projectId: string }[]>(await http('GET', `/v1/admin/companies/${s.companyId}/documents`), 200);
+  const projectId = docs.find((d) => d.id === s.caseId)?.projectId ?? '';
+  const link = JSON.parse(await withMcp(s.worker.key, (call) => call('requestUploadLink', { projectId }))) as Link & { expiresAt: string };
+  const token = uploadLinkToken(link.url);
+  const info = await (await fetch(`${PUBLIC_URL}/v1/upload-links/${token}`)).json().catch(() => ({})) as { target?: string; caseTitle?: string; projectName?: string };
+  check((info.projectName ?? '').includes('Comunidad Olmo 14 expediente') && !info.caseTitle && info.target === 'PROJECT' && !!link.expiresAt,
+    'Paso 16d: requestUploadLink con projectId da un enlace cuya API muestra el proyecto, sin caso, y su caducidad');
+  const first = await postUpload(token, 'nota-proyecto-ficticia.txt', 'Nota ficticia subida a un proyecto por el enlace.');
+  const again = await postUpload(token, 'nota-proyecto-ficticia.txt', 'Nota ficticia subida a un proyecto por el enlace.');
+  check(first.status === 200 && first.body.duplicate === false && again.status === 200 && again.body.duplicate === true,
+    'Paso 16e: subir a un proyecto por el enlace responde 200; repetir el mismo fichero se marca duplicate');
+  const both = await withMcp(s.worker.key, (call) => call('requestUploadLink', { projectId, caseId: s.caseId })).then(() => '', (e: Error) => e.message);
+  check(both.includes('Indica un caso o un proyecto, no los dos'), 'Paso 16f: requestUploadLink con caso y proyecto a la vez pide indicar solo uno');
+}
+
 async function waitStatus(companyId: string, docId: string, wanted: string): Promise<void> {
   for (let i = 0; i < 60; i++) {
     const docs = await json<{ id: string; status: string }[]>(await http('GET', `/v1/admin/companies/${companyId}/documents`), 200);
@@ -368,6 +393,7 @@ async function caseFileStep(): Promise<void> {
   await searchAndRemoveStep(s.worker.key, s.caseId, s.ids);
   await openOriginalStep(s.worker.key, s.ids['Informe del perito']!);
   await uploadLinkStep(s);
+  await projectUploadLinkStep(s);
   await photosStep(s);
   // errorMessage de mcp/src/tools/result.ts: 404 «No se ha encontrado…»; el ajeno tiene la capacidad, así que la API responde 404
   const denied = await caseFile(s.outsider.key, s.caseId).then(() => '', (e: Error) => e.message);
