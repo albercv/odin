@@ -27,7 +27,10 @@ import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.ImportProjectList;
+import com.e2d.odin.application.intake.ListProjectCandidates;
 import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.document.WithdrawDocument;
@@ -491,6 +494,22 @@ public class UseCaseConfiguration {
     GetIntakeBatch getIntakeBatch(IntakeRepository intake, DocumentRepository documents,
             InstallationSettings installationSettings, IntakeSettings intakeSettings) {
         return new GetIntakeBatch(intake, documents, installationSettings, intakeSettings);
+    }
+
+    @Bean
+    ImportProjectList importProjectList(IntakeRepository intake) {
+        return new ImportProjectList(intake);
+    }
+
+    @Bean
+    ListProjectCandidates listProjectCandidates(IntakeRepository intake, DocumentRepository documents) {
+        return new ListProjectCandidates(intake, documents);
+    }
+
+    @Bean
+    ConfirmProjectCandidates confirmProjectCandidates(IntakeRepository intake, OrganizationRepository organizations,
+            CreateProject createProject) {
+        return new ConfirmProjectCandidates(intake, organizations, createProject);
     }
 
     @Bean

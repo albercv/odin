@@ -436,6 +436,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importProjectList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discoverProjects"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmProjectCandidates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/files": {
         parameters: {
             query?: never;
@@ -908,6 +956,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projectCandidates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1403,6 +1467,37 @@ export interface components {
         IntakeWarningView: {
             code: string;
             message: string;
+        };
+        /** @description origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado. */
+        ProjectCandidateView: {
+            name: string;
+            origin: string;
+            /** Format: int32 */
+            documentCount: number;
+            state: string;
+            /** Format: uuid */
+            projectId?: string;
+        };
+        ProjectCandidates: {
+            candidates: components["schemas"]["ProjectCandidateView"][];
+        };
+        ConfirmProjectCandidatesRequest: {
+            /** @description De 1 a 500 decisiones, todo o nada. */
+            decisions: components["schemas"]["ProjectDecisionRequest"][];
+        };
+        ProjectDecisionRequest: {
+            /** @description Nombre del candidato, tal como sale en la lista. */
+            name: string;
+            /**
+             * @description CREATE crea el proyecto, MERGE lo une a uno que ya existe (projectId), REJECT lo rechaza.
+             * @enum {string}
+             */
+            decision: "CREATE" | "MERGE" | "REJECT";
+            /**
+             * Format: uuid
+             * @description Solo con MERGE: el proyecto de la empresa al que se une.
+             */
+            projectId?: string;
         };
         /** @description outcome: CREATED, ALREADY_THERE (la huella ya estaba) o DISCARDED_IN_BATCH (se descartó en este lote). */
         IntakeFile: {
@@ -2699,6 +2794,86 @@ export interface operations {
             };
         };
     };
+    importProjectList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    discoverProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    confirmProjectCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmProjectCandidatesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
     knownFiles: {
         parameters: {
             query: {
@@ -3600,6 +3775,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    projectCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
                 };
             };
         };

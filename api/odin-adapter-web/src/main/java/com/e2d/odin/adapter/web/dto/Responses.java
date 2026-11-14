@@ -58,6 +58,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import com.e2d.odin.domain.shared.ProjectId;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -479,6 +480,22 @@ public final class Responses {
     public record IntakeFile(String outcome, DocumentView document) {
         public static IntakeFile from(com.e2d.odin.application.intake.IntakeFileResult r) {
             return new IntakeFile(r.outcome().name(), DocumentView.from(r.entry()));
+        }
+    }
+
+    @Schema(description = "origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, "
+            + "CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado.")
+    public record ProjectCandidateView(String name, String origin, int documentCount, String state,
+            @Nullable UUID projectId) {
+        static ProjectCandidateView from(com.e2d.odin.domain.intake.ProjectCandidate c) {
+            return new ProjectCandidateView(c.name(), c.origin().name(), c.documentCount(), c.state().name(),
+                    c.projectId().map(ProjectId::value).orElse(null));
+        }
+    }
+
+    public record ProjectCandidates(List<ProjectCandidateView> candidates) {
+        public static ProjectCandidates from(List<com.e2d.odin.domain.intake.ProjectCandidate> candidates) {
+            return new ProjectCandidates(candidates.stream().map(ProjectCandidateView::from).toList());
         }
     }
 

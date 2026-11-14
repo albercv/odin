@@ -1133,6 +1133,137 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "importProjectList",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/discover" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "discoverProjects",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/confirm" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "confirmProjectCandidates",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmProjectCandidatesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/files" : {
       "get" : {
         "tags" : [ "intake-controller" ],
@@ -2458,6 +2589,41 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates" : {
+      "get" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "projectCandidates",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/gaps" : {
       "get" : {
         "tags" : [ "usage-controller" ],
@@ -3654,6 +3820,75 @@
           }
         },
         "required" : [ "code", "message" ]
+      },
+      "ProjectCandidateView" : {
+        "type" : "object",
+        "description" : "origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado.",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "documentCount", "name", "origin", "state" ]
+      },
+      "ProjectCandidates" : {
+        "type" : "object",
+        "properties" : {
+          "candidates" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProjectCandidateView"
+            }
+          }
+        },
+        "required" : [ "candidates" ]
+      },
+      "ConfirmProjectCandidatesRequest" : {
+        "type" : "object",
+        "properties" : {
+          "decisions" : {
+            "type" : "array",
+            "description" : "De 1 a 500 decisiones, todo o nada.",
+            "items" : {
+              "$ref" : "#/components/schemas/ProjectDecisionRequest"
+            }
+          }
+        },
+        "required" : [ "decisions" ]
+      },
+      "ProjectDecisionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Nombre del candidato, tal como sale en la lista."
+          },
+          "decision" : {
+            "type" : "string",
+            "description" : "CREATE crea el proyecto, MERGE lo une a uno que ya existe (projectId), REJECT lo rechaza.",
+            "enum" : [ "CREATE", "MERGE", "REJECT" ]
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Solo con MERGE: el proyecto de la empresa al que se une."
+          }
+        },
+        "required" : [ "decision", "name" ]
       },
       "IntakeFile" : {
         "type" : "object",

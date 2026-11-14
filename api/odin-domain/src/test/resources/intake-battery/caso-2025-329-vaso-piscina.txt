@@ -1,0 +1,44 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+RESIDENCIAL LOS LIMONEROS 2
+
+DATOS DEL CASO
+Número de caso: Caso 2025-329
+Comunidad: Residencial Los Limoneros 2
+Categoría: Instalaciones de la piscina
+Fecha de apertura: 4 de julio de 2025
+Comunicante: vocal de la junta, encargado del seguimiento de la piscina
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 4 de julio de 2025 el vocal encargado de la piscina comunicó al despacho, por teléfono y después por escrito, un descenso del nivel del vaso de la piscina de unos tres centímetros diarios. El socorrista había anotado el nivel en la escala del skimmer durante una semana, con tendencia constante, también con la depuradora parada. El vaso es de hormigón revestido de gresite, con una antigüedad de quince años, y el circuito de recirculación incluye skimmers, sumidero de fondo, boquillas de impulsión, filtro de arena y bomba. El reponedor automático había ocultado el problema algunas semanas, hasta que el aumento del consumo de la red llamó la atención de la junta.
+
+ACTUACIONES REALIZADAS
+- 5 de julio de 2025: el administrador registra la incidencia y pide al socorrista que repita la medición del nivel con la bomba apagada y el reponedor cerrado.
+- 8 de julio de 2025: contraste de la lectura nocturna y diurna. El descenso persiste con el reponedor cerrado, por lo que se descarta la evaporación como causa principal.
+- 10 de julio de 2025: el administrador solicita visita a Aquaservicios del Sur S.L., empresa de mantenimiento de piscinas.
+- 14 de julio de 2025: primera visita del técnico, que revisa la sala de depuración, las válvulas de aspiración, el sumidero de fondo y el estado de las juntas del vaso.
+- 16 de julio de 2025: el técnico propone una prueba de estanqueidad por tramos y fija la fecha de ejecución.
+
+DOCUMENTACIÓN ARCHIVADA
+- Registro de lecturas del nivel del vaso, de la primera semana de julio de 2025.
+- Facturas del consumo de la red del trimestre anterior.
+- Informe de la primera visita del técnico de Aquaservicios del Sur S.L.
+=== Página 2 ===
+RESOLUCIÓN
+La prueba de estanqueidad con colorante localizó una microfisura en el pasamuros de una boquilla de impulsión. El técnico fue aplicando colorante junto a cada accesorio del vaso, con la bomba parada para evitar corrientes, y observó que el colorante era aspirado hacia el interior del hormigón en el pasamuros de la boquilla más próxima a la sala de depuración. El resto de los accesorios, los skimmers y el sumidero de fondo, resultó estanco.
+Aquaservicios del Sur S.L. selló la microfisura con resina epoxi por 450 euros. Para ello se rebajó el nivel del vaso unos veinte centímetros por debajo de la boquilla, se abrió el chaflán del pasamuros con radial, se limpió y se aplicó la resina bicomponente en dos capas, con un refuerzo de malla de fibra de vidrio. Una vez curada la resina, se repuso el gresite y se rejuntó el perímetro de la boquilla. Los trabajos se ejecutaron entre el 21 y el 23 de julio de 2025, y la empresa emitió el parte de trabajo y la factura.
+
+SEGUIMIENTO
+El 24 de julio de 2025 se llenó el vaso hasta su nivel de trabajo y se cerró el reponedor automático. El socorrista registró el nivel durante tres jornadas consecutivas, con la depuradora en marcha y parada, y no se observó descenso alguno. El vocal encargado de la piscina verificó las anotaciones en persona y confirmó que el consumo de la red volvía a la normalidad. El administrador informó a la junta por escrito de la resolución.
+
+RESULTADO
+Cerrado el 25 de julio de 2025. El nivel del vaso se mantiene estable y la piscina permaneció abierta al uso desde el 26 de julio de 2025 sin incidencias.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Informe de la prueba de estanqueidad con fotografías del colorante.
+- Parte de trabajo y factura de Aquaservicios del Sur S.L.
+- Registro de lecturas del nivel de los días 24 a 26 de julio de 2025.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.

@@ -1,0 +1,43 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA · FICHA DE CASO
+COMUNIDAD DE PROPIETARIOS CALLE OLMO 24
+
+DATOS DEL CASO
+Número de caso: Caso 2025-348
+Comunidad: Comunidad de Propietarios calle Olmo 24, Puerto Albar
+Tipo de incidencia: patología higrotérmica en vivienda
+Fecha de apertura: 20 de octubre de 2025
+Comunicante: propietaria del 4º A
+Responsable de la gestión: Administraciones Ribera
+Estado actual: cerrado
+
+DESCRIPCIÓN DE LA INCIDENCIA
+El 20 de octubre de 2025 la propietaria del 4º A comunicó al despacho, mediante correo electrónico con fotografías, una proliferación de colonias fúngicas en el paramento de la fachada norte del dormitorio principal. Según su relato, las colonias son de color negruzco, aparecen sobre todo en la esquina superior junto al encuentro con el techo y detrás del cabecero de la cama, y han crecido desde el comienzo del otoño. La vivienda, orientada a norte, tiene carpintería de aluminio sin rotura de puente térmico y persianas cerradas casi todo el día. La propietaria indicó que el dormitorio carece de rejillas de ventilación y que seca la ropa en un tendedero interior.
+
+ACTUACIONES REALIZADAS
+- 21 de octubre de 2025: el administrador registra la incidencia y pide a la propietaria que anote la temperatura del dormitorio.
+- 24 de octubre de 2025: visita a la vivienda. Se comprueba el estado del paramento, de la carpintería y de la cubierta del edificio sobre la vertical del dormitorio, sin observar daños en elementos comunes.
+- 29 de octubre de 2025: el administrador encarga la inspección a un técnico de patología de la edificación.
+- 4 de noviembre de 2025: inspección del técnico con termómetro de contacto, higrómetro y cámara termográfica. Se registran los valores de temperatura superficial en el encuentro con el techo y en el centro del paño.
+- 7 de noviembre de 2025: el técnico entrega su informe.
+
+DOCUMENTACIÓN ARCHIVADA
+- Correo electrónico de la propietaria del 4º A y fotografías con fecha.
+- Registro de temperaturas anotado por la propietaria.
+- Informe del técnico con imágenes termográficas, de 7 de noviembre de 2025.
+=== Página 2 ===
+RESOLUCIÓN
+El técnico concluye que el origen son condensaciones superficiales por ventilación insuficiente de la vivienda, sin defecto en elementos comunes. Su informe señala que la temperatura superficial del paramento norte desciende por debajo del punto de rocío cuando el dormitorio permanece cerrado, y que la combinación de puente térmico en el encuentro con el techo, ausencia de renovación de aire y producción interior de vapor explica la proliferación de colonias fúngicas. La cubierta, la fachada y las bajantes comunes se encuentran en buen estado, y las lecturas del higrómetro en el resto de la vivienda son coherentes con ese diagnóstico.
+La Comunidad no asume la reparación y se recomienda a la propietaria ventilar a diario y no secar ropa en el interior. El técnico añade como medidas la apertura de las ventanas diez minutos cada mañana, la instalación de rejillas higrorregulables en la carpintería, mantener la calefacción en una temperatura estable y separar los muebles del paramento norte. La limpieza del paramento con fungicida y la pintura fungicida corresponden a la propietaria.
+
+SEGUIMIENTO
+El 10 de noviembre de 2025 el administrador comunicó por escrito el informe a la propietaria del 4º A y le entregó el resumen de recomendaciones. La propietaria llamó al despacho para aclarar el alcance y mostró su conformidad con las medidas. El administrador comprobó con ella por teléfono que había comenzado a ventilar a diario.
+
+RESULTADO
+Cerrado el 14 de noviembre de 2025. No se detectó defecto en elementos comunes y la ficha queda archivada con el informe técnico.
+
+DOCUMENTACIÓN ADICIONAL ARCHIVADA
+- Comunicación escrita del 10 de noviembre de 2025 con el resumen de recomendaciones.
+- Imágenes termográficas y lecturas del higrómetro del informe del técnico.
+
+Observaciones: la ficha recoge únicamente los hechos y las fechas que constan en el expediente del despacho.
