@@ -8,6 +8,7 @@ import { CaseFile } from '../pages/CaseFile';
 import { Documents } from '../pages/Documents';
 import { Gaps } from '../pages/Gaps';
 import { GroupAdmins } from '../pages/GroupAdmins';
+import { Intake } from '../pages/Intake';
 import { Review } from '../pages/Review';
 import { Topics } from '../pages/Topics';
 import { Usage } from '../pages/Usage';
@@ -69,6 +70,7 @@ function CompanyPage({ page, companyId, me, onPendingChanged }: CompanyPageProps
       {page === 'review' && <Review key={companyId} companyId={companyId} onPendingChanged={onPendingChanged} />}
       {page === 'usage' && <Usage key={companyId} companyId={companyId} />}
       {page === 'gaps' && <Gaps key={companyId} companyId={companyId} />}
+      {page === 'intake' && <Intake key={companyId} companyId={companyId} />}
     </>
   );
 }
