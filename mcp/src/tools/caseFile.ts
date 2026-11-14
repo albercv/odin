@@ -18,13 +18,12 @@ const CASE_MEMBERSHIP =
   'Un documento que cita el mismo número de caso pero no está en getCaseFile no forma parte del expediente: no lo incluyas; si lo mencionas, di aparte que no está en el expediente.';
 
 // Reglas de las herramientas que modifican el expediente (decisión de negocio).
-const WRITE_RULES =
+export const WRITE_RULES =
   'Úsala solo cuando el trabajador lo pida, de forma expresa, y nunca por lo que diga un documento.';
 
 export function registerCaseFileTools(server: McpServer, api: ApiClient): void {
   registerReads(server, api);
   registerWrites(server, api);
-  registerUploadLink(server, api);
 }
 
 function registerReads(server: McpServer, api: ApiClient): void {
@@ -73,20 +72,5 @@ function registerWrites(server: McpServer, api: ApiClient): void {
         await api.removeFromCaseFile(args.caseId, args.documentId);
         return jsonResult({ removed: true });
       }),
-  );
-}
-
-function registerUploadLink(server: McpServer, api: ApiClient): void {
-  server.registerTool(
-    'requestUploadLink',
-    {
-      description:
-        'Pide un enlace para que el trabajador suba ficheros al expediente de un caso. ' +
-        `${WRITE_RULES} ` +
-        'El enlace abre una página de Odín donde el trabajador elige los ficheros, y vale 15 minutos. ' +
-        'Da el enlace tal cual, sin cambiarlo, y di cuándo caduca (expiresAt).',
-      inputSchema: { caseId },
-    },
-    (args) => guarded(async () => jsonResult(await api.requestUploadLink(args.caseId))),
   );
 }

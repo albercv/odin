@@ -7,6 +7,7 @@ import { registerListDocuments } from './tools/listDocuments.js';
 import { registerListMyKnowledgeCards } from './tools/listMyKnowledgeCards.js';
 import { registerListMyQuestions } from './tools/listMyQuestions.js';
 import { registerListProjects } from './tools/listProjects.js';
+import { registerUploadLink } from './tools/uploadLink.js';
 import { registerOpenOriginal } from './tools/openOriginal.js';
 import { registerReadPage } from './tools/readPage.js';
 import { registerSaveKnowledgeCard } from './tools/saveKnowledgeCard.js';
@@ -46,6 +47,7 @@ export async function buildServer(api: ApiClient): Promise<McpServer> {
     if (capabilities.has('SIMILAR_CASES')) registerFindSimilarCases(server, api, projects);
   }
   if (capabilities.has('CASE_FILES')) registerCaseFileTools(server, api);
+  registerUploadLink(server, api, capabilities.has('CASE_FILES'), capabilities.has('UPLOAD_DOCUMENTS'));
   if (capabilities.has('SAVE_KNOWLEDGE_CARD')) {
     registerSaveKnowledgeCard(server, api);
     registerListMyKnowledgeCards(server, api, projects);
