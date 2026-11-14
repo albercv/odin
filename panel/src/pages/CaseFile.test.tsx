@@ -19,7 +19,7 @@ const adminDoc = (id: string, title: string, projectId?: string, status = 'READY
 const routes = (documents: unknown[], more: Routes = {}): Routes => ({
   [fileUrl]: () => ({ caseDocument, documents, pendingDocuments: 0 }),
   [eventsUrl]: () => [{ id: 'v1', documentId: 'e1', documentTitle: 'Informe del perito', action: 'ADDED', actorId: 'u', at: '2026-11-12T09:00:00Z' }, { id: 'v2', documentId: 'e2', documentTitle: 'Foto 1', action: 'REMOVED', actorId: 'u', at: '2026-11-12T10:00:00Z' }],
-  [docsUrl]: () => [adminDoc('e1', 'Informe del perito', 'p1'), adminDoc('g1', 'Contrato marco'), adminDoc('x1', 'Documento de otro proyecto', 'p2'), adminDoc('k1', 'Expediente 2024/017', 'p1'), adminDoc('n1', 'Sin leer aún', 'p1', 'PROCESSING')],
+  [docsUrl]: () => ({ documents: [adminDoc('e1', 'Informe del perito', 'p1'), adminDoc('g1', 'Contrato marco'), adminDoc('x1', 'Documento de otro proyecto', 'p2'), adminDoc('k1', 'Expediente 2024/017', 'p1'), adminDoc('n1', 'Sin leer aún', 'p1', 'PROCESSING')], total: 5 }),
   ...more,
 });
 const show = (r: Routes) => { const calls = mockFetch(r); renderWithProviders(<CaseFile companyId="c1" caseId="k1" />); return calls; };

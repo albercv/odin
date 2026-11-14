@@ -74,10 +74,23 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public void save(Document document) {
         Document stored = documents.get(document.id());
+        if (stored == null && beforeNewDocument != null) {
+            var race = beforeNewDocument;
+            beforeNewDocument = null;
+            race.accept(document);
+            throw new com.e2d.odin.domain.shared.ConflictException("Ya existe un registro con esos datos");
+        }
         // Como el upsert de PostgreSQL: guardar no escribe ni borra la marca de sustituido ni la de caso (la primera vez sí guarda la de caso).
         documents.put(document.id(), stored == null ? document.withSupersession(Optional.empty(), Optional.empty())
                 : document.withSupersession(stored.supersededBy(), stored.supersededAt())
                         .withCaseDocument(stored.caseDocument()));
+    }
+
+    private java.util.function.Consumer<Document> beforeNewDocument;
+
+    /** Antes de guardar el siguiente documento nuevo, otra subida idéntica se cuela y gana el índice único. */
+    public void raceWith(java.util.function.Consumer<Document> otherUpload) {
+        beforeNewDocument = otherUpload;
     }
 
     @Override
@@ -149,11 +162,30 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public List<DocumentEntry> listWithdrawn(CompanyScope scope, ProjectVisibility visibility, int offset,
-            int limit) {
-        return documents.values().stream().filter(d -> d.withdrawn() && scope.includes(d.companyId()) && visibility.allows(d.projectId()))
+    public List<DocumentEntry> search(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery, int offset, int limit) {
+        return matching(scope, visibility, withdrawn, titleQuery)
                 .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
                 .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
+    }
+
+    @Override
+    public int count(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery) {
+        return (int) matching(scope, visibility, withdrawn, titleQuery).count();
+    }
+
+    private java.util.stream.Stream<Document> matching(CompanyScope scope, ProjectVisibility visibility,
+            boolean withdrawn, Optional<String> titleQuery) {
+        lastListScope = scope;
+        return documents.values().stream().filter(d -> d.withdrawn() == withdrawn && scope.includes(d.companyId())
+                && visibility.allows(d.projectId()))
+                .filter(d -> titleQuery.map(q -> fold(d.title()).contains(fold(q))).orElse(true));
+    }
+
+    private static String fold(String text) {
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .toLowerCase();
     }
 
     private DocumentEntry entry(CompanyScope scope, ProjectVisibility visibility, Document d) {

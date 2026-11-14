@@ -12,6 +12,7 @@ import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
+import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.UploadToCaseFile;
@@ -20,13 +21,14 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import com.e2d.odin.adapter.web.link.OriginalResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -51,6 +53,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 public class AdminDocumentController {
 
+    private static final int MAX_QUERY = 100;
+
     private final UploadDocument upload;
     private final ListCompanyDocuments list;
     private final GetDocument get;
@@ -63,11 +67,12 @@ public class AdminDocumentController {
     private final OpenOriginal openOriginal;
     private final WithdrawDocument withdraw;
     private final RestoreDocument restore;
+    private final UserNames userNames;
 
     public AdminDocumentController(UploadDocument upload, ListCompanyDocuments list, GetDocument get,
             RetryDocument retry, SupersedeDocument supersede, UpdateDocument update, MarkCaseDocuments markCases,
             AddToCaseFiles addToCaseFiles, UploadToCaseFile uploadToCaseFile, OpenOriginal openOriginal,
-            WithdrawDocument withdraw, RestoreDocument restore) {
+            WithdrawDocument withdraw, RestoreDocument restore, UserNames userNames) {
         this.upload = upload;
         this.list = list;
         this.get = get;
@@ -80,15 +85,25 @@ public class AdminDocumentController {
         this.openOriginal = openOriginal;
         this.withdraw = withdraw;
         this.restore = restore;
+        this.userNames = userNames;
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/documents")
-    public List<Responses.DocumentView> list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+    public Responses.DocumentPage list(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "100") int limit, @Parameter(description = "Si es true, devuelve solo los documentos retirados (con su paginación)")
-            @RequestParam(defaultValue = "false") boolean withdrawn) {
-        return list.execute(actor, new CompanyId(companyId), offset, limit, withdrawn).stream()
-                .map(Responses.DocumentView::from).toList();
+            @RequestParam(defaultValue = "100") int limit,
+            @Parameter(description = "Si es true, devuelve solo los documentos retirados (con su paginación)")
+            @RequestParam(defaultValue = "false") boolean withdrawn,
+            @Parameter(description = "Texto del título, sin mayúsculas ni acentos (hasta 100 caracteres)")
+            @RequestParam(required = false) String q) {
+        if (q != null && q.strip().length() > MAX_QUERY) {
+            throw new ValidationException("La búsqueda admite hasta " + MAX_QUERY + " caracteres");
+        }
+        var page = list.page(actor, new CompanyId(companyId), offset, limit, withdrawn, Optional.ofNullable(q));
+        Map<UserId, String> names = userNames.of(page.documents().stream().map(t -> t.entry().document().uploadedBy())
+                .collect(Collectors.toSet()));
+        return new Responses.DocumentPage(
+                page.documents().stream().map(t -> Responses.DocumentView.from(t, names)).toList(), page.total());
     }
 
     @PostMapping(path = "/v1/admin/companies/{companyId}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

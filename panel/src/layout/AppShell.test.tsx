@@ -13,7 +13,8 @@ const quiet = { pendingDocuments: 0, window: { always: true }, timezone: 'Europe
 async function openAs(link: string, routes: Record<string, () => unknown>) {
   const calls = mockFetch({
     'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
-    'GET /v1/admin/companies/c2/cards?status=PENDING': () => [],
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }),
+    'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }),
     ...routes,
   });
   renderWithProviders(<AppShell me={me} onLogout={() => {}} onPasswordChanged={() => {}} onProfileChanged={() => {}} />);
@@ -40,5 +41,41 @@ test.each([['Uso', 'usage-stats'], ['Huecos', 'gaps']])('%sUsesTheChosenCompany'
   });
   expect(await screen.findByRole('heading', { name: link, level: 1 })).toBeInTheDocument();
   await waitFor(() => expect(calls.some((c) => c.key.startsWith(`GET /v1/admin/companies/c2/${route}`))).toBe(true));
-  expect(calls.some((c) => c.key.includes('/companies/c1/'))).toBe(false);
+  expect(calls.some((c) => c.key.includes('/companies/c1/') && !c.key.includes('/cards'))).toBe(false);
+});
+
+const shell = () => renderWithProviders(<AppShell me={me} onLogout={() => {}} onPasswordChanged={() => {}} onProfileChanged={() => {}} />);
+
+test('groupAdminLandsOnTheFirstCompanyAndKeepsTheChoiceAcrossTabs', async () => {
+  const calls = mockFetch({
+    'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [] }],
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }), 'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }),
+    'GET /v1/admin/companies/c1/projects': () => [], 'GET /v1/admin/companies/c1/members': () => [],
+    'GET /v1/admin/companies/c2/projects': () => [], 'GET /v1/admin/companies/c2/members': () => [],
+  });
+  shell();
+  await userEvent.click(await screen.findByRole('link', { name: 'Empresa' }));
+  expect(await screen.findByRole('heading', { name: 'Acme' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Empresa' })).toHaveValue('c1');
+  expect(screen.queryByText('Elige una empresa en el menú.')).toBeNull();
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Empresa' }), 'Beta');
+  await userEvent.click(screen.getByRole('link', { name: 'Grupo' }));
+  await userEvent.click(screen.getByRole('link', { name: 'Empresa' }));
+  expect(await screen.findByRole('heading', { name: 'Beta' })).toBeInTheDocument();
+  expect(calls.some((c) => c.key === 'GET /v1/admin/companies/c2/members')).toBe(true);
+});
+
+test('groupCompaniesFailingToLoadSaysSoInsteadOfNoCompanies', async () => {
+  mockFetch({ 'GET /v1/admin/companies': () => ({ status: 500, body: { detail: 'x' } }) });
+  shell();
+  await userEvent.click(await screen.findByRole('link', { name: 'Documentos' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('No se han podido cargar las empresas');
+  expect(screen.queryByRole('heading', { name: 'Todavía no hay empresas' })).toBeNull();
+});
+
+test('groupWithoutCompaniesShowsAnEmptyState', async () => {
+  mockFetch({ 'GET /v1/admin/companies': () => [] });
+  shell();
+  await userEvent.click(await screen.findByRole('link', { name: 'Documentos' }));
+  expect(await screen.findByRole('heading', { name: 'Todavía no hay empresas' })).toBeInTheDocument();
 });

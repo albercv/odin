@@ -1,5 +1,6 @@
 package com.e2d.odin.application.casefile;
 
+import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
@@ -10,7 +11,6 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.shared.CompanyId;
-import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.HashSet;
@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * La ficha de un caso y los documentos de su expediente por orden de alta: el trabajador solo ve los ya legibles y
@@ -31,7 +30,7 @@ public class GetCaseFile {
     private final ProjectMemberRepository projectMembers;
     private final DocumentRepository documents;
     private final CaseFileRepository caseFiles;
-    private final UserRepository users;
+    private final UserNames names;
 
     public GetCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
             DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users) {
@@ -39,7 +38,7 @@ public class GetCaseFile {
         this.projectMembers = projectMembers;
         this.documents = documents;
         this.caseFiles = caseFiles;
-        this.users = users;
+        this.names = new UserNames(users);
     }
 
     public CaseFileView execute(Actor actor, DocumentId caseId) {
@@ -87,6 +86,6 @@ public class GetCaseFile {
             ids.add(v.document().document().uploadedBy());
             ids.add(v.addedBy());
         });
-        return users.findAllById(ids).stream().collect(Collectors.toMap(User::id, User::displayName));
+        return this.names.of(ids);
     }
 }

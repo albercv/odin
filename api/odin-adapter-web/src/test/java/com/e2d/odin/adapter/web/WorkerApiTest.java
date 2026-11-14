@@ -474,4 +474,35 @@ class WorkerApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$[0].caseDocument").value(false));
         mvc.perform(get("/v1/documents").header(AUTH, key)).andExpect(jsonPath("$", hasSize(2)));
     }
+
+    @Test
+    void projectUploadLinkIsIssuedWithAWorkerKey() throws Exception {
+        CompanyId company = newCompany();
+        var project = Fixtures.companyWideProject(w.orgs, company);
+        mvc.perform(post("/v1/projects/" + project.value() + "/upload-links").header(AUTH, workerKey(company)))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.url").isNotEmpty())
+                .andExpect(jsonPath("$.expiresAt").isNotEmpty());
+    }
+
+    @Test
+    void projectUploadLinkWithoutCapabilityIs403() throws Exception {
+        CompanyId company = Fixtures.companyWith(w.orgs, EnumSet.of(Capability.CASE_FILES));
+        var project = Fixtures.companyWideProject(w.orgs, company);
+        mvc.perform(post("/v1/projects/" + project.value() + "/upload-links").header(AUTH, workerKey(company)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void projectUploadLinkIs404IdenticallyForClosedAndMissingProjects() throws Exception {
+        CompanyId company = newCompany();
+        String closed = Fixtures.project(w.orgs, company).value().toString();
+        String missing = UUID.randomUUID().toString();
+        String key = workerKey(company);
+        String a = mvc.perform(post("/v1/projects/" + closed + "/upload-links").header(AUTH, key))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+        String b = mvc.perform(post("/v1/projects/" + missing + "/upload-links").header(AUTH, key))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+        // el cuerpo solo difiere en `instance`, que repite la ruta pedida
+        org.assertj.core.api.Assertions.assertThat(a.replace(closed, "X")).isEqualTo(b.replace(missing, "X"));
+    }
 }

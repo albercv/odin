@@ -64,6 +64,18 @@ class AdminApiTest extends WebTestSupport {
     }
 
     @Test
+    void documentListNamesWhoUploadedEachOne() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        mvc.perform(upload(company, admin, "contenido-uno".getBytes())).andExpect(status().isCreated());
+        Fixtures.readyDocument(w.docs, company, "de alguien que ya no existe");
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[?(@.title=='Manual' && @.uploadedByName=='Admin Pérez')]").isNotEmpty())
+                .andExpect(jsonPath("$.documents[?(@.uploadedByName==null)]").isNotEmpty());
+    }
+
+    @Test
     void uploadAcceptsCaseDocumentField() throws Exception {
         CompanyId company = newCompany();
         Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
@@ -216,7 +228,7 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.supersededAt").doesNotExist());
         mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.id == '" + old.id().value() + "')].supersededBy.title")
+                .andExpect(jsonPath("$.documents[?(@.id == '" + old.id().value() + "')].supersededBy.title")
                         .value(current.title()));
     }
 
@@ -555,7 +567,8 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(status().isCreated());
         mvc.perform(get("/v1/admin/companies/" + id + "/projects").cookie(group)).andExpect(jsonPath("$", hasSize(1)));
         mvc.perform(get("/v1/admin/companies/" + id + "/cards?status=PENDING").cookie(group))
-                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.cards", hasSize(0)))
+                .andExpect(jsonPath("$.total").value(0));
         mvc.perform(post("/v1/admin/cards/" + UUID.randomUUID() + "/review").cookie(group)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"APPROVE\"}"))
                 .andExpect(status().isNotFound());
@@ -682,10 +695,10 @@ class AdminApiTest extends WebTestSupport {
         w.tagging.seedRow(tagged, com.e2d.odin.domain.topic.TaggingStatus.DONE);
 
         mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents").cookie(admin))
-                .andExpect(status().isOk()).andExpect(jsonPath("$[0].taggingStatus").value("DONE"))
-                .andExpect(jsonPath("$[0].topics[0].id").value(water))
-                .andExpect(jsonPath("$[0].topics[0].name").value("Agua"))
-                .andExpect(jsonPath("$[0].topics[0].source").value("AI"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.documents[0].taggingStatus").value("DONE"))
+                .andExpect(jsonPath("$.documents[0].topics[0].id").value(water))
+                .andExpect(jsonPath("$.documents[0].topics[0].name").value("Agua"))
+                .andExpect(jsonPath("$.documents[0].topics[0].source").value("AI"));
     }
 
     @Test
@@ -957,5 +970,48 @@ class AdminApiTest extends WebTestSupport {
                 .andExpect(jsonPath("$.detail").value("El administrador necesita correo"));
         mvc.perform(delete("/v1/admin/group-admins/" + UUID.randomUUID()).cookie(group))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void documentListSearchesByTitleAndGivesTheTotal() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Fixtures.titledDocument(w.docs, company, "Póliza seguro 2023");
+        Fixtures.titledDocument(w.docs, company, "Contrato");
+        String url = "/v1/admin/companies/" + company.value() + "/documents";
+
+        mvc.perform(get(url + "?q=poliza").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.documents", hasSize(1)))
+                .andExpect(jsonPath("$.documents[0].title").value("Póliza seguro 2023"));
+        mvc.perform(get(url + "?limit=1").cookie(admin)).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.documents", hasSize(1)));
+        mvc.perform(get(url + "?q=" + "x".repeat(100)).cookie(admin)).andExpect(status().isOk());
+        mvc.perform(get(url + "?q=" + "x".repeat(101)).cookie(admin)).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void cardListSearchesPagesAndGivesTheTotal() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Fixtures.card(w.cards, company, com.e2d.odin.domain.knowledge.CardStatus.PENDING, "Póliza", "a");
+        Fixtures.card(w.cards, company, com.e2d.odin.domain.knowledge.CardStatus.PENDING, "Contrato", "b");
+        String url = "/v1/admin/companies/" + company.value() + "/cards";
+
+        mvc.perform(get(url + "?q=poliza").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.cards[0].title").value("Póliza"));
+        mvc.perform(get(url + "?limit=10&offset=1").cookie(admin)).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.cards", hasSize(1)));
+        mvc.perform(get(url + "?q=" + "x".repeat(100)).cookie(admin)).andExpect(status().isOk());
+        mvc.perform(get(url + "?q=" + "x".repeat(101)).cookie(admin)).andExpect(status().isBadRequest());
+        mvc.perform(get(url + "?q=" + "  " + "x".repeat(100)).cookie(admin)).andExpect(status().isOk());
+    }
+
+    @Test
+    void documentListMeasuresTheTrimmedQuery() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+
+        mvc.perform(get("/v1/admin/companies/" + company.value() + "/documents?q=  " + "x".repeat(100))
+                .cookie(admin)).andExpect(status().isOk());
     }
 }

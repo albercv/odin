@@ -9,7 +9,7 @@ let fake: FakeApi;
 afterEach(() => fake?.close());
 
 async function descriptions() {
-  fake = await startFakeApi(() => meWith(['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES', 'SIMILAR_CASES']));
+  fake = await startFakeApi(() => meWith(['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES', 'UPLOAD_DOCUMENTS', 'SIMILAR_CASES']));
   const server = await buildServer(createApiClient(fake.url, 'clave-secreta-1'));
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '1' });

@@ -1,0 +1,4 @@
+.search { display: grid; gap: 6px; }
+.search input { width: 100%; min-width: 0; }
+.search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.count { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--text-muted); }

@@ -1,6 +1,7 @@
 package com.e2d.odin.bootstrap;
 
 import com.e2d.odin.application.document.GetDocument;
+import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RetryDocument;
@@ -14,6 +15,7 @@ import com.e2d.odin.application.link.OpenOriginal;
 import com.e2d.odin.application.link.ResolveLink;
 import com.e2d.odin.application.link.UploadByLink;
 import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
@@ -438,8 +440,14 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile) {
-        return new UploadByLink(resolve, links, uploadToCaseFile);
+    UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile,
+            UploadToProject uploadToProject) {
+        return new UploadByLink(resolve, links, uploadToCaseFile, uploadToProject);
+    }
+
+    @Bean
+    UploadToProject uploadToProject(UploadDocument upload, DocumentRepository documents) {
+        return new UploadToProject(upload, documents);
     }
 
     @Bean
@@ -463,6 +471,11 @@ public class UseCaseConfiguration {
             IdGenerator ids,
             Clock clock) {
         return new UploadDocument(documents, organizations, files, detector, uploadSettings, ids, clock);
+    }
+
+    @Bean
+    UserNames userNames(UserRepository users) {
+        return new UserNames(users);
     }
 
     @Bean

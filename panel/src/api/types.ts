@@ -180,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectId}/upload-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["issueProjectUploadLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/documents/{documentId}/original-links": {
         parameters: {
             query?: never;
@@ -1035,6 +1051,8 @@ export interface components {
             caseDocument: boolean;
             /** Format: date-time */
             withdrawnAt?: string;
+            /** @description Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe. */
+            uploadedByName?: string;
         };
         TopicLabelView: {
             /** Format: uuid */
@@ -1050,18 +1068,19 @@ export interface components {
             replacementId?: string;
         };
         Capabilities: {
-            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
+            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
         };
         CompanyView: {
             /** Format: uuid */
             id: string;
             name: string;
             code: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
             codeReviewed: boolean;
         };
         UploadReceipt: {
             filename: string;
+            duplicate: boolean;
         };
         SimilarCasesRequestBody: {
             queries?: string[];
@@ -1156,17 +1175,17 @@ export interface components {
             hits: components["schemas"]["Hit"][];
             noSource: boolean;
         };
+        IssuedLink: {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         OriginalLinkRequest: {
             /**
              * Format: int32
              * @description Página en la que abre el visor de PDF; si falta, abre por la primera.
              */
             page?: number;
-        };
-        IssuedLink: {
-            url: string;
-            /** Format: date-time */
-            expiresAt: string;
         };
         VerifyCitation: {
             /** Format: uuid */
@@ -1381,7 +1400,9 @@ export interface components {
             password?: string;
         };
         UploadLinkInfo: {
-            caseTitle: string;
+            /** @enum {string} */
+            target: "CASE" | "PROJECT";
+            caseTitle?: string;
             projectName: string;
             /** Format: date-time */
             expiresAt: string;
@@ -1401,7 +1422,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
         };
         MeProject: {
             /** Format: uuid */
@@ -1671,6 +1692,11 @@ export interface components {
             reason?: string;
             gaps: components["schemas"]["GapView"][];
         };
+        DocumentPage: {
+            documents: components["schemas"]["DocumentView"][];
+            /** Format: int32 */
+            total: number;
+        };
         DeliveredVolumeView: {
             month: string;
             totals: components["schemas"]["DeliveryTotalView"][];
@@ -1693,6 +1719,11 @@ export interface components {
             actorId: string;
             /** Format: date-time */
             at: string;
+        };
+        CardPage: {
+            cards: components["schemas"]["CardView"][];
+            /** Format: int32 */
+            total: number;
         };
     };
     responses: never;
@@ -2048,6 +2079,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchResponse"];
+                };
+            };
+        };
+    };
+    issueProjectUploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
                 };
             };
         };
@@ -2573,6 +2626,8 @@ export interface operations {
                 limit?: number;
                 /** @description Si es true, devuelve solo los documentos retirados (con su paginación) */
                 withdrawn?: boolean;
+                /** @description Texto del título, sin mayúsculas ni acentos (hasta 100 caracteres) */
+                q?: string;
             };
             header?: never;
             path: {
@@ -2588,7 +2643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DocumentView"][];
+                    "application/json": components["schemas"]["DocumentPage"];
                 };
             };
         };
@@ -3457,6 +3512,10 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "PENDING" | "APPROVED" | "REJECTED";
+                offset?: number;
+                limit?: number;
+                /** @description Texto del título o del cuerpo, sin mayúsculas ni acentos (hasta 100 caracteres) */
+                q?: string;
             };
             header?: never;
             path: {
@@ -3472,7 +3531,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CardView"][];
+                    "application/json": components["schemas"]["CardPage"];
                 };
             };
         };
