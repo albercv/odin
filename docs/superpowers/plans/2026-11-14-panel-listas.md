@@ -62,6 +62,19 @@
 - [ ] **Step 2: Implementar y comprobar.** `cd api && mvn -q verify`; regenerar los tipos; `npm run check:types` en `mcp/` y en `panel/`.
 - [ ] **Step 3: Commit** en `task/panel-listas/api-documentos`: `feat: la lista de documentos del administrador busca por título y da el total (encargo 15)`.
 
+### Task 1b: Página de fichas pendientes en la API (D-105)
+
+**Files:**
+- Modify: `api/odin-application/.../knowledge/ListCardsForReview.java`. `CardPage page(Actor, CompanyId, CardStatus, Optional<String> query, int offset, int limit)`, con `record CardPage(List<KnowledgeCard> cards, int total)`.
+- Modify: el puerto y `PostgresKnowledgeCardRepository` (hoy `listByStatus` sin `LIMIT`, l.61-66). La consulta añade búsqueda y recuento: `unaccent(lower(title || ' ' || body)) LIKE …`, con `%` y `_` escapados.
+- Modify: `AdminCardController.java:35`, que añade `q`, `offset` y `limit` (de 10 a 50) y responde `{cards, total}`.
+- Modify: `panel/src/api/client.ts`, `api.cardPage(companyId, { q, offset, limit })`.
+- Regenerate: `openapi.json` y los dos `types.ts`.
+- Test: `ListCardsForReviewTest`, la prueba del controlador y el IT del repositorio (dos empresas, total, acentos, `%`).
+
+- [ ] **Step 1: Pruebas que fallan. Step 2: implementar y comprobar** (`mvn -q verify`; `check:types`).
+- [ ] **Step 3: Commit** en `task/panel-listas/api-fichas`: `feat: la revisión de fichas pagina, busca y da el total (encargo 15, D-105)`.
+
 ### Task 2: Piezas del panel
 
 **Files:**
@@ -150,6 +163,23 @@
 - [ ] **Step 2: Implementar y comprobar.** `npm test`.
 - [ ] **Step 3: Commit** en `task/panel-listas/documentos`: `feat: documentos con buscador, páginas y tamaño elegible (encargo 15)`.
 
+### Task 5b: Revisión con páginas y buscador (D-105)
+
+**Files:**
+- Modify: `panel/src/pages/Review.tsx`. `useServerPage` (tarea 5) sobre `api.cardPage`, `SearchBox` («Buscar fichas») y `Pagination` con 10 por página. El número del menú sale del `total` (`onPendingChanged`). Se quita el esconder en el navegador de `useResolvedCards`.
+- Test: `pages/Review.test.tsx`.
+
+**Interfaces:**
+- Consumes: `api.cardPage` (tarea 1b), `useServerPage` (tarea 5) y lo que produce la tarea 2.
+
+- [ ] **Step 1: Pruebas que fallan.**
+  - Con 15 pendientes se ven 10 y «Página 1 de 2».
+  - Aprobar la única ficha de la página 2 vuelve a la página 1.
+  - El número del menú baja de 15 a 14.
+  - «tejado» filtra por el texto de la ficha.
+- [ ] **Step 2: Implementar y comprobar.** `npm test`.
+- [ ] **Step 3: Commit** en `task/panel-listas/revision`: `feat: revisión de fichas con páginas y buscador (encargo 15, D-105)`.
+
 ### Task 6: De principio a fin y accesibilidad
 
 **Files:**
@@ -171,8 +201,8 @@
 
 ## Orden y paralelo
 
-- La tarea 1 (API) y las tareas 2 y 3 (panel) no comparten ficheros: pueden ir a la vez, en worktrees distintos.
+- Las tareas 1 y 1b (API) y las tareas 2 y 3 (panel) no comparten ficheros: pueden ir a la vez, en worktrees distintos. La 1b va después de la 1 (regeneran el mismo `openapi.json`).
 - La tarea 4 necesita la 2.
-- La tarea 5 necesita la 1 y la 2.
+- La tarea 5 necesita la 1 y la 2. La 5b necesita la 1b y la 5.
 - La tarea 6 va al final.
-- Modelos: tareas 1, 5 y 6 con un modelo estándar (varias capas o el navegador); tareas 2, 3 y 4 con uno barato o medio; revisión final con el más capaz.
+- Modelos: tareas 1, 1b, 5 y 6 con un modelo estándar (varias capas o el navegador); tareas 2, 3 y 4 con uno barato o medio; revisión final con el más capaz.

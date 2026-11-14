@@ -13,6 +13,7 @@
    - un buscador sin botón, que filtra mientras se escribe a partir de 3 letras y devuelve los resultados paginados.
 3. **Personas:** igual que la pestaña Empresa.
 4. **Documentos:** el mismo buscador, paginado, y se puede elegir cuántos se ven por página, hasta 50.
+5. **Revisión** (D-105, 2026-11-14): la lista de lo que hay que revisar no puede ser un listado enorme. Lleva páginas y, si encaja, el mismo buscador desde 3 letras.
 
 **Cómo leo el punto 3:** «Personas» es la sección con ese título dentro de la pestaña Empresa (`components/Members.tsx`). El panel no tiene una pestaña aparte de personas. Si el propietario quiere una pestaña nueva, es un cambio pequeño sobre las mismas piezas: el CEO lo confirma con él.
 
@@ -26,6 +27,10 @@
   - el panel pide la lista en tandas de 500 hasta 2.000, con `offset` y `limit`, y avisa si la corta;
   - la API (`GET /v1/admin/companies/{id}/documents`) acepta `offset`, `limit` (de 100 a 500) y `withdrawn`;
   - no tiene búsqueda y no da el total.
+- **Revisión:**
+  - lista las fichas pendientes de la empresa (`GET /v1/admin/companies/{id}/cards?status=PENDING`), enteras y sin `LIMIT` en el SQL;
+  - el panel las tiene todas en memoria, esconde las ya resueltas y saca de ahí el número del menú;
+  - crece sin límite si nadie revisa: es la cola de lo que los trabajadores guardan con `saveKnowledgeCard`.
 - **Piezas reutilizables:** el panel tiene `Table`, `Section`, `Field`, `Button` y `EmptyState`. No hay componente de páginas, ni de búsqueda, ni de espera al teclear.
 
 ## 3. Decisiones
@@ -38,6 +43,10 @@
   - La API gana:
     - el parámetro `q`, que busca en el título sin distinguir mayúsculas ni acentos, con `unaccent`;
     - el total de resultados.
+- **Revisión: sí.**
+  - Es una cola que crece sin límite.
+  - La API gana `q`, que busca en el título y el texto de la ficha sin distinguir acentos ni mayúsculas, junto con `offset`, `limit` y el total.
+  - El número del menú sale del total, no de contar en el navegador.
 - **Proyectos y personas: no, por ahora.**
   - Una empresa tiene decenas de proyectos (un administrador de fincas, quizá unos cientos de comunidades) y pocas decenas de personas.
   - La lista ya llega entera en una sola petición, sin cortes, así que filtrar y paginar en el navegador es inmediato y no toca la API.
@@ -54,6 +63,10 @@
   - más de 100 caracteres dan 400;
   - se busca en el título con `unaccent(lower(...)) LIKE` y los comodines escapados, como en el canal literal de la búsqueda;
   - el mínimo de 3 letras lo pone el panel, no la API.
+- **Fichas pendientes:** `GET /v1/admin/companies/{companyId}/cards?status=&q=&offset=&limit=` responde `CardPage { cards, total }`.
+  - Mismas reglas de `q` que en los documentos, con búsqueda en `title` y `body`.
+  - `limit` va de 10 a 50.
+  - Orden: la más antigua primero, como hoy (`seq`), porque es una cola.
 - **Doble barrera:** el filtro de empresa, de proyectos y de retirados sigue igual, con el filtro SQL y RLS. La búsqueda y el recuento van dentro del mismo filtro.
 - **`limit`:** se mantiene de 100 a 500 por defecto, para otros usos. El panel pide 10, 25 o 50.
 
@@ -74,6 +87,11 @@
 
 ### 3.4 Pantallas
 
+- **Revisión:**
+  - buscador «Buscar fichas» y 10 por página;
+  - al aprobar o rechazar una ficha, se vuelve a pedir la página; si queda vacía y no es la primera, se pide la anterior;
+  - el número del menú sale del `total`;
+  - las fichas resueltas dejan de esconderse en el navegador, porque ya no vuelven del servidor.
 - **Selector de empresa:**
   - el administrador de grupo empieza en la primera empresa de la lista, en el orden de `GET /v1/admin/companies`;
   - desaparece la opción vacía y el mensaje «Elige una empresa en el menú.»;
@@ -110,6 +128,7 @@
     - las páginas;
     - «Por página» con 10, 25 y 50;
     - buscar en «Retirados»;
+    - Revisión: 15 fichas pendientes en dos páginas; aprobar una actualiza el número del menú;
     - el diálogo «Sustituir» encuentra candidatos que no están en la página.
 - **Accesibilidad:** `AxeBuilder`, sin violaciones graves ni críticas, en cada estado: con resultados, sin resultados y con la segunda página. Se manejan solo con el teclado el buscador, las páginas y el tamaño. Si cambian las capturas de `visual.spec.ts`, se revisan y se actualizan a propósito.
 - **Al final:** `make check` y `make demo` terminando con 0, y la revisión de toda la rama.
