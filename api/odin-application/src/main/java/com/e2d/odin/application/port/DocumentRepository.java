@@ -4,14 +4,18 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.ProjectId;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -27,6 +31,23 @@ public interface DocumentRepository {
 
     Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id);
 
+    /** Como {@link #findEntry}, pero también encuentra los retirados: solo para retirarlos y recuperarlos. */
+    Optional<DocumentEntry> findEntryIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility,
+            DocumentId id);
+
+    /** Escribe solo la retirada del documento. Al recuperar, si hay otro igual sin retirar en su proyecto, 409. */
+    void markWithdrawal(Document document);
+
+    /**
+     * La lista del administrador: con {@code withdrawn}, solo los retirados; con {@code titleQuery}, solo los que lo
+     * contienen en el título, sin mayúsculas ni acentos y con {@code %} y {@code _} como texto.
+     */
+    List<DocumentEntry> search(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery, int offset, int limit);
+
+    /** Cuántos documentos devuelve {@link #search} sin paginar. */
+    int count(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn, Optional<String> titleQuery);
+
     /** Pone la marca de sustituido con su propia orden: {@link #save} no la escribe ni la borra. */
     void markSuperseded(CompanyId companyId, DocumentId id, DocumentId replacementId, Instant at);
 
@@ -41,7 +62,50 @@ public interface DocumentRepository {
     /** Marca o desmarca la ficha de caso de todos los documentos de la empresa en una transacción; si falta alguno, 404 y no cambia ninguno. */
     int markCaseDocuments(CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument);
 
+    /** Si el mismo fichero está varias veces en la empresa, el más antiguo. */
     Optional<Document> findBySha256(CompanyId companyId, String sha256);
+
+    /** Busca solo en ese proyecto y entre los documentos sin proyecto; si hay varios, el más antiguo. */
+    Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId, String sha256);
+
+    /**
+     * Para la primera carga, el más antiguo de la empresa sin contar lo retirado, o, si no hay, el retirado dentro de
+     * ese lote. Ve también lo pendiente.
+     */
+    Optional<Document> findBySha256ForIntake(CompanyId companyId, IntakeBatchId batchId, String sha256);
+
+    /** De esas huellas, las que {@link #findBySha256ForIntake} encontraría: ya están en la empresa o se retiraron en el lote. */
+    Set<String> existingSha256ForIntake(CompanyId companyId, IntakeBatchId batchId, Collection<String> sha256s);
+
+    /** Recuentos de los documentos del lote: subidos (sin retirar) y los que aún no se han leído. */
+    IntakeCounts intakeCounts(CompanyId companyId, IntakeBatchId batchId);
+
+    /** El texto (páginas unidas) de cada documento ya leído y sin retirar del lote, pendientes incluidos. */
+    List<String> intakeTexts(CompanyId companyId, IntakeBatchId batchId);
+
+    /** Los documentos READY, sin retirar y aún pendientes del lote, con su texto, solo por la ruta de la clasificación. */
+    List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId);
+
+    /** Los documentos del lote aún pendientes y sin retirar, en cualquier estado (también los que fallaron al leerse). */
+    List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId);
+
+    /** Los títulos de los documentos del lote, retirados y pendientes incluidos: la bandeja los muestra junto a cada propuesta. */
+    java.util.Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId);
+
+    /** Los títulos de esos documentos que son de la empresa (retirados y pendientes incluidos); los de otra empresa no salen. */
+    java.util.Map<DocumentId, String> titlesOf(CompanyId companyId, java.util.Collection<DocumentId> ids);
+
+    /**
+     * Saca un documento pendiente de lo pendiente (D1): lo deja en ese proyecto, o sin proyecto, y visible para quien lo
+     * ve. Si ya está confirmado o retirado, o hay otro igual y visible en ese proyecto, 409 y no cambia nada.
+     */
+    void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId, UserId by, Instant at);
+
+    /** Pone {@code scan_of}: el documento es el escaneo del original (D3). Solo sobre documentos visibles, no pendientes. */
+    void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId);
+
+    /** Si algún documento de la empresa, sin retirar, espera al lector OCR o lo está pasando. */
+    boolean readerQueueBusy(CompanyId companyId);
 
     /**
      * Con {@code topicId}, solo los documentos que tienen ese tema {@code ACTIVE}. Con {@code caseDocument}, solo los

@@ -1,0 +1,4 @@
+.page { max-width: 640px; margin: 0 auto; padding: 32px 20px; display: flex; flex-direction: column; gap: 20px; }
+.facts { display: grid; gap: 12px; margin: 0; }
+.facts dt { font-size: 14px; color: var(--text-muted); }
+.facts dd { margin: 2px 0 0; font-weight: 500; }

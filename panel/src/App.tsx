@@ -3,6 +3,7 @@ import { api, setUnauthorizedHandler, type S } from './api/client';
 import { AppShell } from './layout/AppShell';
 import { Cover } from './pages/Cover';
 import { Login } from './pages/Login';
+import { UploadByLink } from './pages/UploadByLink';
 import { useBrand } from './theme/BrandContext';
 import { ColorModeContext } from './theme/ColorModeContext';
 import { useColorMode } from './theme/useColorMode';
@@ -43,6 +44,10 @@ function ColorModeRoot({ children }: { children: React.ReactNode }) {
   return <ColorModeContext.Provider value={value}>{children}</ColorModeContext.Provider>;
 }
 
+/** `/subir/:token` is public: it never loads the session. */
+const uploadToken = () => /^\/subir\/([^/]+)$/.exec(location.pathname)?.[1];
+
 export function App() {
-  return <ColorModeRoot><ToastProvider><ConfirmProvider><Panel /></ConfirmProvider></ToastProvider></ColorModeRoot>;
+  const token = uploadToken();
+  return <ColorModeRoot><ToastProvider><ConfirmProvider>{token ? <UploadByLink token={token} /> : <Panel />}</ConfirmProvider></ToastProvider></ColorModeRoot>;
 }

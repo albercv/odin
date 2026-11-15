@@ -62,7 +62,7 @@ class SupersessionCheckTest {
     }
 
     private static SearchHit hit(String title, boolean superseded, Optional<DocumentRef> replacement) {
-        return new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), title, Optional.of(1), true, Optional.empty(),
+        return new SearchHit(SourceType.ORIGINAL_DOCUMENT, UUID.randomUUID(), title, Optional.of(1), true, false, Optional.empty(),
                 "autor", Instant.EPOCH, "", 1.0, superseded, replacement, Optional.empty());
     }
 }

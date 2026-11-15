@@ -1,12 +1,16 @@
 package com.e2d.odin.adapter.web.dto;
 
+import com.e2d.odin.application.casefile.CaseFileAssignment;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.organization.Capability;
+import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.ValidationException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public final class Requests {
 
@@ -27,6 +31,66 @@ public final class Requests {
 
     public record UpdateDocumentRequest(@Schema(description = "Si el documento es la ficha de un caso resuelto.",
             requiredMode = Schema.RequiredMode.REQUIRED) Boolean caseDocument) {
+    }
+
+    public record CaseFileDocumentsRequest(
+            @Schema(description = "De 1 a 500 documentos que ya están en Odín.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) List<UUID> documentIds) {
+
+        public CaseFileAssignment assignment(UUID caseId) {
+            if (documentIds == null || documentIds.isEmpty() || documentIds.contains(null)) {
+                throw new ValidationException("Elige al menos un documento");
+            }
+            return new CaseFileAssignment(new DocumentId(caseId),
+                    documentIds.stream().map(DocumentId::new).collect(Collectors.toSet()));
+        }
+    }
+
+    public record OriginalLinkRequest(
+            @Schema(description = "Página en la que abre el visor de PDF; si falta, abre por la primera.")
+            Integer page) {
+    }
+
+    public record StartIntakeRequest(
+            @Schema(description = "Quién sube: el comando de la IA o el panel.", allowableValues = {"COMMAND", "PANEL"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            String channel) {
+    }
+
+    public record ProjectDecisionRequest(
+            @Schema(description = "Nombre del candidato, tal como sale en la lista.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) String name,
+            @Schema(description = "CREATE crea el proyecto, MERGE lo une a uno que ya existe (projectId), REJECT lo rechaza.",
+                    allowableValues = {"CREATE", "MERGE", "REJECT"}, requiredMode = Schema.RequiredMode.REQUIRED)
+            String decision,
+            @Schema(description = "Solo con MERGE: el proyecto de la empresa al que se une.") UUID projectId) {
+    }
+
+    public record ConfirmProjectCandidatesRequest(
+            @Schema(description = "De 1 a 500 decisiones, todo o nada.", requiredMode = Schema.RequiredMode.REQUIRED)
+            List<ProjectDecisionRequest> decisions) {
+    }
+
+    public record ConfirmProposalsRequest(
+            @Schema(description = "De 1 a 500 propuestas del lote, todo o nada.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) List<UUID> proposalIds) {
+    }
+
+    public record DecideProposalRequest(
+            @Schema(description = "CONFIRM la confirma, CORRECT_PROJECT la lleva a otro proyecto (projectId), COMPANY_WIDE "
+                    + "deja el documento sin proyecto para toda la empresa, DONT_KNOW lo deja pendiente y oculto, "
+                    + "REJECT la rechaza.",
+                    allowableValues = {"CONFIRM", "CORRECT_PROJECT", "COMPANY_WIDE", "DONT_KNOW", "REJECT"},
+                    requiredMode = Schema.RequiredMode.REQUIRED) String decision,
+            @Schema(description = "Solo con CORRECT_PROJECT: el proyecto de la empresa al que va el documento.")
+            UUID projectId) {
+    }
+
+    public record PlaceDocumentRequest(
+            @Schema(description = "El proyecto de la empresa al que va el documento. Exactamente uno de projectId o companyWide.")
+            UUID projectId,
+            @Schema(description = "Verdadero: sin proyecto, visible para toda la empresa. Exactamente uno de projectId o companyWide.")
+            Boolean companyWide) {
     }
 
     public record CaseMarksRequest(
@@ -89,13 +153,16 @@ public final class Requests {
     public record Review(ReviewDecision decision, String correctedBody, String note) {
     }
 
-    public record SearchRequest(List<String> queries, UUID projectId, Integer limit) {
+    public record SearchRequest(List<String> queries, UUID projectId, Integer limit, UUID caseId) {
     }
 
     public record SimilarCasesRequestBody(List<String> queries, UUID projectId, Integer limit) {
     }
 
     public record VerifyCitation(UUID documentId, Integer pageNumber, String quote) {
+    }
+
+    public record VerifyCitations(List<VerifyCitation> citations) {
     }
 
     public record SaveCard(String title, String body, UUID projectId) {

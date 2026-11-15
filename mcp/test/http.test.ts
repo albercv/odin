@@ -31,7 +31,7 @@ const post = (url: string, body: string, headers: Record<string, string> = {}) =
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', ...headers }, body });
 
 const verifyCall = JSON.stringify({ jsonrpc: '2.0', id: 9, method: 'tools/call',
-  params: { name: 'verifyCitation', arguments: { documentId: 'd', pageNumber: 1, quote: 'q' } } });
+  params: { name: 'verifyCitation', arguments: { citations: [{ documentId: 'd', pageNumber: 1, quote: 'q' }] } } });
 
 async function startWithFakeApi() {
   fake = await startFakeApi((r) => (r.url === '/v1/me' ? meWith(['SEARCH_KNOWLEDGE']) : { status: 200, body: { verified: true } }));
@@ -46,9 +46,9 @@ describe('http transport', () => {
     const otherKey = await post(url, verifyCall, { 'mcp-session-id': sessionId, Authorization: 'Bearer key-B' });
     const noKey = await post(url, verifyCall, { 'mcp-session-id': sessionId });
     expect([otherKey.status, noKey.status]).toEqual([401, 401]);
-    const verifyCalls = () => fake.requests.filter((r) => r.url === '/v1/citations/verify');
+    const verifyCalls = () => fake.requests.filter((r) => r.url === '/v1/citations/verify-batch');
     expect(verifyCalls()).toHaveLength(0);
-    await client.callTool({ name: 'verifyCitation', arguments: { documentId: 'd', pageNumber: 1, quote: 'q' } });
+    await client.callTool({ name: 'verifyCitation', arguments: { citations: [{ documentId: 'd', pageNumber: 1, quote: 'q' }] } });
     expect(verifyCalls().map((r) => r.authorization)).toEqual(['Bearer key-A']);
   });
 
@@ -71,11 +71,11 @@ describe('http transport', () => {
     mcp = await startHttpServer(fake.url, 0);
     const url = `http://127.0.0.1:${(mcp.address() as AddressInfo).port}/mcp`;
     const [a, b] = [await open(url, 'key-A'), await open(url, 'key-B')];
-    const args = { documentId: 'd', pageNumber: 1, quote: 'q' };
+    const args = { citations: [{ documentId: 'd', pageNumber: 1, quote: 'q' }] };
     await a.callTool({ name: 'verifyCitation', arguments: args });
     await b.callTool({ name: 'verifyCitation', arguments: args });
     await a.callTool({ name: 'verifyCitation', arguments: args });
-    const calls = fake.requests.filter((r) => r.url === '/v1/citations/verify').map((r) => r.authorization);
+    const calls = fake.requests.filter((r) => r.url === '/v1/citations/verify-batch').map((r) => r.authorization);
     expect(calls).toEqual(['Bearer key-A', 'Bearer key-B', 'Bearer key-A']);
     expect(fake.requests.filter((r) => r.url === '/v1/me').map((r) => r.authorization)).toEqual(['Bearer key-A', 'Bearer key-B']);
   });

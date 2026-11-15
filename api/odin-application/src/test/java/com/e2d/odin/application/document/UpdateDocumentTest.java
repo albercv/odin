@@ -5,11 +5,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
+import com.e2d.odin.application.fake.MutableClock;
+import com.e2d.odin.domain.casefile.CaseFileAction;
+import com.e2d.odin.domain.casefile.CaseFileEntry;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import java.util.UUID;
@@ -19,7 +25,8 @@ class UpdateDocumentTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
-    private final UpdateDocument update = new UpdateDocument(docs);
+    private final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository(docs);
+    private final UpdateDocument update = new UpdateDocument(docs, files, new MutableClock());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 
@@ -64,5 +71,37 @@ class UpdateDocumentTest {
         assertThatThrownBy(() -> update.execute(Actors.worker(companyA), d.id(), true))
                 .isInstanceOf(ForbiddenException.class);
         assertThat(docs.get(d.id()).orElseThrow().caseDocument()).isFalse();
+    }
+
+    @Test
+    void unmarkCaseWithEntriesConflicts() {
+        Document caseDoc = Fixtures.readyDocument(docs, companyA, "caso");
+        update.execute(Actors.companyAdmin(companyA), caseDoc.id(), true);
+        files.add(new CaseFileEntry(companyA, caseDoc.id(), Fixtures.readyDocument(docs, companyA, "x").id(),
+                new UserId(UUID.randomUUID()), Fixtures.NOW));
+
+        assertThatThrownBy(() -> update.execute(Actors.companyAdmin(companyA), caseDoc.id(), false))
+                .isInstanceOf(ConflictException.class).hasMessage("Quita antes los documentos del expediente");
+        assertThat(docs.get(caseDoc.id()).orElseThrow().caseDocument()).isTrue();
+    }
+
+    @Test
+    void unmarkCaseWhoseOnlyEntryIsHiddenProceedsAndRecordsRemoval() {
+        Document caseDoc = Fixtures.readyDocument(docs, companyA, "caso");
+        Document member = Fixtures.readyDocument(docs, companyA, "x");
+        update.execute(Actors.companyAdmin(companyA), caseDoc.id(), true);
+        files.add(new CaseFileEntry(companyA, caseDoc.id(), member.id(), new UserId(UUID.randomUUID()), Fixtures.NOW));
+        docs.save(member.withWithdrawal(java.util.Optional.of(Fixtures.NOW), java.util.Optional.of(new UserId(UUID.randomUUID()))));
+        var admin = Actors.companyAdmin(companyA);
+
+        update.execute(admin, caseDoc.id(), false);
+
+        assertThat(docs.get(caseDoc.id()).orElseThrow().caseDocument()).isFalse();
+        assertThat(files.countEntries(companyA, caseDoc.id())).isZero();
+        assertThat(files.allEvents()).singleElement().satisfies(e -> {
+            assertThat(e.action()).isEqualTo(CaseFileAction.REMOVED);
+            assertThat(e.actorId()).isEqualTo(admin.userId());
+            assertThat(e.documentId()).isEqualTo(member.id());
+        });
     }
 }

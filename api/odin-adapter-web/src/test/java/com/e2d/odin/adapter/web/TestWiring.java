@@ -1,19 +1,57 @@
 package com.e2d.odin.adapter.web;
 
+import com.e2d.odin.application.casefile.AddToCaseFiles;
+import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
+import com.e2d.odin.application.link.DescribeUploadLink;
+import com.e2d.odin.application.link.IssueOriginalLink;
+import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.LinkIssuer;
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.link.ResolveLink;
+import com.e2d.odin.application.link.UploadByLink;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.document.UploadToProject;
+import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.casefile.ReadCaseFile;
+import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.RemoveFromCaseFile;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
+import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.UpdateDocument;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryDeliveryMeter;
+import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
+import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
+import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
+import com.e2d.odin.application.intake.ConfirmIntakeProposals;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.DecideIntakeProposal;
+import com.e2d.odin.application.intake.DiscardIntakeDocument;
+import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
+import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.ImportProjectList;
+import com.e2d.odin.application.intake.ListProjectCandidates;
+import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
@@ -105,8 +143,12 @@ public class TestWiring {
     final InMemoryUserRepository users = new InMemoryUserRepository();
     final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
+    final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
+    final com.e2d.odin.application.shared.IntakeSettings intakeSettings = new com.e2d.odin.application.shared.IntakeSettings(false);
+    final InMemoryIntakeRepository intake = new InMemoryIntakeRepository();
+    final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository(docs);
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
     final InMemoryQuestionLog questions = new InMemoryQuestionLog();
     final InMemoryTopicRepository topics = new InMemoryTopicRepository();
@@ -256,11 +298,123 @@ public class TestWiring {
     }
 
     @Bean RevokeAccessKey revokeAccessKey() {
-        return new RevokeAccessKey(keys, users, clock);
+        return new RevokeAccessKey(keys, users, links, clock);
+    }
+
+    @Bean LinkSettings linkSettings() {
+        return new LinkSettings("http://odin.test", java.time.Duration.ofMinutes(15));
+    }
+
+    @Bean LinkIssuer linkIssuer() {
+        return new LinkIssuer(links, tokens, secrets, ids, clock, linkSettings());
+    }
+
+    @Bean IssueUploadLink issueUploadLink() {
+        return new IssueUploadLink(orgs, projectMembers, docs, linkIssuer());
+    }
+
+    @Bean IssueOriginalLink issueOriginalLink() {
+        return new IssueOriginalLink(orgs, projectMembers, docs, linkIssuer());
+    }
+
+    @Bean ResolveLink resolveLink() {
+        return new ResolveLink(links, resolveActor(), orgs, projectMembers, docs, secrets, clock);
+    }
+
+    @Bean DescribeUploadLink describeUploadLink() {
+        return new DescribeUploadLink(resolveLink(), orgs);
+    }
+
+    @Bean UploadByLink uploadByLink() {
+        return new UploadByLink(resolveLink(), links, uploadToCaseFile(), uploadToProject());
+    }
+
+    @Bean UploadToProject uploadToProject() {
+        return new UploadToProject(uploadDocument(), docs);
+    }
+
+    @Bean UploadToCaseFile uploadToCaseFile() {
+        return new UploadToCaseFile(uploadDocument(), addToCaseFiles(), caseFiles, ids, clock);
+    }
+
+    @Bean OpenOriginal openOriginal() {
+        return new OpenOriginal(resolveLink(), files, docs);
     }
 
     @Bean UploadDocument uploadDocument() {
         return new UploadDocument(docs, orgs, files, detector, new UploadSettings(MAX_UPLOAD), ids, clock);
+    }
+
+    @Bean StartIntake startIntake() {
+        return new StartIntake(intake, orgs, ids, clock);
+    }
+
+    @Bean AddFileToIntake addFileToIntake() {
+        return new AddFileToIntake(intake, uploadDocument());
+    }
+
+    @Bean CloseIntakeUpload closeIntakeUpload() {
+        return new CloseIntakeUpload(intake);
+    }
+
+    @Bean GetIntakeBatch getIntakeBatch() {
+        return new GetIntakeBatch(intake, docs, installationSettings(), intakeSettings);
+    }
+
+    @Bean ImportProjectList importProjectList() {
+        return new ImportProjectList(intake);
+    }
+
+    @Bean ListProjectCandidates listProjectCandidates() {
+        return new ListProjectCandidates(intake, docs);
+    }
+
+    @Bean OpenIntakeOriginal openIntakeOriginal() {
+        return new OpenIntakeOriginal(intake, docs, files);
+    }
+
+    @Bean CloseProjectList closeProjectList() {
+        return new CloseProjectList(intake, docs, listProjectCandidates(), installationSettings(), clock);
+    }
+
+    @Bean ConfirmProjectCandidates confirmProjectCandidates() {
+        return new ConfirmProjectCandidates(intake, orgs, createProject());
+    }
+
+    @Bean IntakeEffects intakeEffects() {
+        return new IntakeEffects(intake, docs, orgs, markCaseDocuments(), supersedeDocument(), addToCaseFiles(),
+                installationSettings(), clock);
+    }
+
+    @Bean ListUnplacedDocuments listUnplacedDocuments() {
+        return new ListUnplacedDocuments(intake, docs);
+    }
+
+    @Bean PlaceIntakeDocument placeIntakeDocument() {
+        return new PlaceIntakeDocument(intakeEffects());
+    }
+
+    @Bean ListOpenIntakeBatches listOpenIntakeBatches() {
+        return new ListOpenIntakeBatches(intake);
+    }
+    @Bean ListIntakeProposals listIntakeProposals() {
+        return new ListIntakeProposals(intake, docs);
+    }
+
+    @Bean ConfirmIntakeProposals confirmIntakeProposals() {
+        return new ConfirmIntakeProposals(intake, intakeEffects());
+    }
+
+    @Bean DecideIntakeProposal decideIntakeProposal() {
+        return new DecideIntakeProposal(intake, intakeEffects());
+    }
+
+    @Bean DiscardIntakeDocument discardIntakeDocument() {
+        return new DiscardIntakeDocument(docs, withdrawDocument(), intakeEffects());
+    }
+
+    @Bean UserNames userNames() {
+        return new UserNames(users);
     }
 
     @Bean ListCompanyDocuments listCompanyDocuments() {
@@ -276,11 +430,40 @@ public class TestWiring {
     }
 
     @Bean UpdateDocument updateDocument() {
-        return new UpdateDocument(docs);
+        return new UpdateDocument(docs, caseFiles, clock);
+    }
+
+    @Bean WithdrawDocument withdrawDocument() {
+        return new WithdrawDocument(docs, clock);
+    }
+
+    @Bean RestoreDocument restoreDocument() {
+        return new RestoreDocument(docs);
     }
 
     @Bean MarkCaseDocuments markCaseDocuments() {
-        return new MarkCaseDocuments(docs);
+        return new MarkCaseDocuments(docs, caseFiles, clock);
+    }
+
+    @Bean ReadCaseFile readCaseFile() {
+        return new ReadCaseFile(orgs, projectMembers, docs, caseFiles, users,
+                new com.e2d.odin.application.shared.CaseFileSettings());
+    }
+
+    @Bean GetCaseFile getCaseFile() {
+        return new GetCaseFile(orgs, projectMembers, docs, caseFiles, users);
+    }
+
+    @Bean AddToCaseFiles addToCaseFiles() {
+        return new AddToCaseFiles(orgs, projectMembers, docs, caseFiles, ids, clock);
+    }
+
+    @Bean RemoveFromCaseFile removeFromCaseFile() {
+        return new RemoveFromCaseFile(orgs, projectMembers, docs, caseFiles, ids, clock);
+    }
+
+    @Bean ListCaseFileEvents listCaseFileEvents() {
+        return new ListCaseFileEvents(docs, caseFiles);
     }
 
     @Bean SupersedeDocument supersedeDocument() {

@@ -1,11 +1,15 @@
 package com.e2d.odin.bootstrap;
 
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.shared.CaseFileSettings;
 import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.shared.IntakeSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.application.shared.TaggingWindow;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,8 +31,18 @@ public class SettingsConfiguration {
     }
 
     @Bean
+    IntakeSettings intakeSettings(@Value("${odin.tagger.url:}") String taggerUrl) {
+        return new IntakeSettings(!taggerUrl.isBlank());
+    }
+
+    @Bean
     UploadSettings uploadSettings(@Value("${odin.upload-max-bytes}") long maxBytes) {
         return new UploadSettings(maxBytes);
+    }
+
+    @Bean
+    CaseFileSettings caseFileSettings(@Value("${odin.case-file-chunk-chars}") int chunkChars) {
+        return new CaseFileSettings(chunkChars);
     }
 
     /** La ventana del etiquetado la lee el estado del panel aunque no haya etiquetador. */
@@ -48,6 +62,12 @@ public class SettingsConfiguration {
             throw new IllegalArgumentException("odin.tagger.window debe ser «always» o «HH:mm-HH:mm»: " + value);
         }
         return TaggingWindow.between(LocalTime.parse(parts[0]), LocalTime.parse(parts[1]), zone);
+    }
+
+    @Bean
+    LinkSettings linkSettings(@Value("${odin.public-url:}") String publicUrl,
+            @Value("${odin.link-ttl:PT15M}") Duration ttl) {
+        return new LinkSettings(publicUrl, ttl);
     }
 
     @Bean

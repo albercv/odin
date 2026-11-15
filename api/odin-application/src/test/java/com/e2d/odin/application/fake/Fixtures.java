@@ -92,6 +92,14 @@ public final class Fixtures {
         return d;
     }
 
+    public static Document titledDocument(InMemoryDocumentRepository docs, CompanyId company, String title) {
+        Document d = new Document(new DocumentId(UUID.randomUUID()), company, Optional.empty(), title, "t.pdf",
+                DocumentFormat.PDF, UUID.randomUUID().toString(), DocumentStatus.READY, Optional.empty(), true,
+                new UserId(UUID.randomUUID()), NOW, Optional.empty(), 0, Optional.empty(), Optional.empty());
+        docs.save(d);
+        return d;
+    }
+
     public static Document readyDocument(InMemoryDocumentRepository docs, CompanyId company, String pageText) {
         Document d = document(docs, company, DocumentStatus.READY);
         docs.replacePages(d.id(), java.util.List.of(new DocumentPage(d.id(), 1, pageText, "stub", "1")));
@@ -99,8 +107,13 @@ public final class Fixtures {
     }
 
     public static KnowledgeCard card(InMemoryKnowledgeCardRepository cards, CompanyId company, CardStatus status) {
-        KnowledgeCard c = new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), "Titulo",
-                "Cuerpo original", Optional.empty(), new UserId(UUID.randomUUID()), NOW, status, Optional.empty());
+        return card(cards, company, status, "Titulo", "Cuerpo original");
+    }
+
+    public static KnowledgeCard card(InMemoryKnowledgeCardRepository cards, CompanyId company, CardStatus status,
+            String title, String body) {
+        KnowledgeCard c = new KnowledgeCard(new CardId(UUID.randomUUID()), company, Optional.empty(), title,
+                body, Optional.empty(), new UserId(UUID.randomUUID()), NOW, status, Optional.empty());
         cards.save(c);
         return c;
     }

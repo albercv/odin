@@ -1,0 +1,46 @@
+=== Página 1 ===
+ADMINISTRACIONES RIBERA
+FICHA DE CASO
+
+Caso 2025-273
+Comunidad: Residencial Los Olivos 2
+Fecha de apertura: 16 de junio de 2025
+Categoría: Incidencia en instalaciones comunes
+Estado: Cerrado
+Gestionado por: Administraciones Ribera, departamento de incidencias
+
+1. DESCRIPCIÓN
+El 16 de junio de 2025 el jardinero que atiende la comunidad avisó al administrador de que una zona del césped situada junto al paseo central de los jardines permanecía encharcada desde hacía varios días, incluso en las horas en que el riego automático estaba desconectado. El administrador comprobó la lectura del contador general de agua y constató un consumo superior al habitual para esas fechas. Con estos indicios se abrió el caso como fuga de agua en la red de riego de los jardines comunitarios.
+
+2. DATOS DE LA INCIDENCIA
+Elemento afectado: red de riego de los jardines comunitarios, sector central.
+Zona de afección: césped y paseo central, sin daños en viviendas ni en el garaje.
+Comunicación al presidente: el mismo día de la apertura, por correo electrónico.
+Personas afectadas: ninguna de forma directa; el agua encharcada se acotó con vallas para evitar el paso.
+
+3. ACTUACIONES INICIALES
+16 de junio. Se cierra la llave de paso del sector central de riego y se desconecta el programador del sistema automático.
+17 de junio. Se solicita a un fontanero una primera revisión de la red. El técnico confirma una pérdida en una tubería enterrada, pero no puede determinar el punto exacto sin equipos de localización.
+19 de junio. El administrador informa al presidente de la situación y de la conveniencia de comunicar el siniestro, dado que la póliza vigente incluye la localización de fugas. Se reúne la documentación necesaria: facturas de consumo, informe del fontanero y fotografías de la zona.
+23 de junio. Se remite la comunicación del siniestro y se acuerda con el presidente mantener cerrado el sector afectado hasta conocer la valoración de la aseguradora.
+
+=== Página 2 ===
+4. RESOLUCIÓN
+Se tramitó la comunicación del siniestro a través del administrador, adjuntando el informe del fontanero, las lecturas del contador y las fotografías. La aseguradora designó a un perito, que visitó los jardines el 3 de julio. Se dio parte a Seguros Atalaya con cargo a la póliza ATL-9642-2024, que cubrió la localización de la fuga. Los trabajos de localización se realizaron mediante equipos de detección acústica, que permitieron identificar la rotura en un tramo de tubería de polietileno situado bajo el paseo central. Una vez localizada, se repuso el tramo dañado, se recompuso el pavimento y se comprobó la estanqueidad de la red antes de reabrir el sector.
+
+5. RESULTADO
+Cerrado el 2 de agosto de 2025; la comunidad asumió la franquicia de 310 euros.
+El sector central de riego volvió a funcionar con normalidad y el consumo del contador general recuperó sus valores habituales en las lecturas posteriores. No se produjeron daños en viviendas ni reclamaciones de propietarios por este motivo.
+
+6. CRONOLOGÍA DE CIERRE
+3 de julio. Visita del perito de la aseguradora a los jardines.
+8 de julio. Localización de la fuga mediante detección acústica.
+Mediados de julio. Reposición del tramo de tubería y recomposición del pavimento.
+28 de julio. Prueba de presión y reapertura del sector central.
+2 de agosto. Cierre del expediente y comunicación del resultado al presidente.
+
+7. DOCUMENTACIÓN ARCHIVADA
+Informe del fontanero, lecturas del contador general, fotografías de la zona, comunicación del siniestro, valoración del perito, justificante de la franquicia abonada por la comunidad y correo de cierre al presidente. Toda la documentación se conserva en el archivo de la comunidad.
+
+8. OBSERVACIONES
+Se recomienda mantener la revisión anual de la red de riego al inicio de cada temporada y consultar las lecturas del contador general en cada giro trimestral para detectar con rapidez posibles consumos anómalos.

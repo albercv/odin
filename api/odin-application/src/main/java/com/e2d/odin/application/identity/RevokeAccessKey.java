@@ -1,6 +1,7 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AccessKeyRepository;
+import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
@@ -13,11 +14,14 @@ public class RevokeAccessKey {
 
     private final AccessKeyRepository keys;
     private final UserRepository users;
+    private final AccessLinkRepository links;
     private final Clock clock;
 
-    public RevokeAccessKey(AccessKeyRepository keys, UserRepository users, Clock clock) {
+    public RevokeAccessKey(AccessKeyRepository keys, UserRepository users, AccessLinkRepository links,
+            Clock clock) {
         this.keys = keys;
         this.users = users;
+        this.links = links;
         this.clock = clock;
     }
 
@@ -31,5 +35,6 @@ public class RevokeAccessKey {
         if (key.revokedAt().isEmpty()) {
             keys.save(key.revoked(clock.instant()));
         }
+        links.deleteOf(key.companyId(), key.userId());
     }
 }

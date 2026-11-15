@@ -6,17 +6,24 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.application.port.IntakeDocument;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class InMemoryDocumentRepository implements DocumentRepository {
 
@@ -73,10 +81,23 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public void save(Document document) {
         Document stored = documents.get(document.id());
+        if (stored == null && beforeNewDocument != null) {
+            var race = beforeNewDocument;
+            beforeNewDocument = null;
+            race.accept(document);
+            throw new com.e2d.odin.domain.shared.ConflictException("Ya existe un registro con esos datos");
+        }
         // Como el upsert de PostgreSQL: guardar no escribe ni borra la marca de sustituido ni la de caso (la primera vez sí guarda la de caso).
         documents.put(document.id(), stored == null ? document.withSupersession(Optional.empty(), Optional.empty())
                 : document.withSupersession(stored.supersededBy(), stored.supersededAt())
                         .withCaseDocument(stored.caseDocument()));
+    }
+
+    private java.util.function.Consumer<Document> beforeNewDocument;
+
+    /** Antes de guardar el siguiente documento nuevo, otra subida idéntica se cuela y gana el índice único. */
+    public void raceWith(java.util.function.Consumer<Document> otherUpload) {
+        beforeNewDocument = otherUpload;
     }
 
     @Override
@@ -115,6 +136,10 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
+        return visible(scope, visibility, id).filter(d -> !d.withdrawn() && !d.intakePending());
+    }
+
+    private Optional<Document> visible(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
         return Optional.ofNullable(documents.get(id))
                 .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId()));
     }
@@ -122,6 +147,52 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public Optional<DocumentEntry> findEntry(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
         return findById(scope, visibility, id).map(d -> entry(scope, visibility, d));
+    }
+
+    @Override
+    public Optional<DocumentEntry> findEntryIncludingWithdrawn(CompanyScope scope, ProjectVisibility visibility,
+            DocumentId id) {
+        return visible(scope, visibility, id).map(d -> entry(scope, visibility, d));
+    }
+
+    @Override
+    public void markWithdrawal(Document document) {
+        boolean duplicated = document.withdrawnAt().isEmpty() && documents.values().stream()
+                .anyMatch(d -> !d.id().equals(document.id()) && !d.withdrawn()
+                        && d.companyId().equals(document.companyId()) && d.projectId().equals(document.projectId())
+                        && d.sha256().equals(document.sha256()));
+        if (duplicated) {
+            throw new ConflictException("Ya hay un documento igual en ese proyecto; retíralo antes de recuperar este");
+        }
+        documents.computeIfPresent(document.id(),
+                (id, stored) -> stored.withWithdrawal(document.withdrawnAt(), document.withdrawnBy()));
+    }
+
+    @Override
+    public List<DocumentEntry> search(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery, int offset, int limit) {
+        return matching(scope, visibility, withdrawn, titleQuery)
+                .sorted(Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
+                .skip(offset).limit(limit).map(d -> entry(scope, visibility, d)).toList();
+    }
+
+    @Override
+    public int count(CompanyScope scope, ProjectVisibility visibility, boolean withdrawn,
+            Optional<String> titleQuery) {
+        return (int) matching(scope, visibility, withdrawn, titleQuery).count();
+    }
+
+    private java.util.stream.Stream<Document> matching(CompanyScope scope, ProjectVisibility visibility,
+            boolean withdrawn, Optional<String> titleQuery) {
+        lastListScope = scope;
+        return documents.values().stream().filter(d -> d.withdrawn() == withdrawn && !d.intakePending()
+                && scope.includes(d.companyId()) && visibility.allows(d.projectId()))
+                .filter(d -> titleQuery.map(q -> fold(d.title()).contains(fold(q))).orElse(true));
+    }
+
+    private static String fold(String text) {
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .toLowerCase();
     }
 
     private DocumentEntry entry(CompanyScope scope, ProjectVisibility visibility, Document d) {
@@ -149,7 +220,118 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return documents.values().stream()
-                .filter(d -> d.companyId().equals(companyId) && d.sha256().equals(sha256)).findFirst();
+                .filter(d -> !d.withdrawn() && !d.intakePending() && d.companyId().equals(companyId)
+                        && d.sha256().equals(sha256))
+                .findFirst();
+    }
+
+    @Override
+    public Optional<Document> findBySha256ForIntake(CompanyId companyId, IntakeBatchId batchId, String sha256) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId) && d.sha256().equals(sha256)
+                && (!d.withdrawn() || d.intakeBatchId().equals(Optional.of(batchId))))
+                .min(Comparator.comparing(Document::withdrawn));
+    }
+
+    @Override
+    public Set<String> existingSha256ForIntake(CompanyId companyId, IntakeBatchId batchId,
+            Collection<String> sha256s) {
+        return sha256s.stream().filter(sha -> findBySha256ForIntake(companyId, batchId, sha).isPresent())
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public IntakeCounts intakeCounts(CompanyId companyId, IntakeBatchId batchId) {
+        List<Document> mine = documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()).toList();
+        long reading = mine.stream().filter(d -> Set.of(DocumentStatus.RECEIVED, DocumentStatus.PROCESSING,
+                DocumentStatus.PENDING_READER, DocumentStatus.READER_PROCESSING).contains(d.status())).count();
+        return new IntakeCounts(mine.size(), (int) reading, (int) mine.stream().filter(Document::intakePending).count(),
+                (int) mine.stream().filter(d -> d.status() == DocumentStatus.PENDING_READER).count());
+    }
+
+    @Override
+    public List<String> intakeTexts(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()
+                && d.status() == DocumentStatus.READY)
+                .map(d -> pagesOf(d.id()).stream().map(DocumentPage::text).collect(java.util.stream.Collectors.joining("\n")))
+                .toList();
+    }
+
+    @Override
+    public List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn() && d.intakePending()
+                && d.status() == DocumentStatus.READY)
+                .map(d -> new IntakeDocument(d.id(), d.intakePath(), pagesOf(d.id()).stream()
+                        .map(DocumentPage::text).collect(java.util.stream.Collectors.joining("\n")),
+                        pagesOf(d.id()).stream().anyMatch(p -> p.readerName().equals("unlimited-ocr-2")))).toList();
+    }
+
+    @Override
+    public List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && d.intakePending() && !d.withdrawn()).toList();
+    }
+
+    @Override
+    public Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)))
+                .collect(Collectors.toMap(Document::id, Document::title));
+    }
+
+    @Override
+    public Map<DocumentId, String> titlesOf(CompanyId companyId, java.util.Collection<DocumentId> ids) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId) && ids.contains(d.id()))
+                .collect(Collectors.toMap(Document::id, Document::title));
+    }
+
+    private final Map<DocumentId, Map.Entry<UserId, Instant>> placements = new HashMap<>();
+
+    /** Quién y cuándo sacó el documento de lo pendiente (la base lo guarda en intake_placed_by/at). */
+    public Map.Entry<UserId, Instant> placedBy(DocumentId id) {
+        return placements.get(id);
+    }
+
+    @Override
+    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId, UserId by, Instant at) {
+        Document d = documents.get(id);
+        if (d == null || !d.companyId().equals(companyId) || !d.intakePending() || d.withdrawn()) {
+            throw new ConflictException("El documento ya no está pendiente");
+        }
+        // Como el índice único de huella de lo visible (V26).
+        boolean twin = documents.values().stream().anyMatch(o -> !o.id().equals(id) && !o.withdrawn()
+                && !o.intakePending() && o.companyId().equals(companyId) && o.projectId().equals(projectId)
+                && o.sha256().equals(d.sha256()));
+        if (twin) {
+            throw new ConflictException("Ya hay un documento igual en ese proyecto: descarta este");
+        }
+        documents.put(id, d.confirmedIn(projectId));
+        placements.put(id, Map.entry(by, at));
+    }
+
+    @Override
+    public void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId) {
+        Document d = documents.get(scanId);
+        if (d == null || !d.companyId().equals(companyId) || d.intakePending() || d.withdrawn()) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+        documents.put(scanId, d.scanOf(originalId));
+    }
+
+    @Override
+    public boolean readerQueueBusy(CompanyId companyId) {
+        return documents.values().stream().anyMatch(d -> d.companyId().equals(companyId) && !d.withdrawn()
+                && (d.status() == DocumentStatus.PENDING_READER || d.status() == DocumentStatus.READER_PROCESSING));
+    }
+
+    @Override
+    public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
+            String sha256) {
+        return documents.values().stream().filter(d -> !d.withdrawn() && !d.intakePending()
+                && d.companyId().equals(companyId) && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
+                .findFirst();
     }
 
     @Override
@@ -158,8 +340,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
             int limit) {
         lastListScope = scope;
         return documents.values().stream()
-                .filter(d -> scope.includes(d.companyId()) && visibility.allows(d.projectId())
-                        && status.map(d.status()::equals).orElse(true))
+                .filter(d -> !d.withdrawn() && !d.intakePending() && scope.includes(d.companyId())
+                        && visibility.allows(d.projectId()) && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
                 .filter(d -> caseDocument.map(flag -> d.caseDocument() == flag).orElse(true))
                 .filter(d -> topicId.isEmpty() || activeTopic.test(d.id(), topicId.get()))
@@ -179,7 +361,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         for (Document d : candidates) {
             boolean stale = d.status() == DocumentStatus.PROCESSING
                     && d.processingStartedAt().map(t -> !t.plus(staleAfter).isAfter(now)).orElse(true);
-            if (d.status() == DocumentStatus.RECEIVED || stale) {
+            if (!d.withdrawn() && (d.status() == DocumentStatus.RECEIVED || stale)) {
                 Document claimed = d.startProcessing(now);
                 documents.put(claimed.id(), claimed);
                 return Optional.of(claimed);
@@ -193,7 +375,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
         for (Document d : new ArrayList<>(documents.values())) {
             boolean stale = d.status() == DocumentStatus.READER_PROCESSING
                     && d.processingStartedAt().map(t -> !t.plus(staleAfter).isAfter(now)).orElse(true);
-            if (d.status() == DocumentStatus.PENDING_READER || stale) {
+            if (!d.withdrawn() && (d.status() == DocumentStatus.PENDING_READER || stale)) {
                 Document claimed = d.startReading(now);
                 documents.put(claimed.id(), claimed);
                 return Optional.of(claimed);

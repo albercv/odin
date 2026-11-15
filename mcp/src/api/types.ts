@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["withdraw"];
+        post?: never;
+        delete: operations["restore"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/documents/{documentId}/topics/{topicId}": {
         parameters: {
             query?: never;
@@ -78,6 +94,22 @@ export interface paths {
         get?: never;
         put: operations["capabilities"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/upload-links/{token}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadByLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -148,6 +180,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectId}/upload-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["issueProjectUploadLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}/original-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["originalLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/citations/verify": {
         parameters: {
             query?: never;
@@ -158,6 +222,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/citations/verify-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/upload-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/file/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -205,7 +317,7 @@ export interface paths {
         };
         get: operations["list"];
         put?: never;
-        post: operations["add_1"];
+        post: operations["add_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -301,7 +413,7 @@ export interface paths {
         };
         get: operations["list_2"];
         put?: never;
-        post: operations["add_2"];
+        post: operations["add_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -318,6 +430,182 @@ export interface paths {
         get: operations["keys"];
         put?: never;
         post: operations["issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openBatches"];
+        put?: never;
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals/{proposalId}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["decideProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmProposals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-list/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeProjectList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importProjectList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discoverProjects"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmProjectCandidates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["knownFiles"];
+        put?: never;
+        post: operations["addFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["place"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeUpload"];
         delete?: never;
         options?: never;
         head?: never;
@@ -350,6 +638,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["markCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -468,6 +772,38 @@ export interface paths {
         patch: operations["update_3"];
         trace?: never;
     };
+    "/v1/upload-links/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["describeUploadLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/originals/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openOriginalByLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -564,6 +900,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cases/{caseId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/file/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["text"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/me": {
         parameters: {
             query?: never;
@@ -588,6 +956,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["documentTopics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/documents/{documentId}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadOriginal"];
         put?: never;
         post?: never;
         delete?: never;
@@ -660,6 +1044,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["proposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projectCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["unplacedDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["original"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/gaps": {
         parameters: {
             query?: never;
@@ -692,6 +1156,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["file_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/cards": {
         parameters: {
             query?: never;
@@ -703,6 +1199,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cases/{caseId}/file/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -740,6 +1252,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -747,13 +1275,6 @@ export interface components {
         SetPassword: {
             currentPassword?: string;
             newPassword?: string;
-        };
-        SupersedeRequest: {
-            /**
-             * Format: uuid
-             * @description El documento que lo sustituye entero.
-             */
-            replacementId?: string;
         };
         DocumentLink: {
             /** Format: uuid */
@@ -784,6 +1305,10 @@ export interface components {
             taggingStatus?: string;
             topics: components["schemas"]["TopicLabelView"][];
             caseDocument: boolean;
+            /** Format: date-time */
+            withdrawnAt?: string;
+            /** @description Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe. */
+            uploadedByName?: string;
         };
         TopicLabelView: {
             /** Format: uuid */
@@ -791,16 +1316,27 @@ export interface components {
             name: string;
             source: string;
         };
+        SupersedeRequest: {
+            /**
+             * Format: uuid
+             * @description El documento que lo sustituye entero.
+             */
+            replacementId?: string;
+        };
         Capabilities: {
-            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities?: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
         };
         CompanyView: {
             /** Format: uuid */
             id: string;
             name: string;
             code: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
             codeReviewed: boolean;
+        };
+        UploadReceipt: {
+            filename: string;
+            duplicate: boolean;
         };
         SimilarCasesRequestBody: {
             queries?: string[];
@@ -867,6 +1403,8 @@ export interface components {
             projectId?: string;
             /** Format: int32 */
             limit?: number;
+            /** Format: uuid */
+            caseId?: string;
         };
         Hit: {
             sourceType: string;
@@ -876,6 +1414,7 @@ export interface components {
             /** Format: int32 */
             pageNumber?: number;
             paginated: boolean;
+            caseDocument: boolean;
             /** Format: uuid */
             projectId?: string;
             authorName: string;
@@ -892,6 +1431,18 @@ export interface components {
             hits: components["schemas"]["Hit"][];
             noSource: boolean;
         };
+        IssuedLink: {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        OriginalLinkRequest: {
+            /**
+             * Format: int32
+             * @description Página en la que abre el visor de PDF; si falta, abre por la primera.
+             */
+            page?: number;
+        };
         VerifyCitation: {
             /** Format: uuid */
             documentId?: string;
@@ -901,6 +1452,27 @@ export interface components {
         };
         Verification: {
             verified: boolean;
+        };
+        VerifyCitations: {
+            citations?: components["schemas"]["VerifyCitation"][];
+        };
+        VerificationResult: {
+            /** Format: uuid */
+            documentId: string;
+            /** Format: int32 */
+            pageNumber: number;
+            verified: boolean;
+        };
+        Verifications: {
+            results: components["schemas"]["VerificationResult"][];
+        };
+        CaseFileDocumentsRequest: {
+            /** @description De 1 a 500 documentos que ya están en Odín. */
+            documentIds: string[];
+        };
+        CaseFileAdded: {
+            /** Format: int32 */
+            added: number;
         };
         SaveCard: {
             title?: string;
@@ -1008,6 +1580,123 @@ export interface components {
             prefix: string;
             key: string;
         };
+        StartIntakeRequest: {
+            /**
+             * @description Quién sube: el comando de la IA o el panel.
+             * @enum {string}
+             */
+            channel: "COMMAND" | "PANEL";
+        };
+        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). projectListClosedAt: cuándo se dio la lista de proyectos por terminada; sin ella no se clasifica. */
+        IntakeBatchView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            companyId: string;
+            channel: string;
+            state: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            closedAt?: string;
+            /** Format: int32 */
+            uploaded: number;
+            /** Format: int32 */
+            reading: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            alreadyThere: number;
+            /** Format: int32 */
+            discarded: number;
+            warnings: components["schemas"]["IntakeWarningView"][];
+            proposed: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            unplaced: number;
+            /** Format: date-time */
+            projectListClosedAt?: string;
+        };
+        IntakeWarningView: {
+            code: string;
+            message: string;
+        };
+        DecideProposalRequest: {
+            /**
+             * @description CONFIRM la confirma, CORRECT_PROJECT la lleva a otro proyecto (projectId), COMPANY_WIDE deja el documento sin proyecto para toda la empresa, DONT_KNOW lo deja pendiente y oculto, REJECT la rechaza.
+             * @enum {string}
+             */
+            decision: "CONFIRM" | "CORRECT_PROJECT" | "COMPANY_WIDE" | "DONT_KNOW" | "REJECT";
+            /**
+             * Format: uuid
+             * @description Solo con CORRECT_PROJECT: el proyecto de la empresa al que va el documento.
+             */
+            projectId?: string;
+        };
+        /** @description state: PROPOSED, CONFIRMED, REJECTED o DONT_KNOW («no lo sé»: sigue abierta y se puede decidir después). decidedBy y decidedAt: quién y cuándo, si está decidida o con «no lo sé». */
+        DecidedProposal: {
+            /** Format: uuid */
+            id: string;
+            state: string;
+            /** Format: uuid */
+            decidedBy?: string;
+            /** Format: date-time */
+            decidedAt?: string;
+        };
+        ConfirmProposalsRequest: {
+            /** @description De 1 a 500 propuestas del lote, todo o nada. */
+            proposalIds: string[];
+        };
+        ConfirmedProposals: {
+            /** Format: int32 */
+            confirmed: number;
+        };
+        /** @description origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado. */
+        ProjectCandidateView: {
+            name: string;
+            origin: string;
+            /** Format: int32 */
+            documentCount: number;
+            state: string;
+            /** Format: uuid */
+            projectId?: string;
+        };
+        ProjectCandidates: {
+            candidates: components["schemas"]["ProjectCandidateView"][];
+        };
+        ConfirmProjectCandidatesRequest: {
+            /** @description De 1 a 500 decisiones, todo o nada. */
+            decisions: components["schemas"]["ProjectDecisionRequest"][];
+        };
+        ProjectDecisionRequest: {
+            /** @description Nombre del candidato, tal como sale en la lista. */
+            name: string;
+            /**
+             * @description CREATE crea el proyecto, MERGE lo une a uno que ya existe (projectId), REJECT lo rechaza.
+             * @enum {string}
+             */
+            decision: "CREATE" | "MERGE" | "REJECT";
+            /**
+             * Format: uuid
+             * @description Solo con MERGE: el proyecto de la empresa al que se une.
+             */
+            projectId?: string;
+        };
+        /** @description outcome: CREATED, ALREADY_THERE (la huella ya estaba) o DISCARDED_IN_BATCH (se descartó en este lote). */
+        IntakeFile: {
+            outcome: string;
+            document: components["schemas"]["DocumentView"];
+        };
+        PlaceDocumentRequest: {
+            /**
+             * Format: uuid
+             * @description El proyecto de la empresa al que va el documento. Exactamente uno de projectId o companyWide.
+             */
+            projectId?: string;
+            /** @description Verdadero: sin proyecto, visible para toda la empresa. Exactamente uno de projectId o companyWide. */
+            companyWide?: boolean;
+        };
         Upload: {
             document: components["schemas"]["DocumentView"];
             duplicate: boolean;
@@ -1083,6 +1772,14 @@ export interface components {
             active?: boolean;
             password?: string;
         };
+        UploadLinkInfo: {
+            /** @enum {string} */
+            target: "CASE" | "PROJECT";
+            caseTitle?: string;
+            projectName: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         Me: {
             /** Format: uuid */
             userId: string;
@@ -1098,7 +1795,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES")[];
+            capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
         };
         MeProject: {
             /** Format: uuid */
@@ -1166,6 +1863,65 @@ export interface components {
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
             readerName: string;
+        };
+        CaseFileDocumentView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId?: string;
+            title: string;
+            filename: string;
+            format: string;
+            paginated: boolean;
+            /** Format: int32 */
+            pageCount: number;
+            /** Format: uuid */
+            uploadedBy: string;
+            /** Format: date-time */
+            uploadedAt: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+            /** Format: uuid */
+            addedBy?: string;
+            /** Format: date-time */
+            addedAt?: string;
+            status: string;
+            uploadedByName?: string;
+            addedByName?: string;
+        };
+        CaseFileResponse: {
+            caseDocument: components["schemas"]["CaseFileDocumentView"];
+            documents: components["schemas"]["CaseFileDocumentView"][];
+            /** Format: int32 */
+            pendingDocuments: number;
+            /** Format: int32 */
+            unreadableDocuments: number;
+        };
+        CaseFileTextPageView: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+            /** Format: int32 */
+            pageNumber: number;
+            text: string;
+            unread: boolean;
+        };
+        CaseFileTextResponse: {
+            pages: components["schemas"]["CaseFileTextPageView"][];
+            nextCursor?: string;
+            complete: boolean;
+            /** Format: int32 */
+            documentsRead: number;
+            /** Format: int32 */
+            documentsTotal: number;
+            /** Format: int32 */
+            pagesRead: number;
+            /** Format: int32 */
+            pagesTotal: number;
+            /** Format: int32 */
+            pendingDocuments: number;
+            /** Format: int32 */
+            unreadableDocuments: number;
         };
         AdminMe: {
             /** Format: uuid */
@@ -1296,6 +2052,58 @@ export interface components {
             /** Format: date-time */
             revokedAt?: string;
         };
+        /** @description Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL. */
+        IntakeBatchSummary: {
+            /** Format: uuid */
+            id: string;
+            state: string;
+            channel: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Los lotes de la empresa que no están cerrados, el más reciente primero. */
+        OpenIntakeBatches: {
+            batches: components["schemas"]["IntakeBatchSummary"][];
+        };
+        /** @description kind: PROJECT, COMPANY_WIDE, CASE_MARK, CASE_LINK, SAME_AS_SCAN o SUPERSEDES. confidence: HIGH o LOW. projectId: el proyecto propuesto, si la clase lo tiene. */
+        IntakeProposalGroup: {
+            kind: string;
+            confidence: string;
+            /** Format: uuid */
+            projectId?: string;
+            proposals: components["schemas"]["IntakeProposalItem"][];
+        };
+        IntakeProposalGroups: {
+            groups: components["schemas"]["IntakeProposalGroup"][];
+        };
+        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. */
+        IntakeProposalItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+            /** Format: uuid */
+            targetDocumentId?: string;
+            targetTitle?: string;
+            caseNumber?: string;
+            source: string;
+            reason: string;
+        };
+        KnownFiles: {
+            sha256: string[];
+        };
+        /** @description Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. */
+        IntakeDocumentView: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            path?: string;
+            status: string;
+        };
+        IntakeDocuments: {
+            documents: components["schemas"]["IntakeDocumentView"][];
+        };
         GapView: {
             text: string;
             kind: string;
@@ -1309,6 +2117,11 @@ export interface components {
             reason?: string;
             gaps: components["schemas"]["GapView"][];
         };
+        DocumentPage: {
+            documents: components["schemas"]["DocumentView"][];
+            /** Format: int32 */
+            total: number;
+        };
         DeliveredVolumeView: {
             month: string;
             totals: components["schemas"]["DeliveryTotalView"][];
@@ -1319,6 +2132,23 @@ export interface components {
             calls: number;
             /** Format: int64 */
             bytes: number;
+        };
+        CaseFileEventView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            documentId: string;
+            documentTitle?: string;
+            action: string;
+            /** Format: uuid */
+            actorId: string;
+            /** Format: date-time */
+            at: string;
+        };
+        CardPage: {
+            cards: components["schemas"]["CardView"][];
+            /** Format: int32 */
+            total: number;
         };
     };
     responses: never;
@@ -1350,6 +2180,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    withdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+        };
+    };
+    restore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
             };
         };
     };
@@ -1511,6 +2385,35 @@ export interface operations {
             };
         };
     };
+    uploadByLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadReceipt"];
+                };
+            };
+        };
+    };
     similarCases: {
         parameters: {
             query?: never;
@@ -1605,6 +2508,54 @@ export interface operations {
             };
         };
     };
+    issueProjectUploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
+                };
+            };
+        };
+    };
+    originalLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OriginalLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
+                };
+            };
+        };
+    };
     verify: {
         parameters: {
             query?: never;
@@ -1625,6 +2576,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Verification"];
+                };
+            };
+        };
+    };
+    verifyBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyCitations"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Verifications"];
+                };
+            };
+        };
+    };
+    uploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
+                };
+            };
+        };
+    };
+    add_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseFileDocumentsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileAdded"];
                 };
             };
         };
@@ -1717,7 +2740,7 @@ export interface operations {
             };
         };
     };
-    add_1: {
+    add_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1945,7 +2968,7 @@ export interface operations {
             };
         };
     };
-    add_2: {
+    add_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -2021,11 +3044,358 @@ export interface operations {
             };
         };
     };
+    openBatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenIntakeBatches"];
+                };
+            };
+        };
+    };
+    start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    decideProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                proposalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecidedProposal"];
+                };
+            };
+        };
+    };
+    confirmProposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmProposalsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmedProposals"];
+                };
+            };
+        };
+    };
+    closeProjectList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    importProjectList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    discoverProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    confirmProjectCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmProjectCandidatesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    knownFiles: {
+        parameters: {
+            query: {
+                sha256: string[];
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnownFiles"];
+                };
+            };
+        };
+    };
+    addFile: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description No se creó nada: ya estaba o se descartó en este lote */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeFile"];
+                };
+            };
+            /** @description Documento nuevo, pendiente de confirmar */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeFile"];
+                };
+            };
+        };
+    };
+    discard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    place: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    closeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
     list_3: {
         parameters: {
             query?: {
                 offset?: number;
                 limit?: number;
+                /** @description Si es true, devuelve solo los documentos retirados (con su paginación) */
+                withdrawn?: boolean;
+                /** @description Texto del título, sin mayúsculas ni acentos (hasta 100 caracteres) */
+                q?: string;
             };
             header?: never;
             path: {
@@ -2041,7 +3411,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DocumentView"][];
+                    "application/json": components["schemas"]["DocumentPage"];
                 };
             };
         };
@@ -2052,6 +3422,8 @@ export interface operations {
                 title?: string;
                 projectId?: string;
                 caseDocument?: boolean;
+                /** @description Caso a cuyo expediente se añade el documento. */
+                caseId?: string;
             };
             header?: never;
             path: {
@@ -2110,6 +3482,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseMarksResult"];
+                };
+            };
+        };
+    };
+    add_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseFileDocumentsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileAdded"];
                 };
             };
         };
@@ -2404,6 +3803,50 @@ export interface operations {
             };
         };
     };
+    describeUploadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadLinkInfo"];
+                };
+            };
+        };
+    };
+    openOriginalByLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -2537,6 +3980,52 @@ export interface operations {
             };
         };
     };
+    file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
+    text: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileTextResponse"];
+                };
+            };
+        };
+    };
     me_1: {
         parameters: {
             query?: never;
@@ -2575,6 +4064,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentTopicsResponse"];
+                };
+            };
+        };
+    };
+    downloadOriginal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };
@@ -2671,6 +4182,128 @@ export interface operations {
             };
         };
     };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    proposals: {
+        parameters: {
+            query?: {
+                kind?: string;
+                confidence?: string;
+                project?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeProposalGroups"];
+                };
+            };
+        };
+    };
+    projectCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    unplacedDocuments: {
+        parameters: {
+            query: {
+                unplaced: boolean;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeDocuments"];
+                };
+            };
+        };
+    };
+    original: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
     gaps: {
         parameters: {
             query?: {
@@ -2719,10 +4352,60 @@ export interface operations {
             };
         };
     };
+    file_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileResponse"];
+                };
+            };
+        };
+    };
+    events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseFileEventView"][];
+                };
+            };
+        };
+    };
     list_5: {
         parameters: {
             query?: {
                 status?: "PENDING" | "APPROVED" | "REJECTED";
+                offset?: number;
+                limit?: number;
+                /** @description Texto del título o del cuerpo, sin mayúsculas ni acentos (hasta 100 caracteres) */
+                q?: string;
             };
             header?: never;
             path: {
@@ -2738,8 +4421,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CardView"][];
+                    "application/json": components["schemas"]["CardPage"];
                 };
+            };
+        };
+    };
+    remove_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2769,6 +4473,28 @@ export interface operations {
             header?: never;
             path: {
                 userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                caseId: string;
+                documentId: string;
             };
             cookie?: never;
         };

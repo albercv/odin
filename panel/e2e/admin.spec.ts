@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 
 const state = JSON.parse(readFileSync(process.env.DEMO_STATE ?? '', 'utf8')) as { admin: { email: string; password: string }; sessionCookie: string };
@@ -332,6 +333,35 @@ async function uploadCaseFilesAndMarkSelection(page: Page): Promise<void> {
   console.log('✓ Admin 17: dos ficheros subidos a la vez como fichas de caso; la selección se desmarca y se vuelve a marcar por lotes');
 }
 
+async function caseScreenAndWithdrawal(page: Page): Promise<void> {
+  const [caseName, other] = [CASE_FILES[1] ?? '', CASE_FILES[0] ?? ''];
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await page.getByRole('link', { name: `Ver expediente de ${caseName}`, exact: true }).click();
+  await expect(page.getByRole('heading', { name: caseName, level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Añadir documentos', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Añadir documentos' });
+  await picker.getByRole('checkbox', { name: other, exact: true }).check();
+  await picker.getByRole('button', { name: 'Añadir', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Historial' })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await page.getByRole('button', { name: `Quitar del expediente ${other}`, exact: true }).click();
+  await confirmDialog(page, `¿Quitar «${other}» del expediente? El documento sigue en Odín; solo deja de formar parte de este caso.`, 'Quitar');
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  await openActions(page.locator('main'), other);
+  await page.getByRole('button', { name: `Retirar ${other}`, exact: true }).click();
+  await page.getByRole('dialog', { name: new RegExp(`Retirar «${other}»`) }).getByRole('button', { name: 'Retirar', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retirados', exact: true }).click();
+  await page.getByRole('button', { name: `Recuperar ${other}`, exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retirados', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: other })).toBeVisible();
+  await page.getByRole('link', { name: 'Empresa', exact: true }).click();
+  console.log('✓ Admin 17b: pantalla del caso (añadir, historial, quitar con confirmación, axe) y retirar y recuperar un documento');
+}
+
 const groupAdminsSection = (page: Page): Locator => page.locator('section', { has: page.getByRole('heading', { name: 'Administradores del grupo' }) });
 
 async function openGroupAdmins(page: Page, email: string, password: string): Promise<void> {
@@ -465,6 +495,83 @@ async function workersAskAndSaveCard(page: Page): Promise<void> {
   }
 }
 
+const LINK_PROJECT = 'Proyecto del enlace de caso e2e';
+const LINK_CASE = 'caso-e2e-3';
+
+// Una ficha de caso dentro de un proyecto del que el trabajador es miembro (D-111: sin proyecto no hay enlace de subida).
+async function caseInProjectOf(page: Page, companyId: string, worker: string): Promise<string> {
+  const { id: projectId } = await apiJson<{ id: string }>(page, 'post', `/v1/admin/companies/${companyId}/projects`, { name: LINK_PROJECT });
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/projects/${projectId}/members/${worker}`);
+  const response = await page.request.post(`${API}/v1/admin/companies/${companyId}/documents?projectId=${projectId}&caseDocument=true&title=${LINK_CASE}`,
+    { multipart: { file: { name: `${LINK_CASE}.txt`, mimeType: 'text/plain', buffer: Buffer.from('Ficha de caso ficticia del enlace: humedad en el garaje.') } } });
+  expect(response.ok(), `subir la ficha ${response.status()}`).toBeTruthy();
+  return ((await response.json()) as { document: { id: string } }).document.id;
+}
+
+// El trabajador pide el enlace con su clave real (la API); la página pública se abre sin sesión y sube un fichero.
+async function uploadThroughPublicLink(page: Page, browser: Browser): Promise<void> {
+  const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
+  const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES'] });
+  const { documents } = await apiJson<{ documents: { id: string; title: string }[] }>(page, 'get', `/v1/admin/companies/${companyId}/documents?limit=500`);
+  const generalCaseId = documents.find((d) => d.title === CASE_FILES[1])?.id ?? '';
+  const members = await apiJson<{ userId: string; displayName: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/members`);
+  const worker = members.find((m) => m.displayName === ASKERS[0])?.userId ?? '';
+  const caseId = await caseInProjectOf(page, companyId, worker);
+  const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${worker}/keys`, { label: 'enlace e2e' });
+  const noLink = await page.request.post(`${API}/v1/cases/${generalCaseId}/upload-links`, { headers: { Authorization: `Bearer ${key}` } });
+  expect(noLink.status(), 'una ficha de caso sin proyecto no da enlace de subida').toBe(404);
+  const link = await apiJson<{ url: string }>(page, 'post', `/v1/cases/${caseId}/upload-links`, undefined, { Authorization: `Bearer ${key}` });
+  const token = link.url.split('/').pop() ?? '';
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/${token}`);
+  await expect(visitor.getByText('Caso', { exact: true })).toBeVisible();
+  await expect(visitor.getByText(LINK_CASE)).toBeVisible();
+  await visitor.getByLabel('Elegir ficheros').setInputFiles({ name: 'foto-e2e.txt', mimeType: 'text/plain', buffer: Buffer.from('Foto ficticia enviada por el enlace.') });
+  await expect(visitor.getByText('recibido: foto-e2e.txt')).toBeVisible();
+  await expect(visitor.getByRole('link')).toHaveCount(0);
+  expect((await new AxeBuilder({ page: visitor }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/token-que-no-existe`);
+  await expect(visitor.getByRole('alert')).toBeVisible();
+  await expect(visitor.getByText(LINK_CASE)).toHaveCount(0);
+  await visitorContext.close();
+  console.log('✓ Admin 20b: página pública de subida por enlace, sin sesión: caso y proyecto, recibido y enlace no válido sin datos del caso');
+}
+
+const PROJECT_NAME = 'Proyecto de subida e2e';
+const PROJECT_FILES = ['proyecto-e2e-1.txt', 'proyecto-e2e-2.txt'];
+const projectFile = (name: string) => ({ name, mimeType: 'text/plain', buffer: Buffer.from(`Nota ficticia ${name} subida a un proyecto.`) });
+
+// El trabajador pide el enlace de un proyecto; sube dos ficheros y repite uno; el administrador los ve con su autor.
+async function uploadToProjectThroughPublicLink(page: Page, browser: Browser): Promise<void> {
+  const companies = await apiJson<{ id: string; name: string }[]>(page, 'get', '/v1/admin/companies');
+  const companyId = companies.find((c) => c.name === COMPANY)?.id ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/capabilities`, { capabilities: ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES', 'UPLOAD_DOCUMENTS'] });
+  const { id: projectId } = await apiJson<{ id: string }>(page, 'post', `/v1/admin/companies/${companyId}/projects`, { name: PROJECT_NAME });
+  const members = await apiJson<{ userId: string; displayName: string }[]>(page, 'get', `/v1/admin/companies/${companyId}/members`);
+  const worker = members.find((m) => m.displayName === ASKERS[0])?.userId ?? '';
+  await apiJson(page, 'put', `/v1/admin/companies/${companyId}/projects/${projectId}/members/${worker}`);
+  const { key } = await apiJson<{ key: string }>(page, 'post', `/v1/admin/companies/${companyId}/members/${worker}/keys`, { label: 'enlace proyecto e2e' });
+  const link = await apiJson<{ url: string }>(page, 'post', `/v1/projects/${projectId}/upload-links`, undefined, { Authorization: `Bearer ${key}` });
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
+  await visitor.goto(`${process.env.DEMO_PANEL_URL ?? ''}/subir/${link.url.split('/').pop()}`);
+  await expect(visitor.getByRole('heading', { name: 'Subir documentos al proyecto' })).toBeVisible();
+  await expect(visitor.getByText('Proyecto', { exact: true })).toBeVisible();
+  await expect(visitor.getByText(PROJECT_NAME)).toBeVisible();
+  await expect(visitor.getByText('Caso', { exact: true })).toHaveCount(0);
+  await visitor.getByLabel('Elegir ficheros').setInputFiles(PROJECT_FILES.map(projectFile));
+  for (const name of PROJECT_FILES) await expect(visitor.getByText(`recibido: ${name}`)).toBeVisible();
+  await visitor.getByLabel('Elegir ficheros').setInputFiles(projectFile(PROJECT_FILES[0] ?? ''));
+  await expect(visitor.getByText(`${PROJECT_FILES[0]}: Ya estaba en el proyecto`)).toBeVisible();
+  expect((await new AxeBuilder({ page: visitor }).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+  await visitorContext.close();
+  await page.getByRole('link', { name: 'Documentos', exact: true }).click();
+  for (const name of PROJECT_FILES) await expect(page.getByRole('row').filter({ hasText: name.replace('.txt', '') })).toContainText(ASKERS[0] ?? '');
+  console.log('✓ Admin 20c: subida a un proyecto por enlace: dos ficheros con su autor en Documentos, el repetido avisa y Axe sin fallos graves');
+}
+
 async function seeUsageOfTheMonth(page: Page): Promise<void> {
   await page.getByRole('link', { name: 'Uso', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Uso', level: 1 })).toBeVisible();
@@ -526,9 +633,12 @@ test('administración del panel de extremo a extremo', async ({ page, context, b
   await promoteWorkerWithoutPassword(page, browser);
   await deleteProjectMember(page);
   await uploadCaseFilesAndMarkSelection(page);
+  await caseScreenAndWithdrawal(page);
   await createAndEditTopics(page);
   await removeAndRecoverDocumentTopic(page);
   await workersAskAndSaveCard(page);
+  await uploadThroughPublicLink(page, browser);
+  await uploadToProjectThroughPublicLink(page, browser);
   await seeUsageOfTheMonth(page);
   await seeTheGapOfTheQuestion(page);
   await rejectCardSeeingTheNoteWarning(page);

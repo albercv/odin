@@ -33,19 +33,72 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
 const a = '/v1/admin';
 const co = (id: string) => `${a}/companies/${id}`;
 
+const ib = (companyId: string, batchId: string) => `${co(companyId)}/intake-batches/${batchId}`;
+
 const PAGE_SIZE = 500;
 export const MAX_DOCUMENTS = 2000;
 
+export const documentPage = (companyId: string, { q = '', offset = 0, limit = PAGE_SIZE, withdrawn = false } = {}) => {
+  const query = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+  if (q.trim()) query.set('q', q.trim());
+  if (withdrawn) query.set('withdrawn', 'true');
+  return request<S['DocumentPage']>('GET', `${co(companyId)}/documents?${query}`);
+};
+
+export const cardPage = (companyId: string, { q = '', offset = 0, limit = 10 } = {}) => {
+  const query = new URLSearchParams({ status: 'PENDING', offset: String(offset), limit: String(limit) });
+  if (q.trim()) query.set('q', q.trim());
+  return request<S['CardPage']>('GET', `${co(companyId)}/cards?${query}`);
+};
+
 // Recorre las páginas de la API con offset, como collectDocuments en el MCP.
-async function allDocuments(companyId: string) {
+async function allDocuments(companyId: string, withdrawn = false) {
   const documents: S['DocumentView'][] = [];
   while (documents.length <= MAX_DOCUMENTS) {
-    const page = await request<S['DocumentView'][]>('GET', `${co(companyId)}/documents?offset=${documents.length}&limit=${PAGE_SIZE}`);
-    documents.push(...page);
-    if (page.length < PAGE_SIZE) break;
+    const page = await documentPage(companyId, { offset: documents.length, limit: PAGE_SIZE, withdrawn });
+    documents.push(...page.documents);
+    if (page.documents.length < PAGE_SIZE) break;
   }
   return { documents: documents.slice(0, MAX_DOCUMENTS), truncated: documents.length > MAX_DOCUMENTS };
 }
+
+export const originalUrl = (documentId: string) => `${a}/documents/${documentId}/original`;
+/** The original of a pending document of a batch: only its admin opens it, from the tray. */
+export const intakeOriginalUrl = (companyId: string, batchId: string, documentId: string) =>
+  `${ib(companyId, batchId)}/documents/${documentId}/original`;
+
+export const uploadLinks = {
+  info: (token: string) => request<S['UploadLinkInfo']>('GET', `/v1/upload-links/${encodeURIComponent(token)}`, undefined, true),
+  upload: (token: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<S['UploadReceipt']>('POST', `/v1/upload-links/${encodeURIComponent(token)}/documents`, form, true);
+  },
+};
+
+export const intake = {
+  open: (c: string) => request<S['OpenIntakeBatches']>('GET', `${co(c)}/intake-batches`),
+  batch: (c: string, b: string) => request<S['IntakeBatchView']>('GET', ib(c, b)),
+  candidates: (c: string, b: string) => request<S['ProjectCandidates']>('GET', `${ib(c, b)}/project-candidates`),
+  importList: (c: string, b: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/import`, form);
+  },
+  discover: (c: string, b: string) => request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/discover`),
+  closeList: (c: string, b: string) => request<S['IntakeBatchView']>('POST', `${ib(c, b)}/project-list/close`),
+  confirmCandidates: (c: string, b: string, decisions: S['ProjectDecisionRequest'][]) =>
+    request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/confirm`, { decisions }),
+  proposals: (c: string, b: string) => request<S['IntakeProposalGroups']>('GET', `${ib(c, b)}/proposals`),
+  confirmProposals: (c: string, b: string, proposalIds: string[]) =>
+    request<S['ConfirmedProposals']>('POST', `${ib(c, b)}/proposals/confirm`, { proposalIds }),
+  decide: (c: string, b: string, id: string, body: S['DecideProposalRequest']) =>
+    request<S['DecidedProposal']>('POST', `${ib(c, b)}/proposals/${id}/decide`, body),
+  unplaced: (c: string, b: string) => request<S['IntakeDocuments']>('GET', `${ib(c, b)}/documents?unplaced=true`),
+  place: (c: string, b: string, id: string, body: S['PlaceDocumentRequest']) =>
+    request<void>('POST', `${ib(c, b)}/documents/${id}/place`, body),
+  withdraw: (c: string, b: string, id: string) => request<unknown>('POST', `${ib(c, b)}/documents/${id}/withdraw`),
+};
 
 export const api = {
   me: () => request<S['AdminMe']>('GET', `${a}/me`, undefined, true),
@@ -84,11 +137,21 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
-  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false) => {
+  documentPage,
+  withdraw: (documentId: string) => request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/withdrawal`),
+  restore: (documentId: string) => request<S['DocumentView']>('DELETE', `${a}/documents/${documentId}/withdrawal`),
+  caseFile: (id: string, caseId: string) => request<S['CaseFileResponse']>('GET', `${co(id)}/cases/${caseId}/file`),
+  caseEvents: (id: string, caseId: string) => request<S['CaseFileEventView'][]>('GET', `${co(id)}/cases/${caseId}/events`),
+  addToCase: (id: string, caseId: string, documentIds: string[]) =>
+    request<S['CaseFileAdded']>('POST', `${co(id)}/cases/${caseId}/file/documents`, { documentIds }),
+  removeFromCase: (id: string, caseId: string, documentId: string) =>
+    request<void>('DELETE', `${co(id)}/cases/${caseId}/file/documents/${documentId}`),
+  upload: (id: string, file: File, title: string, projectId: string, caseDocument = false, caseId = '') => {
     const q = new URLSearchParams();
     if (title) q.set('title', title);
     if (projectId) q.set('projectId', projectId);
     if (caseDocument) q.set('caseDocument', 'true');
+    if (caseId) q.set('caseId', caseId);
     const form = new FormData();
     form.append('file', file);
     return request<S['Upload']>('POST', `${co(id)}/documents?${q}`, form);
@@ -101,7 +164,8 @@ export const api = {
   supersede: (documentId: string, replacementId: string) =>
     request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/superseded-by`, { replacementId }),
   unsupersede: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/superseded-by`),
-  pendingCards: (id: string) => request<S['CardView'][]>('GET', `${co(id)}/cards?status=PENDING`),
+  pendingCount: (id: string) => cardPage(id, { limit: 10 }).then((page) => page.total),
+  cardPage,
   topics: (id: string) => request<S['TopicView'][]>('GET', `${co(id)}/topics`),
   createTopic: (id: string, b: S['TopicRequest']) => request<S['TopicView']>('POST', `${co(id)}/topics`, b),
   updateTopic: (id: string, topicId: string, b: S['TopicPatch']) => request<S['TopicView']>('PATCH', `${co(id)}/topics/${topicId}`, b),

@@ -41,6 +41,29 @@ public class InMemoryKnowledgeCardRepository implements KnowledgeCardRepository 
     }
 
     @Override
+    public List<KnowledgeCard> search(CompanyScope scope, ProjectVisibility visibility, CardStatus status,
+            Optional<String> query, int offset, int limit) {
+        return matching(scope, visibility, status, query).skip(offset).limit(limit).toList();
+    }
+
+    @Override
+    public int count(CompanyScope scope, ProjectVisibility visibility, CardStatus status, Optional<String> query) {
+        return (int) matching(scope, visibility, status, query).count();
+    }
+
+    private java.util.stream.Stream<KnowledgeCard> matching(CompanyScope scope, ProjectVisibility visibility,
+            CardStatus status, Optional<String> query) {
+        return cards.values().stream().filter(c -> scope.includes(c.companyId())
+                && visibility.allows(c.projectId()) && c.status() == status)
+                .filter(c -> query.map(q -> fold(c.title() + " " + c.body()).contains(fold(q))).orElse(true));
+    }
+
+    private static String fold(String text) {
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .toLowerCase();
+    }
+
+    @Override
     public List<KnowledgeCard> listByStatus(CompanyScope scope, ProjectVisibility visibility, CardStatus status) {
         return cards.values().stream().filter(c -> scope.includes(c.companyId())
                 && visibility.allows(c.projectId()) && c.status() == status).toList();

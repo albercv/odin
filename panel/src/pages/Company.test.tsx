@@ -23,6 +23,7 @@ test('capabilitiesReadOnlyForCompanyAdmin', async () => {
   expect(await screen.findByText('Buscar conocimiento · activa')).toBeInTheDocument();
   expect(screen.getByText('Guardar fichas · desactivada')).toBeInTheDocument();
   expect(screen.getByText('Casos parecidos · desactivada')).toBeInTheDocument();
+  expect(screen.getByText('Subir documentos · desactivada')).toBeInTheDocument();
   expect(screen.queryByRole('switch')).toBeNull();
 });
 

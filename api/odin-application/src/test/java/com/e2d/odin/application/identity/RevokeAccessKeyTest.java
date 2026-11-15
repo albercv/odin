@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
+import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
@@ -27,8 +28,9 @@ class RevokeAccessKeyTest {
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     private final MutableClock clock = new MutableClock();
-    private final RevokeAccessKey revoke = new RevokeAccessKey(keys, users, clock);
+    private final RevokeAccessKey revoke = new RevokeAccessKey(keys, users, links, clock);
     private final CompanyId company = Fixtures.company(new InMemoryOrganizationRepository());
     private final AccessKeyId keyId = new AccessKeyId(UUID.randomUUID());
 
@@ -56,6 +58,24 @@ class RevokeAccessKeyTest {
         assertThatThrownBy(() -> revoke.execute(Actors.worker(company), keyId))
                 .isInstanceOf(ForbiddenException.class);
         assertThat(keys.findById(keyId).orElseThrow().revokedAt()).isEmpty();
+    }
+
+    @Test
+    void revokingDeletesThePersonsLinksAndOnlyTheirs() {
+        var workerId = keys.findById(keyId).orElseThrow().userId();
+        var other = new UserId(UUID.randomUUID());
+        links.save(link(workerId), "h1");
+        links.save(link(other), "h2");
+
+        revoke.execute(Actors.companyAdmin(company), keyId);
+
+        assertThat(links.hashes()).containsExactly("h2");
+    }
+
+    private com.e2d.odin.domain.link.AccessLink link(UserId user) {
+        return new com.e2d.odin.domain.link.AccessLink(UUID.randomUUID(), com.e2d.odin.domain.link.AccessLinkKind.UPLOAD,
+                company, user, Optional.of(new com.e2d.odin.domain.shared.DocumentId(UUID.randomUUID())),
+                Optional.empty(), Optional.empty(), clock.instant(), clock.instant().plusSeconds(900), Optional.empty(), 0);
     }
 
     @Test

@@ -39,7 +39,7 @@ class AdminDocumentsTest {
         Document a = Fixtures.document(docs, companyA, DocumentStatus.READY);
         Fixtures.document(docs, companyB, DocumentStatus.READY);
 
-        assertThat(list.execute(Actors.companyAdmin(companyA), companyA, 0, 10)).extracting(t -> t.entry().document())
+        assertThat(list.page(Actors.companyAdmin(companyA), companyA, 0, 10, false, java.util.Optional.empty()).documents()).extracting(t -> t.entry().document())
                 .containsExactly(a);
     }
 
@@ -47,7 +47,7 @@ class AdminDocumentsTest {
     void otherCompanyAdminCannotList() {
         Fixtures.document(docs, companyA, DocumentStatus.READY);
 
-        assertThatThrownBy(() -> list.execute(Actors.companyAdmin(companyB), companyA, 0, 10))
+        assertThatThrownBy(() -> list.page(Actors.companyAdmin(companyB), companyA, 0, 10, false, java.util.Optional.empty()))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -55,7 +55,7 @@ class AdminDocumentsTest {
     void groupAdminListsAnyCompany() {
         Document a = Fixtures.document(docs, companyA, DocumentStatus.READY);
 
-        assertThat(list.execute(Actors.groupAdmin(), companyA, 0, 10)).extracting(t -> t.entry().document())
+        assertThat(list.page(Actors.groupAdmin(), companyA, 0, 10, false, java.util.Optional.empty()).documents()).extracting(t -> t.entry().document())
                 .isEqualTo(List.of(a));
     }
 
@@ -126,7 +126,7 @@ class AdminDocumentsTest {
         assertThat(got.supersededBy()).contains(DocumentRef.of(b));
         assertThat(got.replacement()).contains(DocumentRef.of(c));
         assertThat(got.document().supersededAt()).contains(Fixtures.NOW);
-        assertThat(list.execute(admin, companyA, 0, 10)).extracting(e -> e.entry().supersededBy().map(DocumentRef::id))
+        assertThat(list.page(admin, companyA, 0, 10, false, java.util.Optional.empty()).documents()).extracting(e -> e.entry().supersededBy().map(DocumentRef::id))
                 .containsExactlyInAnyOrder(Optional.of(b.id()), Optional.of(c.id()), Optional.empty());
     }
 

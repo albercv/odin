@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web.setup;
 
 import com.e2d.odin.adapter.web.dto.Requests;
 import com.e2d.odin.adapter.web.dto.Responses;
+import com.e2d.odin.adapter.web.security.ClientAddress;
 import com.e2d.odin.adapter.web.security.LoginRateLimiter;
 import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.SetUpInstallation;
@@ -20,11 +21,14 @@ public class SetupController {
     private final SetUpInstallation setUp;
     private final RecoverGroupAdmin recoverGroupAdmin;
     private final LoginRateLimiter limiter;
+    private final ClientAddress addresses;
 
-    public SetupController(SetUpInstallation setUp, RecoverGroupAdmin recoverGroupAdmin, LoginRateLimiter limiter) {
+    public SetupController(SetUpInstallation setUp, RecoverGroupAdmin recoverGroupAdmin, LoginRateLimiter limiter,
+            ClientAddress addresses) {
         this.setUp = setUp;
         this.recoverGroupAdmin = recoverGroupAdmin;
         this.limiter = limiter;
+        this.addresses = addresses;
     }
 
     @PostMapping("/v1/setup")
@@ -37,7 +41,7 @@ public class SetupController {
     @PostMapping("/v1/setup/admin-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void recoverAdmin(@RequestBody Requests.RecoverAdmin request, HttpServletRequest http) {
-        String ip = http.getRemoteAddr();
+        String ip = addresses.of(http);
         limiter.check("setup", ip);
         try {
             recoverGroupAdmin.execute(request.setupToken(), Optional.ofNullable(request.email()), request.newPassword());

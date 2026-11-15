@@ -5,7 +5,7 @@ import { createApiClient } from '../src/api/client.js';
 import { buildServer } from '../src/server.js';
 import { meWith, startFakeApi, type FakeApi, type Handler } from './fakeApi.js';
 
-const ALL = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD'];
+const ALL = ['SEARCH_KNOWLEDGE', 'SAVE_KNOWLEDGE_CARD', 'CASE_FILES', 'SIMILAR_CASES'];
 let fake: FakeApi;
 
 async function connect(handler: Handler, key = 'clave-secreta-1') {
@@ -28,7 +28,8 @@ describe('buildServer', () => {
     await fake.close();
     const all = await connect(() => meWith(ALL));
     expect((await all.listTools()).tools.map((t) => t.name).sort()).toEqual(
-      ['listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'readPage', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
+      ['addToCaseFile', 'findSimilarCases', 'getCaseFile', 'listDocuments', 'listMyKnowledgeCards', 'listMyQuestions', 'listProjects', 'openOriginal', 'readCaseFile', 'readPage',
+        'removeFromCaseFile', 'requestUploadLink', 'saveKnowledgeCard', 'searchKnowledge', 'verifyCitation'],
     );
     expect(all.getInstructions()).toContain('verifyCitation');
   });
@@ -73,14 +74,29 @@ describe('buildServer', () => {
     expect(parsed.hits.map((h: { projectName: string }) => h.projectName)).toEqual(['Comunidad Sol', 'Obra Norte']);
   });
 
-  it('deletedProjectShowsDeletedProjectName', async () => {
+  it('unknownProjectShowsUnavailableProjectName', async () => {
     const parsed = await search([docHit('p-borrado')]);
-    expect(parsed.hits[0].projectName).toBe('Proyecto borrado');
+    expect(parsed.hits[0].projectName).toBe('Proyecto no disponible');
   });
 
-  it('hitWithoutProjectHasNullProjectName', async () => {
-    const parsed = await search([docHit(undefined)]);
-    expect(parsed.hits[0].projectName).toBeNull();
+  it('projectAddedWhileTheServerRunsGetsItsName', async () => {
+    let meCalls = 0;
+    const P3 = { id: 'p3', name: 'Residencial Mirador del Puerto' };
+    const client = await connect((r) => {
+      if (r.url === '/v1/me') return meWith(ALL, 'Empresa Uno', ++meCalls === 1 ? [P1] : [P1, P3]);
+      if (r.url.startsWith('/v1/documents')) return { status: 200, body: [{ id: 'd3', projectId: 'p3', title: 'Contrato' }] };
+      return { status: 200, body: { hits: [docHit('p3')], noSource: false } };
+    });
+    const hits = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['x'] } }))).hits;
+    expect(hits[0].projectName).toBe('Residencial Mirador del Puerto');
+    const docs = JSON.parse(textOf(await client.callTool({ name: 'listDocuments', arguments: {} }))).documents;
+    expect(docs[0].projectName).toBe('Residencial Mirador del Puerto');
+  });
+
+  it('hitWithoutProjectIsGeneralNeverDeleted', async () => {
+    const parsed = await search([docHit(undefined), { ...docHit(undefined), projectId: null }]);
+    expect(parsed.hits.map((h: { projectName: string }) => h.projectName))
+      .toEqual(['Sin proyecto (general de la empresa)', 'Sin proyecto (general de la empresa)']);
   });
 
   it('searchResultStillHasProjectId', async () => {
@@ -93,20 +109,20 @@ describe('buildServer', () => {
     expect(JSON.stringify(parsed)).not.toContain('Obra Norte');
     const notMember = await search([docHit('p2')], [P1]);
     expect(JSON.stringify(notMember)).not.toContain('Obra Norte');
-    expect(notMember.hits[0].projectName).toBe('Proyecto borrado');
+    expect(notMember.hits[0].projectName).toBe('Proyecto no disponible');
   });
 
   it('listDocumentsCarriesProjectName', async () => {
     const client = await connect((r) => r.url === '/v1/me' ? meWith(ALL, 'Empresa Uno', [P1])
-      : { status: 200, body: [{ id: 'd1', projectId: 'p1', title: 'T' }, { id: 'd2', title: 'S' }] });
+      : { status: 200, body: [{ id: 'd1', projectId: 'p1', title: 'T' }, { id: 'd2', projectId: null, title: 'S' }] });
     const parsed = JSON.parse(textOf(await client.callTool({ name: 'listDocuments', arguments: {} })));
-    expect(parsed.documents.map((d: { projectName: string | null }) => d.projectName)).toEqual(['Comunidad Sol', null]);
+    expect(parsed.documents.map((d: { projectName: string | null }) => d.projectName)).toEqual(['Comunidad Sol', 'Sin proyecto (general de la empresa)']);
   });
 
   it('instructionsTellToFilterByProject', async () => {
     const client = await connect(() => meWith(ALL));
     expect(client.getInstructions()).toContain(
-      'Si la pregunta nombra un proyecto (una comunidad, un cliente, una obra), búscalo con listProjects y filtra la búsqueda con su projectId.');
+      'Si la pregunta nombra un proyecto (el nombre de un cliente, un contrato, una obra…), búscalo con listProjects y filtra la búsqueda con su projectId.');
   });
 
   it('searchMapsSupersededAndReplacementForDocumentsOnly', async () => {
@@ -160,7 +176,7 @@ describe('buildServer', () => {
     expect(instructions).toContain(
       'Si un resultado viene marcado como sustituido, no lo presentes como vigente: di que está sustituido y por cuál, y busca o lee el que lo sustituye antes de responder. Si no puedes ver el que lo sustituye, di solo que está sustituido.');
     expect(instructions).toContain(
-      'Si dos fuentes no cuadran y ninguna está marcada como sustituida: si una dice expresamente que cambia a la otra (un anexo que modifica una cláusula), o es un acuerdo posterior del órgano que decide (la junta, en una comunidad) sobre lo mismo, da lo que vale ahora, di qué documento lo cambia y cita las dos; si el acuerdo no cita la norma que cambia, dilo, y no juzgues si es válido. Que una sea más reciente no basta. Si no se da ninguno de esos casos, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.');
+      'Si dos fuentes no cuadran y ninguna está marcada como sustituida: si una dice expresamente que cambia a la otra (un anexo que modifica una cláusula), o es un acuerdo posterior del órgano que decide (la junta o el consejo) sobre lo mismo, da lo que vale ahora, di qué documento lo cambia y cita las dos; si el acuerdo no cita la norma que cambia, dilo, y no juzgues si es válido. Que una sea más reciente no basta. Si no se da ninguno de esos casos, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.');
   });
 
   it('searchMapsHitsWithCitation', async () => {
@@ -180,7 +196,7 @@ describe('buildServer', () => {
     const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { hits: [card], noSource: false } }));
     const parsed = JSON.parse(textOf(await client.callTool({ name: 'searchKnowledge', arguments: { queries: ['truco'] } })));
     expect(parsed.hits[0]).toEqual({ sourceType: 'KNOWLEDGE_CARD', cardId: 'k1', title: 'Truco', authorName: 'Ana',
-      addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: null, excerpt: 'se hace así',
+      addedAt: '2026-01-01T00:00:00Z', projectId: null, projectName: 'Sin proyecto (general de la empresa)', excerpt: 'se hace así',
       origin: 'Ficha aportada por Ana, redactada con IA' });
   });
 
@@ -291,11 +307,25 @@ describe('buildServer', () => {
     expect(textOf(result)).toContain(message);
   });
 
+  it('verifyCitationChecksBatchInOrderAndValidatesSize', async () => {
+    const cite = (n: number) => ({ documentId: `d${n}`, pageNumber: n, quote: `q${n}` });
+    const client = await connect((r) => r.url === '/v1/me' ? meWith(ALL) : { status: 200, body: { results: [
+      { documentId: 'd1', pageNumber: 1, verified: true }, { documentId: 'd2', pageNumber: 2, verified: false }] } });
+    const ok = JSON.parse(textOf(await client.callTool({ name: 'verifyCitation', arguments: { citations: [cite(1), cite(2)] } })));
+    expect(ok.results).toEqual([{ ...cite(1), verified: true }, { ...cite(2), verified: false }]);
+    for (const n of [0, 21]) {
+      const bad = await client.callTool({ name: 'verifyCitation', arguments: { citations: Array.from({ length: n }, (_, i) => cite(i + 1)) } });
+      expect(bad.isError).toBe(true);
+    }
+    const tool = (await client.listTools()).tools.find((t) => t.name === 'verifyCitation');
+    expect(tool?.description).toContain('Comprueba en una sola llamada todas las citas literales de tu respuesta (de 1 a 20), también las de documentos que no hayas leído con readPage. Devuelve verified para cada una, en el mismo orden. Si una da false, no la uses; una cita sin comprobar no se da. El título del documento no es texto de la página: solo vale lo que aparece en el texto.');
+  });
+
   it('revokedKeyMidSessionReturnsError', async () => {
     let revoked = false;
-    const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : revoked ? { status: 401, body: { detail: 'x' } } : { status: 200, body: { verified: true } }));
-    const args = { documentId: 'd1', pageNumber: 1, quote: 'q' };
-    expect(JSON.parse(textOf(await client.callTool({ name: 'verifyCitation', arguments: args }))).verified).toBe(true);
+    const client = await connect((r) => (r.url === '/v1/me' ? meWith(ALL) : revoked ? { status: 401, body: { detail: 'x' } } : { status: 200, body: { results: [{ documentId: 'd1', pageNumber: 1, verified: true }] } }));
+    const args = { citations: [{ documentId: 'd1', pageNumber: 1, quote: 'q' }] };
+    expect(JSON.parse(textOf(await client.callTool({ name: 'verifyCitation', arguments: args }))).results[0].verified).toBe(true);
     revoked = true;
     const result = await client.callTool({ name: 'verifyCitation', arguments: args });
     expect(result.isError).toBe(true);
