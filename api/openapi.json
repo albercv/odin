@@ -303,6 +303,50 @@
         }
       }
     },
+    "/v1/admin/audit-settings" : {
+      "get" : {
+        "tags" : [ "audit-settings-controller" ],
+        "operationId" : "get",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuditSettingsView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "audit-settings-controller" ],
+        "operationId" : "update",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateAuditSettings"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuditSettingsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/upload-links/{token}/documents" : {
       "post" : {
         "tags" : [ "access-link-controller" ],
@@ -1963,7 +2007,7 @@
       },
       "patch" : {
         "tags" : [ "user-controller" ],
-        "operationId" : "update",
+        "operationId" : "update_1",
         "parameters" : [ {
           "name" : "userId",
           "in" : "path",
@@ -2000,7 +2044,7 @@
     "/v1/admin/documents/{documentId}" : {
       "get" : {
         "tags" : [ "admin-document-controller" ],
-        "operationId" : "get",
+        "operationId" : "get_1",
         "parameters" : [ {
           "name" : "documentId",
           "in" : "path",
@@ -2025,7 +2069,7 @@
       },
       "patch" : {
         "tags" : [ "admin-document-controller" ],
-        "operationId" : "update_1",
+        "operationId" : "update_2",
         "parameters" : [ {
           "name" : "documentId",
           "in" : "path",
@@ -2062,7 +2106,7 @@
     "/v1/admin/companies/{companyId}" : {
       "patch" : {
         "tags" : [ "company-controller" ],
-        "operationId" : "update_2",
+        "operationId" : "update_3",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -2267,7 +2311,7 @@
       },
       "patch" : {
         "tags" : [ "member-controller" ],
-        "operationId" : "update_3",
+        "operationId" : "update_4",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -2829,7 +2873,7 @@
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}" : {
       "get" : {
         "tags" : [ "intake-controller" ],
-        "operationId" : "get_1",
+        "operationId" : "get_2",
         "parameters" : [ {
           "name" : "companyId",
           "in" : "path",
@@ -3516,6 +3560,48 @@
           }
         },
         "required" : [ "capabilities", "code", "codeReviewed", "id", "name" ]
+      },
+      "UpdateAuditSettings" : {
+        "type" : "object",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "usagePolicyReference" : {
+            "type" : "string",
+            "description" : "Dónde está publicada la política de uso. Obligatorio para encender."
+          },
+          "chatEnabled" : {
+            "type" : "boolean"
+          },
+          "password" : {
+            "type" : "string",
+            "description" : "La contraseña actual del administrador, para volver a identificarse."
+          }
+        }
+      },
+      "AuditSettingsView" : {
+        "type" : "object",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "usagePolicyReference" : {
+            "type" : "string"
+          },
+          "chatEnabled" : {
+            "type" : "boolean"
+          },
+          "updatedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "chatEnabled", "enabled" ]
       },
       "UploadReceipt" : {
         "type" : "object",

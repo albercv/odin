@@ -1,5 +1,9 @@
 package com.e2d.odin.adapter.web;
 
+import com.e2d.odin.application.audit.GetAuditSettings;
+import com.e2d.odin.application.audit.UpdateAuditSettings;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
+import com.e2d.odin.application.fake.InMemoryAuditSettings;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
 import com.e2d.odin.application.link.DescribeUploadLink;
@@ -259,6 +263,18 @@ public class TestWiring {
 
     @Bean DescribeAdmin describeAdmin() {
         return new DescribeAdmin(users);
+    }
+
+    @Bean InMemoryAuditSettings auditSettings() {
+        return new InMemoryAuditSettings();
+    }
+
+    @Bean GetAuditSettings getAuditSettings(InMemoryAuditSettings settings) {
+        return new GetAuditSettings(settings);
+    }
+
+    @Bean UpdateAuditSettings updateAuditSettings(InMemoryAuditSettings settings) {
+        return new UpdateAuditSettings(settings, new InMemoryAuditLog(), users, passwords);
     }
 
     @Bean ListGroupAdmins listGroupAdmins() {

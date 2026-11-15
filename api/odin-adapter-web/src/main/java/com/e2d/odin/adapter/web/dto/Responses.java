@@ -179,6 +179,14 @@ public final class Responses {
         }
     }
 
+    public record AuditSettingsView(boolean enabled, @Nullable String usagePolicyReference, boolean chatEnabled,
+            @Nullable UUID updatedBy, @Nullable Instant updatedAt) {
+        public static AuditSettingsView from(com.e2d.odin.domain.audit.AuditSettings s) {
+            return new AuditSettingsView(s.enabled(), s.usagePolicyReference().orElse(null), s.chatEnabled(),
+                    s.updatedBy().map(u -> u.value()).orElse(null), s.updatedAt().orElse(null));
+        }
+    }
+
     public record GroupAdminAdded(GroupAdminView admin, boolean alreadyExisted, boolean keptPassword) {
         public static GroupAdminAdded from(com.e2d.odin.application.identity.GroupAdminAdded added) {
             return new GroupAdminAdded(GroupAdminView.from(added.admin()), added.alreadyExisted(),

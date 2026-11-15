@@ -1,5 +1,10 @@
 package com.e2d.odin.bootstrap;
 
+import com.e2d.odin.application.audit.GetAuditSettings;
+import com.e2d.odin.application.audit.UpdateAuditSettings;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.application.port.AuditSettingsRepository;
+import com.e2d.odin.domain.audit.AuditSettings;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.document.ListCompanyDocuments;
@@ -328,6 +333,24 @@ public class UseCaseConfiguration {
             @Override
             public void execute(Actor actor, CompanyId companyId, UserId userId) {
                 transaction.executeWithoutResult(status -> super.execute(actor, companyId, userId));
+            }
+        };
+    }
+
+    @Bean
+    GetAuditSettings getAuditSettings(AuditSettingsRepository settings) {
+        return new GetAuditSettings(settings);
+    }
+
+    @Bean
+    UpdateAuditSettings updateAuditSettings(AuditSettingsRepository settings, AuditLog audit, UserRepository users,
+            PasswordHasher passwords, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateAuditSettings(settings, audit, users, passwords) {
+            @Override
+            public AuditSettings execute(Actor actor, String password, boolean enabled, String reference,
+                    boolean chatEnabled) {
+                return transaction.execute(status -> super.execute(actor, password, enabled, reference, chatEnabled));
             }
         };
     }
