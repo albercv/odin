@@ -46,7 +46,7 @@ public class PostgresTaggingRepository implements TaggingRepository {
               AND (t.document_id IS NULL OR NOT (t.status = 'DONE' AND t.topic_list_version = c.topic_list_version))"""
             .formatted(LIVE_TOPIC, Sql.inScope("d.company_id"));
     /**
-     * Sin fila, o con la versión actual: 0; con una anterior: 1. Dentro de cada grupo, por antigüedad. NO KEY UPDATE:
+     * Sin fila, o con la versión actual: 0; con una anterior: 1. Dentro de cada grupo, lo subido a mano antes que la primera carga y luego por antigüedad. NO KEY UPDATE:
      * una decisión o un guardado a la vez (su clave ajena toma KEY SHARE sobre el documento) no se bloquean con la toma.
      */
     private static final String CLAIM = """
@@ -58,7 +58,7 @@ public class PostgresTaggingRepository implements TaggingRepository {
                 OR (t.status = 'TAGGING' AND (t.deadline_at IS NULL OR t.deadline_at < :now))
                 OR (t.status <> 'TAGGING' AND (t.status = 'PENDING' OR t.topic_list_version < c.topic_list_version)))
             ORDER BY CASE WHEN t.document_id IS NULL OR t.topic_list_version = c.topic_list_version THEN 0 ELSE 1 END,
-                d.seq
+                (d.intake_batch_id IS NOT NULL), d.seq
             LIMIT 1 FOR NO KEY UPDATE OF d SKIP LOCKED""".formatted(LIVE_TOPIC, Sql.inScope("d.company_id"),
             Sql.inVisibleProjects("d.project_id"));
 

@@ -407,13 +407,13 @@ public class PostgresDocumentRepository implements DocumentRepository {
         return claim("PENDING_READER", "READER_PROCESSING", now, staleAfter, d -> d.startReading(now));
     }
 
-    /** Toma el primer documento en espera o con el trabajo caducado, bloqueado sin esperar a los que otro ya tiene. */
+    /** Toma el primer documento en espera (lo subido a mano antes que la primera carga) o con el trabajo caducado, bloqueado sin esperar a los que otro ya tiene. */
     private Optional<Document> claim(String waiting, String running, Instant now, Duration staleAfter,
             UnaryOperator<Document> start) {
         String sql = "SELECT " + COLUMNS + """
                  FROM document d WHERE d.withdrawn_at IS NULL AND (d.status = '%s' OR (d.status = '%s'
                     AND (d.processing_started_at IS NULL OR d.processing_started_at <= :threshold)))
-                ORDER BY d.seq LIMIT 1 FOR UPDATE SKIP LOCKED""".formatted(waiting, running);
+                ORDER BY (d.intake_batch_id IS NOT NULL), d.seq LIMIT 1 FOR UPDATE SKIP LOCKED""".formatted(waiting, running);
         return pipeline.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql(sql)
                 .param("threshold", Sql.ts(now.minus(staleAfter))).query((rs, n) -> document(rs)).optional()
                 .map(start).map(claimed -> {
