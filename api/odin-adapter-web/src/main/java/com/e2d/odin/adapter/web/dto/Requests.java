@@ -20,6 +20,12 @@ public final class Requests {
     public record Setup(String setupToken, String groupName, String adminName, String adminEmail, String password) {
     }
 
+    public record UpdateAuditSettings(boolean enabled,
+            @Schema(description = "Dónde está publicada la política de uso. Obligatorio para encender.") String usagePolicyReference,
+            boolean chatEnabled,
+            @Schema(description = "La contraseña actual del administrador, para volver a identificarse.") String password) {
+    }
+
     public record Login(String email, String password) {
     }
 
