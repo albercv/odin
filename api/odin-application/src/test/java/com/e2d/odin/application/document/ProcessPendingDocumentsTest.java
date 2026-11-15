@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.fake.Actors;
@@ -42,7 +43,7 @@ class ProcessPendingDocumentsTest {
     private Document upload(DocumentFormat format) {
         detector.detects(format);
         UploadDocument upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(),
-                new SequenceIdGenerator(), clock);
+                new SequenceIdGenerator(), clock, new InMemoryAuditLog());
         return upload.execute(Actors.companyAdmin(company), company, Optional.empty(), "Manual", "m", "x".getBytes(), false)
                 .document();
     }
@@ -165,7 +166,7 @@ class ProcessPendingDocumentsTest {
         ProcessPendingDocuments processor = processor(pdfReader("uno"));
         processor.processNext();
 
-        new RetryDocument(docs).execute(Actors.companyAdmin(company), d.id());
+        new RetryDocument(docs, new InMemoryAuditLog()).execute(Actors.companyAdmin(company), d.id());
         processor.processNext();
 
         assertThat(docs.get(d.id()).orElseThrow().status()).isEqualTo(DocumentStatus.READY);

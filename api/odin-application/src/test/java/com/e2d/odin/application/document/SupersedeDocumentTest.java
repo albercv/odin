@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -38,7 +39,7 @@ class SupersedeDocumentTest {
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     private final MutableClock clock = new MutableClock();
-    private final SupersedeDocument supersede = new SupersedeDocument(docs, clock);
+    private final SupersedeDocument supersede = new SupersedeDocument(docs, clock, new InMemoryAuditLog());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
     private final Actor adminA = Actors.companyAdmin(companyA);

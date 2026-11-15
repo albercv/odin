@@ -1,5 +1,6 @@
 package com.e2d.odin.adapter.postgres;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.document.UploadDocument;
@@ -139,7 +140,7 @@ class IntakeUploadIT extends AbstractPostgresIT {
 
     private final UploadDocument upload = new UploadDocument(docs, orgs, new InMemoryOriginalFileStore(),
             new StubFormatDetector(DocumentFormat.PDF), new UploadSettings(1000), UUID::randomUUID,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            Clock.fixed(NOW, ZoneOffset.UTC), new InMemoryAuditLog());
     private final byte[] bytes = "mismo contenido".getBytes();
 
     /** El administrador sube {@link #bytes} a la primera carga y un trabajador sube lo mismo por {@code workerUpload}. */

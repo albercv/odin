@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.domain.document.Document;
@@ -24,12 +28,14 @@ public class DiscardIntakeDocument {
     private final DocumentRepository documents;
     private final WithdrawDocument withdraw;
     private final IntakeEffects effects;
+    private final AuditLog audit;
 
     public DiscardIntakeDocument(DocumentRepository documents, WithdrawDocument withdraw,
-            IntakeEffects effects) {
+            IntakeEffects effects, AuditLog audit) {
         this.documents = documents;
         this.withdraw = withdraw;
         this.effects = effects;
+        this.audit = audit;
     }
 
     public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId) {
@@ -44,6 +50,8 @@ public class DiscardIntakeDocument {
         // Antes de retirarlo: la RLS de las propuestas deja de verlas cuando su documento está retirado.
         effects.rejectUndecidedAbout(actor, batch, documentId);
         withdraw.execute(actor, documentId);
+        audit.record(AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.INTAKE_DOCUMENT_DISCARDED), d)
+                .with("intakeBatchId", batchId.value().toString()));
         effects.closeIfDone(batch);
     }
 }

@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
@@ -18,10 +22,12 @@ public class DecideIntakeProposal {
 
     private final IntakeRepository intake;
     private final IntakeEffects effects;
+    private final AuditLog audit;
 
-    public DecideIntakeProposal(IntakeRepository intake, IntakeEffects effects) {
+    public DecideIntakeProposal(IntakeRepository intake, IntakeEffects effects, AuditLog audit) {
         this.intake = intake;
         this.effects = effects;
+        this.audit = audit;
     }
 
     /** Devuelve la propuesta como queda: con «no lo sé», DONT_KNOW con quién y cuándo, y se puede decidir después. */
@@ -44,6 +50,9 @@ public class DecideIntakeProposal {
             case DONT_KNOW -> effects.dontKnow(actor, p);
         }
         effects.closeIfDone(batch);
+        AuditEntry entry = AuditSupport.onIntake(AuditEntry.by(actor, AuditAction.INTAKE_PROPOSAL_DECIDED), companyId,
+                batchId).with("proposalId", proposalId.toString()).with("decision", decision.name());
+        audit.record(projectId.map(entry::onProject).orElse(entry));
         return intake.proposals(companyId, batchId).stream().filter(q -> q.id().equals(proposalId)).findFirst()
                 .orElseThrow();
     }

@@ -1,5 +1,6 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -76,10 +77,10 @@ class ConfirmIntakeTest {
     void inReview() {
         olmo = Fixtures.project(orgs, company);
         haya = Fixtures.project(orgs, company);
-        batch = new StartIntake(intake, orgs, ids, clock).execute(admin, company, IntakeChannel.PANEL).startReading()
+        batch = new StartIntake(intake, orgs, ids, clock, new InMemoryAuditLog()).execute(admin, company, IntakeChannel.PANEL).startReading()
                 .finishReading();
         intake.save(batch);
-        AddToCaseFiles spy = new AddToCaseFiles(orgs, members, docs, files, ids, clock) {
+        AddToCaseFiles spy = new AddToCaseFiles(orgs, members, docs, files, ids, clock, new InMemoryAuditLog()) {
             @Override
             public int execute(Actor actor, CompanyId companyId, List<CaseFileAssignment> assignments) {
                 caseFileActors.add(actor);
@@ -95,14 +96,14 @@ class ConfirmIntakeTest {
 
     /** Los casos de uso con o sin lector OCR en la instalación. */
     private void effects(boolean reader) {
-        IntakeEffects effects = new IntakeEffects(intake, docs, orgs, new MarkCaseDocuments(docs, files, clock),
-                new SupersedeDocument(docs, clock), spy, new InstallationSettings("t", reader), clock);
-        confirm = new ConfirmIntakeProposals(intake, effects);
-        decide = new DecideIntakeProposal(intake, effects);
-        discard = new DiscardIntakeDocument(docs, new WithdrawDocument(docs, clock), effects);
+        IntakeEffects effects = new IntakeEffects(intake, docs, orgs, new MarkCaseDocuments(docs, files, clock, new InMemoryAuditLog()),
+                new SupersedeDocument(docs, clock, new InMemoryAuditLog()), spy, new InstallationSettings("t", reader), clock);
+        confirm = new ConfirmIntakeProposals(intake, effects, new InMemoryAuditLog());
+        decide = new DecideIntakeProposal(intake, effects, new InMemoryAuditLog());
+        discard = new DiscardIntakeDocument(docs, new WithdrawDocument(docs, clock, new InMemoryAuditLog()), effects, new InMemoryAuditLog());
         list = new ListIntakeProposals(intake, docs);
         unplaced = new ListUnplacedDocuments(intake, docs);
-        place = new PlaceIntakeDocument(effects);
+        place = new PlaceIntakeDocument(effects, new InMemoryAuditLog());
         getBatch = new GetIntakeBatch(intake, docs, new com.e2d.odin.application.shared.InstallationSettings("t", true),
                 new com.e2d.odin.application.shared.IntakeSettings(true));
     }
@@ -679,7 +680,7 @@ class ConfirmIntakeTest {
     @Test
     void theAdminOpensTheOriginalOfAPendingDocumentOfTheBatchOnly() {
         InMemoryOriginalFileStore store = new InMemoryOriginalFileStore();
-        OpenIntakeOriginal open = new OpenIntakeOriginal(intake, docs, store);
+        OpenIntakeOriginal open = new OpenIntakeOriginal(intake, docs, store, new InMemoryAuditLog());
         Document d = pending("Acta");
         docs.save(new Document(d.id(), company, Optional.empty(), "Acta", "acta.pdf", d.format(),
                 store.store("contenido del acta".getBytes()), DocumentStatus.READY, Optional.empty(), true,
@@ -689,7 +690,7 @@ class ConfirmIntakeTest {
         assertThat(open.execute(admin, company, batch.id(), d.id()).content()).isEqualTo("contenido del acta".getBytes());
         assertThat(open.execute(admin, company, batch.id(), d.id()).filename()).isEqualTo("acta.pdf");
 
-        IntakeBatch other = new StartIntake(intake, orgs, ids, clock).execute(admin, company, IntakeChannel.PANEL);
+        IntakeBatch other = new StartIntake(intake, orgs, ids, clock, new InMemoryAuditLog()).execute(admin, company, IntakeChannel.PANEL);
         assertThatThrownBy(() -> open.execute(admin, company, other.id(), d.id())).isInstanceOf(NotFoundException.class);
         Document confirmed = Fixtures.readyDocument(docs, company, "Ya confirmado");
         assertThatThrownBy(() -> open.execute(admin, company, batch.id(), confirmed.id()))

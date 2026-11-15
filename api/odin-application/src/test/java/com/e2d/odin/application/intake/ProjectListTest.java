@@ -40,14 +40,14 @@ class ProjectListTest {
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     private final InMemoryIntakeRepository intake = new InMemoryIntakeRepository();
     private final SequenceIdGenerator ids = new SequenceIdGenerator();
-    private final StartIntake start = new StartIntake(intake, orgs, ids, new MutableClock());
-    private final ImportProjectList importList = new ImportProjectList(intake);
+    private final StartIntake start = new StartIntake(intake, orgs, ids, new MutableClock(), new InMemoryAuditLog());
+    private final ImportProjectList importList = new ImportProjectList(intake, new InMemoryAuditLog());
     private final ListProjectCandidates list = new ListProjectCandidates(intake, docs);
     private final ConfirmProjectCandidates confirm = new ConfirmProjectCandidates(intake, orgs,
-            new CreateProject(orgs, ids, new InMemoryAuditLog()));
+            new CreateProject(orgs, ids, new InMemoryAuditLog()), new InMemoryAuditLog());
     private final MutableClock clock = new MutableClock();
     private final CloseProjectList closeList = new CloseProjectList(intake, docs, list,
-            new InstallationSettings("t", true), clock);
+            new InstallationSettings("t", true), clock, new InMemoryAuditLog());
     private final CompanyId company = Fixtures.company(orgs);
     private final CompanyId other = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);
@@ -322,7 +322,7 @@ class ProjectListTest {
         Document scan = Fixtures.document(docs, company, com.e2d.odin.domain.document.DocumentStatus.PENDING_READER);
         docs.save(scan.withIntake(batch.id(), "a/escaneo.pdf"));
         CloseProjectList withoutReader = new CloseProjectList(intake, docs, list, new InstallationSettings("t", false),
-                clock);
+                clock, new InMemoryAuditLog());
 
         assertThatThrownBy(() -> closeList.execute(admin, company, batch.id())).isInstanceOf(ConflictException.class)
                 .hasMessage("Aún se está leyendo 1 documento");
