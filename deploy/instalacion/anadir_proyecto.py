@@ -16,7 +16,9 @@ import datos_prueba as dp
 
 ESTADOS = {"PENDING", "APPROVED", "REJECTED", "CORRECTED"}
 TIPOS = {".csv": "text/csv", ".md": "text/markdown", ".txt": "text/plain", ".pdf": "application/pdf",
-         ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+         ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+         ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+         ".xls": "application/vnd.ms-excel", ".ods": "application/vnd.oasis.opendocument.spreadsheet"}
 CONSULTAS = 4  # documentos de texto con cuya frase más larga se comprueba el aislamiento
 
 Destino = namedtuple("Destino", "empresa miembros")
