@@ -5,8 +5,8 @@ import { currentMonth } from '../components/MonthPicker';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true };
-const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true };
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
+const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
 const me = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', role: 'GROUP_ADMIN' as const, companies: [acme, beta], scannedDocumentsSupported: false };
 const quiet = { pendingDocuments: 0, window: { always: true }, timezone: 'Europe/Madrid' };
 

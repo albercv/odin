@@ -237,6 +237,32 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void projectLabelOfAIsInvisibleToBAndOnlyTheGroupAdminChangesIt() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        String body = "{\"projectLabel\":{\"singular\":\"Comunidad\",\"plural\":\"Comunidades\",\"feminine\":true}}";
+
+        for (CompanyId own : new CompanyId[] {a, b}) {
+            mvc.perform(patch("/v1/admin/companies/" + a.value())
+                    .cookie(adminCookie(Role.COMPANY_ADMIN, Optional.of(own))).contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/v1/me").header("Authorization", workerKey(a)))
+                .andExpect(jsonPath("$.company.projectLabel.singular").value("proyecto"));
+
+        mvc.perform(patch("/v1/admin/companies/" + a.value()).cookie(adminCookie(Role.GROUP_ADMIN, Optional.empty()))
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.projectLabel.plural").value("comunidades"));
+        mvc.perform(get("/v1/me").header("Authorization", workerKey(a)))
+                .andExpect(jsonPath("$.company.projectLabel.singular").value("comunidad"))
+                .andExpect(jsonPath("$.company.projectLabel.feminine").value(true));
+        mvc.perform(get("/v1/me").header("Authorization", workerKey(b)))
+                .andExpect(jsonPath("$.company.projectLabel.singular").value("proyecto"))
+                .andExpect(jsonPath("$.company.projectLabel.plural").value("proyectos"))
+                .andExpect(jsonPath("$.company.projectLabel.feminine").value(false));
+    }
+
+    @Test
     void workerRoutesCarryNoCodes() throws Exception {
         CompanyId a = newCompany();
         w.orgs.saveProject(new com.e2d.odin.domain.organization.Project(
