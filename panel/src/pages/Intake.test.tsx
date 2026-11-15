@@ -376,7 +376,7 @@ test('withSeveralBatchesTheAdminPicksWhichOneToReview', async () => {
   const calls = show({ [`GET ${base}/b0`]: () => batch({ id: 'b0', uploaded: 99 }) });
   const picker = await screen.findByLabelText('Carga a revisar');
   expect(within(picker).getAllByRole('option')).toHaveLength(2);
-  await userEvent.selectOptions(picker, within(picker).getAllByRole('option')[1]);
+  await userEvent.selectOptions(picker, within(picker).getAllByRole('option')[1]!);
   expect(await screen.findByText('99')).toBeInTheDocument();
   expect(called(calls, `GET ${base}/b0`)).toBe(true);
 });
