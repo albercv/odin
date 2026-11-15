@@ -41,7 +41,6 @@ function Batch({ companyId, batchId, onClosed }: { companyId: string; batchId: s
   const batch = useLoad(() => intake.batch(companyId, batchId), [companyId, batchId]);
   const projects = useLoad(() => api.projects(companyId), [companyId]);
   const [step, setStep] = useState(0);
-  const t = useProjectTerms();
   const changed = () => { batch.reload(); projects.reload(); };
   const closeBatch = () => { changed(); onClosed(); };
   const props = { companyId, batchId, projects: projects.data ?? NONE, onChanged: changed, batch: batch.data };
@@ -56,6 +55,7 @@ function Batch({ companyId, batchId, onClosed }: { companyId: string; batchId: s
 }
 
 function Steps({ step, setStep, ...props }: Step & { step: number; setStep: (i: number) => void }) {
+  const t = useProjectTerms();
   return (
     <>
       <nav className={styles.steps} aria-label="Pasos de la primera carga">
