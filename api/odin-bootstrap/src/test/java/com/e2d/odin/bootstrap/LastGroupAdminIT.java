@@ -122,7 +122,7 @@ class LastGroupAdminIT {
 
     private static void deactivateEachOther(User first, User second, UserRepository users) throws Exception {
         UseCaseConfiguration config = new UseCaseConfiguration();
-        var update = config.updateUser(users, memberships, NO_SESSIONS, transactionManager);
+        var update = config.updateUser(users, memberships, NO_SESSIONS, transactionManager, new NoAudit());
         UserChanges off = new UserChanges(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(false));
         runBoth(() -> update.execute(actingAs(first), second.id(), off),
                 () -> update.execute(actingAs(second), first.id(), off));
@@ -130,7 +130,7 @@ class LastGroupAdminIT {
 
     private static void deleteEachOther(User first, User second, UserRepository users) throws Exception {
         var delete = new UseCaseConfiguration().deleteUser(users, memberships,
-                new PostgresProjectMemberRepository(tx), NO_SESSIONS, Clock.systemUTC(), transactionManager);
+                new PostgresProjectMemberRepository(tx), NO_SESSIONS, Clock.systemUTC(), transactionManager, new NoAudit());
         runBoth(() -> {
             delete.execute(actingAs(first), second.id());
             return null;

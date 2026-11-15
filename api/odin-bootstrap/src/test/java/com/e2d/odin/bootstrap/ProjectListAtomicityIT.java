@@ -7,7 +7,6 @@ import com.e2d.odin.adapter.postgres.PostgresIntakeRepository;
 import com.e2d.odin.adapter.postgres.PostgresOrganizationRepository;
 import com.e2d.odin.adapter.postgres.PostgresUserRepository;
 import com.e2d.odin.adapter.postgres.ScopedTransactions;
-import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
 import com.e2d.odin.application.intake.ImportProjectList;
 import com.e2d.odin.application.intake.ProjectDecision.Action;
@@ -104,7 +103,7 @@ class ProjectListAtomicityIT {
             }
         };
         ConfirmProjectCandidates confirm = new UseCaseConfiguration().confirmProjectCandidates(intake, failingSecond,
-                new CreateProject(failingSecond, new RandomUuidGenerator(), new InMemoryAuditLog()), transactionManager);
+                new CreateProject(failingSecond, new RandomUuidGenerator(), new NoAudit()), transactionManager);
 
         assertThatThrownBy(() -> confirm.execute(admin, company, batch, List.of(
                 new ProjectDecision("Calle Olmo 24", Action.CREATE, Optional.empty()),

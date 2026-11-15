@@ -47,7 +47,7 @@ class SetUpAtomicityIT {
         };
         SetUpInstallation setUp = new UseCaseConfiguration().setUpInstallation(organizations, failingUsers,
                 new BcryptPasswordHasher(), new RandomUuidGenerator(), new SecureRandomPersonCodeGenerator(),
-                new InstallationSettings("token"), new DataSourceTransactionManager(app));
+                new InstallationSettings("token"), new DataSourceTransactionManager(app), new NoAudit());
 
         assertThatThrownBy(() -> setUp.execute("token", "Grupo", "Admin", "a@e.test", "clave-muy-larga-1"))
                 .isInstanceOf(IllegalStateException.class);
