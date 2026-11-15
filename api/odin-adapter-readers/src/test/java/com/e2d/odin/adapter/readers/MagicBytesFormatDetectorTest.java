@@ -48,6 +48,13 @@ class MagicBytesFormatDetectorTest {
         assertThat(detector.detect(doc.toByteArray())).isEmpty();
     }
 
+    @Test
+    void detectsOdsButNotOdt() throws Exception {
+        assertThat(detector.detect(OdsSheetsTest.zip("application/vnd.oasis.opendocument.spreadsheet", "<a/>")))
+                .contains(DocumentFormat.ODS);
+        assertThat(detector.detect(OdsSheetsTest.zip("application/vnd.oasis.opendocument.text", "<a/>"))).isEmpty();
+    }
+
     private static byte[] write(org.apache.poi.ss.usermodel.Workbook workbook) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         workbook.write(out);

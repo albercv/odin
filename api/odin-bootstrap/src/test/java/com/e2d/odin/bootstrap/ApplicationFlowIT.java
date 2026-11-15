@@ -280,6 +280,41 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(citation(api, keyB, document, 2)).isFalse();
     }
 
+    @Test
+    @Order(12)
+    void odsSheetIsSearchableAndCitable() throws Exception {
+        ApiClient api = new ApiClient(port);
+        Reply upload = api.upload("/v1/admin/companies/" + companyA + "/documents", "plan.ods", ods(), "Cookie",
+                adminCookie);
+        assertThat(upload.status()).isEqualTo(201);
+        String document = upload.json().get("document").get("id").asString();
+        awaitReady(api, document);
+
+        Reply hit = api.post("/v1/search", map("queries", List.of("soldadura paneles")), "Authorization", keyA);
+        assertThat(hit.json().get("hits").get(0).get("sourceId").asString()).isEqualTo(document);
+        Reply cited = api.post("/v1/citations/verify", map("documentId", document, "pageNumber", 1,
+                "quote", "Soldadura  paneles  septiembre"), "Authorization", keyA);
+        assertThat(cited.json().get("verified").asBoolean()).isTrue();
+        assertThat(found(api, keyB, "soldadura paneles")).isFalse();
+    }
+
+    private static byte[] ods() throws Exception {
+        String t = "xmlns:table=\"urn:oasis:names:tc:opendocument:xmlns:table:1.0\" "
+                + "xmlns:text=\"urn:oasis:names:tc:opendocument:xmlns:text:1.0\"";
+        String cell = "<table:table-cell><text:p>%s</text:p></table:table-cell>";
+        String content = "<doc " + t + "><table:table table:name=\"Plan\"><table:table-row>"
+                + cell.formatted("Soldadura") + cell.formatted("paneles") + cell.formatted("septiembre")
+                + "</table:table-row></table:table></doc>";
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
+            zip.putNextEntry(new java.util.zip.ZipEntry("mimetype"));
+            zip.write("application/vnd.oasis.opendocument.spreadsheet".getBytes(StandardCharsets.US_ASCII));
+            zip.putNextEntry(new java.util.zip.ZipEntry("content.xml"));
+            zip.write(content.getBytes(StandardCharsets.UTF_8));
+        }
+        return out.toByteArray();
+    }
+
     private boolean citation(ApiClient api, String key, String document, int page) {
         Reply cited = api.post("/v1/citations/verify", map("documentId", document, "pageNumber", page,
                 "quote", "Grúa ficticia  fundición norte  agosto"), "Authorization", key);
