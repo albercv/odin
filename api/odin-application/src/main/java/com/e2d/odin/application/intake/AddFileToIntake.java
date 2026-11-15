@@ -1,9 +1,6 @@
 package com.e2d.odin.application.intake;
 
-import com.e2d.odin.application.audit.AuditSupport;
 import com.e2d.odin.application.port.AuditLog;
-import com.e2d.odin.domain.audit.AuditAction;
-import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.port.IntakeRepository;

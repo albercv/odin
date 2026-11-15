@@ -289,4 +289,73 @@ class AdminAuditIT {
         assertThat(rows).extracting(r -> r.get("actor_user_id")).containsOnlyNulls();
         adminCookie = login(ADMIN_EMAIL);
     }
+
+    private String uploadPdf(String project, String filename) {
+        byte[] pdf = ("%PDF-1.4 contenido reservado " + System.nanoTime()).getBytes();
+        Reply reply = api.upload(ADMIN + "/companies/" + companyId + "/documents?projectId=" + project, filename, pdf,
+                "Cookie", adminCookie);
+        assertThat(reply.status()).as(reply.body()).isEqualTo(201);
+        return reply.json().get("document").get("id").asString();
+    }
+
+    @Test
+    void documentActionsLeaveOneEntryEachAndNeverTheContent() {
+        String project = admin("post", ADMIN + "/companies/" + companyId + "/projects", map("name", "Obra Sur")).json()
+                .get("id").asString();
+        clearLog();
+
+        String document = uploadPdf(project, "informe.pdf");
+        Map<String, Object> uploaded = only("DOCUMENT_UPLOADED");
+        assertTarget(uploaded, "DOCUMENT", document);
+        assertThat(uploaded.get("project_id").toString()).isEqualTo(project);
+        JsonNode upload = details(uploaded);
+        assertThat(upload.get("sha256").asString()).hasSize(64);
+        assertThat(upload.get("sizeBytes").asInt()).isPositive();
+        assertThat(uploaded.get("details").toString()).doesNotContain("reservado");
+        AuditAssertions.assertNoForbiddenFields(upload);
+
+        clearLog();
+        assertThat(api.get(ADMIN + "/documents/" + document + "/original", "Cookie", adminCookie).status()).isEqualTo(200);
+        assertThat(details(only("DOCUMENT_ORIGINAL_DOWNLOADED"))).isEmpty();
+
+        admin("put", ADMIN + "/documents/" + document + "/withdrawal", null);
+        assertTarget(only("DOCUMENT_WITHDRAWN"), "DOCUMENT", document);
+        admin("delete", ADMIN + "/documents/" + document + "/withdrawal", null);
+        assertTarget(only("DOCUMENT_RESTORED"), "DOCUMENT", document);
+
+        admin("post", ADMIN + "/companies/" + companyId + "/documents/case-marks",
+                map("documentIds", List.of(document), "caseDocument", true));
+        JsonNode marks = details(only("DOCUMENTS_CASE_MARK_CHANGED"));
+        assertThat(marks.get("count").asInt()).isEqualTo(1);
+        assertThat(marks.get("ids").get(0).asString()).isEqualTo(document);
+    }
+
+    @Test
+    void topicsLeaveOneEntryEachWithTheNameAsLabelOnly() {
+        String project = admin("post", ADMIN + "/companies/" + companyId + "/projects", map("name", "Obra Este")).json()
+                .get("id").asString();
+        String document = uploadPdf(project, "tema.pdf");
+        clearLog();
+
+        String topic = admin("post", ADMIN + "/companies/" + companyId + "/topics",
+                map("name", "Agua", "definition", "Fugas y humedades")).json().get("id").asString();
+        Map<String, Object> created = only("TOPIC_CREATED");
+        assertTarget(created, "TOPIC", topic);
+        assertThat(created).containsEntry("target_label", "Agua");
+        assertThat(created.get("details").toString()).doesNotContain("Fugas");
+
+        admin("put", ADMIN + "/documents/" + document + "/topics/" + topic, null);
+        Map<String, Object> added = only("DOCUMENT_TOPIC_ADDED");
+        assertTarget(added, "TOPIC", topic);
+        assertThat(details(added).get("documentId").asString()).isEqualTo(document);
+        admin("delete", ADMIN + "/documents/" + document + "/topics/" + topic, null);
+        assertTarget(only("DOCUMENT_TOPIC_REMOVED"), "TOPIC", topic);
+        admin("post", ADMIN + "/documents/" + document + "/topics/retag", null);
+        assertTarget(only("DOCUMENT_RETAGGED"), "DOCUMENT", document);
+
+        admin("patch", ADMIN + "/companies/" + companyId + "/topics/" + topic, map("definition", "Otra definición"));
+        assertThat(details(only("TOPIC_UPDATED")).get("definitionChanged").asBoolean()).isTrue();
+        admin("delete", ADMIN + "/companies/" + companyId + "/topics/" + topic, null);
+        assertTarget(only("TOPIC_DELETED"), "TOPIC", topic);
+    }
 }
