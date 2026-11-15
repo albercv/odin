@@ -1,6 +1,6 @@
 # Primera carga, segunda ronda: cierre (encargo 19, D-113)
 
-Fecha: 2026-11-15. Rama `feature/primera-carga-2`, que sale de lo instalado (7791802) y ya tiene `develop` (7687358) mezclada. No está desplegada ni fusionada en `develop`: las dos cosas necesitan el permiso del propietario.
+Fecha: 2026-11-15. Rama `feature/primera-carga-2`, que sale de lo instalado (7791802) y ya tiene `develop` (b433e50, con el encargo 20 y su V28) mezclada. No está desplegada ni fusionada en `develop`: las dos cosas necesitan el permiso del propietario.
 
 ## Lo que entra
 
@@ -26,19 +26,19 @@ Fecha: 2026-11-15. Rama `feature/primera-carga-2`, que sale de lo instalado (779
 
 ## Verificación
 
-- `make check` termina con 0 sobre c396973:
+- `make check` termina con 0 sobre 491cfb1:
 
   | Parte | Pruebas | Fallos |
   |---|---|---|
-  | Java | 1.521 | 0 |
-  | MCP | 105 | 0 |
-  | Panel | 421 | 0 |
+  | Java | 1.549 | 0 |
+  | MCP | 114 | 0 |
+  | Panel | 428 | 0 |
   | Python | 103 | 0 |
 
   Incluye las pruebas de aislamiento de cada ruta y campo nuevos.
-- **Ensayo V26 → V27** en la pila `odin-ensayo`, nunca en la instalación del propietario:
-  - se restauró la copia de las 12:30 con las imágenes de `develop`, y su huella coincide con la del propietario;
-  - `instalacion-actualizar` con la feature termina con 0 en 20 s, y Flyway aplica la 27;
+- **Ensayo V28 → V29** en la pila `odin-ensayo`, nunca en la instalación del propietario:
+  - se restauró la copia de las 20:29 (V26) con las imágenes de `develop`, que la llevan a V28; su huella coincide con la del propietario;
+  - `instalacion-actualizar` con la feature termina con 0 en 20 s, y Flyway aplica la 29 (historial 26, 28, 29);
   - la huella de los datos queda idéntica: 0 lotes, 0 documentos con tipo y las dos columnas nuevas;
   - el MCP da 15 herramientas a Marta y 14 a Ignacio, y Claude Desktop no se ha tocado;
   - la pila se ha bajado con sus volúmenes.
