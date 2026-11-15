@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { S } from '../api/client';
 import { Button } from '../ui/Button';
 import { documentTypeLabel } from './documentType';
+import { useProjectTerms } from './projectTerms';
 import styles from './Intake.module.css';
 
 export type Decision = S['DecideProposalRequest'];
@@ -9,13 +10,14 @@ type Props = { kind: string; item: S['IntakeProposalItem']; projectKind: boolean
 
 function CorrectProject({ title, projects, onCorrect }: { title: string; projects: S['ProjectView'][]; onCorrect: (projectId: string) => void }) {
   const [projectId, setProjectId] = useState('');
+  const t = useProjectTerms();
   return (
     <>
-      <select aria-label={`Proyecto correcto de ${title}`} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-        <option value="">Otro proyecto…</option>
+      <select aria-label={`${t.One} ${t.agree('correcto', 'correcta')} de ${title}`} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+        <option value="">{t.agree('Otro', 'Otra')} {t.one}…</option>
         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
-      <Button aria-label={`Corregir proyecto de ${title}`} disabled={!projectId} onClick={() => onCorrect(projectId)}>Corregir</Button>
+      <Button aria-label={`Corregir ${t.one} de ${title}`} disabled={!projectId} onClick={() => onCorrect(projectId)}>Corregir</Button>
     </>
   );
 }

@@ -7,15 +7,17 @@ import { StatusPill } from '../ui/StatusPill';
 import { useToast } from '../ui/Toast';
 import { formatDate } from '../pages/reviewNames';
 import { Notice } from './Notice';
+import { useProjectTerms } from './projectTerms';
 import { useAction } from './useLoad';
 import styles from './CardDetail.module.css';
 
 type Props = { card: S['CardView']; author: string; project: string; locked?: boolean; focusTitle?: boolean; onResolved: () => void };
 
 function Facts({ card, author, project }: Omit<Props, 'onResolved' | 'locked' | 'focusTitle'>) {
+  const t = useProjectTerms();
   return (
     <dl className={styles.facts}>
-      <div><dt>Proyecto</dt><dd>{project}</dd></div>
+      <div><dt>{t.One}</dt><dd>{project}</dd></div>
       <div><dt>Guardada por</dt><dd>{author}</dd></div>
       <div><dt>Fecha</dt><dd>{formatDate(card.createdAt)}</dd></div>
     </dl>

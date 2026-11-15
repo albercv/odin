@@ -8,7 +8,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Optional;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -16,6 +19,7 @@ public class MagicBytesFormatDetector implements DocumentFormatDetector {
 
     private static final byte[] PDF = "%PDF-".getBytes(StandardCharsets.US_ASCII);
     private static final byte[] ZIP = {'P', 'K', 3, 4};
+    private static final byte[] OLE2 = {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1};
     private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
     private static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
     private static final byte[] TIFF_LITTLE = {'I', 'I', 42, 0};
@@ -29,8 +33,9 @@ public class MagicBytesFormatDetector implements DocumentFormatDetector {
         if (startsWith(content, PDF)) {
             return Optional.of(DocumentFormat.PDF);
         }
-        if (isDocx(content)) {
-            return Optional.of(DocumentFormat.DOCX);
+        Optional<DocumentFormat> office = detectOffice(content);
+        if (office.isPresent()) {
+            return office;
         }
         if (isImage(content)) {
             return Optional.of(DocumentFormat.IMAGE);
@@ -43,18 +48,48 @@ public class MagicBytesFormatDetector implements DocumentFormatDetector {
                 || startsWith(content, TIFF_LITTLE) || startsWith(content, TIFF_BIG);
     }
 
-    private static boolean isDocx(byte[] content) {
-        if (!startsWith(content, ZIP)) {
+    private static Optional<DocumentFormat> detectOffice(byte[] content) {
+        if (startsWith(content, ZIP)) {
+            Set<String> names = zipEntryNames(content);
+            if (names.contains("word/document.xml")) {
+                return Optional.of(DocumentFormat.DOCX);
+            }
+            if (names.contains("xl/workbook.xml")) {
+                return Optional.of(DocumentFormat.XLSX);
+            }
+            return isOds(content) ? Optional.of(DocumentFormat.ODS) : Optional.empty();
+        }
+        return startsWith(content, OLE2) && hasWorkbookStream(content)
+                ? Optional.of(DocumentFormat.XLS) : Optional.empty();
+    }
+
+    private static boolean isOds(byte[] content) {
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(content))) {
+            ZipEntry first = zip.getNextEntry();
+            return first != null && "mimetype".equals(first.getName())
+                    && "application/vnd.oasis.opendocument.spreadsheet"
+                            .equals(new String(zip.readNBytes(100), StandardCharsets.US_ASCII).trim());
+        } catch (IOException e) {
             return false;
         }
+    }
+
+    private static Set<String> zipEntryNames(byte[] content) {
+        Set<String> names = new HashSet<>();
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(content))) {
             for (ZipEntry entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) {
-                if ("word/document.xml".equals(entry.getName())) {
-                    return true;
-                }
+                names.add(entry.getName());
             }
-            return false;
         } catch (IOException e) {
+            return names;
+        }
+        return names;
+    }
+
+    private static boolean hasWorkbookStream(byte[] content) {
+        try (POIFSFileSystem fs = new POIFSFileSystem(new ByteArrayInputStream(content))) {
+            return fs.getRoot().hasEntry("Workbook") || fs.getRoot().hasEntry("Book");
+        } catch (IOException | RuntimeException e) {
             return false;
         }
     }

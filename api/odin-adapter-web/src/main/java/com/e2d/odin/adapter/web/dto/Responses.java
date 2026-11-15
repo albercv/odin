@@ -39,6 +39,7 @@ import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectLabel;
 import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.knowledge.QuestionRecord;
 import com.e2d.odin.domain.search.SearchHit;
@@ -77,9 +78,10 @@ public final class Responses {
     public record UserRef(UUID userId) {
     }
 
-    public record CompanyRef(UUID id, String name, String code, boolean codeReviewed) {
+    public record CompanyRef(UUID id, String name, String code, boolean codeReviewed, ProjectLabelView projectLabel) {
         public static CompanyRef from(Company c) {
-            return new CompanyRef(c.id().value(), c.name(), c.code(), c.codeReviewed());
+            return new CompanyRef(c.id().value(), c.name(), c.code(), c.codeReviewed(),
+                    ProjectLabelView.from(c.projectLabel()));
         }
     }
 
@@ -95,16 +97,24 @@ public final class Responses {
         }
     }
 
-    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities, boolean codeReviewed) {
+    public record ProjectLabelView(String singular, String plural, boolean feminine) {
+        public static ProjectLabelView from(ProjectLabel l) {
+            return new ProjectLabelView(l.singular(), l.plural(), l.feminine());
+        }
+    }
+
+    public record CompanyView(UUID id, String name, String code, Set<Capability> capabilities, boolean codeReviewed,
+            ProjectLabelView projectLabel) {
         public static CompanyView from(Company c) {
-            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities(), c.codeReviewed());
+            return new CompanyView(c.id().value(), c.name(), c.code(), c.capabilities(), c.codeReviewed(),
+                    ProjectLabelView.from(c.projectLabel()));
         }
     }
 
     /** La empresa tal como la ve un trabajador: sin código, que es cosa del panel de administración. */
-    public record MeCompany(UUID id, String name, Set<Capability> capabilities) {
+    public record MeCompany(UUID id, String name, Set<Capability> capabilities, ProjectLabelView projectLabel) {
         public static MeCompany from(Company c) {
-            return new MeCompany(c.id().value(), c.name(), c.capabilities());
+            return new MeCompany(c.id().value(), c.name(), c.capabilities(), ProjectLabelView.from(c.projectLabel()));
         }
     }
 
@@ -466,10 +476,11 @@ public final class Responses {
     }
 
     /** {@code caseTitle} solo viaja en un enlace de caso. */
-    public record UploadLinkInfo(com.e2d.odin.application.link.UploadTargetKind target, @Nullable String caseTitle, String projectName, Instant expiresAt) {
+    public record UploadLinkInfo(com.e2d.odin.application.link.UploadTargetKind target, @Nullable String caseTitle, String projectName,
+            ProjectLabelView projectLabel, Instant expiresAt) {
         public static UploadLinkInfo from(com.e2d.odin.application.link.UploadLinkInfo info) {
             return new UploadLinkInfo(info.kind(), info.caseTitle().orElse(null), info.projectName(),
-                    info.expiresAt());
+                    ProjectLabelView.from(info.projectLabel()), info.expiresAt());
         }
     }
 

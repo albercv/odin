@@ -87,3 +87,16 @@ test('unreviewedCodeIsFlaggedUntilSaved', async () => {
   await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /v1/admin/companies/c1')).toBe(true));
   await waitFor(() => expect(screen.queryByText('Código por revisar')).toBeNull());
 });
+
+test('editsTheProjectLabel', async () => {
+  const calls = await edit();
+  expect(screen.getByLabelText('Nombre de los proyectos (singular)')).toHaveValue('proyecto');
+  await userEvent.clear(screen.getByLabelText('Nombre de los proyectos (singular)'));
+  await userEvent.type(screen.getByLabelText('Nombre de los proyectos (singular)'), 'Comunidad');
+  await userEvent.clear(screen.getByLabelText('Nombre de los proyectos (plural)'));
+  await userEvent.type(screen.getByLabelText('Nombre de los proyectos (plural)'), 'Comunidades');
+  await userEvent.selectOptions(screen.getByLabelText('Artículo'), 'la');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar Acme' }));
+  await waitFor(() => expect(calls.find((c) => c.key === 'PATCH /v1/admin/companies/c1')?.body)
+    .toEqual({ name: 'Acme', projectLabel: { singular: 'Comunidad', plural: 'Comunidades', feminine: true } }));
+});

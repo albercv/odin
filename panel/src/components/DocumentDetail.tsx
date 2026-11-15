@@ -9,6 +9,7 @@ import { StatusPill } from '../ui/StatusPill';
 import { Notice } from './Notice';
 import { useAction } from './useLoad';
 import { DocumentTopics } from './DocumentTopics';
+import { useProjectTerms } from './projectTerms';
 import styles from './DocumentDetail.module.css';
 
 type Props = { document: S['DocumentView']; projects: S['ProjectView'][]; onClose: () => void; onChanged?: () => void };
@@ -45,10 +46,11 @@ function ScanOf({ of, open, onUnlink }: { of: S['ScanLink']; open: (id: string) 
 
 function Facts({ d, projects }: { d: S['DocumentView']; projects: S['ProjectView'][] }) {
   const [label, tone] = STATUS[d.status] ?? [d.status, 'off' as const];
+  const t = useProjectTerms();
   return (
     <dl className={styles.facts}>
         <div><dt>Estado</dt><dd><StatusPill tone={tone}>{label}</StatusPill></dd></div>
-        <div><dt>Proyecto</dt><dd>{projectName(d.projectId, projects)}</dd></div>
+        <div><dt>{t.One}</dt><dd>{projectName(d.projectId, projects, t.noneOne)}</dd></div>
         <div><dt>Fecha de alta</dt><dd>{formatDate(d.uploadedAt)}</dd></div>
         {d.supersededBy && (
           <div>

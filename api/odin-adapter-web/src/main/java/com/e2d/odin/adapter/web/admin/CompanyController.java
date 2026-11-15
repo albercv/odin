@@ -14,6 +14,7 @@ import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.application.organization.UpdateCompany;
 import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.organization.ProjectLabel;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -75,7 +76,8 @@ public class CompanyController {
     public Responses.CompanyView update(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @RequestBody Requests.UpdateCompany request) {
         CompanyChanges changes = new CompanyChanges(Optional.ofNullable(request.name()),
-                Optional.ofNullable(request.code()));
+                Optional.ofNullable(request.code()), Optional.ofNullable(request.projectLabel())
+                        .map(l -> ProjectLabel.of(l.singular(), l.plural(), l.feminine())));
         return Responses.CompanyView.from(updateCompany.execute(actor, new CompanyId(companyId), changes));
     }
 

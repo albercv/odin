@@ -3,7 +3,9 @@ package com.e2d.odin.application.link;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.link.AccessLinkKind;
+import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectLabel;
 import com.e2d.odin.domain.shared.NotFoundException;
 import java.time.Instant;
 import java.util.Optional;
@@ -22,11 +24,13 @@ public class DescribeUploadLink {
     public UploadLinkInfo execute(String token, String clientAddress) {
         ResolvedLink resolved = resolve.execute(token, clientAddress, AccessLinkKind.UPLOAD);
         Instant expiresAt = resolved.link().expiresAt();
+        ProjectLabel label = organizations.findCompany(resolved.link().companyId()).map(Company::projectLabel)
+                .orElse(ProjectLabel.DEFAULT);
         return switch (resolved.target()) {
             case LinkTarget.ProjectTarget p ->
-                    new UploadLinkInfo(UploadTargetKind.PROJECT, Optional.empty(), p.project().name(), expiresAt);
+                    new UploadLinkInfo(UploadTargetKind.PROJECT, Optional.empty(), p.project().name(), label, expiresAt);
             case LinkTarget.CaseTarget c -> new UploadLinkInfo(UploadTargetKind.CASE,
-                    Optional.of(c.caseDocument().title()), projectNameOf(c.caseDocument()), expiresAt);
+                    Optional.of(c.caseDocument().title()), projectNameOf(c.caseDocument()), label, expiresAt);
             case LinkTarget.OriginalTarget o -> throw new NotFoundException("Enlace no encontrado");
         };
     }

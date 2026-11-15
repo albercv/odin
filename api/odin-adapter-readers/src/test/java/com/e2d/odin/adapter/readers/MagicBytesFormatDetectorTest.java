@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.e2d.odin.domain.document.DocumentFormat;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +32,34 @@ class MagicBytesFormatDetectorTest {
                 .contains(DocumentFormat.MARKDOWN);
         assertThat(detector.detect("Parrafo\n# Seccion".getBytes(StandardCharsets.UTF_8)))
                 .contains(DocumentFormat.MARKDOWN);
+    }
+
+    @Test
+    void detectsXlsxXlsAndRejectsOle2Doc() throws Exception {
+        assertThat(detector.detect(write(new XSSFWorkbook()))).contains(DocumentFormat.XLSX);
+        HSSFWorkbook xls = new HSSFWorkbook();
+        xls.createSheet("A");
+        assertThat(detector.detect(write(xls))).contains(DocumentFormat.XLS);
+        ByteArrayOutputStream doc = new ByteArrayOutputStream();
+        try (POIFSFileSystem fs = new POIFSFileSystem()) {
+            fs.createDocument(new java.io.ByteArrayInputStream(new byte[] {1, 2, 3}), "WordDocument");
+            fs.writeFilesystem(doc);
+        }
+        assertThat(detector.detect(doc.toByteArray())).isEmpty();
+    }
+
+    @Test
+    void detectsOdsButNotOdt() throws Exception {
+        assertThat(detector.detect(OdsSheetsTest.zip("application/vnd.oasis.opendocument.spreadsheet", "<a/>")))
+                .contains(DocumentFormat.ODS);
+        assertThat(detector.detect(OdsSheetsTest.zip("application/vnd.oasis.opendocument.text", "<a/>"))).isEmpty();
+    }
+
+    private static byte[] write(org.apache.poi.ss.usermodel.Workbook workbook) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        workbook.write(out);
+        workbook.close();
+        return out.toByteArray();
     }
 
     @Test

@@ -3,6 +3,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { ApiClient, WorkerDocumentView } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
+import { noProject, type ProjectTerms } from '../terms.js';
 import { guarded, jsonResult } from './result.js';
 
 const PAGE_SIZE = 500;
@@ -20,19 +21,19 @@ export async function collectDocuments(api: ApiClient, projectId?: string, topic
   return { documents: documents.slice(0, MAX_DOCUMENTS), truncated: documents.length > MAX_DOCUMENTS };
 }
 
-export function registerListDocuments(server: McpServer, api: ApiClient, projects: ProjectNames): void {
+export function registerListDocuments(server: McpServer, api: ApiClient, projects: ProjectNames, t: ProjectTerms): void {
   server.registerTool(
     'listDocuments',
     {
       description:
         'Lista los documentos de la empresa (hasta 2.000; si hay más, truncated es true). ' +
-        'projectName es el proyecto: una de las unidades con las que la empresa organiza su trabajo en Odín; «Sin proyecto (general de la empresa)» si no es de ningún proyecto y lo ve toda la empresa. ' +
+        `projectName es ${t.the} ${t.singular}: una de las unidades con las que la empresa organiza su trabajo en Odín; «${noProject(t)}» si no es de ${t.none} ${t.singular} y lo ve toda la empresa. ` +
         'Una «copia escaneada» (scanCopies de un documento) es el mismo documento escaneado: no sale como documento aparte; se puede abrir o leer por su id. ' +
         'Los temas de origen AI los asignó una IA al ingresar el documento; preséntalos como tales. ' +
         'Una lista por tema puede estar incompleta: si taggingPending es mayor que 0, dilo. ' +
         'Para una lista completa, combina el filtro por tema con la búsqueda, porque el etiquetado puede dejarse alguno.',
       inputSchema: {
-        projectId: z.string().optional().describe('Limita la lista a un proyecto'),
+        projectId: z.string().optional().describe(`Limita la lista a ${t.one}`),
         topic: z.string().optional().describe('Limita la lista a un tema de la empresa, por su nombre'),
         caseDocument: z.boolean().optional().describe('true lista solo las fichas de caso; false, solo lo que no es caso'),
       },

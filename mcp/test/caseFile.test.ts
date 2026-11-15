@@ -2,7 +2,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createApiClient } from '../src/api/client.js';
-import { buildServer, INSTRUCTIONS } from '../src/server.js';
+import { buildServer, instructions } from '../src/server.js';
+import { DEFAULT_TERMS } from '../src/terms.js';
 import { meWith, startFakeApi, type FakeApi, type Handler } from './fakeApi.js';
 
 let fake: FakeApi;
@@ -275,7 +276,7 @@ describe('case file tools', () => {
   });
 
   it('instructionsStayWithinBudget', () => {
-    expect(INSTRUCTIONS.length).toBeLessThanOrEqual(2200);
+    expect(instructions(DEFAULT_TERMS).length).toBeLessThanOrEqual(2200);
   });
 });
 
