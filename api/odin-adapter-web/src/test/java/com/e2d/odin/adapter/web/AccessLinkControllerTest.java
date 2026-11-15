@@ -56,6 +56,17 @@ class AccessLinkControllerTest extends WebTestSupport {
     }
 
     @Test
+    void linkInfoCarriesTheLabelOfTheLinksCompany() throws Exception {
+        String token = tokenOf("/v1/projects/" + project.value() + "/upload-links");
+        mvc.perform(get("/v1/upload-links/" + token)).andExpect(jsonPath("$.projectLabel.singular").value("proyecto"));
+
+        w.orgs.saveCompany(w.orgs.findCompany(company).orElseThrow()
+                .withProjectLabel(new com.e2d.odin.domain.organization.ProjectLabel("obra", "obras", true)));
+        mvc.perform(get("/v1/upload-links/" + token)).andExpect(jsonPath("$.projectLabel.singular").value("obra"))
+                .andExpect(jsonPath("$.projectLabel.feminine").value(true));
+    }
+
+    @Test
     void caseLinkKeepsItsFieldsAndAddsTarget() throws Exception {
         Document caseDoc = Fixtures.documentIn(w.docs, company, project, "ficha");
         w.docs.markCaseDocuments(company, Set.of(caseDoc.id()), true);

@@ -6,8 +6,8 @@ import { AppShell } from '../layout/AppShell';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true };
-const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true };
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
+const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
 
 test('offersEveryCompanyWithTheCurrentOneSelected', async () => {
   const onChange = vi.fn();
