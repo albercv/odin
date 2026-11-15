@@ -32,7 +32,7 @@
 
 ## Tareas
 
-### Tarea 1: registro inalterable, interruptor y contexto
+### Task 1: registro inalterable, interruptor y contexto
 
 **Rama:** `task/monitorizacion/registro`.
 
@@ -59,7 +59,7 @@
   - interruptor: un administrador de empresa o un trabajador recibe 403; contraseña mala → 403 y entrada `negado`; encender sin `usagePolicyReference` → 400; encender deja la primera entrada y apagar la última;
   - ningún `details` de las pruebas lleva campos prohibidos (comprobación reutilizable para las tareas siguientes).
 
-### Tarea 2: acciones de administración (acceso, instalación, organización, personas, claves, proyectos)
+### Task 2: acciones de administración (acceso, instalación, organización, personas, claves, proyectos)
 
 **Rama:** `task/monitorizacion/administracion-1`.
 
@@ -67,7 +67,7 @@
 - IP y navegador solo en las entradas de acceso al panel (decisión 5).
 - **Pruebas:** una por acción (prueba de API o de caso de uso con la base real, la que use el proyecto para ese controlador): exactamente una entrada, con actor, papel, canal `PANEL`, objeto, resultado y `details` correctos. Capacidades: antes y después. Un administrador de empresa que cambia algo de su empresa deja `company_id` de esa empresa.
 
-### Tarea 3: acciones de administración (documentos, temas, fichas, primera carga)
+### Task 3: acciones de administración (documentos, temas, fichas, primera carga)
 
 **Rama:** `task/monitorizacion/administracion-2`.
 
@@ -75,7 +75,7 @@
 - Documentos: título, proyecto, tamaño y huella; nunca el contenido. Fichas: id y proyecto; nunca el texto.
 - **Pruebas:** como en la tarea 2, más una que comprueba que ninguna entrada de documento o ficha lleva texto.
 
-### Tarea 4: acciones del trabajador desde el chat
+### Task 4: acciones del trabajador desde el chat
 
 **Rama:** `task/monitorizacion/trabajador`.
 
@@ -84,7 +84,7 @@
 - Un enlace rechazado (404 de siempre) no deja entrada (no se revela nada nuevo y no hay actor).
 - **Pruebas:** una por acción; `via` presente en las de enlace; una subida duplicada deja su entrada con `details.duplicate = true`; ninguna lleva texto de ficha ni contenido.
 
-### Tarea 5: consulta en el panel
+### Task 5: consulta en el panel
 
 **Rama:** `task/monitorizacion/consulta`.
 
@@ -94,7 +94,7 @@
 - **Panel:** página «Actividad» en la navegación de administración: filtros, tabla, «Cargar más», exportar CSV, pie con el estado de la cadena y la huella de cabeza, y aviso «El registro está apagado» cuando lo esté. El administrador de grupo ve el interruptor (encender con la referencia de la política y la contraseña; apagar con la contraseña).
 - **Pruebas:** trabajador → 403; administrador de empresa no ve otra empresa ni las filas de grupo (aislamiento); paginación estable con entradas en el mismo instante; prueba de contrato de que ninguna respuesta agrupa, cuenta ni ordena por persona; la exportación CSV deja su entrada; pruebas de componentes de la página (filtros, cargar más, aviso de apagado, interruptor), con Axe si el panel ya lo usa en sus pruebas de componentes.
 
-### Tarea 6: clave de administrador para el chat
+### Task 6: clave de administrador para el chat
 
 **Rama:** `task/monitorizacion/clave-chat`.
 
@@ -106,6 +106,6 @@
 - **Panel:** en «Actividad», el administrador emite su clave (se muestra una vez), ve si tiene una vigente y la revoca; el de grupo enciende o apaga el chat.
 - **Pruebas:** clave de trabajador → 403; clave de otro ámbito (administrador de empresa pidiendo otra empresa) → 403; sin intervalo o de más de 7 días → 400; tope de 500 al día; sin correo en la salida; cada llamada registrada; clave caducada o revocada → 401; `chat_enabled` apagado → no se emite; pruebas del MCP (registro condicionado y validación de entrada) y de componentes del panel.
 
-### Tarea 7: verificación final
+### Task 7: verificación final
 
 - `make check` en verde sobre la punta de la feature. Actualizar el diseño con lo construido y lo que queda (fases B, E, F, G e hitos del sistema).
