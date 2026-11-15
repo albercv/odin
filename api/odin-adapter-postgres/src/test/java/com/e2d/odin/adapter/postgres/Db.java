@@ -52,6 +52,11 @@ final class Db {
         try (Connection c = OWNER.getConnection(); Statement s = c.createStatement()) {
             s.execute("TRUNCATE question_record, knowledge_card, document_page, document, admin_session, access_key, "
                     + "membership, app_user, project, company_capability, company, odin_group CASCADE");
+            s.execute("ALTER TABLE audit_event DISABLE TRIGGER USER");
+            s.execute("TRUNCATE audit_event, audit_actor");
+            s.execute("ALTER TABLE audit_event ENABLE TRIGGER USER");
+            s.execute("UPDATE audit_setting SET enabled = false, usage_policy_reference = NULL, chat_enabled = false, "
+                    + "updated_by = NULL, updated_at = NULL");
         } catch (SQLException e) {
             throw new IllegalStateException(e);
         }
