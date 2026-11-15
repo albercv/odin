@@ -27,6 +27,36 @@ import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.ClassifyIntake;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
+import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
+import com.e2d.odin.application.port.ProjectProposer;
+import java.util.Optional;
+import org.springframework.beans.factory.ObjectProvider;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.ConfirmIntakeProposals;
+import com.e2d.odin.application.intake.DecideIntakeProposal;
+import com.e2d.odin.application.intake.DiscardIntakeDocument;
+import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.IntakeDecision;
+import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
+import com.e2d.odin.domain.intake.IntakeProposal;
+import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.ProjectId;
+import java.util.UUID;
+import com.e2d.odin.application.intake.ImportProjectList;
+import com.e2d.odin.application.intake.ListProjectCandidates;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.ProjectCandidate;
+import com.e2d.odin.application.intake.ProjectDecision;
+import com.e2d.odin.application.intake.StartIntake;
+import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
@@ -112,6 +142,7 @@ import com.e2d.odin.application.usage.GetDeliveredVolume;
 import com.e2d.odin.application.usage.GetUsageStats;
 import com.e2d.odin.application.usage.ListGaps;
 import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.shared.IntakeSettings;
 import com.e2d.odin.application.shared.ProcessingSettings;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.application.shared.UploadSettings;
@@ -471,6 +502,156 @@ public class UseCaseConfiguration {
             IdGenerator ids,
             Clock clock) {
         return new UploadDocument(documents, organizations, files, detector, uploadSettings, ids, clock);
+    }
+
+    @Bean
+    StartIntake startIntake(IntakeRepository intake, OrganizationRepository organizations, IdGenerator ids,
+            Clock clock) {
+        return new StartIntake(intake, organizations, ids, clock);
+    }
+
+    @Bean
+    AddFileToIntake addFileToIntake(IntakeRepository intake, UploadDocument upload) {
+        return new AddFileToIntake(intake, upload);
+    }
+
+    /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
+    @Bean
+    ClassifyIntake classifyIntake(IntakeRepository intake, DocumentRepository documents,
+            ObjectProvider<ProjectProposer> proposer, IdGenerator ids, InstallationSettings installationSettings,
+            Clock clock) {
+        return new ClassifyIntake(intake, documents, Optional.ofNullable(proposer.getIfAvailable()), ids,
+                installationSettings, clock);
+    }
+
+    @Bean
+    CloseIntakeUpload closeIntakeUpload(IntakeRepository intake) {
+        return new CloseIntakeUpload(intake);
+    }
+
+    @Bean
+    GetIntakeBatch getIntakeBatch(IntakeRepository intake, DocumentRepository documents,
+            InstallationSettings installationSettings, IntakeSettings intakeSettings) {
+        return new GetIntakeBatch(intake, documents, installationSettings, intakeSettings);
+    }
+
+    @Bean
+    ImportProjectList importProjectList(IntakeRepository intake, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ImportProjectList(intake) {
+            @Override
+            public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
+                    byte[] content) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId, content));
+            }
+        };
+    }
+
+    @Bean
+    ListProjectCandidates listProjectCandidates(IntakeRepository intake, DocumentRepository documents) {
+        return new ListProjectCandidates(intake, documents);
+    }
+
+    /** Sin transacción: lo que descubre se queda aunque falten candidatos por decidir (lo ve el administrador). */
+    @Bean
+    CloseProjectList closeProjectList(IntakeRepository intake, DocumentRepository documents,
+            ListProjectCandidates candidates, InstallationSettings installationSettings, Clock clock) {
+        return new CloseProjectList(intake, documents, candidates, installationSettings, clock);
+    }
+
+    @Bean
+    ConfirmProjectCandidates confirmProjectCandidates(IntakeRepository intake, OrganizationRepository organizations,
+            CreateProject createProject, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ConfirmProjectCandidates(intake, organizations, createProject) {
+            @Override
+            public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
+                    List<ProjectDecision> decisions) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId, decisions));
+            }
+        };
+    }
+
+    @Bean
+    IntakeEffects intakeEffects(IntakeRepository intake, DocumentRepository documents,
+            OrganizationRepository organizations, MarkCaseDocuments markCaseDocuments,
+            SupersedeDocument supersedeDocument, AddToCaseFiles addToCaseFiles,
+            InstallationSettings installationSettings, Clock clock) {
+        return new IntakeEffects(intake, documents, organizations, markCaseDocuments, supersedeDocument,
+                addToCaseFiles, installationSettings, clock);
+    }
+
+    @Bean
+    ListOpenIntakeBatches listOpenIntakeBatches(IntakeRepository intake) {
+        return new ListOpenIntakeBatches(intake);
+    }
+
+    @Bean
+    ListIntakeProposals listIntakeProposals(IntakeRepository intake, DocumentRepository documents) {
+        return new ListIntakeProposals(intake, documents);
+    }
+
+    /** Confirmar, decidir y descartar son todo o nada: una transacción por acción. */
+    @Bean
+    ConfirmIntakeProposals confirmIntakeProposals(IntakeRepository intake, IntakeEffects effects,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ConfirmIntakeProposals(intake, effects) {
+            @Override
+            public int execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, List<UUID> proposalIds) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId, proposalIds));
+            }
+        };
+    }
+
+    @Bean
+    DecideIntakeProposal decideIntakeProposal(IntakeRepository intake, IntakeEffects effects,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new DecideIntakeProposal(intake, effects) {
+            @Override
+            public IntakeProposal execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, UUID proposalId,
+                    IntakeDecision decision, Optional<ProjectId> projectId) {
+                return transaction.execute(
+                        status -> super.execute(actor, companyId, batchId, proposalId, decision, projectId));
+            }
+        };
+    }
+
+    @Bean
+    ListUnplacedDocuments listUnplacedDocuments(IntakeRepository intake, DocumentRepository documents) {
+        return new ListUnplacedDocuments(intake, documents);
+    }
+
+    @Bean
+    OpenIntakeOriginal openIntakeOriginal(IntakeRepository intake, DocumentRepository documents,
+            OriginalFileStore files) {
+        return new OpenIntakeOriginal(intake, documents, files);
+    }
+
+    @Bean
+    PlaceIntakeDocument placeIntakeDocument(IntakeEffects effects, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new PlaceIntakeDocument(effects) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId,
+                    Optional<ProjectId> projectId, boolean companyWide) {
+                transaction.executeWithoutResult(
+                        status -> super.execute(actor, companyId, batchId, documentId, projectId, companyWide));
+            }
+        };
+    }
+
+    @Bean
+    DiscardIntakeDocument discardIntakeDocument(DocumentRepository documents,
+            WithdrawDocument withdrawDocument, IntakeEffects effects, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new DiscardIntakeDocument(documents, withdrawDocument, effects) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, batchId, documentId));
+            }
+        };
     }
 
     @Bean

@@ -33,7 +33,25 @@ import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryDeliveryMeter;
 import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
+import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
+import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
+import com.e2d.odin.application.intake.ConfirmIntakeProposals;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.DecideIntakeProposal;
+import com.e2d.odin.application.intake.DiscardIntakeDocument;
+import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
+import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.ImportProjectList;
+import com.e2d.odin.application.intake.ListProjectCandidates;
+import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
@@ -128,6 +146,8 @@ public class TestWiring {
     final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
+    final com.e2d.odin.application.shared.IntakeSettings intakeSettings = new com.e2d.odin.application.shared.IntakeSettings(false);
+    final InMemoryIntakeRepository intake = new InMemoryIntakeRepository();
     final InMemoryCaseFileRepository caseFiles = new InMemoryCaseFileRepository(docs);
     final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
     final InMemoryQuestionLog questions = new InMemoryQuestionLog();
@@ -323,6 +343,74 @@ public class TestWiring {
 
     @Bean UploadDocument uploadDocument() {
         return new UploadDocument(docs, orgs, files, detector, new UploadSettings(MAX_UPLOAD), ids, clock);
+    }
+
+    @Bean StartIntake startIntake() {
+        return new StartIntake(intake, orgs, ids, clock);
+    }
+
+    @Bean AddFileToIntake addFileToIntake() {
+        return new AddFileToIntake(intake, uploadDocument());
+    }
+
+    @Bean CloseIntakeUpload closeIntakeUpload() {
+        return new CloseIntakeUpload(intake);
+    }
+
+    @Bean GetIntakeBatch getIntakeBatch() {
+        return new GetIntakeBatch(intake, docs, installationSettings(), intakeSettings);
+    }
+
+    @Bean ImportProjectList importProjectList() {
+        return new ImportProjectList(intake);
+    }
+
+    @Bean ListProjectCandidates listProjectCandidates() {
+        return new ListProjectCandidates(intake, docs);
+    }
+
+    @Bean OpenIntakeOriginal openIntakeOriginal() {
+        return new OpenIntakeOriginal(intake, docs, files);
+    }
+
+    @Bean CloseProjectList closeProjectList() {
+        return new CloseProjectList(intake, docs, listProjectCandidates(), installationSettings(), clock);
+    }
+
+    @Bean ConfirmProjectCandidates confirmProjectCandidates() {
+        return new ConfirmProjectCandidates(intake, orgs, createProject());
+    }
+
+    @Bean IntakeEffects intakeEffects() {
+        return new IntakeEffects(intake, docs, orgs, markCaseDocuments(), supersedeDocument(), addToCaseFiles(),
+                installationSettings(), clock);
+    }
+
+    @Bean ListUnplacedDocuments listUnplacedDocuments() {
+        return new ListUnplacedDocuments(intake, docs);
+    }
+
+    @Bean PlaceIntakeDocument placeIntakeDocument() {
+        return new PlaceIntakeDocument(intakeEffects());
+    }
+
+    @Bean ListOpenIntakeBatches listOpenIntakeBatches() {
+        return new ListOpenIntakeBatches(intake);
+    }
+    @Bean ListIntakeProposals listIntakeProposals() {
+        return new ListIntakeProposals(intake, docs);
+    }
+
+    @Bean ConfirmIntakeProposals confirmIntakeProposals() {
+        return new ConfirmIntakeProposals(intake, intakeEffects());
+    }
+
+    @Bean DecideIntakeProposal decideIntakeProposal() {
+        return new DecideIntakeProposal(intake, intakeEffects());
+    }
+
+    @Bean DiscardIntakeDocument discardIntakeDocument() {
+        return new DiscardIntakeDocument(docs, withdrawDocument(), intakeEffects());
     }
 
     @Bean UserNames userNames() {

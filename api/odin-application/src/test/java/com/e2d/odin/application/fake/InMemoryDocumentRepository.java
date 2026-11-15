@@ -6,6 +6,9 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.application.port.IntakeDocument;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -13,11 +16,14 @@ import com.e2d.odin.domain.shared.DocumentId;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.topic.TopicId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class InMemoryDocumentRepository implements DocumentRepository {
 
@@ -129,7 +136,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> findById(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
-        return visible(scope, visibility, id).filter(d -> !d.withdrawn());
+        return visible(scope, visibility, id).filter(d -> !d.withdrawn() && !d.intakePending());
     }
 
     private Optional<Document> visible(CompanyScope scope, ProjectVisibility visibility, DocumentId id) {
@@ -178,8 +185,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     private java.util.stream.Stream<Document> matching(CompanyScope scope, ProjectVisibility visibility,
             boolean withdrawn, Optional<String> titleQuery) {
         lastListScope = scope;
-        return documents.values().stream().filter(d -> d.withdrawn() == withdrawn && scope.includes(d.companyId())
-                && visibility.allows(d.projectId()))
+        return documents.values().stream().filter(d -> d.withdrawn() == withdrawn && !d.intakePending()
+                && scope.includes(d.companyId()) && visibility.allows(d.projectId()))
                 .filter(d -> titleQuery.map(q -> fold(d.title()).contains(fold(q))).orElse(true));
     }
 
@@ -213,15 +220,117 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     @Override
     public Optional<Document> findBySha256(CompanyId companyId, String sha256) {
         return documents.values().stream()
-                .filter(d -> !d.withdrawn() && d.companyId().equals(companyId) && d.sha256().equals(sha256))
+                .filter(d -> !d.withdrawn() && !d.intakePending() && d.companyId().equals(companyId)
+                        && d.sha256().equals(sha256))
                 .findFirst();
+    }
+
+    @Override
+    public Optional<Document> findBySha256ForIntake(CompanyId companyId, IntakeBatchId batchId, String sha256) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId) && d.sha256().equals(sha256)
+                && (!d.withdrawn() || d.intakeBatchId().equals(Optional.of(batchId))))
+                .min(Comparator.comparing(Document::withdrawn));
+    }
+
+    @Override
+    public Set<String> existingSha256ForIntake(CompanyId companyId, IntakeBatchId batchId,
+            Collection<String> sha256s) {
+        return sha256s.stream().filter(sha -> findBySha256ForIntake(companyId, batchId, sha).isPresent())
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public IntakeCounts intakeCounts(CompanyId companyId, IntakeBatchId batchId) {
+        List<Document> mine = documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()).toList();
+        long reading = mine.stream().filter(d -> Set.of(DocumentStatus.RECEIVED, DocumentStatus.PROCESSING,
+                DocumentStatus.PENDING_READER, DocumentStatus.READER_PROCESSING).contains(d.status())).count();
+        return new IntakeCounts(mine.size(), (int) reading, (int) mine.stream().filter(Document::intakePending).count(),
+                (int) mine.stream().filter(d -> d.status() == DocumentStatus.PENDING_READER).count());
+    }
+
+    @Override
+    public List<String> intakeTexts(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn()
+                && d.status() == DocumentStatus.READY)
+                .map(d -> pagesOf(d.id()).stream().map(DocumentPage::text).collect(java.util.stream.Collectors.joining("\n")))
+                .toList();
+    }
+
+    @Override
+    public List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && !d.withdrawn() && d.intakePending()
+                && d.status() == DocumentStatus.READY)
+                .map(d -> new IntakeDocument(d.id(), d.intakePath(), pagesOf(d.id()).stream()
+                        .map(DocumentPage::text).collect(java.util.stream.Collectors.joining("\n")),
+                        pagesOf(d.id()).stream().anyMatch(p -> p.readerName().equals("unlimited-ocr-2")))).toList();
+    }
+
+    @Override
+    public List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)) && d.intakePending() && !d.withdrawn()).toList();
+    }
+
+    @Override
+    public Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId)
+                && d.intakeBatchId().equals(Optional.of(batchId)))
+                .collect(Collectors.toMap(Document::id, Document::title));
+    }
+
+    @Override
+    public Map<DocumentId, String> titlesOf(CompanyId companyId, java.util.Collection<DocumentId> ids) {
+        return documents.values().stream().filter(d -> d.companyId().equals(companyId) && ids.contains(d.id()))
+                .collect(Collectors.toMap(Document::id, Document::title));
+    }
+
+    private final Map<DocumentId, Map.Entry<UserId, Instant>> placements = new HashMap<>();
+
+    /** Quién y cuándo sacó el documento de lo pendiente (la base lo guarda en intake_placed_by/at). */
+    public Map.Entry<UserId, Instant> placedBy(DocumentId id) {
+        return placements.get(id);
+    }
+
+    @Override
+    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId, UserId by, Instant at) {
+        Document d = documents.get(id);
+        if (d == null || !d.companyId().equals(companyId) || !d.intakePending() || d.withdrawn()) {
+            throw new ConflictException("El documento ya no está pendiente");
+        }
+        // Como el índice único de huella de lo visible (V26).
+        boolean twin = documents.values().stream().anyMatch(o -> !o.id().equals(id) && !o.withdrawn()
+                && !o.intakePending() && o.companyId().equals(companyId) && o.projectId().equals(projectId)
+                && o.sha256().equals(d.sha256()));
+        if (twin) {
+            throw new ConflictException("Ya hay un documento igual en ese proyecto: descarta este");
+        }
+        documents.put(id, d.confirmedIn(projectId));
+        placements.put(id, Map.entry(by, at));
+    }
+
+    @Override
+    public void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId) {
+        Document d = documents.get(scanId);
+        if (d == null || !d.companyId().equals(companyId) || d.intakePending() || d.withdrawn()) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+        documents.put(scanId, d.scanOf(originalId));
+    }
+
+    @Override
+    public boolean readerQueueBusy(CompanyId companyId) {
+        return documents.values().stream().anyMatch(d -> d.companyId().equals(companyId) && !d.withdrawn()
+                && (d.status() == DocumentStatus.PENDING_READER || d.status() == DocumentStatus.READER_PROCESSING));
     }
 
     @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
-        return documents.values().stream().filter(d -> !d.withdrawn() && d.companyId().equals(companyId)
-                && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
+        return documents.values().stream().filter(d -> !d.withdrawn() && !d.intakePending()
+                && d.companyId().equals(companyId) && d.sha256().equals(sha256) && (d.projectId().isEmpty() || d.projectId().equals(projectId)))
                 .findFirst();
     }
 
@@ -231,8 +340,8 @@ public class InMemoryDocumentRepository implements DocumentRepository {
             int limit) {
         lastListScope = scope;
         return documents.values().stream()
-                .filter(d -> !d.withdrawn() && scope.includes(d.companyId()) && visibility.allows(d.projectId())
-                        && status.map(d.status()::equals).orElse(true))
+                .filter(d -> !d.withdrawn() && !d.intakePending() && scope.includes(d.companyId())
+                        && visibility.allows(d.projectId()) && status.map(d.status()::equals).orElse(true))
                 .filter(d -> projectId.isEmpty() || d.projectId().equals(projectId))
                 .filter(d -> caseDocument.map(flag -> d.caseDocument() == flag).orElse(true))
                 .filter(d -> topicId.isEmpty() || activeTopic.test(d.id(), topicId.get()))

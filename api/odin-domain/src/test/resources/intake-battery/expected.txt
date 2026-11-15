@@ -1,0 +1,61 @@
+avenida del puerto 3
+calle abeto 16
+calle abeto 39
+calle castano 16
+calle castano 27
+calle castano 38
+calle castano 42
+calle fresno 9
+calle haya 2
+calle haya 2 bloque 2
+calle haya 57
+calle olmo 10
+calle olmo 11
+calle olmo 14
+calle olmo 23
+calle olmo 24
+calle olmo 24 bloque 2
+calle olmo 25
+calle olmo 32
+calle olmo 4
+calle olmo 40
+calle olmo 47
+calle olmo 51
+calle olmo 52
+calle olmo 52 bloque 2
+calle olmo 56
+calle olmo 59
+calle pino 26
+calle pino 47
+calle roble 46
+calle sauce 43
+calle sauce 57
+procedimientos generales
+residencial las acacias
+residencial las acacias 2
+residencial las adelfas
+residencial las adelfas 2
+residencial las encinas
+residencial las encinas 2
+residencial las moreras
+residencial las palmeras
+residencial las palmeras 2
+residencial los almendros
+residencial los cerezos
+residencial los cerezos 2
+residencial los jazmines
+residencial los jazmines 2
+residencial los limoneros
+residencial los limoneros 2
+residencial los naranjos
+residencial los naranjos 2
+residencial los olivos
+residencial los olivos 2
+residencial los pinos
+residencial los pinos 2
+residencial los robles
+residencial los robles 2
+residencial los sauces
+residencial los sauces 2
+residencial los tilos
+residencial los tilos 2

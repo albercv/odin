@@ -35,6 +35,21 @@ final class Sql {
         return "(" + withdrawnColumn + " IS NULL OR current_setting('app.include_withdrawn', true) = 'on')";
     }
 
+    /** Lo pendiente de la primera carga solo se ve en la sesión que activa {@code app.include_intake} (D1). */
+    static String notPending(String alias) {
+        return "(NOT " + alias + ".intake_pending OR current_setting('app.include_intake', true) = 'on')";
+    }
+
+    /** Lo que un documento tiene que cumplir para verse: ni retirado ni pendiente. */
+    static String visibleDocument(String alias) {
+        return "(" + notWithdrawn(alias + ".withdrawn_at") + " AND " + notPending(alias) + ")";
+    }
+
+    /** Búsquedas y listas: además, sin los escaneos enlazados a un documento digital (D3). */
+    static String listable(String alias) {
+        return "(" + visibleDocument(alias) + " AND " + alias + ".scan_of IS NULL)";
+    }
+
     static StatementSpec visible(StatementSpec spec, ProjectVisibility visibility) {
         return spec.param("allProjects", visibility.allProjects()).param("projectIds", projectIds(visibility));
     }

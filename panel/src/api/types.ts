@@ -436,6 +436,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openBatches"];
+        put?: never;
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals/{proposalId}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["decideProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmProposals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-list/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeProjectList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importProjectList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discoverProjects"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmProjectCandidates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["knownFiles"];
+        put?: never;
+        post: operations["addFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["place"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/documents": {
         parameters: {
             query?: never;
@@ -860,6 +1036,86 @@ export interface paths {
             cookie?: never;
         };
         get: operations["projects_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["proposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projectCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["unplacedDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/documents/{documentId}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["original"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1324,6 +1580,123 @@ export interface components {
             prefix: string;
             key: string;
         };
+        StartIntakeRequest: {
+            /**
+             * @description Quién sube: el comando de la IA o el panel.
+             * @enum {string}
+             */
+            channel: "COMMAND" | "PANEL";
+        };
+        /** @description uploaded: documentos subidos sin retirar; reading: aún sin leer; pending: sin confirmar; alreadyThere: ficheros que ya estaban al subirlos; discarded: ficheros descartados en este lote; proposed: propuestas por decidir por clase (solo las clases que tienen alguna); unplaced: documentos pendientes sin propuesta de proyecto por decidir (en revisión). projectListClosedAt: cuándo se dio la lista de proyectos por terminada; sin ella no se clasifica. */
+        IntakeBatchView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            companyId: string;
+            channel: string;
+            state: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            closedAt?: string;
+            /** Format: int32 */
+            uploaded: number;
+            /** Format: int32 */
+            reading: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            alreadyThere: number;
+            /** Format: int32 */
+            discarded: number;
+            warnings: components["schemas"]["IntakeWarningView"][];
+            proposed: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            unplaced: number;
+            /** Format: date-time */
+            projectListClosedAt?: string;
+        };
+        IntakeWarningView: {
+            code: string;
+            message: string;
+        };
+        DecideProposalRequest: {
+            /**
+             * @description CONFIRM la confirma, CORRECT_PROJECT la lleva a otro proyecto (projectId), COMPANY_WIDE deja el documento sin proyecto para toda la empresa, DONT_KNOW lo deja pendiente y oculto, REJECT la rechaza.
+             * @enum {string}
+             */
+            decision: "CONFIRM" | "CORRECT_PROJECT" | "COMPANY_WIDE" | "DONT_KNOW" | "REJECT";
+            /**
+             * Format: uuid
+             * @description Solo con CORRECT_PROJECT: el proyecto de la empresa al que va el documento.
+             */
+            projectId?: string;
+        };
+        /** @description state: PROPOSED, CONFIRMED, REJECTED o DONT_KNOW («no lo sé»: sigue abierta y se puede decidir después). decidedBy y decidedAt: quién y cuándo, si está decidida o con «no lo sé». */
+        DecidedProposal: {
+            /** Format: uuid */
+            id: string;
+            state: string;
+            /** Format: uuid */
+            decidedBy?: string;
+            /** Format: date-time */
+            decidedAt?: string;
+        };
+        ConfirmProposalsRequest: {
+            /** @description De 1 a 500 propuestas del lote, todo o nada. */
+            proposalIds: string[];
+        };
+        ConfirmedProposals: {
+            /** Format: int32 */
+            confirmed: number;
+        };
+        /** @description origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado. */
+        ProjectCandidateView: {
+            name: string;
+            origin: string;
+            /** Format: int32 */
+            documentCount: number;
+            state: string;
+            /** Format: uuid */
+            projectId?: string;
+        };
+        ProjectCandidates: {
+            candidates: components["schemas"]["ProjectCandidateView"][];
+        };
+        ConfirmProjectCandidatesRequest: {
+            /** @description De 1 a 500 decisiones, todo o nada. */
+            decisions: components["schemas"]["ProjectDecisionRequest"][];
+        };
+        ProjectDecisionRequest: {
+            /** @description Nombre del candidato, tal como sale en la lista. */
+            name: string;
+            /**
+             * @description CREATE crea el proyecto, MERGE lo une a uno que ya existe (projectId), REJECT lo rechaza.
+             * @enum {string}
+             */
+            decision: "CREATE" | "MERGE" | "REJECT";
+            /**
+             * Format: uuid
+             * @description Solo con MERGE: el proyecto de la empresa al que se une.
+             */
+            projectId?: string;
+        };
+        /** @description outcome: CREATED, ALREADY_THERE (la huella ya estaba) o DISCARDED_IN_BATCH (se descartó en este lote). */
+        IntakeFile: {
+            outcome: string;
+            document: components["schemas"]["DocumentView"];
+        };
+        PlaceDocumentRequest: {
+            /**
+             * Format: uuid
+             * @description El proyecto de la empresa al que va el documento. Exactamente uno de projectId o companyWide.
+             */
+            projectId?: string;
+            /** @description Verdadero: sin proyecto, visible para toda la empresa. Exactamente uno de projectId o companyWide. */
+            companyWide?: boolean;
+        };
         Upload: {
             document: components["schemas"]["DocumentView"];
             duplicate: boolean;
@@ -1678,6 +2051,58 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             revokedAt?: string;
+        };
+        /** @description Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL. */
+        IntakeBatchSummary: {
+            /** Format: uuid */
+            id: string;
+            state: string;
+            channel: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Los lotes de la empresa que no están cerrados, el más reciente primero. */
+        OpenIntakeBatches: {
+            batches: components["schemas"]["IntakeBatchSummary"][];
+        };
+        /** @description kind: PROJECT, COMPANY_WIDE, CASE_MARK, CASE_LINK, SAME_AS_SCAN o SUPERSEDES. confidence: HIGH o LOW. projectId: el proyecto propuesto, si la clase lo tiene. */
+        IntakeProposalGroup: {
+            kind: string;
+            confidence: string;
+            /** Format: uuid */
+            projectId?: string;
+            proposals: components["schemas"]["IntakeProposalItem"][];
+        };
+        IntakeProposalGroups: {
+            groups: components["schemas"]["IntakeProposalGroup"][];
+        };
+        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. */
+        IntakeProposalItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+            /** Format: uuid */
+            targetDocumentId?: string;
+            targetTitle?: string;
+            caseNumber?: string;
+            source: string;
+            reason: string;
+        };
+        KnownFiles: {
+            sha256: string[];
+        };
+        /** @description Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. */
+        IntakeDocumentView: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            path?: string;
+            status: string;
+        };
+        IntakeDocuments: {
+            documents: components["schemas"]["IntakeDocumentView"][];
         };
         GapView: {
             text: string;
@@ -2619,6 +3044,349 @@ export interface operations {
             };
         };
     };
+    openBatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenIntakeBatches"];
+                };
+            };
+        };
+    };
+    start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    decideProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                proposalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecidedProposal"];
+                };
+            };
+        };
+    };
+    confirmProposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmProposalsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmedProposals"];
+                };
+            };
+        };
+    };
+    closeProjectList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    importProjectList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    discoverProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    confirmProjectCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmProjectCandidatesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    knownFiles: {
+        parameters: {
+            query: {
+                sha256: string[];
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnownFiles"];
+                };
+            };
+        };
+    };
+    addFile: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description No se creó nada: ya estaba o se descartó en este lote */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeFile"];
+                };
+            };
+            /** @description Documento nuevo, pendiente de confirmar */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeFile"];
+                };
+            };
+        };
+    };
+    discard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    place: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    closeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
     list_3: {
         parameters: {
             query?: {
@@ -3410,6 +4178,128 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectView"][];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    proposals: {
+        parameters: {
+            query?: {
+                kind?: string;
+                confidence?: string;
+                project?: string;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeProposalGroups"];
+                };
+            };
+        };
+    };
+    projectCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    unplacedDocuments: {
+        parameters: {
+            query: {
+                unplaced: boolean;
+            };
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeDocuments"];
+                };
+            };
+        };
+    };
+    original: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };

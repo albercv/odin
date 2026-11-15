@@ -1,4 +1,4 @@
-.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery datos-prueba-cargar datos-prueba-recuento instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
+.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento primera-carga instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -15,6 +15,7 @@ check:
 	cd mcp && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm run build && npm test
 	cd panel && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm test && npm run build
 	python3 -m unittest discover -s deploy/instalacion -p 'test_*.py'
+	python3 -m unittest discover -s experimentos/2026-11-13-primera-carga/parte_c -p 'test_*.py'
 
 COMPOSE = docker compose -f deploy/compose.yaml --env-file deploy/.env
 
@@ -40,6 +41,10 @@ tagger-model:
 tagging-battery:
 	cd api && mvn -q -am -pl odin-adapter-tagger-ollama verify -Dgroups=model -DexcludedGroups=
 
+# Batería de la propuesta de proyecto con el modelo real (los 15 documentos que las reglas no resuelven). Fuera de make check.
+project-proposer-battery:
+	cd api && mvn -q -am -pl odin-adapter-tagger-ollama verify -Dgroups=model -DexcludedGroups= -Dit.test=ProjectProposerBatteryIT -Dfailsafe.failIfNoSpecifiedTests=false
+
 # Instalación del propietario (D-056): datos de prueba, vaciarla, volver a una copia y conector de Claude Desktop.
 # Van con cerrojo (data/instalacion.lock). INSTALACION_PROYECTO e INSTALACION_ENV eligen otra pila.
 datos-prueba-cargar:
@@ -63,6 +68,11 @@ instalacion-desplegar:
 
 instalacion-actualizar:
 	@CONFIRMAR="$(CONFIRMAR)" MODO=actualizar CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
+
+# Primera carga del archivo de una empresa (la lanza su administrador): make primera-carga CARPETA=/ruta [ARGS=--si]
+primera-carga:
+	@test -n "$(CARPETA)" || { echo "Falta la carpeta: make primera-carga CARPETA=/ruta/del/archivo"; exit 1; }
+	@deploy/instalacion/cerrojo.sh python3 deploy/instalacion/primera_carga.py "$(CARPETA)" $(ARGS)
 
 # Añade un proyecto nuevo sin vaciar (encargo 14): make instalacion-anadir-proyecto DATOS_PROYECTO=<carpeta> CONFIRMAR=ANADIR
 instalacion-anadir-proyecto:

@@ -135,7 +135,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 Sql.inScope("d.company_id"), Sql.inVisibleProjects("d.project_id"),
                 SearchSql.inProject("c.project_id"), Sql.inScope("c.company_id"),
                 Sql.inVisibleProjects("c.project_id"), SearchSql.visibleCards("c"),
-                Sql.notWithdrawn("d.withdrawn_at"));
+                Sql.listable("d"));
     }
 
     private static CaseRow caseRow(ResultSet rs, int n) throws SQLException {
@@ -154,7 +154,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
             return Map.of();
         }
         String sql = PAGES_OF_CASES.formatted(Sql.inScope("p.company_id"), Sql.inVisibleProjects("d.project_id"),
-                Sql.notWithdrawn("d.withdrawn_at"));
+                Sql.listable("d"));
         Map<UUID, List<CasePage>> pages = new HashMap<>();
         Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility()).param("ids", ids)
                 .query((rs, n) -> {
@@ -188,7 +188,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 Sql.inScope("c.company_id"), Sql.inVisibleProjects("d.project_id"),
                 Sql.inVisibleProjects("c.project_id"), SearchSql.inProject("d.project_id"),
                 SearchSql.inProject("c.project_id"), SearchSql.visibleCards("c"),
-                Sql.notWithdrawn("d.withdrawn_at"), SearchSql.inCaseFile("d"), SearchSql.NO_CASE_FILE);
+                Sql.listable("d"), SearchSql.inCaseFile("d"), SearchSql.NO_CASE_FILE);
     }
 
     private static SearchHit hit(ResultSet rs, List<String> terms) throws SQLException {

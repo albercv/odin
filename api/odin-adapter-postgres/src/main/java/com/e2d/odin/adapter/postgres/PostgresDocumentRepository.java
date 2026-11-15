@@ -6,6 +6,9 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.application.port.IntakeDocument;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -20,7 +23,9 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -36,14 +41,15 @@ public class PostgresDocumentRepository implements DocumentRepository {
     static final String COLUMNS = """
             d.id, d.company_id, d.project_id, d.title, d.filename, d.format, d.sha256, d.status, d.failure_reason,
             d.paginated, d.uploaded_by, d.uploaded_at, d.processing_started_at, d.attempt_count, d.superseded_by,
-            d.superseded_at, d.pages_without_text, d.case_document, d.withdrawn_at, d.withdrawn_by""";
+            d.superseded_at, d.pages_without_text, d.case_document, d.withdrawn_at, d.withdrawn_by,
+            d.intake_batch_id, d.intake_pending, d.intake_path, d.scan_of""";
     private final ScopedTransactions tx;
     /** Los carriles del lector y del etiquetado terminan también lo que se retiró a mitad de trabajo (sin WITH CHECK, la RLS lo impediría). */
     private final ScopedTransactions pipeline;
 
     public PostgresDocumentRepository(ScopedTransactions tx) {
         this.tx = tx;
-        this.pipeline = tx.includeWithdrawn(true);
+        this.pipeline = tx.includeWithdrawn(true).includeIntake(true);
     }
 
     @Override
@@ -87,7 +93,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
             ProjectVisibility visibility, DocumentId id) {
         String sql = "SELECT " + COLUMNS + ", " + SupersessionSql.COLUMNS + " FROM document d "
                 + SupersessionSql.joins("d.superseded_by", "d.company_id") + " WHERE d.id = :id AND " + Sql.inScope("d.company_id")
-                + " AND " + Sql.inVisibleProjects("d.project_id") + " AND " + Sql.notWithdrawn("d.withdrawn_at");
+                + " AND " + Sql.inVisibleProjects("d.project_id") + " AND " + Sql.visibleDocument("d");
         return transactions.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("id", id.value()).query((rs, n) -> entry(rs)).optional());
     }
@@ -125,16 +131,19 @@ public class PostgresDocumentRepository implements DocumentRepository {
                         .query(Integer.class).single());
     }
 
-    /** Los retirados solo se ven en la sesión que activa {@code app.include_withdrawn}. */
+    /**
+     * Los retirados solo se ven en la sesión que activa {@code app.include_withdrawn}. Ninguna activa
+     * {@code app.include_intake}: lo pendiente no sale en la lista, el buscador ni el total (D1).
+     */
     private ScopedTransactions searchTransactions(boolean withdrawn) {
-        return withdrawn ? pipeline : tx;
+        return withdrawn ? tx.includeWithdrawn(true) : tx;
     }
 
     private static String searchFilter() {
         return "(NOT :withdrawnOnly OR d.withdrawn_at IS NOT NULL) AND (CAST(:title AS text) IS NULL "
                 + "OR unaccent(lower(d.title)) LIKE unaccent(lower(CAST(:title AS text)))) AND "
                 + Sql.inScope("d.company_id") + " AND " + Sql.inVisibleProjects("d.project_id") + " AND "
-                + Sql.notWithdrawn("d.withdrawn_at");
+                + Sql.visibleDocument("d"); // con los escaneos enlazados: solo se ocultan al trabajador (D3)
     }
 
     private static StatementSpec bindSearch(StatementSpec spec, ProjectVisibility visibility, boolean withdrawn,
@@ -205,6 +214,135 @@ public class PostgresDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public Optional<Document> findBySha256ForIntake(CompanyId companyId, IntakeBatchId batchId, String sha256) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc
+                .sql("SELECT " + COLUMNS + " FROM document d WHERE d.company_id = :company AND d.sha256 = :sha "
+                        + "AND (d.withdrawn_at IS NULL OR d.intake_batch_id = :batch) "
+                        + "ORDER BY d.withdrawn_at IS NOT NULL, d.seq LIMIT 1")
+                .param("company", companyId.value()).param("sha", sha256).param("batch", batchId.value())
+                .query((rs, n) -> document(rs)).optional());
+    }
+
+    @Override
+    public Set<String> existingSha256ForIntake(CompanyId companyId, IntakeBatchId batchId,
+            Collection<String> sha256s) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> Set.copyOf(jdbc.sql("""
+                SELECT DISTINCT d.sha256 FROM document d WHERE d.company_id = :company
+                AND d.sha256 = ANY (string_to_array(:shas, ',')) AND (d.withdrawn_at IS NULL OR d.intake_batch_id = :batch)""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .param("shas", String.join(",", sha256s)).query(String.class).list()));
+    }
+
+    @Override
+    public IntakeCounts intakeCounts(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT count(*) FILTER (WHERE withdrawn_at IS NULL) AS uploaded,
+                       count(*) FILTER (WHERE withdrawn_at IS NULL
+                           AND status IN ('RECEIVED', 'PROCESSING', 'PENDING_READER', 'READER_PROCESSING')) AS reading,
+                       count(*) FILTER (WHERE withdrawn_at IS NULL AND intake_pending) AS pending,
+                       count(*) FILTER (WHERE withdrawn_at IS NULL AND status = 'PENDING_READER') AS awaiting_reader
+                FROM document WHERE company_id = :company AND intake_batch_id = :batch""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> new IntakeCounts(rs.getInt("uploaded"), rs.getInt("reading"),
+                        rs.getInt("pending"), rs.getInt("awaiting_reader"))).single());
+    }
+
+    @Override
+    public List<String> intakeTexts(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT string_agg(p.text, E'\\n' ORDER BY p.number) FROM document d
+                JOIN document_page p ON p.document_id = d.id
+                WHERE d.company_id = :company AND d.intake_batch_id = :batch AND d.withdrawn_at IS NULL
+                AND d.status = 'READY' GROUP BY d.id ORDER BY d.seq""")
+                .param("company", companyId.value()).param("batch", batchId.value()).query(String.class).list());
+    }
+
+    @Override
+    public List<IntakeDocument> intakeReadyDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT d.id, d.intake_path, string_agg(p.text, E'\\n' ORDER BY p.number) AS text,
+                       bool_or(p.reader_name = 'unlimited-ocr-2') AS scan
+                FROM document d JOIN document_page p ON p.document_id = d.id
+                WHERE d.company_id = :company AND d.intake_batch_id = :batch AND d.withdrawn_at IS NULL
+                AND d.status = 'READY' AND d.intake_pending GROUP BY d.id ORDER BY d.seq""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> new IntakeDocument(new DocumentId(Sql.uuid(rs, "id")),
+                        Optional.ofNullable(rs.getString("intake_path")), rs.getString("text"), rs.getBoolean("scan")))
+                .list());
+    }
+
+    @Override
+    public List<Document> intakePendingDocuments(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT "
+                + COLUMNS + """
+                 FROM document d WHERE d.company_id = :company AND d.intake_batch_id = :batch
+                AND d.intake_pending AND d.withdrawn_at IS NULL ORDER BY d.seq""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> document(rs)).list());
+    }
+
+    @Override
+    public java.util.Map<DocumentId, String> intakeTitles(CompanyId companyId, IntakeBatchId batchId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT id, title FROM document WHERE company_id = :company AND intake_batch_id = :batch""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "id")), rs.getString("title"))).list()
+                .stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
+    @Override
+    public java.util.Map<DocumentId, String> titlesOf(CompanyId companyId, java.util.Collection<DocumentId> ids) {
+        if (ids.isEmpty()) {
+            return java.util.Map.of();
+        }
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT id, title FROM document WHERE company_id = :company AND id = ANY (string_to_array(:ids, ',')::uuid[])""")
+                .param("company", companyId.value()).param("ids", ids.stream().map(d -> d.value().toString())
+                        .collect(Collectors.joining(",")))
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "id")), rs.getString("title"))).list()
+                .stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
+    @Override
+    public void confirmIntake(CompanyId companyId, DocumentId id, Optional<ProjectId> projectId, UserId by,
+            Instant at) {
+        int updated;
+        try {
+            updated = pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                    UPDATE document SET project_id = :project, intake_pending = false, intake_placed_by = :by,
+                        intake_placed_at = :at
+                    WHERE id = :id AND company_id = :company AND intake_pending AND withdrawn_at IS NULL""")
+                    .param("project", projectId.map(ProjectId::value).orElse(null)).param("id", id.value())
+                    .param("company", companyId.value()).param("by", by.value()).param("at", Sql.ts(at)).update());
+        } catch (ConflictException e) {
+            // el índice único de huella de lo visible (V26): alguien subió el mismo fichero a ese proyecto
+            throw new ConflictException("Ya hay un documento igual en ese proyecto: descarta este");
+        }
+        if (updated == 0) {
+            throw new ConflictException("El documento ya no está pendiente");
+        }
+    }
+
+    @Override
+    public void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId) {
+        int updated = tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                UPDATE document SET scan_of = :original WHERE id = :id AND company_id = :company""")
+                .param("original", originalId.value()).param("id", scanId.value())
+                .param("company", companyId.value()).update());
+        if (updated == 0) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+    }
+
+    @Override
+    public boolean readerQueueBusy(CompanyId companyId) {
+        return pipeline.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                SELECT EXISTS (SELECT 1 FROM document WHERE company_id = :company AND withdrawn_at IS NULL
+                AND status IN ('PENDING_READER', 'READER_PROCESSING'))""")
+                .param("company", companyId.value()).query(Boolean.class).single());
+    }
+
+    @Override
     public Optional<Document> findBySha256InProject(CompanyId companyId, Optional<ProjectId> projectId,
             String sha256) {
         return tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("SELECT " + COLUMNS
@@ -236,7 +374,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
                   AND (CAST(:status AS text) IS NULL OR d.status = :status)
                   AND %s AND %s AND %s
                 ORDER BY d.title, d.id OFFSET :offset LIMIT :limit""".formatted(Sql.inScope("d.company_id"),
-                Sql.inVisibleProjects("d.project_id"), Sql.notWithdrawn("d.withdrawn_at"));
+                Sql.inVisibleProjects("d.project_id"), Sql.listable("d"));
         return transactions.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
                 .param("project", project).param("topic", topicId.map(TopicId::value).orElse(null))
                 .param("caseDocument", caseDocument.orElse(null))
@@ -252,7 +390,7 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 FROM document_page p JOIN document d ON d.id = p.document_id
                 WHERE p.document_id = :id AND p.number = :number AND """ + Sql.inScope("p.company_id")
                 + " AND " + Sql.inVisibleProjects("d.project_id") + " AND "
-                + Sql.notWithdrawn("d.withdrawn_at")), scope), visibility)
+                + Sql.visibleDocument("d")), scope), visibility)
                 .param("id", id.value()).param("number", pageNumber)
                 .query((rs, n) -> new DocumentPage(new DocumentId(Sql.uuid(rs, "document_id")), rs.getInt("number"),
                         rs.getString("text"), rs.getString("reader_name"), rs.getString("reader_version")))
@@ -288,9 +426,10 @@ public class PostgresDocumentRepository implements DocumentRepository {
         jdbc.sql("""
                 INSERT INTO document (id, company_id, project_id, title, filename, format, sha256, status,
                     failure_reason, paginated, uploaded_by, uploaded_at, processing_started_at, attempt_count,
-                    pages_without_text, case_document)
+                    pages_without_text, case_document, intake_batch_id, intake_pending, intake_path)
                 VALUES (:id, :company, :project, :title, :filename, :format, :sha, :status, :reason, :paginated,
-                    :uploader, :uploaded, :started, :attempts, :blankPages, :caseDocument)
+                    :uploader, :uploaded, :started, :attempts, :blankPages, :caseDocument, :intakeBatch,
+                    :intakePending, :intakePath)
                 ON CONFLICT (id) DO UPDATE SET project_id = :project, title = :title, filename = :filename,
                     format = :format, status = :status, failure_reason = :reason, paginated = :paginated,
                     processing_started_at = :started, attempt_count = :attempts,
@@ -303,7 +442,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 .param("uploaded", Sql.ts(d.uploadedAt())).param("started", Sql.ts(d.processingStartedAt()))
                 .param("attempts", d.attemptCount())
                 .param("blankPages", d.pagesWithoutText().toArray(Integer[]::new))
-                .param("caseDocument", d.caseDocument()).update();
+                .param("caseDocument", d.caseDocument())
+                .param("intakeBatch", d.intakeBatchId().map(IntakeBatchId::value).orElse(null))
+                .param("intakePending", d.intakePending()).param("intakePath", d.intakePath().orElse(null)).update();
     }
 
     private static DocumentEntry entry(ResultSet rs) throws SQLException {
@@ -321,6 +462,9 @@ public class PostgresDocumentRepository implements DocumentRepository {
                 Sql.optionalInstant(rs, "superseded_at"),
                 List.of((Integer[]) rs.getArray("pages_without_text").getArray()), rs.getBoolean("case_document"),
                 Sql.optionalInstant(rs, "withdrawn_at"),
-                Optional.ofNullable(Sql.uuid(rs, "withdrawn_by")).map(UserId::new));
+                Optional.ofNullable(Sql.uuid(rs, "withdrawn_by")).map(UserId::new),
+                Optional.ofNullable(Sql.uuid(rs, "intake_batch_id")).map(IntakeBatchId::new),
+                rs.getBoolean("intake_pending"), Optional.ofNullable(rs.getString("intake_path")),
+                Optional.ofNullable(Sql.uuid(rs, "scan_of")).map(DocumentId::new));
     }
 }
