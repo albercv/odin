@@ -1642,6 +1642,41 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "closeBatch",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeBatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload" : {
       "post" : {
         "tags" : [ "intake-controller" ],
@@ -4306,12 +4341,16 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "toDecide" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "projectListClosedAt" : {
             "type" : "string",
             "format" : "date-time"
           }
         },
-        "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "proposed", "reading", "state", "unplaced", "uploaded", "warnings" ]
+        "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "proposed", "reading", "state", "toDecide", "unplaced", "uploaded", "warnings" ]
       },
       "IntakeWarningView" : {
         "type" : "object",
@@ -5437,7 +5476,7 @@
       },
       "IntakeBatchSummary" : {
         "type" : "object",
-        "description" : "Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL.",
+        "description" : "Un lote sin cerrar o cerrado con documentos sin ubicar. state: OPEN, READING, IN_REVIEW o CLOSED; channel: COMMAND o PANEL.",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -5458,7 +5497,7 @@
       },
       "OpenIntakeBatches" : {
         "type" : "object",
-        "description" : "Los lotes de la empresa que no están cerrados, el más reciente primero.",
+        "description" : "Los lotes de la empresa que no están cerrados y los cerrados con documentos sin ubicar, el más reciente primero.",
         "properties" : {
           "batches" : {
             "type" : "array",

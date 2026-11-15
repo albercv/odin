@@ -548,7 +548,7 @@ class ConfirmIntakeTest {
     @Test
     void nothingIsDecidedUntilTheBatchIsInReview() {
         IntakeBatch reading = new IntakeBatch(batch.id(), company, admin.userId(), IntakeChannel.PANEL,
-                IntakeState.READING, batch.createdAt(), Optional.empty(), 0, 0, Optional.empty(), Optional.empty());
+                IntakeState.READING, batch.createdAt(), Optional.empty(), Optional.empty(), 0, 0, Optional.empty(), Optional.empty());
         intake.save(reading);
         Document d = pending("Acta");
         IntakeProposal p = project(d, olmo, ProposalConfidence.HIGH);

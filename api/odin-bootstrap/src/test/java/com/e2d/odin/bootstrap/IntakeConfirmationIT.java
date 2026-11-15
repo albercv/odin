@@ -15,13 +15,16 @@ import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.WithdrawDocument;
+import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
 import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
 import com.e2d.odin.application.intake.IntakeDecision;
 import com.e2d.odin.application.intake.IntakeEffects;
 import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
 import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
@@ -93,6 +96,9 @@ class IntakeConfirmationIT {
     private static DiscardIntakeDocument discard;
     private static PlaceIntakeDocument place;
     private static ListUnplacedDocuments unplaced;
+    private static CloseIntakeBatch close;
+    private static ListOpenIntakeBatches listBatches;
+    private static StartIntake start;
 
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private Actor admin;
@@ -122,6 +128,9 @@ class IntakeConfirmationIT {
         decide = config.decideIntakeProposal(intake, effects, transactionManager);
         place = config.placeIntakeDocument(effects, transactionManager);
         unplaced = config.listUnplacedDocuments(intake, docs);
+        close = config.closeIntakeBatch(intake, clock, transactionManager);
+        listBatches = config.listOpenIntakeBatches(intake, docs);
+        start = new StartIntake(intake, organizations, new RandomUuidGenerator(), clock);
         discard = config.discardIntakeDocument(docs, new WithdrawDocument(docs, clock), effects,
                 transactionManager);
     }
@@ -364,5 +373,60 @@ class IntakeConfirmationIT {
         place.execute(admin, company, batch, mine.id(), Optional.empty(), true);
 
         assertThat(intake.find(company, batch).orElseThrow().state()).isEqualTo(IntakeState.CLOSED);
+    }
+
+    @Test
+    void closingTheBatchLeavesDontKnowUnplacedHiddenFromWorkersUntilPlacedInTheClosedBatch() {
+        Document d = pending("Dudoso rubi", "baliza rubi");
+        IntakeProposal p = projectProposal(d, olmo);
+        decide.execute(admin, company, batch, p.id(), IntakeDecision.DONT_KNOW, Optional.empty());
+
+        close.execute(admin, company, batch);
+
+        IntakeBatch closed = intake.find(company, batch).orElseThrow();
+        assertThat(closed.state()).isEqualTo(IntakeState.CLOSED);
+        assertThat(closed.closedBy()).contains(admin.userId());
+        assertThat(closed.closedAt()).isPresent();
+        assertThat(stored(p).state()).isEqualTo(DecisionState.REJECTED);
+        assertThat(stored(p).decidedBy()).contains(admin.userId());
+        assertThat(unplaced.execute(admin, company, batch)).extracting(Document::id).containsExactly(d.id());
+        assertThat(listBatches.execute(admin, company)).extracting(IntakeBatch::id).contains(batch);
+        CompanyScope mine = CompanyScope.of(company);
+        for (ProjectVisibility v : List.of(ProjectVisibility.all(), ProjectVisibility.of(Set.of(olmo)),
+                ProjectVisibility.of(Set.of()))) {
+            assertThat(seenBy(mine, v, d, "rubi")).as("sin colocar, tras cerrar").isFalse();
+        }
+
+        place.execute(admin, company, batch, d.id(), Optional.of(olmo), false);
+
+        assertThat(seenBy(mine, ProjectVisibility.of(Set.of(olmo)), d, "rubi")).isTrue();
+        assertThat(seenBy(mine, ProjectVisibility.of(Set.of(haya)), d, "rubi")).isFalse();
+        assertThat(intake.find(company, batch).orElseThrow().state()).isEqualTo(IntakeState.CLOSED);
+        assertThat(listBatches.execute(admin, company)).extracting(IntakeBatch::id).doesNotContain(batch);
+    }
+
+    @Test
+    void closingWithAProposalToDecideChangesNothingInTheDatabase() {
+        Document undecided = pending("Sin decidir", "x");
+        Document dontKnow = pending("No lo sé", "y");
+        IntakeProposal open = projectProposal(undecided, olmo);
+        IntakeProposal unknown = projectProposal(dontKnow, olmo);
+        decide.execute(admin, company, batch, unknown.id(), IntakeDecision.DONT_KNOW, Optional.empty());
+
+        assertThatThrownBy(() -> close.execute(admin, company, batch)).isInstanceOf(ConflictException.class);
+
+        assertThat(stored(unknown).state()).isEqualTo(DecisionState.DONT_KNOW);
+        assertThat(stored(open).state()).isEqualTo(DecisionState.PROPOSED);
+        assertThat(intake.find(company, batch).orElseThrow().state()).isEqualTo(IntakeState.IN_REVIEW);
+    }
+
+    @Test
+    void aNewLoadCanStartWhileTheOtherIsInReview() {
+        IntakeBatch next = start.execute(admin, company, IntakeChannel.COMMAND);
+
+        assertThat(next.state()).isEqualTo(IntakeState.OPEN);
+        assertThat(listBatches.execute(admin, company)).extracting(IntakeBatch::id)
+                .containsExactlyInAnyOrder(batch, next.id());
+        assertThat(intake.findActive(company)).map(IntakeBatch::id).contains(next.id());
     }
 }
