@@ -43,6 +43,8 @@ class AdminAuditIT {
         registry.add("ODIN_SETUP_TOKEN", () -> SETUP_TOKEN);
         registry.add("ODIN_ORIGINALS_DIR", () -> System.getProperty("java.io.tmpdir"));
         registry.add("ODIN_UPLOAD_MAX_BYTES", () -> "1000000");
+        registry.add("ODIN_PUBLIC_URL", () -> "http://odin.test/");
+        registry.add("ODIN_TRUSTED_PROXIES", () -> "127.0.0.1");
     }
 
     @LocalServerPort int port;
@@ -100,11 +102,15 @@ class AdminAuditIT {
 
     /** La única fila de esa acción, que debe existir. */
     private Map<String, Object> only(String action) {
+        return only(action, "PANEL");
+    }
+
+    private Map<String, Object> only(String action, String channel) {
         List<Map<String, Object>> rows = owner.sql("SELECT * FROM audit_event WHERE action = :a ORDER BY id")
                 .param("a", action).query().listOfRows();
         assertThat(rows).as(action).hasSize(1);
         Map<String, Object> row = rows.get(0);
-        assertThat(row).containsEntry("channel", "PANEL").containsEntry("outcome", "DONE");
+        assertThat(row).containsEntry("channel", channel).containsEntry("outcome", "DONE");
         assertThat(row.get("request_id")).isNotNull();
         return row;
     }
@@ -357,5 +363,66 @@ class AdminAuditIT {
         assertThat(details(only("TOPIC_UPDATED")).get("definitionChanged").asBoolean()).isTrue();
         admin("delete", ADMIN + "/companies/" + companyId + "/topics/" + topic, null);
         assertTarget(only("TOPIC_DELETED"), "TOPIC", topic);
+    }
+
+    private record WorkerSetup(String project, String caseId, String workerId, String bearer) {
+    }
+
+    private WorkerSetup workerSetup() {
+        admin("put", ADMIN + "/companies/" + companyId + "/capabilities", map("capabilities",
+                List.of("SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "CASE_FILES", "UPLOAD_DOCUMENTS")));
+        String project = admin("post", ADMIN + "/companies/" + companyId + "/projects", map("name", "Obra " + System.nanoTime()))
+                .json().get("id").asString();
+        String caseId = uploadPdf(project, "ficha.pdf");
+        admin("post", ADMIN + "/companies/" + companyId + "/documents/case-marks",
+                map("documentIds", List.of(caseId), "caseDocument", true));
+        String workerId = admin("post", ADMIN + "/companies/" + companyId + "/members", map("firstName", "Marta",
+                "lastName", "Gil", "email", "marta" + System.nanoTime() + "@ejemplo.test", "roles", List.of("WORKER"), "projectIds",
+                List.of(project))).json().get("member").get("userId").asString();
+        String bearer = "Bearer " + admin("post", ADMIN + "/companies/" + companyId + "/members/" + workerId + "/keys",
+                map("label", "portatil")).json().get("key").asString();
+        clearLog();
+        return new WorkerSetup(project, caseId, workerId, bearer);
+    }
+
+    @Test
+    void workerKeyActionsAreRecordedThroughTheChatChannel() {
+        WorkerSetup w = workerSetup();
+
+        assertThat(api.post("/v1/cards", map("title", "TITULO-RESERVADO", "body", "TEXTO-RESERVADO", "projectId",
+                w.project()), "Authorization", w.bearer()).status()).isEqualTo(201);
+        Map<String, Object> card = only("CARD_SAVED", "CHAT");
+        assertThat(card).containsEntry("actor_kind", "PERSON").containsEntry("actor_role", "WORKER");
+        assertThat(card.get("actor_user_id").toString()).isEqualTo(w.workerId());
+        assertThat(card.get("project_id").toString()).isEqualTo(w.project());
+        assertThat(card.get("details").toString()).doesNotContain("RESERVADO");
+        assertThat(card.get("target_label")).isNull();
+
+        api.post("/v1/cases/" + w.caseId() + "/upload-links", map(), "Authorization", w.bearer());
+        Map<String, Object> issued = only("UPLOAD_LINK_ISSUED", "CHAT");
+        assertThat(issued).containsEntry("actor_role", "WORKER");
+        assertThat(details(issued).get("linkId").asString()).isNotBlank();
+    }
+
+    @Test
+    void anUploadByLinkIsRecordedAsTheLinkWithItsIssuingWorker() {
+        WorkerSetup w = workerSetup();
+        String url = api.post("/v1/cases/" + w.caseId() + "/upload-links", map(), "Authorization", w.bearer())
+                .json().get("url").asString();
+        String linkId = details(only("UPLOAD_LINK_ISSUED", "CHAT")).get("linkId").asString();
+
+        Reply sent = new ApiClient("127.0.0.1", port).upload(
+                "/v1/upload-links/" + url.substring(url.lastIndexOf('/') + 1) + "/documents", "anexo.pdf",
+                ("%PDF-1.4 anexo reservado " + System.nanoTime()).getBytes(), "X-Forwarded-For", "192.168.1.20");
+
+        assertThat(sent.status()).as(sent.body()).isEqualTo(200);
+        Map<String, Object> byLink = only("DOCUMENT_UPLOADED", "API");
+        assertThat(byLink).containsEntry("actor_kind", "LINK").containsEntry("via", linkId);
+        assertThat(byLink.get("actor_user_id")).isNull();
+        assertThat(byLink.get("actor_role")).isNull();
+        assertThat(details(byLink).get("linkOwnerId").asString()).isEqualTo(w.workerId());
+        assertThat(details(byLink).get("duplicate").asBoolean()).isFalse();
+        assertThat(byLink.get("details").toString()).doesNotContain("reservado");
+        AuditAssertions.assertNoForbiddenFields(details(byLink));
     }
 }

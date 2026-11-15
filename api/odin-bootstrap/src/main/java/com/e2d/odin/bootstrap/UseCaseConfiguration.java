@@ -85,6 +85,7 @@ import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
 import com.e2d.odin.application.link.DescribeUploadLink;
 import com.e2d.odin.application.link.IssueOriginalLink;
 import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.IssuedLink;
 import com.e2d.odin.application.link.LinkIssuer;
 import com.e2d.odin.application.link.LinkSettings;
 import com.e2d.odin.application.link.OpenOriginal;
