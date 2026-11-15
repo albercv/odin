@@ -2076,7 +2076,7 @@ export interface components {
         IntakeProposalGroups: {
             groups: components["schemas"]["IntakeProposalGroup"][];
         };
-        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. */
+        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. documentType: el tipo del documento de la fila (no el del destino), o null si no se reconoció. */
         IntakeProposalItem: {
             /** Format: uuid */
             id: string;
@@ -2089,17 +2089,19 @@ export interface components {
             caseNumber?: string;
             source: string;
             reason: string;
+            documentType?: string;
         };
         KnownFiles: {
             sha256: string[];
         };
-        /** @description Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. */
+        /** @description Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. documentType: el tipo que le calculó la clasificación (acta, contrato, poliza…), o null si no se reconoció. */
         IntakeDocumentView: {
             /** Format: uuid */
             id: string;
             title: string;
             path?: string;
             status: string;
+            documentType?: string;
         };
         IntakeDocuments: {
             documents: components["schemas"]["IntakeDocumentView"][];

@@ -235,8 +235,10 @@ public class IntakeController {
         if (!unplaced) {
             throw new ValidationException("Solo se listan los documentos sin colocar: unplaced=true");
         }
-        return Responses.IntakeDocuments.from(
-                this.unplaced.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId)));
+        CompanyId company = new CompanyId(companyId);
+        IntakeBatchId batch = new IntakeBatchId(batchId);
+        return Responses.IntakeDocuments.from(this.unplaced.execute(actor, company, batch),
+                this.unplaced.types(actor, company, batch));
     }
 
     /** El original de un documento pendiente del lote, para decidir viéndolo. */

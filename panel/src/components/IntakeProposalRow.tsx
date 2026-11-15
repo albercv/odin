@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { S } from '../api/client';
 import { Button } from '../ui/Button';
+import { documentTypeLabel } from './documentType';
 import styles from './Intake.module.css';
 
 export type Decision = S['DecideProposalRequest'];
@@ -33,6 +34,7 @@ export function IntakeProposalRow({ kind, item, projectKind, projects, decide, o
   return (
     <li className={styles.row}>
       <p><strong>{title}</strong> <a href={original} target="_blank" rel="noreferrer" aria-label={`Ver el original de ${title}`}>Ver el original</a></p>
+      <p className={styles.reason}>{documentTypeLabel(item.documentType)}</p>
       {relation(kind, item) && <p>{relation(kind, item)}</p>}
       {item.caseNumber && <p>{`Caso ${item.caseNumber}`}</p>}
       <p className={styles.reason}>{item.reason}</p>
