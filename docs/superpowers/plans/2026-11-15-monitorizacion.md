@@ -47,6 +47,7 @@
 - **Dominio:** `AuditEntry` (o nombre equivalente al estilo del proyecto) con enums `AuditAction` (lista cerrada; se amplía en cada tarea), `AuditActorKind`, `AuditChannel`, `AuditOutcome`.
 - **Aplicación:** puerto `AuditLog.record(entry)` (misma transacción) y `AuditLog.recordDenied(entry)` (transacción propia); puerto de contexto de la petición (ruling 6). `UpdateAuditSettings` y `GetAuditSettings` (solo administrador de grupo, contraseña en el cuerpo, ruling 3 y 4).
 - **Web:** filtro de contexto (ruling 6); `GET /v1/admin/audit-settings` y `PUT /v1/admin/audit-settings`.
+- **RLS:** el patrón del proyecto (`app.group_scope = 'on' OR company_id = ANY(app.company_ids)`) ya deja las filas sin empresa solo al ámbito de grupo.
 - **Pruebas (integración con base real salvo las unitarias):**
   - cada `record` deja exactamente una fila con sus campos; con el registro apagado, ninguna;
   - `UPDATE`, `DELETE` y `TRUNCATE` como `odin_app` fallan; `INSERT` directo también;
@@ -62,7 +63,7 @@
 
 **Rama:** `task/monitorizacion/administracion-1`.
 
-- Entradas en: entrada al panel, entrada fallida (con `user_id` si existe; ruling 7), salida; `POST /v1/setup` y `POST /v1/setup/admin-password` (actor `INSTALLER`, canal `API`, `DENIED` si el token es malo); crear y cambiar empresa; **capacidades con antes y después**; alta y baja de administradores del grupo; personas: alta, cambio de papel, baja, `UpdateUser` (antes y después de nombre, apellidos, correo y activo), cambio de contraseña (sin la contraseña); claves de trabajador: emisión y revocación (solo el prefijo); proyectos: crear, cambiar (restringido o abierto), borrar; miembros: alta y baja.
+- Entradas en: entrada al panel, entrada fallida (con `user_id` si existe; ruling 7), salida; `POST /v1/setup` y `POST /v1/setup/admin-password` (actor `INSTALLER`, canal `API`, `DENIED` si el token es malo); crear y cambiar empresa; **capacidades con antes y después**; alta y baja de administradores del grupo; personas: alta en empresa (`AddMember`), cambio de papel (`UpdateMember`), baja (`RemoveMember` y `DeleteUser`), `UpdateUser` (antes y después de nombre, apellidos, correo y activo), cambio de contraseña (sin la contraseña); claves de trabajador: emisión y revocación (solo el prefijo); proyectos: crear, cambiar (restringido o abierto), borrar; miembros: alta y baja.
 - IP y navegador solo en las entradas de acceso al panel (decisión 5).
 - **Pruebas:** una por acción (prueba de API o de caso de uso con la base real, la que use el proyecto para ese controlador): exactamente una entrada, con actor, papel, canal `PANEL`, objeto, resultado y `details` correctos. Capacidades: antes y después. Un administrador de empresa que cambia algo de su empresa deja `company_id` de esa empresa.
 
@@ -70,7 +71,7 @@
 
 **Rama:** `task/monitorizacion/administracion-2`.
 
-- Entradas en: subida, reintento, retirada y su deshacer, marca de sustituido y su deshacer, marca de caso, cambio de temas y reetiquetado, catálogo de temas (alta, cambio, borrado), metadatos, **descarga del original por el administrador**, revisión de fichas (aprobada, corregida, rechazada) y las acciones de administrador de la primera carga (bandeja de entrada).
+- Entradas en: subida, reintento, retirada y su deshacer, marca de sustituido y su deshacer, marca de caso, cambio de temas y reetiquetado, catálogo de temas (alta, cambio, borrado), metadatos, **descarga del original por el administrador**, revisión de fichas (aprobada, corregida, rechazada), expedientes desde el administrador (`AdminCaseFileController`: añadir, quitar, subir al expediente) y las acciones de administrador de la primera carga (bandeja de entrada).
 - Documentos: título, proyecto, tamaño y huella; nunca el contenido. Fichas: id y proyecto; nunca el texto.
 - **Pruebas:** como en la tarea 2, más una que comprueba que ninguna entrada de documento o ficha lleva texto.
 
