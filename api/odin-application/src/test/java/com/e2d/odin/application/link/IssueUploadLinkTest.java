@@ -42,7 +42,7 @@ class IssueUploadLinkTest {
     @Test
     void missingPublicUrlSaysSoAndStoresNothing() {
         var noUrl = new LinkSettings("", Duration.ofMinutes(15));
-        var issuer = new LinkIssuer(w.links, w.tokens, w.secrets, w.ids, w.clock, noUrl);
+        var issuer = new LinkIssuer(w.links, w.tokens, w.secrets, w.ids, w.clock, noUrl, w.audit);
         var issue = new IssueUploadLink(w.orgs, w.members, w.docs, issuer);
         Document caseDoc = w.caseIn(w.project);
 

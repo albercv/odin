@@ -226,12 +226,4 @@ class UploadByLinkTest {
         assertThat(send("ficha.pdf", "propio").filename()).isEqualTo("ficha.pdf");
         assertThat(w.caseFiles.countEntries(w.company, caseDoc.id())).isZero();
     }
-
-    @Test
-    void aLinkUploadWritesNoEntryFromTheAdminAudit() {
-        send("acta.pdf", "uno");
-        send("otra.pdf", "uno");
-
-        assertThat(w.audit.entries).isEmpty();
-    }
 }

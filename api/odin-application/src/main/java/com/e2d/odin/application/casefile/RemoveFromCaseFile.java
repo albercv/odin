@@ -43,13 +43,19 @@ public class RemoveFromCaseFile {
     }
 
     public void execute(Actor actor, DocumentId caseId, DocumentId documentId) {
-        remove(actor, CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers), caseId, documentId);
+        Document caseDocument = remove(actor,
+                CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers), caseId, documentId);
+        record(actor, caseDocument, documentId);
     }
 
     /** La ruta del administrador, que nombra la empresa: deja una entrada. */
     public void execute(Actor actor, CompanyId companyId, DocumentId caseId, DocumentId documentId) {
         Document caseDocument = remove(actor,
                 CaseFileAccess.of(actor, Optional.of(companyId), organizations, projectMembers), caseId, documentId);
+        record(actor, caseDocument, documentId);
+    }
+
+    private void record(Actor actor, Document caseDocument, DocumentId documentId) {
         audit.record(AuditSupport.onCaseFile(AuditEntry.by(actor, AuditAction.CASE_FILE_DOCUMENT_REMOVED),
                 caseDocument).with("documentId", documentId.value().toString()));
     }

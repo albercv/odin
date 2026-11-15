@@ -328,7 +328,7 @@ public class TestWiring {
     }
 
     @Bean LinkIssuer linkIssuer() {
-        return new LinkIssuer(links, tokens, secrets, ids, clock, linkSettings());
+        return new LinkIssuer(links, tokens, secrets, ids, clock, linkSettings(), auditLog());
     }
 
     @Bean IssueUploadLink issueUploadLink() {
@@ -348,7 +348,7 @@ public class TestWiring {
     }
 
     @Bean UploadByLink uploadByLink() {
-        return new UploadByLink(resolveLink(), links, uploadToCaseFile(), uploadToProject());
+        return new UploadByLink(resolveLink(), links, uploadToCaseFile(), uploadToProject(), auditLog());
     }
 
     @Bean UploadToProject uploadToProject() {
@@ -501,7 +501,7 @@ public class TestWiring {
     }
 
     @Bean SaveKnowledgeCard saveKnowledgeCard() {
-        return new SaveKnowledgeCard(orgs, projectMembers, cards, ids, clock);
+        return new SaveKnowledgeCard(orgs, projectMembers, cards, ids, clock, auditLog());
     }
 
     @Bean ListMyKnowledgeCards listMyKnowledgeCards() {

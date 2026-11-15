@@ -600,20 +600,38 @@ public class UseCaseConfiguration {
 
     @Bean
     LinkIssuer linkIssuer(AccessLinkRepository links, TokenGenerator tokens, SecretHasher secrets, IdGenerator ids,
-            Clock clock, LinkSettings settings) {
-        return new LinkIssuer(links, tokens, secrets, ids, clock, settings);
+            Clock clock, LinkSettings settings, AuditLog audit) {
+        return new LinkIssuer(links, tokens, secrets, ids, clock, settings, audit);
     }
 
     @Bean
     IssueUploadLink issueUploadLink(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            DocumentRepository documents, LinkIssuer issuer) {
-        return new IssueUploadLink(organizations, projectMembers, documents, issuer);
+            DocumentRepository documents, LinkIssuer issuer, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueUploadLink(organizations, projectMembers, documents, issuer) {
+            @Override
+            public IssuedLink execute(Actor actor, DocumentId caseId) {
+                return transaction.execute(status -> super.execute(actor, caseId));
+            }
+
+            @Override
+            public IssuedLink forProject(Actor actor, ProjectId projectId) {
+                return transaction.execute(status -> super.forProject(actor, projectId));
+            }
+        };
     }
 
     @Bean
     IssueOriginalLink issueOriginalLink(OrganizationRepository organizations,
-            ProjectMemberRepository projectMembers, DocumentRepository documents, LinkIssuer issuer) {
-        return new IssueOriginalLink(organizations, projectMembers, documents, issuer);
+            ProjectMemberRepository projectMembers, DocumentRepository documents, LinkIssuer issuer,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueOriginalLink(organizations, projectMembers, documents, issuer) {
+            @Override
+            public IssuedLink execute(Actor actor, DocumentId documentId, Optional<Integer> page) {
+                return transaction.execute(status -> super.execute(actor, documentId, page));
+            }
+        };
     }
 
     @Bean
@@ -629,8 +647,8 @@ public class UseCaseConfiguration {
 
     @Bean
     UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile,
-            UploadToProject uploadToProject) {
-        return new UploadByLink(resolve, links, uploadToCaseFile, uploadToProject);
+            UploadToProject uploadToProject, AuditLog audit) {
+        return new UploadByLink(resolve, links, uploadToCaseFile, uploadToProject, audit);
     }
 
     @Bean
@@ -929,6 +947,11 @@ public class UseCaseConfiguration {
             public int execute(Actor actor, CompanyId companyId, List<CaseFileAssignment> assignments) {
                 return transaction.execute(status -> super.execute(actor, companyId, assignments));
             }
+
+            @Override
+            public int execute(Actor actor, List<CaseFileAssignment> assignments) {
+                return transaction.execute(status -> super.execute(actor, assignments));
+            }
         };
     }
 
@@ -941,6 +964,11 @@ public class UseCaseConfiguration {
             @Override
             public void execute(Actor actor, CompanyId companyId, DocumentId caseId, DocumentId documentId) {
                 transaction.executeWithoutResult(status -> super.execute(actor, companyId, caseId, documentId));
+            }
+
+            @Override
+            public void execute(Actor actor, DocumentId caseId, DocumentId documentId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, caseId, documentId));
             }
         };
     }
@@ -991,8 +1019,16 @@ public class UseCaseConfiguration {
             ProjectMemberRepository projectMembers,
             KnowledgeCardRepository cards,
             IdGenerator ids,
-            Clock clock) {
-        return new SaveKnowledgeCard(organizations, projectMembers, cards, ids, clock);
+            Clock clock,
+            AuditLog audit,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new SaveKnowledgeCard(organizations, projectMembers, cards, ids, clock, audit) {
+            @Override
+            public KnowledgeCard execute(Actor actor, String title, String body, Optional<ProjectId> projectId) {
+                return transaction.execute(status -> super.execute(actor, title, body, projectId));
+            }
+        };
     }
 
     @Bean

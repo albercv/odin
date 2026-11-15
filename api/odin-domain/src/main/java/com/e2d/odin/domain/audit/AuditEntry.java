@@ -40,6 +40,13 @@ public record AuditEntry(AuditAction action, AuditOutcome outcome, AuditActorKin
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Map.of());
     }
 
+    /** Quien actúa es el enlace de acceso, no una persona identificada: {@code via} es el enlace y su dueño va en los detalles. */
+    public static AuditEntry byLink(java.util.UUID linkId, UserId owner, AuditAction action) {
+        return new AuditEntry(action, AuditOutcome.DONE, AuditActorKind.LINK, Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(linkId.toString()),
+                Optional.empty(), Map.of("linkOwnerId", owner.value().toString()));
+    }
+
     public static AuditEntry byInstaller(AuditAction action) {
         return new AuditEntry(action, AuditOutcome.DONE, AuditActorKind.INSTALLER, Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Map.of());

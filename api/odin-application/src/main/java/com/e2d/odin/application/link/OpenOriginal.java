@@ -31,9 +31,12 @@ public class OpenOriginal {
     }
 
     public OriginalFile execute(String token, String clientAddress) {
-        var target = resolve.execute(token, clientAddress, AccessLinkKind.ORIGINAL).target();
-        if (target instanceof LinkTarget.OriginalTarget original) {
-            return read(original.document());
+        ResolvedLink resolved = resolve.execute(token, clientAddress, AccessLinkKind.ORIGINAL);
+        if (resolved.target() instanceof LinkTarget.OriginalTarget original) {
+            OriginalFile file = read(original.document());
+            audit.record(AuditSupport.onDocument(AuditEntry.byLink(resolved.link().id(), resolved.link().userId(),
+                    AuditAction.DOCUMENT_ORIGINAL_DOWNLOADED), original.document()));
+            return file;
         }
         throw new NotFoundException("Enlace no encontrado");
     }
