@@ -1,5 +1,9 @@
 package com.e2d.odin.application.link;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.shared.AccessPolicy;
@@ -16,11 +20,14 @@ public class OpenOriginal {
     private final ResolveLink resolve;
     private final OriginalFileStore files;
     private final DocumentRepository documents;
+    private final AuditLog audit;
 
-    public OpenOriginal(ResolveLink resolve, OriginalFileStore files, DocumentRepository documents) {
+    public OpenOriginal(ResolveLink resolve, OriginalFileStore files, DocumentRepository documents,
+            AuditLog audit) {
         this.resolve = resolve;
         this.files = files;
         this.documents = documents;
+        this.audit = audit;
     }
 
     public OriginalFile execute(String token, String clientAddress) {
@@ -35,7 +42,9 @@ public class OpenOriginal {
         AccessPolicy.requireAdmin(admin);
         Document document = documents.findById(admin.scope(), ProjectVisibility.all(), id)
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
-        return read(document);
+        OriginalFile original = read(document);
+        audit.record(AuditSupport.onDocument(AuditEntry.by(admin, AuditAction.DOCUMENT_ORIGINAL_DOWNLOADED), document));
+        return original;
     }
 
     private OriginalFile read(Document document) {

@@ -1,6 +1,10 @@
 package com.e2d.odin.application.intake;
 
 import com.e2d.odin.application.link.OriginalFile;
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.OriginalFileStore;
@@ -24,11 +28,14 @@ public class OpenIntakeOriginal {
     private final IntakeRepository intake;
     private final DocumentRepository documents;
     private final OriginalFileStore files;
+    private final AuditLog audit;
 
-    public OpenIntakeOriginal(IntakeRepository intake, DocumentRepository documents, OriginalFileStore files) {
+    public OpenIntakeOriginal(IntakeRepository intake, DocumentRepository documents, OriginalFileStore files,
+            AuditLog audit) {
         this.intake = intake;
         this.documents = documents;
         this.files = files;
+        this.audit = audit;
     }
 
     public OriginalFile execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId) {
@@ -37,6 +44,9 @@ public class OpenIntakeOriginal {
                 documentId).map(DocumentEntry::document)
                 .filter(x -> x.intakeBatchId().equals(Optional.of(batchId)) && x.intakePending() && !x.withdrawn())
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
-        return new OriginalFile(d.filename(), d.format(), files.read(d.sha256()));
+        OriginalFile original = new OriginalFile(d.filename(), d.format(), files.read(d.sha256()));
+        audit.record(AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.DOCUMENT_ORIGINAL_DOWNLOADED), d)
+                .with("intakeBatchId", batchId.value().toString()));
+        return original;
     }
 }

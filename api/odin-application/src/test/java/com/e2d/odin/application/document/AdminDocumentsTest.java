@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -32,7 +33,7 @@ class AdminDocumentsTest {
     private final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
     private final ListCompanyDocuments list = new ListCompanyDocuments(docs, topics, tagging);
     private final GetDocument get = new GetDocument(docs);
-    private final RetryDocument retry = new RetryDocument(docs);
+    private final RetryDocument retry = new RetryDocument(docs, new InMemoryAuditLog());
 
     @Test
     void listsOwnCompanyDocumentsOnly() {

@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -35,7 +36,7 @@ class UploadDocumentTest {
     private final InMemoryOriginalFileStore store = new InMemoryOriginalFileStore();
     private final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     private final UploadDocument upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(100),
-            new SequenceIdGenerator(), new MutableClock());
+            new SequenceIdGenerator(), new MutableClock(), new InMemoryAuditLog());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
     private final Actor adminA = Actors.companyAdmin(companyA);

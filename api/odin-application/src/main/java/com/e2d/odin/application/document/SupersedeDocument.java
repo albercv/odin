@@ -1,5 +1,9 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.document.Document;
@@ -20,10 +24,12 @@ public class SupersedeDocument {
 
     private final DocumentRepository documents;
     private final Clock clock;
+    private final AuditLog audit;
 
-    public SupersedeDocument(DocumentRepository documents, Clock clock) {
+    public SupersedeDocument(DocumentRepository documents, Clock clock, AuditLog audit) {
         this.documents = documents;
         this.clock = clock;
+        this.audit = audit;
     }
 
     public DocumentEntry mark(Actor actor, DocumentId documentId, DocumentId replacementId) {
@@ -40,6 +46,8 @@ public class SupersedeDocument {
             requireVisibleToWhoSeesTheDocument(document, replacement);
             rejectCircularChain(company, document, replacement);
             documents.markSuperseded(document.companyId(), documentId, replacementId, clock.instant());
+            audit.record(AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.DOCUMENT_SUPERSEDED), document)
+                    .with("replacementId", replacementId.value().toString()));
             return documents.findEntry(company, ProjectVisibility.all(), documentId).orElseThrow();
         });
     }
@@ -47,6 +55,7 @@ public class SupersedeDocument {
     public void unmark(Actor actor, DocumentId documentId) {
         Document document = requireDocument(actor, documentId);
         documents.clearSuperseded(document.companyId(), documentId);
+        audit.record(AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.DOCUMENT_SUPERSEDED_CLEARED), document));
     }
 
     private Document requireDocument(Actor actor, DocumentId documentId) {

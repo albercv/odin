@@ -1,5 +1,6 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -24,7 +25,7 @@ class ListOpenIntakeBatchesTest {
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryIntakeRepository intake = new InMemoryIntakeRepository();
     private final MutableClock clock = new MutableClock();
-    private final StartIntake start = new StartIntake(intake, orgs, new SequenceIdGenerator(), clock);
+    private final StartIntake start = new StartIntake(intake, orgs, new SequenceIdGenerator(), clock, new InMemoryAuditLog());
     private final ListOpenIntakeBatches list = new ListOpenIntakeBatches(intake);
     private final CompanyId company = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);

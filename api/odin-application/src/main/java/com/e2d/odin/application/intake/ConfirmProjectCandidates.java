@@ -2,6 +2,10 @@ package com.e2d.odin.application.intake;
 
 import com.e2d.odin.application.intake.ProjectDecision.Action;
 import com.e2d.odin.application.organization.CreateProject;
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.domain.identity.Actor;
@@ -30,9 +34,11 @@ public class ConfirmProjectCandidates {
     private final IntakeRepository intake;
     private final OrganizationRepository organizations;
     private final CreateProject createProject;
+    private final AuditLog audit;
 
     public ConfirmProjectCandidates(IntakeRepository intake, OrganizationRepository organizations,
-            CreateProject createProject) {
+            CreateProject createProject, AuditLog audit) {
+        this.audit = audit;
         this.intake = intake;
         this.organizations = organizations;
         this.createProject = createProject;
@@ -53,7 +59,14 @@ public class ConfirmProjectCandidates {
                 case REJECT -> candidate.reject();
             });
         }
+        audit.record(AuditSupport.onIntake(AuditEntry.by(actor, AuditAction.INTAKE_PROJECTS_DECIDED), companyId, batchId)
+                .with("count", decisions.size()).with("created", countOf(decisions, Action.CREATE))
+                .with("merged", countOf(decisions, Action.MERGE)).with("rejected", countOf(decisions, Action.REJECT)));
         return intake.candidates(companyId, batchId);
+    }
+
+    private static int countOf(List<ProjectDecision> decisions, Action action) {
+        return (int) decisions.stream().filter(d -> d.action() == action).count();
     }
 
     private void validate(CompanyId companyId, Map<String, ProjectCandidate> candidates, ProjectDecision d) {

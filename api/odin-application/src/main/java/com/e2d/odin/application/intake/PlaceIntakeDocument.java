@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.intake.IntakeBatchId;
@@ -16,9 +20,11 @@ import java.util.Optional;
 public class PlaceIntakeDocument {
 
     private final IntakeEffects effects;
+    private final AuditLog audit;
 
-    public PlaceIntakeDocument(IntakeEffects effects) {
+    public PlaceIntakeDocument(IntakeEffects effects, AuditLog audit) {
         this.effects = effects;
+        this.audit = audit;
     }
 
     public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId,
@@ -29,5 +35,9 @@ public class PlaceIntakeDocument {
         }
         effects.placeUnplaced(actor, batch, documentId, projectId);
         effects.closeIfDone(batch);
+        AuditEntry entry = AuditEntry.by(actor, AuditAction.INTAKE_DOCUMENT_PLACED).onCompany(companyId)
+                .on("DOCUMENT", documentId.value().toString(), null)
+                .with("intakeBatchId", batchId.value().toString()).with("companyWide", companyWide);
+        audit.record(projectId.map(entry::onProject).orElse(entry));
     }
 }

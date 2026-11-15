@@ -1,5 +1,6 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -43,10 +44,10 @@ class IntakeUploadTest {
     private final MutableClock clock = new MutableClock();
     private final SequenceIdGenerator ids = new SequenceIdGenerator();
     private final UploadDocument upload = new UploadDocument(docs, orgs, new InMemoryOriginalFileStore(),
-            new StubFormatDetector(DocumentFormat.PDF), new UploadSettings(100), ids, clock);
-    private final StartIntake start = new StartIntake(intake, orgs, ids, clock);
-    private final AddFileToIntake addFile = new AddFileToIntake(intake, upload);
-    private final CloseIntakeUpload close = new CloseIntakeUpload(intake);
+            new StubFormatDetector(DocumentFormat.PDF), new UploadSettings(100), ids, clock, new InMemoryAuditLog());
+    private final StartIntake start = new StartIntake(intake, orgs, ids, clock, new InMemoryAuditLog());
+    private final AddFileToIntake addFile = new AddFileToIntake(intake, upload, new InMemoryAuditLog());
+    private final CloseIntakeUpload close = new CloseIntakeUpload(intake, new InMemoryAuditLog());
     private final GetIntakeBatch get = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true),
             new IntakeSettings(true));
     private final CompanyId company = Fixtures.company(orgs);

@@ -1,5 +1,9 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.document.DocumentEntry;
@@ -13,9 +17,11 @@ import java.util.Optional;
 public class RestoreDocument {
 
     private final DocumentRepository documents;
+    private final AuditLog audit;
 
-    public RestoreDocument(DocumentRepository documents) {
+    public RestoreDocument(DocumentRepository documents, AuditLog audit) {
         this.documents = documents;
+        this.audit = audit;
     }
 
     public DocumentEntry execute(Actor actor, DocumentId documentId) {
@@ -27,6 +33,7 @@ public class RestoreDocument {
             return entry;
         }
         documents.markWithdrawal(entry.document().withWithdrawal(Optional.empty(), Optional.empty()));
+        audit.record(AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.DOCUMENT_RESTORED), entry.document()));
         return documents.findEntryIncludingWithdrawn(actor.scope(), ProjectVisibility.all(), documentId).orElseThrow();
     }
 }

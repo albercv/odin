@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.CandidateOrigin;
@@ -29,9 +33,11 @@ public class ImportProjectList {
     private static final String BYTE_ORDER_MARK = "﻿";
 
     private final IntakeRepository intake;
+    private final AuditLog audit;
 
-    public ImportProjectList(IntakeRepository intake) {
+    public ImportProjectList(IntakeRepository intake, AuditLog audit) {
         this.intake = intake;
+        this.audit = audit;
     }
 
     public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, byte[] content) {
@@ -50,6 +56,8 @@ public class ImportProjectList {
                         counts.getOrDefault(key, 0), DecisionState.PROPOSED, Optional.empty()));
             }
         });
+        audit.record(AuditSupport.onIntake(AuditEntry.by(actor, AuditAction.INTAKE_PROJECT_LIST_IMPORTED), companyId,
+                batchId).with("count", names.size()));
         return intake.candidates(companyId, batchId);
     }
 

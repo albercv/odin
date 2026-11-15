@@ -7,6 +7,7 @@ import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
@@ -47,6 +48,7 @@ final class LinkWorld {
     final InMemoryOriginalFileStore store = new InMemoryOriginalFileStore();
     final StubFormatDetector detector = new StubFormatDetector(DocumentFormat.PDF);
     final MutableClock clock = new MutableClock();
+    final InMemoryAuditLog audit = new InMemoryAuditLog();
     final SequenceIdGenerator ids = new SequenceIdGenerator();
     final SequenceTokenGenerator tokens = new SequenceTokenGenerator();
     final FakeSecretHasher secrets = new FakeSecretHasher();
@@ -88,9 +90,9 @@ final class LinkWorld {
     }
 
     UploadByLink uploadByLink() {
-        var upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(1000), ids, clock);
-        var add = new AddToCaseFiles(orgs, members, docs, caseFiles, ids, clock);
-        return new UploadByLink(resolve(), links, new UploadToCaseFile(upload, add, caseFiles, ids, clock),
+        var upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(1000), ids, clock, audit);
+        var add = new AddToCaseFiles(orgs, members, docs, caseFiles, ids, clock, audit);
+        return new UploadByLink(resolve(), links, new UploadToCaseFile(upload, add, caseFiles, ids, clock, audit),
                 new UploadToProject(upload, docs));
     }
 
@@ -105,7 +107,7 @@ final class LinkWorld {
     }
 
     OpenOriginal openOriginal() {
-        return new OpenOriginal(resolve(), store, docs);
+        return new OpenOriginal(resolve(), store, docs, audit);
     }
 
     static String token(IssuedLink link) {

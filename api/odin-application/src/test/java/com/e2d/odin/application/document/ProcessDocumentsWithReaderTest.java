@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.fake.Actors;
@@ -45,7 +46,7 @@ class ProcessDocumentsWithReaderTest {
     private Document pendingReader(DocumentFormat format) {
         StubFormatDetector detector = new StubFormatDetector(format);
         Document d = new UploadDocument(docs, orgs, store, detector, new UploadSettings(), new SequenceIdGenerator(),
-                clock).execute(Actors.companyAdmin(company), company, Optional.empty(), "Escaneo", "e", "x".getBytes(), false)
+                clock, new InMemoryAuditLog()).execute(Actors.companyAdmin(company), company, Optional.empty(), "Escaneo", "e", "x".getBytes(), false)
                 .document();
         docs.save(d.awaitReader());
         return d;

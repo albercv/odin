@@ -103,7 +103,7 @@ class ProjectListAtomicityIT {
             }
         };
         ConfirmProjectCandidates confirm = new UseCaseConfiguration().confirmProjectCandidates(intake, failingSecond,
-                new CreateProject(failingSecond, new RandomUuidGenerator(), new NoAudit()), transactionManager);
+                new CreateProject(failingSecond, new RandomUuidGenerator(), new NoAudit()), transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> confirm.execute(admin, company, batch, List.of(
                 new ProjectDecision("Calle Olmo 24", Action.CREATE, Optional.empty()),
@@ -127,7 +127,7 @@ class ProjectListAtomicityIT {
                 super.save(c);
             }
         };
-        ImportProjectList importList = new UseCaseConfiguration().importProjectList(failing, transactionManager);
+        ImportProjectList importList = new UseCaseConfiguration().importProjectList(failing, transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> importList.execute(admin, company, batch, "Calle Haya 2".getBytes()))
                 .isInstanceOf(IllegalStateException.class);

@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.port.IntakeRepository;
@@ -16,10 +20,12 @@ public class AddFileToIntake {
 
     private final IntakeRepository intake;
     private final UploadDocument upload;
+    private final AuditLog audit;
 
-    public AddFileToIntake(IntakeRepository intake, UploadDocument upload) {
+    public AddFileToIntake(IntakeRepository intake, UploadDocument upload, AuditLog audit) {
         this.intake = intake;
         this.upload = upload;
+        this.audit = audit;
     }
 
     public IntakeFileResult execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, String path,
@@ -31,6 +37,7 @@ public class AddFileToIntake {
         String cleanPath = Validation.requireText(path, "la ruta del fichero");
         UploadOutcome outcome = upload.executeForIntake(actor, companyId, batchId, cleanPath, filename, filename,
                 content);
+        audit.record(outcome.auditEntry(actor, content.length).with("intakeBatchId", batchId.value().toString()));
         if (!outcome.duplicate()) {
             return new IntakeFileResult(IntakeFileResult.Outcome.CREATED, outcome.entry());
         }

@@ -356,27 +356,27 @@ public class TestWiring {
     }
 
     @Bean UploadToCaseFile uploadToCaseFile() {
-        return new UploadToCaseFile(uploadDocument(), addToCaseFiles(), caseFiles, ids, clock);
+        return new UploadToCaseFile(uploadDocument(), addToCaseFiles(), caseFiles, ids, clock, auditLog());
     }
 
     @Bean OpenOriginal openOriginal() {
-        return new OpenOriginal(resolveLink(), files, docs);
+        return new OpenOriginal(resolveLink(), files, docs, auditLog());
     }
 
     @Bean UploadDocument uploadDocument() {
-        return new UploadDocument(docs, orgs, files, detector, new UploadSettings(MAX_UPLOAD), ids, clock);
+        return new UploadDocument(docs, orgs, files, detector, new UploadSettings(MAX_UPLOAD), ids, clock, auditLog());
     }
 
     @Bean StartIntake startIntake() {
-        return new StartIntake(intake, orgs, ids, clock);
+        return new StartIntake(intake, orgs, ids, clock, auditLog());
     }
 
     @Bean AddFileToIntake addFileToIntake() {
-        return new AddFileToIntake(intake, uploadDocument());
+        return new AddFileToIntake(intake, uploadDocument(), auditLog());
     }
 
     @Bean CloseIntakeUpload closeIntakeUpload() {
-        return new CloseIntakeUpload(intake);
+        return new CloseIntakeUpload(intake, auditLog());
     }
 
     @Bean GetIntakeBatch getIntakeBatch() {
@@ -384,7 +384,7 @@ public class TestWiring {
     }
 
     @Bean ImportProjectList importProjectList() {
-        return new ImportProjectList(intake);
+        return new ImportProjectList(intake, auditLog());
     }
 
     @Bean ListProjectCandidates listProjectCandidates() {
@@ -392,15 +392,15 @@ public class TestWiring {
     }
 
     @Bean OpenIntakeOriginal openIntakeOriginal() {
-        return new OpenIntakeOriginal(intake, docs, files);
+        return new OpenIntakeOriginal(intake, docs, files, auditLog());
     }
 
     @Bean CloseProjectList closeProjectList() {
-        return new CloseProjectList(intake, docs, listProjectCandidates(), installationSettings(), clock);
+        return new CloseProjectList(intake, docs, listProjectCandidates(), installationSettings(), clock, auditLog());
     }
 
     @Bean ConfirmProjectCandidates confirmProjectCandidates() {
-        return new ConfirmProjectCandidates(intake, orgs, createProject());
+        return new ConfirmProjectCandidates(intake, orgs, createProject(), auditLog());
     }
 
     @Bean IntakeEffects intakeEffects() {
@@ -413,7 +413,7 @@ public class TestWiring {
     }
 
     @Bean PlaceIntakeDocument placeIntakeDocument() {
-        return new PlaceIntakeDocument(intakeEffects());
+        return new PlaceIntakeDocument(intakeEffects(), auditLog());
     }
 
     @Bean ListOpenIntakeBatches listOpenIntakeBatches() {
@@ -424,15 +424,15 @@ public class TestWiring {
     }
 
     @Bean ConfirmIntakeProposals confirmIntakeProposals() {
-        return new ConfirmIntakeProposals(intake, intakeEffects());
+        return new ConfirmIntakeProposals(intake, intakeEffects(), auditLog());
     }
 
     @Bean DecideIntakeProposal decideIntakeProposal() {
-        return new DecideIntakeProposal(intake, intakeEffects());
+        return new DecideIntakeProposal(intake, intakeEffects(), auditLog());
     }
 
     @Bean DiscardIntakeDocument discardIntakeDocument() {
-        return new DiscardIntakeDocument(docs, withdrawDocument(), intakeEffects());
+        return new DiscardIntakeDocument(docs, withdrawDocument(), intakeEffects(), auditLog());
     }
 
     @Bean UserNames userNames() {
@@ -448,23 +448,23 @@ public class TestWiring {
     }
 
     @Bean RetryDocument retryDocument() {
-        return new RetryDocument(docs);
+        return new RetryDocument(docs, auditLog());
     }
 
     @Bean UpdateDocument updateDocument() {
-        return new UpdateDocument(docs, caseFiles, clock);
+        return new UpdateDocument(docs, caseFiles, clock, auditLog());
     }
 
     @Bean WithdrawDocument withdrawDocument() {
-        return new WithdrawDocument(docs, clock);
+        return new WithdrawDocument(docs, clock, auditLog());
     }
 
     @Bean RestoreDocument restoreDocument() {
-        return new RestoreDocument(docs);
+        return new RestoreDocument(docs, auditLog());
     }
 
     @Bean MarkCaseDocuments markCaseDocuments() {
-        return new MarkCaseDocuments(docs, caseFiles, clock);
+        return new MarkCaseDocuments(docs, caseFiles, clock, auditLog());
     }
 
     @Bean ReadCaseFile readCaseFile() {
@@ -477,11 +477,11 @@ public class TestWiring {
     }
 
     @Bean AddToCaseFiles addToCaseFiles() {
-        return new AddToCaseFiles(orgs, projectMembers, docs, caseFiles, ids, clock);
+        return new AddToCaseFiles(orgs, projectMembers, docs, caseFiles, ids, clock, auditLog());
     }
 
     @Bean RemoveFromCaseFile removeFromCaseFile() {
-        return new RemoveFromCaseFile(orgs, projectMembers, docs, caseFiles, ids, clock);
+        return new RemoveFromCaseFile(orgs, projectMembers, docs, caseFiles, ids, clock, auditLog());
     }
 
     @Bean ListCaseFileEvents listCaseFileEvents() {
@@ -489,7 +489,7 @@ public class TestWiring {
     }
 
     @Bean SupersedeDocument supersedeDocument() {
-        return new SupersedeDocument(docs, clock);
+        return new SupersedeDocument(docs, clock, auditLog());
     }
 
     @Bean ListCardsForReview listCardsForReview() {
@@ -497,7 +497,7 @@ public class TestWiring {
     }
 
     @Bean ReviewCard reviewCard() {
-        return new ReviewCard(cards, clock);
+        return new ReviewCard(cards, clock, auditLog());
     }
 
     @Bean SaveKnowledgeCard saveKnowledgeCard() {
@@ -537,15 +537,15 @@ public class TestWiring {
     }
 
     @Bean CreateTopic createTopic() {
-        return new CreateTopic(orgs, topics, ids);
+        return new CreateTopic(orgs, topics, ids, auditLog());
     }
 
     @Bean UpdateTopic updateTopic() {
-        return new UpdateTopic(topics);
+        return new UpdateTopic(topics, auditLog());
     }
 
     @Bean DeleteTopic deleteTopic() {
-        return new DeleteTopic(topics, clock);
+        return new DeleteTopic(topics, clock, auditLog());
     }
 
     @Bean ListTopics listTopics() {
@@ -553,7 +553,7 @@ public class TestWiring {
     }
 
     @Bean ReviewDocumentTopics reviewDocumentTopics() {
-        return new ReviewDocumentTopics(docs, topics, tagging, clock);
+        return new ReviewDocumentTopics(docs, topics, tagging, clock, auditLog());
     }
 
     @Bean ListDocumentTopics listDocumentTopics() {

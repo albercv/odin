@@ -1,5 +1,6 @@
 package com.e2d.odin.application.casefile;
 
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.port.CaseFileRepository;
@@ -27,9 +28,11 @@ public class UploadToCaseFile {
     private final CaseFileRepository caseFiles;
     private final IdGenerator ids;
     private final Clock clock;
+    private final AuditLog audit;
 
     public UploadToCaseFile(UploadDocument upload, AddToCaseFiles addToCaseFiles, CaseFileRepository caseFiles,
-            IdGenerator ids, Clock clock) {
+            IdGenerator ids, Clock clock, AuditLog audit) {
+        this.audit = audit;
         this.upload = upload;
         this.addToCaseFiles = addToCaseFiles;
         this.caseFiles = caseFiles;
@@ -37,6 +40,15 @@ public class UploadToCaseFile {
         this.clock = clock;
     }
 
+    /** La subida del administrador: una entrada con quién, qué documento y a qué expediente. El enlace usa {@link #execute}. */
+    public UploadOutcome executeAsAdmin(Actor actor, Document caseDocument, String title, String filename,
+            byte[] content) {
+        UploadOutcome stored = execute(actor, caseDocument, title, filename, content);
+        audit.record(stored.auditEntry(actor, content.length).with("caseId", caseDocument.id().value().toString()));
+        return stored;
+    }
+
+    /** Sin entrada de registro: la comparten el administrador (que usa executeAsAdmin) y el enlace de subida. */
     public UploadOutcome execute(Actor actor, Document caseDocument, String title, String filename, byte[] content) {
         UploadOutcome stored = upload.executeForCase(actor, caseDocument.companyId(), caseDocument.projectId(), title,
                 filename, content, created -> addNew(actor, caseDocument, created));
@@ -46,7 +58,7 @@ public class UploadToCaseFile {
             if (actor.role() == Role.WORKER) {
                 addToCaseFiles.execute(actor, assignments);
             } else {
-                addToCaseFiles.execute(actor, caseDocument.companyId(), assignments);
+                addToCaseFiles.apply(actor, caseDocument.companyId(), assignments);
             }
         }
         return stored;
