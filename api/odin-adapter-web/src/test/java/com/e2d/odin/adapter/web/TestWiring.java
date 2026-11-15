@@ -5,6 +5,13 @@ import com.e2d.odin.application.audit.ExportAuditActivity;
 import com.e2d.odin.application.audit.GetAuditIntegrity;
 import com.e2d.odin.application.audit.GetAuditSettings;
 import com.e2d.odin.application.audit.ListAuditActivity;
+import com.e2d.odin.application.audit.ListChatActivity;
+import com.e2d.odin.application.fake.InMemoryAdminChatKeyRepository;
+import com.e2d.odin.application.identity.DescribeAdminChat;
+import com.e2d.odin.application.identity.DescribeAdminChatKey;
+import com.e2d.odin.application.identity.IssueAdminChatKey;
+import com.e2d.odin.application.identity.ResolveAdminChatKey;
+import com.e2d.odin.application.identity.RevokeAdminChatKey;
 import com.e2d.odin.application.audit.UpdateAuditSettings;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.GetCaseFile;
@@ -154,6 +161,8 @@ public class TestWiring {
     final InMemoryUserRepository users = new InMemoryUserRepository();
     final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
+    final InMemoryAdminChatKeyRepository chatKeys = new InMemoryAdminChatKeyRepository();
+    final InMemoryAuditSettings auditSettingsStore = new InMemoryAuditSettings();
     final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
@@ -277,7 +286,7 @@ public class TestWiring {
     }
 
     @Bean InMemoryAuditSettings auditSettings() {
-        return new InMemoryAuditSettings();
+        return auditSettingsStore;
     }
 
     @Bean InMemoryAuditReader auditReader() {
@@ -334,6 +343,31 @@ public class TestWiring {
 
     @Bean DeleteUser deleteUser() {
         return new DeleteUser(users, memberships, projectMembers, adminSessions(), clock, auditLog());
+    }
+
+    @Bean ResolveAdminChatKey resolveAdminChatKey() {
+        return new ResolveAdminChatKey(chatKeys, users, memberships, auditSettingsStore, secrets, clock);
+    }
+
+    @Bean IssueAdminChatKey issueAdminChatKey() {
+        return new IssueAdminChatKey(chatKeys, users, auditSettingsStore, passwords, secrets, tokens, ids, clock,
+                auditLog());
+    }
+
+    @Bean RevokeAdminChatKey revokeAdminChatKey() {
+        return new RevokeAdminChatKey(chatKeys, clock, auditLog());
+    }
+
+    @Bean DescribeAdminChatKey describeAdminChatKey() {
+        return new DescribeAdminChatKey(chatKeys, auditSettingsStore, clock);
+    }
+
+    @Bean DescribeAdminChat describeAdminChat() {
+        return new DescribeAdminChat(orgs);
+    }
+
+    @Bean ListChatActivity listChatActivity(ListAuditActivity list, InMemoryAuditReader reader) {
+        return new ListChatActivity(list, reader, auditLog(), clock);
     }
 
     @Bean IssueAccessKey issueAccessKey() {

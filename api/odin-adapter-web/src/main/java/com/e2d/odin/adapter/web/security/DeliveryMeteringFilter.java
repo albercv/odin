@@ -50,7 +50,7 @@ public class DeliveryMeteringFilter extends OncePerRequestFilter {
         CountingResponse counting = new CountingResponse(response);
         chain.doFilter(request, counting);
         counting.flushWriter();
-        if (response.getStatus() == HttpServletResponse.SC_OK
+        if (response.getStatus() == HttpServletResponse.SC_OK && request.getAttribute(CurrentActor.CHAT_ACCESS) == null
                 && request.getAttribute(CurrentActor.ATTRIBUTE) instanceof Actor actor) {
             record(actor, tool.get(), counting.bytes());
         }

@@ -20,4 +20,7 @@ public interface AuditReader {
     OptionalLong firstBroken();
 
     boolean sealMatches(long id, String hash);
+
+    /** Las filas que las consultas hechas con esa clave del chat devolvieron entre {@code since} y 24 horas después. */
+    long rowsReturnedToChatKey(String keyPrefix, java.time.Instant since);
 }

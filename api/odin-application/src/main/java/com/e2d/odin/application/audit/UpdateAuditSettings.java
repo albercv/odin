@@ -9,8 +9,6 @@ import com.e2d.odin.domain.audit.AuditAction;
 import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.audit.AuditSettings;
 import com.e2d.odin.domain.identity.Actor;
-import com.e2d.odin.domain.identity.User;
-import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
 
@@ -38,7 +36,7 @@ public class UpdateAuditSettings {
     public AuditSettings execute(Actor actor, String password, boolean enabled, String usagePolicyReference,
             boolean chatEnabled) {
         AccessPolicy.requireGroupAdmin(actor);
-        requirePassword(actor, password);
+        Reauthentication.require(users, passwords, audit, actor, password, "AUDIT_SETTINGS");
         AuditSettings current = settings.get();
         Optional<String> kept = Optional.ofNullable(usagePolicyReference).map(String::strip)
                 .filter(s -> !s.isEmpty()).or(current::usagePolicyReference);
@@ -50,13 +48,21 @@ public class UpdateAuditSettings {
                 .with("policyReferenceChanged", !kept.equals(current.usagePolicyReference()));
         boolean disabling = current.enabled() && !enabled;
         if (disabling) {
-            audit.record(entry);
+            record(actor, entry, current, chatEnabled);
         }
         settings.update(enabled, kept, chatEnabled, actor.userId());
         if (!disabling) {
-            audit.record(entry);
+            record(actor, entry, current, chatEnabled);
         }
         return settings.get();
+    }
+
+    private void record(Actor actor, AuditEntry entry, AuditSettings current, boolean chatEnabled) {
+        audit.record(entry);
+        if (chatEnabled != current.chatEnabled()) {
+            audit.record(AuditEntry.by(actor, chatEnabled ? AuditAction.CHAT_ENABLED : AuditAction.CHAT_DISABLED)
+                    .on(TARGET, "main", null));
+        }
     }
 
     private static AuditAction action(AuditSettings current, boolean enabled) {
@@ -64,15 +70,5 @@ public class UpdateAuditSettings {
             return AuditAction.AUDIT_SETTINGS_UPDATED;
         }
         return enabled ? AuditAction.AUDIT_ENABLED : AuditAction.AUDIT_DISABLED;
-    }
-
-    private void requirePassword(Actor actor, String password) {
-        boolean correct = password != null && users.findById(actor.userId()).flatMap(User::passwordHash)
-                .filter(hash -> passwords.matches(password, hash)).isPresent();
-        if (!correct) {
-            audit.recordDenied(AuditEntry.by(actor, AuditAction.REAUTHENTICATION_FAILED).denied()
-                    .with("purpose", "AUDIT_SETTINGS"));
-            throw new ForbiddenException("La contraseña no es correcta");
-        }
     }
 }

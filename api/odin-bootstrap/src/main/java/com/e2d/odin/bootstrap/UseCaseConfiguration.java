@@ -5,6 +5,14 @@ import com.e2d.odin.application.audit.ExportAuditActivity;
 import com.e2d.odin.application.audit.GetAuditIntegrity;
 import com.e2d.odin.application.audit.GetAuditSettings;
 import com.e2d.odin.application.audit.ListAuditActivity;
+import com.e2d.odin.application.audit.ListChatActivity;
+import com.e2d.odin.application.identity.DescribeAdminChat;
+import com.e2d.odin.application.identity.DescribeAdminChatKey;
+import com.e2d.odin.application.identity.IssueAdminChatKey;
+import com.e2d.odin.application.identity.IssuedAdminChatKey;
+import com.e2d.odin.application.identity.ResolveAdminChatKey;
+import com.e2d.odin.application.identity.RevokeAdminChatKey;
+import com.e2d.odin.application.port.AdminChatKeyRepository;
 import com.e2d.odin.application.audit.UpdateAuditSettings;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.domain.topic.Topic;
@@ -484,6 +492,53 @@ public class UseCaseConfiguration {
                 return transaction.execute(status -> super.execute(actor, password, enabled, reference, chatEnabled));
             }
         };
+    }
+
+    @Bean
+    ResolveAdminChatKey resolveAdminChatKey(AdminChatKeyRepository keys, UserRepository users,
+            MembershipRepository memberships, AuditSettingsRepository settings, SecretHasher secrets, Clock clock) {
+        return new ResolveAdminChatKey(keys, users, memberships, settings, secrets, clock);
+    }
+
+    @Bean
+    IssueAdminChatKey issueAdminChatKey(AdminChatKeyRepository keys, UserRepository users,
+            AuditSettingsRepository settings, PasswordHasher passwords, SecretHasher secrets, TokenGenerator tokens,
+            IdGenerator ids, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueAdminChatKey(keys, users, settings, passwords, secrets, tokens, ids, clock, audit) {
+            @Override
+            public IssuedAdminChatKey execute(Actor actor, String password, Optional<CompanyId> company) {
+                return transaction.execute(status -> super.execute(actor, password, company));
+            }
+        };
+    }
+
+    @Bean
+    RevokeAdminChatKey revokeAdminChatKey(AdminChatKeyRepository keys, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RevokeAdminChatKey(keys, clock, audit) {
+            @Override
+            public void execute(Actor actor, UUID keyId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, keyId));
+            }
+        };
+    }
+
+    @Bean
+    DescribeAdminChatKey describeAdminChatKey(AdminChatKeyRepository keys, AuditSettingsRepository settings,
+            Clock clock) {
+        return new DescribeAdminChatKey(keys, settings, clock);
+    }
+
+    @Bean
+    DescribeAdminChat describeAdminChat(OrganizationRepository organizations) {
+        return new DescribeAdminChat(organizations);
+    }
+
+    @Bean
+    ListChatActivity listChatActivity(ListAuditActivity list, AuditReader reader, AuditLog audit, Clock clock) {
+        return new ListChatActivity(list, reader, audit, clock);
     }
 
     @Bean

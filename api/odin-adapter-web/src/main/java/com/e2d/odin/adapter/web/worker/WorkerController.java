@@ -6,6 +6,8 @@ import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.link.IssueOriginalLink;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
+import com.e2d.odin.application.identity.ChatAccess;
+import com.e2d.odin.application.identity.DescribeAdminChat;
 import com.e2d.odin.application.organization.DescribeMe;
 import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ListMyQuestions;
@@ -53,11 +55,13 @@ public class WorkerController {
     private final ListMyKnowledgeCards listMyCards;
     private final ListMyQuestions listMyQuestions;
     private final IssueOriginalLink issueOriginalLink;
+    private final DescribeAdminChat describeAdminChat;
 
-    public WorkerController(DescribeMe describeMe, SearchKnowledge search, FindSimilarCases findSimilarCases,
+    public WorkerController(DescribeAdminChat describeAdminChat, DescribeMe describeMe, SearchKnowledge search, FindSimilarCases findSimilarCases,
             ListDocuments listDocuments, ReadPage readPage, VerifyCitation verifyCitation,
             SaveKnowledgeCard saveCard, ListMyKnowledgeCards listMyCards, ListMyQuestions listMyQuestions,
             IssueOriginalLink issueOriginalLink) {
+        this.describeAdminChat = describeAdminChat;
         this.describeMe = describeMe;
         this.search = search;
         this.findSimilarCases = findSimilarCases;
@@ -71,7 +75,11 @@ public class WorkerController {
     }
 
     @GetMapping("/v1/me")
-    public Responses.Me me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor) {
+    public Responses.Me me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @RequestAttribute(value = CurrentActor.CHAT_ACCESS, required = false) ChatAccess chat) {
+        if (chat != null) {
+            return Responses.Me.adminChat(describeAdminChat.execute(chat));
+        }
         return Responses.Me.from(describeMe.execute(actor));
     }
 

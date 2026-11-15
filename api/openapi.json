@@ -2014,6 +2014,50 @@
         }
       }
     },
+    "/v1/admin/activity-keys" : {
+      "get" : {
+        "tags" : [ "activity-key-controller" ],
+        "operationId" : "current",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivityKeysView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "activity-key-controller" ],
+        "operationId" : "issue_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IssueActivityKey"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedActivityKeyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/users/{userId}" : {
       "delete" : {
         "tags" : [ "user-controller" ],
@@ -3356,7 +3400,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "AUDIT_ENABLED", "AUDIT_DISABLED", "AUDIT_SETTINGS_UPDATED", "REAUTHENTICATION_FAILED", "LOGIN_SUCCEEDED", "LOGIN_FAILED", "LOGOUT", "INSTALLATION_SET_UP", "ADMIN_PASSWORD_RECOVERED", "COMPANY_CREATED", "COMPANY_UPDATED", "COMPANY_CAPABILITIES_CHANGED", "GROUP_ADMIN_ADDED", "GROUP_ADMIN_REVOKED", "MEMBER_ADDED", "MEMBER_UPDATED", "MEMBER_REMOVED", "USER_UPDATED", "USER_DELETED", "PASSWORD_CHANGED", "ACCESS_KEY_ISSUED", "ACCESS_KEY_REVOKED", "PROJECT_CREATED", "PROJECT_UPDATED", "PROJECT_DELETED", "PROJECT_MEMBER_ADDED", "PROJECT_MEMBER_REMOVED", "DOCUMENT_UPLOADED", "DOCUMENT_RETRIED", "DOCUMENT_WITHDRAWN", "DOCUMENT_RESTORED", "DOCUMENT_SUPERSEDED", "DOCUMENT_SUPERSEDED_CLEARED", "DOCUMENT_CASE_MARK_CHANGED", "DOCUMENTS_CASE_MARK_CHANGED", "DOCUMENT_ORIGINAL_DOWNLOADED", "DOCUMENT_TOPIC_ADDED", "DOCUMENT_TOPIC_REMOVED", "DOCUMENT_RETAGGED", "TOPIC_CREATED", "TOPIC_UPDATED", "TOPIC_DELETED", "CARD_APPROVED", "CARD_CORRECTED", "CARD_REJECTED", "CASE_FILE_DOCUMENTS_ADDED", "CASE_FILE_DOCUMENT_REMOVED", "INTAKE_STARTED", "INTAKE_UPLOAD_CLOSED", "INTAKE_PROJECT_LIST_IMPORTED", "INTAKE_PROJECTS_DECIDED", "INTAKE_PROJECT_LIST_CLOSED", "INTAKE_PROPOSALS_CONFIRMED", "INTAKE_PROPOSAL_DECIDED", "INTAKE_DOCUMENT_DISCARDED", "INTAKE_DOCUMENT_PLACED", "CARD_SAVED", "UPLOAD_LINK_ISSUED", "ORIGINAL_LINK_ISSUED", "ACTIVITY_EXPORTED" ]
+            "enum" : [ "AUDIT_ENABLED", "AUDIT_DISABLED", "AUDIT_SETTINGS_UPDATED", "REAUTHENTICATION_FAILED", "LOGIN_SUCCEEDED", "LOGIN_FAILED", "LOGOUT", "INSTALLATION_SET_UP", "ADMIN_PASSWORD_RECOVERED", "COMPANY_CREATED", "COMPANY_UPDATED", "COMPANY_CAPABILITIES_CHANGED", "GROUP_ADMIN_ADDED", "GROUP_ADMIN_REVOKED", "MEMBER_ADDED", "MEMBER_UPDATED", "MEMBER_REMOVED", "USER_UPDATED", "USER_DELETED", "PASSWORD_CHANGED", "ACCESS_KEY_ISSUED", "ACCESS_KEY_REVOKED", "PROJECT_CREATED", "PROJECT_UPDATED", "PROJECT_DELETED", "PROJECT_MEMBER_ADDED", "PROJECT_MEMBER_REMOVED", "DOCUMENT_UPLOADED", "DOCUMENT_RETRIED", "DOCUMENT_WITHDRAWN", "DOCUMENT_RESTORED", "DOCUMENT_SUPERSEDED", "DOCUMENT_SUPERSEDED_CLEARED", "DOCUMENT_CASE_MARK_CHANGED", "DOCUMENTS_CASE_MARK_CHANGED", "DOCUMENT_ORIGINAL_DOWNLOADED", "DOCUMENT_TOPIC_ADDED", "DOCUMENT_TOPIC_REMOVED", "DOCUMENT_RETAGGED", "TOPIC_CREATED", "TOPIC_UPDATED", "TOPIC_DELETED", "CARD_APPROVED", "CARD_CORRECTED", "CARD_REJECTED", "CASE_FILE_DOCUMENTS_ADDED", "CASE_FILE_DOCUMENT_REMOVED", "INTAKE_STARTED", "INTAKE_UPLOAD_CLOSED", "INTAKE_PROJECT_LIST_IMPORTED", "INTAKE_PROJECTS_DECIDED", "INTAKE_PROJECT_LIST_CLOSED", "INTAKE_PROPOSALS_CONFIRMED", "INTAKE_PROPOSAL_DECIDED", "INTAKE_DOCUMENT_DISCARDED", "INTAKE_DOCUMENT_PLACED", "CARD_SAVED", "UPLOAD_LINK_ISSUED", "ORIGINAL_LINK_ISSUED", "ACTIVITY_EXPORTED", "CHAT_ENABLED", "CHAT_DISABLED", "ADMIN_CHAT_KEY_ISSUED", "ADMIN_CHAT_KEY_REVOKED", "CHAT_QUERY" ]
           }
         }, {
           "name" : "actorUserId",
@@ -3464,7 +3508,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "AUDIT_ENABLED", "AUDIT_DISABLED", "AUDIT_SETTINGS_UPDATED", "REAUTHENTICATION_FAILED", "LOGIN_SUCCEEDED", "LOGIN_FAILED", "LOGOUT", "INSTALLATION_SET_UP", "ADMIN_PASSWORD_RECOVERED", "COMPANY_CREATED", "COMPANY_UPDATED", "COMPANY_CAPABILITIES_CHANGED", "GROUP_ADMIN_ADDED", "GROUP_ADMIN_REVOKED", "MEMBER_ADDED", "MEMBER_UPDATED", "MEMBER_REMOVED", "USER_UPDATED", "USER_DELETED", "PASSWORD_CHANGED", "ACCESS_KEY_ISSUED", "ACCESS_KEY_REVOKED", "PROJECT_CREATED", "PROJECT_UPDATED", "PROJECT_DELETED", "PROJECT_MEMBER_ADDED", "PROJECT_MEMBER_REMOVED", "DOCUMENT_UPLOADED", "DOCUMENT_RETRIED", "DOCUMENT_WITHDRAWN", "DOCUMENT_RESTORED", "DOCUMENT_SUPERSEDED", "DOCUMENT_SUPERSEDED_CLEARED", "DOCUMENT_CASE_MARK_CHANGED", "DOCUMENTS_CASE_MARK_CHANGED", "DOCUMENT_ORIGINAL_DOWNLOADED", "DOCUMENT_TOPIC_ADDED", "DOCUMENT_TOPIC_REMOVED", "DOCUMENT_RETAGGED", "TOPIC_CREATED", "TOPIC_UPDATED", "TOPIC_DELETED", "CARD_APPROVED", "CARD_CORRECTED", "CARD_REJECTED", "CASE_FILE_DOCUMENTS_ADDED", "CASE_FILE_DOCUMENT_REMOVED", "INTAKE_STARTED", "INTAKE_UPLOAD_CLOSED", "INTAKE_PROJECT_LIST_IMPORTED", "INTAKE_PROJECTS_DECIDED", "INTAKE_PROJECT_LIST_CLOSED", "INTAKE_PROPOSALS_CONFIRMED", "INTAKE_PROPOSAL_DECIDED", "INTAKE_DOCUMENT_DISCARDED", "INTAKE_DOCUMENT_PLACED", "CARD_SAVED", "UPLOAD_LINK_ISSUED", "ORIGINAL_LINK_ISSUED", "ACTIVITY_EXPORTED" ]
+            "enum" : [ "AUDIT_ENABLED", "AUDIT_DISABLED", "AUDIT_SETTINGS_UPDATED", "REAUTHENTICATION_FAILED", "LOGIN_SUCCEEDED", "LOGIN_FAILED", "LOGOUT", "INSTALLATION_SET_UP", "ADMIN_PASSWORD_RECOVERED", "COMPANY_CREATED", "COMPANY_UPDATED", "COMPANY_CAPABILITIES_CHANGED", "GROUP_ADMIN_ADDED", "GROUP_ADMIN_REVOKED", "MEMBER_ADDED", "MEMBER_UPDATED", "MEMBER_REMOVED", "USER_UPDATED", "USER_DELETED", "PASSWORD_CHANGED", "ACCESS_KEY_ISSUED", "ACCESS_KEY_REVOKED", "PROJECT_CREATED", "PROJECT_UPDATED", "PROJECT_DELETED", "PROJECT_MEMBER_ADDED", "PROJECT_MEMBER_REMOVED", "DOCUMENT_UPLOADED", "DOCUMENT_RETRIED", "DOCUMENT_WITHDRAWN", "DOCUMENT_RESTORED", "DOCUMENT_SUPERSEDED", "DOCUMENT_SUPERSEDED_CLEARED", "DOCUMENT_CASE_MARK_CHANGED", "DOCUMENTS_CASE_MARK_CHANGED", "DOCUMENT_ORIGINAL_DOWNLOADED", "DOCUMENT_TOPIC_ADDED", "DOCUMENT_TOPIC_REMOVED", "DOCUMENT_RETAGGED", "TOPIC_CREATED", "TOPIC_UPDATED", "TOPIC_DELETED", "CARD_APPROVED", "CARD_CORRECTED", "CARD_REJECTED", "CASE_FILE_DOCUMENTS_ADDED", "CASE_FILE_DOCUMENT_REMOVED", "INTAKE_STARTED", "INTAKE_UPLOAD_CLOSED", "INTAKE_PROJECT_LIST_IMPORTED", "INTAKE_PROJECTS_DECIDED", "INTAKE_PROJECT_LIST_CLOSED", "INTAKE_PROPOSALS_CONFIRMED", "INTAKE_PROPOSAL_DECIDED", "INTAKE_DOCUMENT_DISCARDED", "INTAKE_DOCUMENT_PLACED", "CARD_SAVED", "UPLOAD_LINK_ISSUED", "ORIGINAL_LINK_ISSUED", "ACTIVITY_EXPORTED", "CHAT_ENABLED", "CHAT_DISABLED", "ADMIN_CHAT_KEY_ISSUED", "ADMIN_CHAT_KEY_REVOKED", "CHAT_QUERY" ]
           }
         }, {
           "name" : "actorUserId",
@@ -3498,6 +3542,96 @@
               "application/json" : {
                 "schema" : {
                   "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/activity" : {
+      "get" : {
+        "tags" : [ "chat-activity-controller" ],
+        "operationId" : "activity",
+        "parameters" : [ {
+          "name" : "from",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "companyId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "projectId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "action",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "AUDIT_ENABLED", "AUDIT_DISABLED", "AUDIT_SETTINGS_UPDATED", "REAUTHENTICATION_FAILED", "LOGIN_SUCCEEDED", "LOGIN_FAILED", "LOGOUT", "INSTALLATION_SET_UP", "ADMIN_PASSWORD_RECOVERED", "COMPANY_CREATED", "COMPANY_UPDATED", "COMPANY_CAPABILITIES_CHANGED", "GROUP_ADMIN_ADDED", "GROUP_ADMIN_REVOKED", "MEMBER_ADDED", "MEMBER_UPDATED", "MEMBER_REMOVED", "USER_UPDATED", "USER_DELETED", "PASSWORD_CHANGED", "ACCESS_KEY_ISSUED", "ACCESS_KEY_REVOKED", "PROJECT_CREATED", "PROJECT_UPDATED", "PROJECT_DELETED", "PROJECT_MEMBER_ADDED", "PROJECT_MEMBER_REMOVED", "DOCUMENT_UPLOADED", "DOCUMENT_RETRIED", "DOCUMENT_WITHDRAWN", "DOCUMENT_RESTORED", "DOCUMENT_SUPERSEDED", "DOCUMENT_SUPERSEDED_CLEARED", "DOCUMENT_CASE_MARK_CHANGED", "DOCUMENTS_CASE_MARK_CHANGED", "DOCUMENT_ORIGINAL_DOWNLOADED", "DOCUMENT_TOPIC_ADDED", "DOCUMENT_TOPIC_REMOVED", "DOCUMENT_RETAGGED", "TOPIC_CREATED", "TOPIC_UPDATED", "TOPIC_DELETED", "CARD_APPROVED", "CARD_CORRECTED", "CARD_REJECTED", "CASE_FILE_DOCUMENTS_ADDED", "CASE_FILE_DOCUMENT_REMOVED", "INTAKE_STARTED", "INTAKE_UPLOAD_CLOSED", "INTAKE_PROJECT_LIST_IMPORTED", "INTAKE_PROJECTS_DECIDED", "INTAKE_PROJECT_LIST_CLOSED", "INTAKE_PROPOSALS_CONFIRMED", "INTAKE_PROPOSAL_DECIDED", "INTAKE_DOCUMENT_DISCARDED", "INTAKE_DOCUMENT_PLACED", "CARD_SAVED", "UPLOAD_LINK_ISSUED", "ORIGINAL_LINK_ISSUED", "ACTIVITY_EXPORTED", "CHAT_ENABLED", "CHAT_DISABLED", "ADMIN_CHAT_KEY_ISSUED", "ADMIN_CHAT_KEY_REVOKED", "CHAT_QUERY" ]
+          }
+        }, {
+          "name" : "actorUserId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "channel",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "PANEL", "API", "CHAT", "CHAT_ADMIN", "SCRIPT", "SYSTEM" ]
+          }
+        }, {
+          "name" : "outcome",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "DONE", "DENIED", "FAILED" ]
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivityPageView"
                 }
               }
             }
@@ -3595,6 +3729,26 @@
           }
         }, {
           "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/activity-keys/{keyId}" : {
+      "delete" : {
+        "tags" : [ "activity-key-controller" ],
+        "operationId" : "revoke_2",
+        "parameters" : [ {
+          "name" : "keyId",
           "in" : "path",
           "required" : true,
           "schema" : {
@@ -4883,6 +5037,41 @@
         },
         "required" : [ "matches" ]
       },
+      "IssueActivityKey" : {
+        "type" : "object",
+        "properties" : {
+          "password" : {
+            "type" : "string",
+            "description" : "La contraseña actual del administrador."
+          },
+          "companyId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid",
+            "description" : "Empresa de la clave. Ausente para el administrador del grupo; el de empresa puede omitirla si administra una sola."
+          }
+        }
+      },
+      "IssuedActivityKeyView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string",
+            "description" : "Se muestra una sola vez; no se guarda."
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "expiresAt", "id", "prefix", "token" ]
+      },
       "UpdateUser" : {
         "type" : "object",
         "properties" : {
@@ -4988,6 +5177,10 @@
       "Me" : {
         "type" : "object",
         "properties" : {
+          "kind" : {
+            "type" : "string",
+            "description" : "WORKER con la clave del trabajador; ADMIN_CHAT con la del administrador para el chat (sin capacidades, proyectos ni temas)."
+          },
           "userId" : {
             "type" : "string",
             "format" : "uuid"
@@ -5000,7 +5193,9 @@
             "enum" : [ "GROUP_ADMIN", "COMPANY_ADMIN", "WORKER" ]
           },
           "company" : {
-            "$ref" : "#/components/schemas/MeCompany"
+            "type" : "null",
+            "$ref" : "#/components/schemas/MeCompany",
+            "description" : "Nulo con una clave de ámbito de grupo."
           },
           "projects" : {
             "type" : "array",
@@ -5018,7 +5213,7 @@
             "$ref" : "#/components/schemas/MeTagging"
           }
         },
-        "required" : [ "company", "displayName", "projects", "role", "tagging", "topics", "userId" ]
+        "required" : [ "displayName", "kind", "projects", "role", "tagging", "topics", "userId" ]
       },
       "MeCompany" : {
         "type" : "object",
@@ -6084,6 +6279,44 @@
           }
         },
         "required" : [ "intact", "logEnabled" ]
+      },
+      "ActivityKeyView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "createdAt", "expiresAt", "id", "prefix" ]
+      },
+      "ActivityKeysView" : {
+        "type" : "object",
+        "properties" : {
+          "chatAvailable" : {
+            "type" : "boolean",
+            "description" : "El registro y la consulta desde el chat están encendidos."
+          },
+          "key" : {
+            "$ref" : "#/components/schemas/ActivityKeyView"
+          }
+        },
+        "required" : [ "chatAvailable" ]
       }
     }
   }

@@ -6,6 +6,7 @@ import com.e2d.odin.domain.shared.DomainException;
 import com.e2d.odin.domain.shared.ForbiddenException;
 import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.PayloadTooLargeException;
+import com.e2d.odin.domain.shared.TooManyRequestsException;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UnsupportedFormatException;
 import com.e2d.odin.domain.shared.ValidationException;
@@ -47,6 +48,7 @@ public class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
             case UnauthorizedException e -> HttpStatus.UNAUTHORIZED;
             case ValidationException e -> HttpStatus.BAD_REQUEST;
             case ConflictException e -> HttpStatus.CONFLICT;
+            case TooManyRequestsException e -> HttpStatus.TOO_MANY_REQUESTS;
             case UnsupportedFormatException e -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
             case PayloadTooLargeException e -> HttpStatus.PAYLOAD_TOO_LARGE;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;

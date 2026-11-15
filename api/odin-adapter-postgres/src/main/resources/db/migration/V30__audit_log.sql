@@ -166,3 +166,19 @@ GRANT EXECUTE ON FUNCTION audit_append(uuid, uuid, text, uuid, text, text, text,
 
 -- La consulta del panel ordena siempre por fecha e id.
 CREATE INDEX audit_event_time_idx ON audit_event (occurred_at DESC, id DESC);
+
+-- La clave del administrador para leer el registro desde su chat. Se resuelve antes de que haya ámbito (como
+-- access_key), así que no lleva RLS: el servidor comprueba en cada llamada que la persona sigue administrando su ámbito.
+CREATE TABLE admin_chat_key (
+    id         uuid PRIMARY KEY,
+    user_id    uuid NOT NULL REFERENCES app_user (id),
+    company_id uuid REFERENCES company (id),
+    prefix     text NOT NULL UNIQUE,
+    token_hash text NOT NULL,
+    created_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL,
+    revoked_at timestamptz
+);
+CREATE INDEX admin_chat_key_user_idx ON admin_chat_key (user_id) WHERE revoked_at IS NULL;
+REVOKE ALL ON admin_chat_key FROM PUBLIC, odin_app;
+GRANT SELECT, INSERT, UPDATE ON admin_chat_key TO odin_app;

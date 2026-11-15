@@ -1,5 +1,6 @@
 package com.e2d.odin.adapter.web.security;
 
+import com.e2d.odin.application.identity.AdminChatToken;
 import com.e2d.odin.application.port.AuditContext.AuditRequest;
 import com.e2d.odin.domain.audit.AuditChannel;
 import jakarta.servlet.FilterChain;
@@ -32,13 +33,17 @@ public class AuditContextFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String agent = request.getHeader(HttpHeaders.USER_AGENT);
-        request.setAttribute(ATTRIBUTE, new AuditRequest(channel(request.getRequestURI()),
+        request.setAttribute(ATTRIBUTE, new AuditRequest(channel(request.getRequestURI(), ActorResolutionFilter.bearer(request)),
                 Optional.of(UUID.randomUUID().toString()), Optional.of(addresses.of(request)),
                 Optional.ofNullable(agent).map(a -> a.length() > MAX_AGENT ? a.substring(0, MAX_AGENT) : a)));
         chain.doFilter(request, response);
     }
 
-    static AuditChannel channel(String path) {
+    /** Por el tipo de credencial: la clave de administrador del chat solo cuenta en sus rutas. */
+    static AuditChannel channel(String path, String bearer) {
+        if (ChatRoutes.accepts(path) && AdminChatToken.isAdminChatToken(bearer)) {
+            return AuditChannel.CHAT_ADMIN;
+        }
         if (path.startsWith("/v1/admin")) {
             return AuditChannel.PANEL;
         }
