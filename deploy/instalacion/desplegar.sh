@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Despliegue conjunto en la instalación (D-056, D-082): copia, código de integracion/instalacion, lector y etiquetado,
+# Despliegue conjunto en la instalación (D-056, D-082): copia, código de develop (D-114), lector y etiquetado,
 # instalación vacía, archivo ficticio completo con expedientes, recuento y conector de Claude Desktop.
 # Sin CONFIRMAR=DESPLEGAR solo explica qué haría. Si algo falla después de tocar la instalación, vuelve a la copia.
 # MODO=actualizar (make instalacion-actualizar CONFIRMAR=ACTUALIZAR) solo cambia el código: conserva la base y los
@@ -9,7 +9,7 @@
 set -euo pipefail
 AQUI=$(cd "$(dirname "$0")" && pwd)
 . "$AQUI/comun.sh"
-RAMA="${RAMA:-integracion/instalacion}"
+RAMA="${RAMA:-develop}"
 TRABAJADOR="${TRABAJADOR:-marta}"
 CONSTRUIR="${CONSTRUIR:-si}"
 MODO="${MODO:-cargar}"

@@ -228,7 +228,7 @@ def main(argv):
     m, expedientes = leer(carpeta)
     fallos = problemas(m, expedientes, carpeta, int(entorno.get("ODIN_UPLOAD_MAX_BYTES", 52428800)))
     if expedientes and importlib.util.find_spec("cargar_expedientes") is None:
-        fallos.append("hay expedientes y falta su cargador (encargo 13): lanza la orden desde integracion/instalacion")
+        fallos.append("hay expedientes y falta su cargador (encargo 13): lanza la orden desde develop")
     if fallos:
         raise SystemExit("Los datos no se pueden cargar. No se ha cambiado nada.\n- " + "\n- ".join(fallos))
     api, cred = dp.conectar(entorno), dp.leer_json(dp.CREDENCIALES / "credenciales.local.json")
