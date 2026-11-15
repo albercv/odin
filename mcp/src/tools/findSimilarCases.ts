@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ApiClient, SimilarCasesResponse } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
+import type { ProjectTerms } from '../terms.js';
 import { guarded, jsonResult, textResult } from './result.js';
 
 const NO_CASES_MESSAGE = 'No constan casos parecidos en los documentos de tu empresa.';
@@ -19,14 +20,14 @@ const DESCRIPTION =
   'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes ver cuál). ' +
   'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.';
 
-export function registerFindSimilarCases(server: McpServer, api: ApiClient, projects: ProjectNames): void {
+export function registerFindSimilarCases(server: McpServer, api: ApiClient, projects: ProjectNames, t: ProjectTerms): void {
   server.registerTool(
     'findSimilarCases',
     {
       description: DESCRIPTION,
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Términos del problema y sus reformulaciones, sin nombres de personas'),
-        projectId: z.string().optional().describe('Limita los casos a un proyecto; también incluye lo que no tiene proyecto'),
+        projectId: z.string().optional().describe(`Limita los casos a ${t.one}; también incluye lo que no tiene ${t.singular}`),
         limit: z.number().int().positive().optional().describe('Máximo de casos'),
       },
     },

@@ -15,6 +15,7 @@ import { EditForm, ResetPasswordForm, RolesForm } from './MemberEditors';
 import { MemberForm } from './MemberForm';
 import { Notice } from './Notice';
 import { confirmDeactivatePerson, confirmDeletePerson } from './personConfirmations';
+import { useProjectTerms } from './projectTerms';
 import { useAction, useLoad } from './useLoad';
 import { includesText, usePagedList } from './usePagedList';
 import styles from './Members.module.css';
@@ -48,13 +49,14 @@ function MemberPanel({ companyId, u, isGroup, panel, onDone, onReset, onProjects
 
 function useRemovals(companyId: string, u: Member, onRemoved: RowProps['onRemoved'], act: ReturnType<typeof useAction>['act']) {
   const confirm = useConfirm();
+  const t = useProjectTerms();
   const remove = async () => {
-    const message = `¿Quitar a ${u.displayName} de esta empresa? Sus claves y sus proyectos de esta empresa dejarán de valer.`;
+    const message = `¿Quitar a ${u.displayName} de esta empresa? Sus claves y sus ${t.many} de esta empresa dejarán de valer.`;
     if (!(await confirm({ message, confirmLabel: 'Quitar', danger: true }))) return;
     if (await act(() => api.removeMember(companyId, u.userId))) onRemoved(`Se ha quitado a ${u.displayName} de esta empresa`);
   };
   const erase = async () => {
-    const message = confirmDeletePerson(u.displayName);
+    const message = confirmDeletePerson(u.displayName, t);
     if (!(await confirm({ message, confirmLabel: 'Borrar', danger: true }))) return;
     if (await act(() => api.deleteUser(u.userId))) onRemoved(`Se ha borrado a ${u.displayName}`);
   };
@@ -64,9 +66,10 @@ function useRemovals(companyId: string, u: Member, onRemoved: RowProps['onRemove
 /** Deactivating a person affects the whole group, so it asks first; reactivating does not. */
 function useGroupToggle(u: Member, act: ReturnType<typeof useAction>['act'], onChanged: () => void) {
   const confirm = useConfirm();
+  const t = useProjectTerms();
   return async () => {
     if (u.personActive) {
-      const message = confirmDeactivatePerson(u.displayName);
+      const message = confirmDeactivatePerson(u.displayName, t);
       if (!(await confirm({ message, confirmLabel: 'Desactivar', danger: true }))) return;
     }
     if (await act(() => api.updateUser(u.userId, { active: !u.personActive }))) onChanged();

@@ -2,12 +2,13 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ApiClient, Hit } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
+import { noProject, type ProjectTerms } from '../terms.js';
 import { NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
 
-const DESCRIPTION =
+const description = (t: ProjectTerms) =>
   'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
   'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
-  'projectName es el proyecto: una de las unidades con las que la empresa organiza su trabajo en Odín; «Sin proyecto (general de la empresa)» si no es de ningún proyecto y lo ve toda la empresa. ' +
+  `projectName es ${t.the} ${t.singular}: una de las unidades con las que la empresa organiza su trabajo en Odín; «${noProject(t)}» si no es de ${t.none} ${t.singular} y lo ve toda la empresa. ` +
   'addedAt es la fecha en que entró en Odín, no la del documento. ' +
   'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
   'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +
@@ -21,14 +22,14 @@ const DESCRIPTION =
 const CASE_FILE_HINT =
   ' caseDocument true marca el documento ficha de un caso: si la pregunta trata de un caso o de un expediente, llama a getCaseFile con ese documentId como caseId antes de responder.';
 
-export function registerSearchKnowledge(server: McpServer, api: ApiClient, projects: ProjectNames, caseFiles: boolean): void {
+export function registerSearchKnowledge(server: McpServer, api: ApiClient, projects: ProjectNames, caseFiles: boolean, t: ProjectTerms): void {
   server.registerTool(
     'searchKnowledge',
     {
-      description: caseFiles ? DESCRIPTION + CASE_FILE_HINT : DESCRIPTION,
+      description: caseFiles ? description(t) + CASE_FILE_HINT : description(t),
       inputSchema: {
         queries: z.array(z.string()).min(1).describe('Consultas de búsqueda, con palabras clave'),
-        projectId: z.string().optional().describe('Limita la búsqueda a un proyecto; también incluye lo que no tiene proyecto'),
+        projectId: z.string().optional().describe(`Limita la búsqueda a ${t.one}; también incluye lo que no tiene ${t.singular}`),
         caseId: z.string().optional().describe('Busca solo dentro de los documentos del expediente de este caso'),
         limit: z.number().int().positive().optional().describe('Máximo de resultados'),
       },

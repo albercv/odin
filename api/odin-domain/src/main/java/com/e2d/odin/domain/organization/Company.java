@@ -6,12 +6,17 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /** {@code codeReviewed} es falso en las empresas migradas: su código salió de las iniciales y falta revisarlo. */
-public record Company(CompanyId id, String name, String code, Set<Capability> capabilities, boolean codeReviewed) {
+public record Company(CompanyId id, String name, String code, Set<Capability> capabilities, boolean codeReviewed,
+        ProjectLabel projectLabel) {
 
     private static final Pattern VALID_CODE = Pattern.compile("[A-Z0-9]{2,6}");
 
     public Company(CompanyId id, String name, String code, Set<Capability> capabilities) {
-        this(id, name, code, capabilities, true);
+        this(id, name, code, capabilities, true, ProjectLabel.DEFAULT);
+    }
+
+    public Company(CompanyId id, String name, String code, Set<Capability> capabilities, boolean codeReviewed) {
+        this(id, name, code, capabilities, codeReviewed, ProjectLabel.DEFAULT);
     }
 
     public Company {
@@ -22,18 +27,22 @@ public record Company(CompanyId id, String name, String code, Set<Capability> ca
     }
 
     public Company withName(String newName) {
-        return new Company(id, newName, code, capabilities, codeReviewed);
+        return new Company(id, newName, code, capabilities, codeReviewed, projectLabel);
     }
 
     public Company withCode(String newCode) {
-        return new Company(id, name, newCode, capabilities, codeReviewed);
+        return new Company(id, name, newCode, capabilities, codeReviewed, projectLabel);
     }
 
     public Company withCapabilities(Set<Capability> newCapabilities) {
-        return new Company(id, name, code, newCapabilities, codeReviewed);
+        return new Company(id, name, code, newCapabilities, codeReviewed, projectLabel);
+    }
+
+    public Company withProjectLabel(ProjectLabel newLabel) {
+        return new Company(id, name, code, capabilities, codeReviewed, newLabel);
     }
 
     public Company withCodeReviewed(boolean reviewed) {
-        return new Company(id, name, code, capabilities, reviewed);
+        return new Company(id, name, code, capabilities, reviewed, projectLabel);
     }
 }

@@ -5,14 +5,16 @@ import { Field } from '../ui/Field';
 import form from '../ui/Form.module.css';
 import { FormDialog } from '../ui/FormDialog';
 import { Notice } from './Notice';
+import { useProjectTerms } from './projectTerms';
 import { useAction, useLoad } from './useLoad';
 
 type Props = { companyId: string; caseId: string; projectId?: string; inFile: Set<string>; onClose: () => void; onDone: () => void };
 
 function Candidates({ candidates, chosen, onToggle }: { candidates: S['DocumentView'][]; chosen: string[]; onToggle: (id: string) => void }) {
+  const t = useProjectTerms();
   return (
     <fieldset className={form.group}>
-      <legend>Documentos del proyecto y generales</legend>
+      <legend>Documentos {t.agree('del', 'de la')} {t.one} y generales</legend>
       {candidates.length === 0 && <p className={form.hint}>Ningún documento coincide.</p>}
       {candidates.map((d) => (
         <label key={d.id} className={form.check}>

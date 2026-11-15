@@ -3513,9 +3513,27 @@
           },
           "codeReviewed" : {
             "type" : "boolean"
+          },
+          "projectLabel" : {
+            "$ref" : "#/components/schemas/ProjectLabelView"
           }
         },
-        "required" : [ "capabilities", "code", "codeReviewed", "id", "name" ]
+        "required" : [ "capabilities", "code", "codeReviewed", "id", "name", "projectLabel" ]
+      },
+      "ProjectLabelView" : {
+        "type" : "object",
+        "properties" : {
+          "singular" : {
+            "type" : "string"
+          },
+          "plural" : {
+            "type" : "string"
+          },
+          "feminine" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "feminine", "plural", "singular" ]
       },
       "UploadReceipt" : {
         "type" : "object",
@@ -4583,6 +4601,20 @@
         },
         "required" : [ "caseDocument" ]
       },
+      "ProjectLabelBody" : {
+        "type" : "object",
+        "properties" : {
+          "singular" : {
+            "type" : "string"
+          },
+          "plural" : {
+            "type" : "string"
+          },
+          "feminine" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "UpdateCompany" : {
         "type" : "object",
         "properties" : {
@@ -4592,6 +4624,10 @@
           "code" : {
             "type" : "string",
             "description" : "Solo lo cambia el administrador del grupo."
+          },
+          "projectLabel" : {
+            "$ref" : "#/components/schemas/ProjectLabelBody",
+            "description" : "Cómo llama la empresa a sus proyectos; si no se envía, no cambia."
           }
         }
       },
@@ -4650,12 +4686,15 @@
           "projectName" : {
             "type" : "string"
           },
+          "projectLabel" : {
+            "$ref" : "#/components/schemas/ProjectLabelView"
+          },
           "expiresAt" : {
             "type" : "string",
             "format" : "date-time"
           }
         },
-        "required" : [ "expiresAt", "projectName", "target" ]
+        "required" : [ "expiresAt", "projectLabel", "projectName", "target" ]
       },
       "Me" : {
         "type" : "object",
@@ -4709,9 +4748,12 @@
               "enum" : [ "SEARCH_KNOWLEDGE", "SAVE_KNOWLEDGE_CARD", "SIMILAR_CASES", "CASE_FILES", "UPLOAD_DOCUMENTS" ]
             },
             "uniqueItems" : true
+          },
+          "projectLabel" : {
+            "$ref" : "#/components/schemas/ProjectLabelView"
           }
         },
-        "required" : [ "capabilities", "id", "name" ]
+        "required" : [ "capabilities", "id", "name", "projectLabel" ]
       },
       "MeProject" : {
         "type" : "object",
@@ -5094,9 +5136,12 @@
           },
           "codeReviewed" : {
             "type" : "boolean"
+          },
+          "projectLabel" : {
+            "$ref" : "#/components/schemas/ProjectLabelView"
           }
         },
-        "required" : [ "code", "codeReviewed", "id", "name" ]
+        "required" : [ "code", "codeReviewed", "id", "name", "projectLabel" ]
       },
       "DocumentTopicView" : {
         "type" : "object",

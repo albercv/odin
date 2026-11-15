@@ -7,6 +7,7 @@ import { useToast } from '../ui/Toast';
 import { Notice } from './Notice';
 import { RolesFields, rolesOf, type RoleChoice } from './RolesFields';
 import { useAction, useLoad } from './useLoad';
+import { useProjectTerms } from './projectTerms';
 import { widelyVisible } from './widelyVisible';
 
 const NO_ROLE = 'Elige al menos un papel';
@@ -27,19 +28,20 @@ function bodyOf(draft: Draft, choice: RoleChoice): S['AddMember'] {
 /** Only closed projects need choosing; the company-wide ones are seen anyway. */
 function ProjectChoices({ companyId, chosen, onChange }: { companyId: string; chosen: string[]; onChange: (ids: string[]) => void }) {
   const projects = useLoad(() => api.projects(companyId), [companyId]);
+  const t = useProjectTerms();
   const closed = projects.data?.filter((p) => p.restricted) ?? [];
   const wide = (projects.data?.length ?? 0) - closed.length;
   if (closed.length === 0 && wide === 0) return null;
   const toggle = (id: string) => onChange(chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id]);
   return (
     <fieldset className={form.group}>
-      <legend>Proyectos a los que accede</legend>
+      <legend>{t.Many} a {t.agree('los', 'las')} que accede</legend>
       {closed.map((p) => (
         <label key={p.id} className={form.check}>
           <input type="checkbox" checked={chosen.includes(p.id)} onChange={() => toggle(p.id)} />{p.name}
         </label>
       ))}
-      {wide > 0 && <p className={form.hint}>{widelyVisible(wide, 'verá')}</p>}
+      {wide > 0 && <p className={form.hint}>{widelyVisible(wide, 'verá', t)}</p>}
     </fieldset>
   );
 }

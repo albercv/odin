@@ -2,7 +2,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createApiClient } from '../src/api/client.js';
-import { buildServer, INSTRUCTIONS } from '../src/server.js';
+import { buildServer, instructions } from '../src/server.js';
+import { DEFAULT_TERMS } from '../src/terms.js';
 import { meWith, startFakeApi, type FakeApi } from './fakeApi.js';
 
 let fake: FakeApi;
@@ -15,7 +16,7 @@ async function descriptions() {
   const client = new Client({ name: 'test', version: '1' });
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
   const tools = (await client.listTools()).tools;
-  return { tools, texts: [INSTRUCTIONS, ...tools.map((t) => t.description ?? '')] };
+  return { tools, texts: [instructions(DEFAULT_TERMS), ...tools.map((t) => t.description ?? '')] };
 }
 
 describe('conector neutro (D-084)', () => {
@@ -51,7 +52,7 @@ describe('conector neutro (D-084)', () => {
     }
   });
 
-  it('INSTRUCTIONS cabe en 2.200 caracteres', () => {
-    expect(INSTRUCTIONS.length).toBeLessThanOrEqual(2200);
+  it('instructions(DEFAULT_TERMS) cabe en 2.200 caracteres', () => {
+    expect(instructions(DEFAULT_TERMS).length).toBeLessThanOrEqual(2200);
   });
 });
