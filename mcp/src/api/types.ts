@@ -708,6 +708,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/activity-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["current"];
+        put?: never;
+        post: operations["issue_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/users/{userId}": {
         parameters: {
             query?: never;
@@ -1284,6 +1300,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cases/{caseId}/file/documents/{documentId}": {
         parameters: {
             query?: never;
@@ -1343,6 +1375,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["remove_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity-keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1851,6 +1899,24 @@ export interface components {
         SealCheckView: {
             matches: boolean;
         };
+        IssueActivityKey: {
+            /** @description La contraseña actual del administrador. */
+            password?: string;
+            /**
+             * Format: uuid
+             * @description Empresa de la clave. Ausente para el administrador del grupo; el de empresa puede omitirla si administra una sola.
+             */
+            companyId?: string | null;
+        };
+        IssuedActivityKeyView: {
+            /** Format: uuid */
+            id: string;
+            prefix: string;
+            /** @description Se muestra una sola vez; no se guarda. */
+            token: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         UpdateUser: {
             firstName?: string;
             lastName?: string;
@@ -1890,12 +1956,15 @@ export interface components {
             expiresAt: string;
         };
         Me: {
+            /** @description WORKER con la clave del trabajador; ADMIN_CHAT con la del administrador para el chat (sin capacidades, proyectos ni temas). */
+            kind: string;
             /** Format: uuid */
             userId: string;
             displayName: string;
             /** @enum {string} */
             role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
-            company: components["schemas"]["MeCompany"];
+            /** @description Nulo con una clave de ámbito de grupo. */
+            company?: components["schemas"]["MeCompany"];
             projects: components["schemas"]["MeProject"][];
             topics: components["schemas"]["TopicView"][];
             tagging: components["schemas"]["MeTagging"];
@@ -2300,6 +2369,22 @@ export interface components {
             headHash?: string;
             /** Format: date-time */
             headAt?: string;
+        };
+        ActivityKeyView: {
+            /** Format: uuid */
+            id: string;
+            prefix: string;
+            /** Format: uuid */
+            companyId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        ActivityKeysView: {
+            /** @description El registro y la consulta desde el chat están encendidos. */
+            chatAvailable: boolean;
+            key?: components["schemas"]["ActivityKeyView"];
         };
     };
     responses: never;
@@ -3758,6 +3843,50 @@ export interface operations {
             };
         };
     };
+    current: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityKeysView"];
+                };
+            };
+        };
+    };
+    issue_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActivityKey"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedActivityKeyView"];
+                };
+            };
+        };
+    };
     delete: {
         parameters: {
             query?: never;
@@ -4652,7 +4781,7 @@ export interface operations {
                 to?: string;
                 companyId?: string;
                 projectId?: string;
-                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED";
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
                 actorUserId?: string;
                 channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
                 outcome?: "DONE" | "DENIED" | "FAILED";
@@ -4702,7 +4831,7 @@ export interface operations {
                 to?: string;
                 companyId?: string;
                 projectId?: string;
-                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED";
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
                 actorUserId?: string;
                 channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
                 outcome?: "DONE" | "DENIED" | "FAILED";
@@ -4720,6 +4849,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": string;
+                };
+            };
+        };
+    };
+    activity: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                companyId?: string;
+                projectId?: string;
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
+                actorUserId?: string;
+                channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
+                outcome?: "DONE" | "DENIED" | "FAILED";
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPageView"];
                 };
             };
         };
@@ -4793,6 +4952,26 @@ export interface operations {
                 companyId: string;
                 caseId: string;
                 documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
             };
             cookie?: never;
         };
