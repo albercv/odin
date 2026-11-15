@@ -16,6 +16,7 @@ check:
 	cd panel && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm test && npm run build
 	python3 -m unittest discover -s deploy/instalacion -p 'test_*.py'
 	python3 -m unittest discover -s experimentos/2026-11-13-primera-carga/parte_c -p 'test_*.py'
+	python3 -m unittest discover -s experimentos/2026-11-15-primera-carga-escala -p 'test_*.py'
 
 COMPOSE = docker compose -f deploy/compose.yaml --env-file deploy/.env
 
