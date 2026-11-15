@@ -26,6 +26,10 @@ public final class Requests {
             @Schema(description = "La contraseña actual del administrador, para volver a identificarse.") String password) {
     }
 
+    public record SealCheck(@Schema(description = "El id de la cabeza guardada como sello.") long id,
+            @Schema(description = "La huella de ese eslabón guardada como sello.") String hash) {
+    }
+
     public record Login(String email, String password) {
     }
 

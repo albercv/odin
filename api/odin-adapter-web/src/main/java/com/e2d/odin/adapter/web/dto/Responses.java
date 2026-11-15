@@ -187,6 +187,27 @@ public final class Responses {
         }
     }
 
+    public record ActivityRowView(long id, Instant occurredAt, @Nullable UUID companyId, @Nullable UUID projectId,
+            String actorKind, @Nullable UUID actorUserId,
+            @Schema(description = "Nombre en el momento de actuar; 'Persona suprimida' si la persona ya no consta.",
+                    nullable = true) @Nullable String actorName,
+            @Nullable String actorRole, String channel, @Nullable String via, String action,
+            @Nullable String targetKind, @Nullable String targetId, @Nullable String targetLabel, String outcome,
+            Map<String, Object> details) {
+    }
+
+    public record ActivityPageView(List<ActivityRowView> items,
+            @Schema(description = "Pásalo como cursor para la página siguiente; nulo si no hay más.", nullable = true)
+            @Nullable String nextCursor) {
+    }
+
+    public record ActivityIntegrityView(boolean logEnabled, boolean intact, @Nullable Long firstBrokenId,
+            @Nullable Long headId, @Nullable String headHash, @Nullable Instant headAt) {
+    }
+
+    public record SealCheckView(boolean matches) {
+    }
+
     public record GroupAdminAdded(GroupAdminView admin, boolean alreadyExisted, boolean keptPassword) {
         public static GroupAdminAdded from(com.e2d.odin.application.identity.GroupAdminAdded added) {
             return new GroupAdminAdded(GroupAdminView.from(added.admin()), added.alreadyExisted(),

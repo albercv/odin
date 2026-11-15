@@ -1,6 +1,10 @@
 package com.e2d.odin.bootstrap;
 
+import com.e2d.odin.application.audit.CheckAuditSeal;
+import com.e2d.odin.application.audit.ExportAuditActivity;
+import com.e2d.odin.application.audit.GetAuditIntegrity;
 import com.e2d.odin.application.audit.GetAuditSettings;
+import com.e2d.odin.application.audit.ListAuditActivity;
 import com.e2d.odin.application.audit.UpdateAuditSettings;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.domain.topic.Topic;
@@ -112,6 +116,7 @@ import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.AdminSessions;
 import com.e2d.odin.application.port.AuditContext;
 import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.application.port.AuditReader;
 import com.e2d.odin.application.port.AuditSettingsRepository;
 import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DeliveryMeter;
@@ -441,6 +446,26 @@ public class UseCaseConfiguration {
                 transaction.executeWithoutResult(status -> super.execute(actor, companyId, userId));
             }
         };
+    }
+
+    @Bean
+    ListAuditActivity listAuditActivity(AuditReader reader) {
+        return new ListAuditActivity(reader);
+    }
+
+    @Bean
+    ExportAuditActivity exportAuditActivity(AuditReader reader, AuditLog audit) {
+        return new ExportAuditActivity(reader, audit);
+    }
+
+    @Bean
+    GetAuditIntegrity getAuditIntegrity(AuditReader reader, AuditSettingsRepository settings) {
+        return new GetAuditIntegrity(reader, settings);
+    }
+
+    @Bean
+    CheckAuditSeal checkAuditSeal(AuditReader reader) {
+        return new CheckAuditSeal(reader);
     }
 
     @Bean
