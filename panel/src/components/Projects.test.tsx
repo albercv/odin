@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, vi } from 'vitest';
 import { Projects } from './Projects';
+import { ProjectTermsContext, projectTerms } from './projectTerms';
 import { mockFetch, type Routes } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
@@ -126,4 +127,14 @@ test('creatingKeepsTheSearch', async () => {
   await waitFor(() => expect(calls.filter((c) => c.key === list)).toHaveLength(2));
   expect(screen.getByRole('searchbox', { name: 'Buscar proyectos' })).toHaveValue('sol');
   expect(bodyRows()).toHaveLength(3);
+});
+
+test('usesTheCompanyWordForProjects', async () => {
+  mockFetch({ [list]: () => [obra] });
+  const terms = projectTerms({ singular: 'comunidad', plural: 'comunidades', feminine: true });
+  renderWithProviders(<ProjectTermsContext.Provider value={terms}><Projects companyId="c1" /></ProjectTermsContext.Provider>);
+  expect(await screen.findByRole('heading', { name: 'Comunidades' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Nueva comunidad' })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'Buscar comunidades' })).toBeInTheDocument();
+  expect(screen.getByText('Una comunidad nueva nace cerrada: solo la ven sus miembros.')).toBeInTheDocument();
 });

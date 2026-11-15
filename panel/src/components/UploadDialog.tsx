@@ -6,6 +6,7 @@ import form from '../ui/Form.module.css';
 import { FormDialog } from '../ui/FormDialog';
 import { useToast } from '../ui/Toast';
 import { Notice } from './Notice';
+import { useProjectTerms } from './projectTerms';
 import { useAction, useLoad } from './useLoad';
 
 type Props = { companyId: string; open: boolean; onClose: () => void; onDone: () => void };
@@ -38,6 +39,7 @@ async function uploadFiles(companyId: string, files: File[], fields: Fields): Pr
 type FormProps = { fields: Fields; several: boolean; projects: S['ProjectView'][]; error?: string; onFiles: (files: File[]) => void; onChange: (changes: Partial<Fields>) => void; onSubmit: (e: React.FormEvent) => void };
 
 function UploadForm({ fields, several, projects, error, onFiles, onChange, onSubmit }: FormProps) {
+  const t = useProjectTerms();
   return (
     <form className={form.form} onSubmit={onSubmit}>
       <Notice message={error} />
@@ -47,9 +49,9 @@ function UploadForm({ fields, several, projects, error, onFiles, onChange, onSub
         <input type="checkbox" checked={fields.caseDocument} onChange={(e) => onChange({ caseDocument: e.target.checked })} />
         Son fichas de caso
       </label>
-      <Field label="Proyecto">
+      <Field label={t.One}>
         <select value={fields.projectId} onChange={(e) => onChange({ projectId: e.target.value })}>
-          <option value="">Sin proyecto</option>
+          <option value="">{t.noneOne}</option>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </Field>

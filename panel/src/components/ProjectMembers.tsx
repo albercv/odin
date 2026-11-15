@@ -6,6 +6,7 @@ import { RowAction } from '../ui/RowActions';
 import { useToast } from '../ui/Toast';
 import { AddPicker } from './AddPicker';
 import { Notice } from './Notice';
+import { useProjectTerms } from './projectTerms';
 import { useAction, useLoad } from './useLoad';
 import styles from './MemberAccesses.module.css';
 
@@ -26,6 +27,7 @@ type WithMembers = Props & { members: Person[]; reload: () => void };
 function VisibleToAll({ companyId, project, onChanged }: Props) {
   const { error, act } = useAction();
   const confirm = useConfirm();
+  const t = useProjectTerms();
   // The list may have changed since the panel opened (e.g. from the person's «Accesos»), so ask again before deciding.
   const freshMemberCount = async () => {
     const found: { count?: number } = {};
@@ -34,7 +36,7 @@ function VisibleToAll({ companyId, project, onChanged }: Props) {
   };
   const change = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const restricted = !e.target.checked;
-    const message = `¿Cerrar ${project.name}? Solo lo verán sus miembros, y ahora no tiene ninguno.`;
+    const message = `¿Cerrar ${project.name}? Solo ${t.agree('lo', 'la')} verán sus miembros, y ahora no tiene ${t.agree('ninguno', 'ninguna')}.`;
     const count = restricted ? await freshMemberCount() : 0;
     if (count === undefined) return;
     if (restricted && count === 0 && !(await confirm({ message, confirmLabel: 'Cerrar' }))) return;
@@ -74,6 +76,7 @@ export function ProjectMembers(props: Props) {
   const members = useLoad(() => api.projectMembers(companyId, project.id), [companyId, project.id, project.memberCount]);
   const list = useRef<HTMLUListElement>(null);
   const toast = useToast();
+  const t = useProjectTerms();
   const { error, act } = useAction();
   const reload = () => { members.reload(); onChanged(); };
   const remove = async (m: Person) => {
@@ -86,7 +89,7 @@ export function ProjectMembers(props: Props) {
     <section aria-label={`Miembros de ${project.name}`} className={styles.accesses}>
       <VisibleToAll {...props} />
       <Notice message={error ?? members.error} />
-      <ul ref={list} tabIndex={-1} aria-label="Miembros del proyecto" className={styles.list}>
+      <ul ref={list} tabIndex={-1} aria-label={`Miembros ${t.agree('del', 'de la')} ${t.one}`} className={styles.list}>
         {members.data?.map((m) => (
           <li key={m.userId} className={styles.item}>
             <span>{m.displayName}</span>

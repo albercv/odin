@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type S } from '../api/client';
 import { CardDetail } from '../components/CardDetail';
 import { Notice } from '../components/Notice';
+import { useProjectTerms } from '../components/projectTerms';
 import { useLoad } from '../components/useLoad';
 import { useServerPage } from '../components/useServerPage';
 import { Pagination } from '../ui/Pagination';
@@ -14,7 +15,7 @@ import styles from './Review.module.css';
 const LEAVE_MS = 240;
 const PAGE_SIZE = 10;
 
-type Names = { members: S['MemberView'][]; projects: S['ProjectView'][] };
+type Names = { members: S['MemberView'][]; projects: S['ProjectView'][]; none: string };
 
 type QueueProps = { cards: S['CardView'][]; names: Names; selectedId?: string; leavingId?: string; paging: Paging; onSelect: (id: string) => void };
 
@@ -26,7 +27,7 @@ function Queue({ cards, names, selectedId, leavingId, paging, onSelect }: QueueP
           <li key={c.id} className={c.id === leavingId ? styles.leaving : undefined}>
             <button type="button" aria-current={c.id === selectedId} onClick={() => onSelect(c.id)}>
               <strong>{c.title}</strong>
-              <span>{projectName(c.projectId, names.projects)}</span>
+              <span>{projectName(c.projectId, names.projects, names.none)}</span>
               <span>{authorName(c.authorId, names.members)}, {formatDate(c.createdAt)}</span>
             </button>
           </li>
@@ -71,20 +72,20 @@ function useReviewList(companyId: string, onPendingChanged?: (count: number) => 
 }
 
 function useNames(companyId: string) {
-  return { members: useLoad(() => api.members(companyId), [companyId]), projects: useLoad(() => api.projects(companyId), [companyId]) };
+  return { members: useLoad(() => api.members(companyId), [companyId]), projects: useLoad(() => api.projects(companyId), [companyId]), none: useProjectTerms().noneOne };
 }
 
 type Props = { companyId: string; onPendingChanged?: (count: number) => void };
 
 export function Review({ companyId, onPendingChanged }: Props) {
   const { list, resolvedInSearch } = useReviewList(companyId, onPendingChanged);
-  const { members, projects } = useNames(companyId);
+  const { members, projects, none } = useNames(companyId);
   const { current, leavingId, setSelected, resolve } = useResolvedCards(list.items, list.reload);
   const [resolved, setResolved] = useState(false);
   const emptyHeading = useRef<HTMLHeadingElement>(null);
   const empty = !list.loading && !list.error && !list.query && list.total === 0;
   useEffect(() => { if (resolved && empty) emptyHeading.current?.focus(); }, [resolved, empty]);
-  const names = { members: members.data ?? [], projects: projects.data ?? [] };
+  const names = { members: members.data ?? [], projects: projects.data ?? [], none };
   const paging = { page: list.page, pageCount: list.pageCount, onPage: (p: number) => { setResolved(false); list.setPage(p); } };
   return (
     <div>
@@ -98,7 +99,7 @@ export function Review({ companyId, onPendingChanged }: Props) {
           <Queue cards={list.items} names={names} selectedId={current.id} leavingId={leavingId} paging={paging} onSelect={(id) => { setResolved(false); setSelected(id); }} />
           <section className={styles.panel} aria-label="Ficha seleccionada" aria-live="polite">
             <CardDetail key={current.id} card={current} author={authorName(current.authorId, names.members)}
-              project={projectName(current.projectId, names.projects)} locked={leavingId !== undefined} focusTitle={resolved}
+              project={projectName(current.projectId, names.projects, none)} locked={leavingId !== undefined} focusTitle={resolved}
               onResolved={() => { setResolved(true); resolvedInSearch(); resolve(current.id); }} />
           </section>
         </div>

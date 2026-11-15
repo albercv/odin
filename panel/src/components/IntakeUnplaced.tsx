@@ -5,6 +5,7 @@ import { useConfirm } from '../ui/ConfirmDialog';
 import { Section } from '../ui/Section';
 import type { Step } from './IntakeCandidates';
 import { Notice } from './Notice';
+import { useProjectTerms } from './projectTerms';
 import { useAction, useLoad } from './useLoad';
 import styles from './Intake.module.css';
 
@@ -16,6 +17,7 @@ type RowProps = { doc: S['IntakeDocumentView']; original: string; projects: S['P
 
 function UnplacedRow({ doc, original, projects, place, discard }: RowProps) {
   const [projectId, setProjectId] = useState('');
+  const t = useProjectTerms();
   const { title } = doc;
   return (
     <li className={styles.row}>
@@ -23,8 +25,8 @@ function UnplacedRow({ doc, original, projects, place, discard }: RowProps) {
       {doc.path && <p className={styles.reason}>{doc.path}</p>}
       {STATUS[doc.status] && <p className={styles.reason}>{STATUS[doc.status]}</p>}
       <div className={styles.tools}>
-        <select aria-label={`Proyecto de ${title}`} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-          <option value="">Un proyecto…</option>
+        <select aria-label={`${t.One} de ${title}`} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <option value="">{t.AOne.split(' ')[0]} {t.one}…</option>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <Button variant="primary" aria-label={`Colocar ${title}`} disabled={!projectId} onClick={() => place({ projectId })}>Colocar</Button>
@@ -40,13 +42,14 @@ export function IntakeUnplaced({ companyId, batchId, projects, onChanged }: Step
   const list = useLoad(() => intake.unplaced(companyId, batchId), [companyId, batchId]);
   const { error, act } = useAction();
   const confirm = useConfirm();
+  const t = useProjectTerms();
   const run = async (fn: () => Promise<unknown>) => { if (await act(fn)) { list.reload(); onChanged(); } };
   const discard = async (doc: S['IntakeDocumentView']) => {
     if (await confirm({ message: `¿Descartar ${doc.title}? Dejará de aparecer en esta carga.`, confirmLabel: 'Descartar', danger: true })) run(() => intake.withdraw(companyId, batchId, doc.id));
   };
   const docs = list.data?.documents ?? [];
   return (
-    <Section title="Sin ubicar" description="Documentos sin propuesta de proyecto. Colócalos en un proyecto, deja que los vea toda la empresa o descártalos.">
+    <Section title="Sin ubicar" description={`Documentos sin propuesta de ${t.one}. Colócalos en ${t.aOne}, deja que los vea toda la empresa o descártalos.`}>
       <div className={styles.body}>
         <Notice message={list.error ?? error} />
         {list.data && docs.length === 0 && <p>No queda ningún documento sin ubicar.</p>}
