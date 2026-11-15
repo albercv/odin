@@ -6,6 +6,7 @@ import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.audit.GetAuditSettings;
 import com.e2d.odin.application.audit.UpdateAuditSettings;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.shared.ValidationException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -34,6 +35,12 @@ public class AuditSettingsController {
     @PutMapping
     public Responses.AuditSettingsView update(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @RequestBody Requests.UpdateAuditSettings request) {
+        if (request.enabled() == null) {
+            throw new ValidationException("Indica si el registro de actividad está encendido o apagado");
+        }
+        if (request.chatEnabled() == null) {
+            throw new ValidationException("Indica si el chat puede consultar el registro de actividad");
+        }
         return Responses.AuditSettingsView.from(update.execute(actor, request.password(), request.enabled(),
                 request.usagePolicyReference(), request.chatEnabled()));
     }

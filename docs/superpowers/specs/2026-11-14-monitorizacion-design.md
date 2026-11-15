@@ -11,6 +11,29 @@
   - la sesión del panel caduca a las 8 horas sin uso y no tiene límite absoluto;
   - no hay papel de administrador en el chat.
 
+## Construido (15 nov.)
+
+Lo que existe en `feature/monitorizacion`, con las decisiones del CTO 3 que lo fijan (apartado «Decisiones de construcción» del plan):
+
+- **Registro inalterable (migración V30):** `audit_event` con cadena de huellas SHA-256; se escribe solo con `audit_append(...)` (`SECURITY DEFINER`, bloqueo consultivo); `odin_app` no inserta directamente. Nada lo borra hoy (rulings 2 y 5).
+- **Interruptor, apagado por defecto:** fila única `audit_setting`; solo el administrador de grupo lo cambia, con contraseña actual (403 y entrada `negado` si falla). Encender exige `usagePolicyReference`; encender escribe la primera entrada y apagar la última. `enabled` y `chatEnabled` son obligatorios en la petición: si falta uno, 400 y no cambia nada (rulings 3 y 4).
+- **Acciones de administración:** acceso, instalación, empresas, personas, claves, proyectos, documentos, temas y fichas; en los cambios de configuración, valor de antes y de después. Una etiqueta de proyecto cambiada se anota así; nombre y correo de personas, solo como «cambió» (ruling 8 para los negados que se registran).
+- **Acciones del trabajador desde el chat:** con canal, petición, IP y navegador fijados por un filtro web según la credencial; las hechas por enlace llevan `actor_kind = LINK` (rulings 6 y 9).
+- **Consulta en el panel:** página «Actividad» para los dos tipos de administrador, con exportación a CSV y sello de integridad; orden siempre por fecha e id, sin agrupar por persona (D-005).
+- **Clave de administrador para el chat:** tabla `admin_chat_key` propia; vale solo para `GET /v1/activity` y `GET /v1/me` (`kind = ADMIN_CHAT`); exige registro y chat encendidos; tope de 500 filas al día (ruling 10).
+- Sin `make demo` esta ronda (ruling 11).
+
+## Pendiente
+
+- Fase B: caducidad de sesión (30 min / 12 h), sesiones abiertas, confirmaciones y volver a identificarse en general.
+- Fase E: recuento de consultas por persona y día.
+- Fase F: guiones de instalación.
+- Fase G: purga, rol `odin_audit_maint` y `bound_address`.
+- Hitos del sistema.
+- Entradas al panel bloqueadas por el limitador.
+- Subidas no atómicas con su entrada de registro.
+- Política de uso y validación legal antes de encender el registro en un cliente.
+
 ## 1. Qué se registra
 
 **Cada entrada** dice:

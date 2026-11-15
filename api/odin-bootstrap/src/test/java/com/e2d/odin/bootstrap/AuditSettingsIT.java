@@ -16,6 +16,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /** El interruptor del registro: quién lo toca, con qué contraseña y qué deja escrito. */
@@ -113,6 +114,23 @@ class AuditSettingsIT {
     void enablingWithoutPolicyReferenceIsBadRequest() {
         assertThat(put(body(true, "  ", PASSWORD)).status()).isEqualTo(400);
         assertThat(put(body(true, null, PASSWORD)).status()).isEqualTo(400);
+    }
+
+    @Test
+    void omittingEnabledOrChatEnabledIsBadRequestAndChangesNothing() {
+        Map<String, Object> on = map("enabled", true, "usagePolicyReference", POLICY, "chatEnabled", true, "password",
+                PASSWORD);
+        assertThat(put(on).status()).isEqualTo(200);
+        for (String missing : List.of("enabled", "chatEnabled")) {
+            Map<String, Object> partial = new java.util.HashMap<>(on);
+            partial.remove(missing);
+            Reply reply = put(partial);
+            assertThat(reply.status()).as(missing).isEqualTo(400);
+            assertThat(reply.json().get("detail").asString()).contains("enabled".equals(missing) ? "registro de actividad está" : "chat puede");
+            JsonNode now = api.get(URL, "Cookie", adminCookie).json();
+            assertThat(now.get("enabled").asBoolean()).isTrue();
+            assertThat(now.get("chatEnabled").asBoolean()).isTrue();
+        }
     }
 
     @Test

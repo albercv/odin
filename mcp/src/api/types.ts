@@ -1469,10 +1469,12 @@ export interface components {
             feminine: boolean;
         };
         UpdateAuditSettings: {
-            enabled?: boolean;
+            /** @description Enciende o apaga el registro de actividad. */
+            enabled: boolean;
             /** @description Dónde está publicada la política de uso. Obligatorio para encender. */
             usagePolicyReference?: string;
-            chatEnabled?: boolean;
+            /** @description Permite o no la consulta del registro desde el chat. */
+            chatEnabled: boolean;
             /** @description La contraseña actual del administrador, para volver a identificarse. */
             password?: string;
         };
