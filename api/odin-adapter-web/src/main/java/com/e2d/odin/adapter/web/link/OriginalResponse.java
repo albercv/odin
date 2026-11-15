@@ -39,6 +39,10 @@ public final class OriginalResponse {
             case PDF -> MediaType.APPLICATION_PDF;
             case DOCX -> MediaType.parseMediaType(
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            case XLSX -> MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            case XLS -> MediaType.parseMediaType("application/vnd.ms-excel");
+            case ODS -> MediaType.parseMediaType("application/vnd.oasis.opendocument.spreadsheet");
             case PLAIN_TEXT, MARKDOWN -> MediaType.parseMediaType("text/plain;charset=UTF-8");
             case IMAGE -> imageType(file.content());
         };
@@ -56,9 +60,14 @@ public final class OriginalResponse {
                 prefix.length);
     }
 
+    private static boolean isAttachment(DocumentFormat format) {
+        return format == DocumentFormat.DOCX || format == DocumentFormat.XLSX || format == DocumentFormat.XLS
+                || format == DocumentFormat.ODS;
+    }
+
     /** {@code filename} en ASCII para los clientes viejos y {@code filename*} en UTF-8 con el nombre verdadero. */
     private static String disposition(OriginalFile file) {
-        String kind = file.format() == DocumentFormat.DOCX ? "attachment" : "inline";
+        String kind = isAttachment(file.format()) ? "attachment" : "inline";
         String ascii = Normalizer.normalize(file.filename(), Normalizer.Form.NFD).replaceAll("\\p{M}", "")
                 .replaceAll("[^\\x20-\\x7E]|[\"\\\\;]", "_");
         String utf8 = URLEncoder.encode(file.filename(), StandardCharsets.UTF_8).replace("+", "%20")

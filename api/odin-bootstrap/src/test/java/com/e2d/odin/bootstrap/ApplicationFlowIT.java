@@ -260,6 +260,47 @@ class ApplicationFlowIT extends AbstractIT {
         assertThat(api.get("/v1/me", "Authorization", assigned).json().get("projects")).hasSize(1);
     }
 
+    @Test
+    @Order(11)
+    void spreadsheetSheetIsAPageSearchableAndCitable() throws Exception {
+        ApiClient api = new ApiClient(port);
+        Reply upload = api.upload("/v1/admin/companies/" + companyA + "/documents", "cuotas.xlsx", xlsx(), "Cookie",
+                adminCookie);
+        assertThat(upload.status()).isEqualTo(201);
+        String document = upload.json().get("document").get("id").asString();
+        awaitReady(api, document);
+
+        Reply hit = api.post("/v1/search", map("queries", List.of("fundición norte")), "Authorization", keyA);
+        assertThat(hit.json().get("hits").get(0).get("sourceId").asString()).isEqualTo(document);
+        assertThat(hit.json().get("hits").get(0).get("pageNumber").asInt()).isEqualTo(2);
+        assertThat(citation(api, keyA, document, 2)).isTrue();
+        assertThat(citation(api, keyA, document, 1)).isFalse();
+        assertThat(found(api, keyB, "fundición norte")).isFalse();
+        assertThat(api.get("/v1/documents/" + document + "/pages/2", "Authorization", keyB).status()).isEqualTo(404);
+        assertThat(citation(api, keyB, document, 2)).isFalse();
+    }
+
+    private boolean citation(ApiClient api, String key, String document, int page) {
+        Reply cited = api.post("/v1/citations/verify", map("documentId", document, "pageNumber", page,
+                "quote", "Grúa ficticia  fundición norte  agosto"), "Authorization", key);
+        assertThat(cited.status()).isEqualTo(200);
+        return cited.json().get("verified").asBoolean();
+    }
+
+    private static byte[] xlsx() throws Exception {
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook book = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+            book.createSheet("Cuotas").createRow(0).createCell(0).setCellValue("Socio ficticio Ana");
+            org.apache.poi.ss.usermodel.Row row = book.createSheet("Obras").createRow(0);
+            String[] cells = {"Grúa ficticia", "fundición norte", "agosto"};
+            for (int i = 0; i < cells.length; i++) {
+                row.createCell(i).setCellValue(cells[i]);
+            }
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            book.write(out);
+            return out.toByteArray();
+        }
+    }
+
     private boolean verified(ApiClient api, String key, String document) {
         Reply cited = api.post("/v1/citations/verify",
                 map("documentId", document, "pageNumber", 1, "quote", "grúa ficticia de la obra cerrada"),
