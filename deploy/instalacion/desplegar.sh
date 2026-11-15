@@ -69,7 +69,7 @@ comprobar() {
 }
 
 [ "${CONFIRMAR:-}" = "$PALABRA" ] || { explicar; exit 0; }
-export CONFIRMAR_INSTALACION=PROPIETARIO # D-099: confirmada con CONFIRMAR=$PALABRA
+export CONFIRMAR_INSTALACION=ESCRIBIR # D-099: confirmada con CONFIRMAR=$PALABRA
 en_marcha || { echo "La instalación «$PROYECTO» no está en marcha (make up). No se ha cambiado nada." >&2; exit 1; }
 mkdir -p "$DATOS/copias"
 curl -s -m 3 http://127.0.0.1:8077/health > /dev/null || echo "Aviso: el puente OCR no responde; los escaneos esperarán al lector."

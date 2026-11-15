@@ -239,10 +239,10 @@ class MainTest(unittest.TestCase):
         return str(getattr(parada.exception, "code", parada.exception))
 
     def test_unEnsayoQueApuntaAlPropietarioParaAntesDeLeerNada(self):
-        self.assertIn("puertos de la instalación del propietario", self.lanzar(8080, "odin-ensayo"))
+        self.assertIn("puertos de la instalación en uso", self.lanzar(8080, "odin-ensayo"))
 
     def test_escribirEnLaDelPropietarioSinConfirmarParaAntesDeLeerNada(self):
-        self.assertIn("CONFIRMAR_INSTALACION=PROPIETARIO", self.lanzar(8080, "odin"))
+        self.assertIn("CONFIRMAR_INSTALACION=ESCRIBIR", self.lanzar(8080, "odin"))
 
     def test_comprobarEnLaDelPropietarioNoPideConfirmacion(self):
         self.assertNotIn("CONFIRMAR_INSTALACION", self.lanzar(8080, "odin", ["--comprobar"]))

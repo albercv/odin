@@ -30,7 +30,7 @@ Qué hace con la carpeta:
 
 1. **Tu correo** y **tu contraseña**. La contraseña no se ve al escribirla y no se guarda en ningún sitio.
 2. **El resumen:** la empresa, cuántos ficheros y cuánto ocupan, lo que se salta y los avisos.
-3. **«¿Seguir? (s/n)»**. Escribe `s` para subir. Con `n` no se sube nada. Para no recibir esta pregunta, añade `ARGS="--si"`; sin la pregunta, si Odín está en sus puertos de siempre (8080, 8088 y 8090), la orden pide además `CONFIRMAR_INSTALACION=PROPIETARIO` delante de `make`.
+3. **«¿Seguir? (s/n)»**. Escribe `s` para subir. Con `n` no se sube nada. Para no recibir esta pregunta, añade `ARGS="--si"`; sin la pregunta, si Odín está en sus puertos de siempre (8080, 8088 y 8090), la orden pide además `CONFIRMAR_INSTALACION=ESCRIBIR` delante de `make`.
 
 ## Los avisos
 

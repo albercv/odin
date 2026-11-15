@@ -4,7 +4,7 @@ La lanza el administrador de la empresa en el servidor de la oficina: make prime
 Pide su correo y su contraseña (getpass); la contraseña no se guarda ni se muestra. Nada sale del equipo.
 Variables: INSTALACION_ENV (por defecto deploy/.env) y PRIMERA_CARGA_API_URL (por defecto el puerto de ODIN_API_PORT en ese fichero).
 D-099: INSTALACION_PROYECTO distinto de odin no va a los puertos del propietario, y --si hacia ellos pide
-CONFIRMAR_INSTALACION=PROPIETARIO."""
+CONFIRMAR_INSTALACION=ESCRIBIR."""
 import argparse
 import getpass
 import hashlib
@@ -200,7 +200,7 @@ def ejecutar(api, argv, libre=None, limite=LIMITE):
 def proteger(url, si):
     """D-099 con proteger_propietario de datos_prueba.py sobre el puerto de destino: una pila de ensayo nunca va a los
     puertos del propietario, y sin la pregunta «¿Seguir?» (--si) escribir en su instalación pide
-    CONFIRMAR_INSTALACION=PROPIETARIO. El camino interactivo no cambia."""
+    CONFIRMAR_INSTALACION=ESCRIBIR. El camino interactivo no cambia."""
     puerto = str(urllib.parse.urlsplit(url).port)
     if puerto in dp.PUERTOS_PROPIETARIO:
         dp.proteger_propietario({"ODIN_API_PORT": puerto}, os.environ.get("INSTALACION_PROYECTO", "odin"), escribe=si)
