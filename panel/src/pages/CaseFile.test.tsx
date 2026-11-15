@@ -82,3 +82,12 @@ test('showsTheHistory', async () => {
   expect(within(history).getByText(/Añadido: Informe del perito/)).toBeInTheDocument();
   expect(within(history).getByText(/Quitado: Foto 1/)).toBeInTheDocument();
 });
+
+test('showsScanCopiesUnderTheirMainAndTheLooseScanWithItsMain', async () => {
+  const main = { ...doc('e1', 'Contrato digital'), scanCopies: [{ documentId: 's1', title: 'Contrato escaneado' }] };
+  const loose = { ...doc('e2', 'Acta escaneada'), scanOf: { documentId: 'z9', title: 'Acta digital' }, scanCopies: [] };
+  show(routes([main, loose]));
+  const row = (await screen.findByText('Contrato digital', { selector: 'td' })).closest('tr')!;
+  expect(within(row).getByText('Copia escaneada: Contrato escaneado')).toBeInTheDocument();
+  expect(within(screen.getByText('Acta escaneada', { selector: 'td' }).closest('tr')!).getByText('Copia escaneada de Acta digital')).toBeInTheDocument();
+});

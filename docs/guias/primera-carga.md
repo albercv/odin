@@ -64,6 +64,8 @@ En cada propuesta puedes confirmarla, corregir el proyecto, marcarla «de toda l
 - **«No lo sé»** deja el documento oculto y pendiente, sin plazo, y guarda quién lo dijo y cuándo. Puedes volver a él cuando lo sepas. Mientras quede alguno, la carga sigue abierta y **no se puede empezar otra primera carga**: la orden lo rechaza hasta que lo decidas.
 - **Descartar** retira el documento. No vuelve a entrar si repites la orden en esta misma carga; en una primera carga nueva, sí, porque para ella es un fichero que falta.
 
+**Copia escaneada:** un escaneo que confirmas como copia de un documento digital deja de salir en las listas y las búsquedas, y aparece como «Copia escaneada» en la ficha del documento principal y en el expediente. Si te equivocaste, abre la ficha del escaneo (desde la del principal, en «Copias escaneadas») y pulsa **«No es una copia escaneada»**: el escaneo vuelve a salir como un documento más.
+
 La carga se cierra sola cuando no queda ningún documento pendiente ni ninguna propuesta por decidir.
 
 ## Cuánto tarda

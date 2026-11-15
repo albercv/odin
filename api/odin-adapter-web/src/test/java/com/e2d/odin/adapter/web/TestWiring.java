@@ -22,6 +22,7 @@ import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UnlinkScanCopy;
 import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.WithdrawDocument;
@@ -419,6 +420,10 @@ public class TestWiring {
 
     @Bean ListCompanyDocuments listCompanyDocuments() {
         return new ListCompanyDocuments(docs, topics, tagging);
+    }
+
+    @Bean UnlinkScanCopy unlinkScanCopy() {
+        return new UnlinkScanCopy(docs);
     }
 
     @Bean GetDocument getDocument() {

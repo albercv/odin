@@ -1252,6 +1252,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/scan-of": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unlinkScanCopy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}": {
         parameters: {
             query?: never;
@@ -1309,6 +1325,15 @@ export interface components {
             withdrawnAt?: string;
             /** @description Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe. */
             uploadedByName?: string;
+            /** @description De quién es copia escaneada este documento. Solo en el listado y la ficha. */
+            scanOf?: components["schemas"]["ScanLink"];
+            /** @description Escaneos enlazados a este documento. Solo en el listado y la ficha; vacío en el resto. */
+            scanCopies: components["schemas"]["ScanLink"][];
+        };
+        ScanLink: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
         };
         TopicLabelView: {
             /** Format: uuid */
@@ -1851,6 +1876,7 @@ export interface components {
             replacement?: components["schemas"]["Replacement"];
             topics: components["schemas"]["TopicLabelView"][];
             caseDocument: boolean;
+            scanCopies: components["schemas"]["ScanLink"][];
         };
         Page: {
             /** Format: uuid */
@@ -1888,6 +1914,8 @@ export interface components {
             status: string;
             uploadedByName?: string;
             addedByName?: string;
+            scanOf?: components["schemas"]["ScanLink"];
+            scanCopies: components["schemas"]["ScanLink"][];
         };
         CaseFileResponse: {
             caseDocument: components["schemas"]["CaseFileDocumentView"];
@@ -4473,6 +4501,26 @@ export interface operations {
             header?: never;
             path: {
                 userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    unlinkScanCopy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
             };
             cookie?: never;
         };

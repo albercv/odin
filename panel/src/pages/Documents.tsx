@@ -79,7 +79,7 @@ type Open = { kind: 'detail' | 'supersede'; document: S['DocumentView'] };
 
 function DocumentDialogs({ open, projects, onClose, onDone }: { open?: Open; projects: S['ProjectView'][]; onClose: () => void; onDone: () => void }) {
   if (open?.kind === 'supersede') return <SupersedeDialog document={open.document} projects={projects} onClose={onClose} onDone={onDone} />;
-  if (open?.kind === 'detail') return <DocumentDetail document={open.document} projects={projects} onClose={onClose} />;
+  if (open?.kind === 'detail') return <DocumentDetail document={open.document} projects={projects} onClose={onClose} onChanged={onDone} />;
   return null;
 }
 

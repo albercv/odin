@@ -6,6 +6,8 @@ import { guarded, jsonResult } from './result.js';
 const caseId = z.string().describe('Identificador del caso');
 
 // Reglas de lectura del expediente (D-078); viven aquí porque INSTRUCTIONS no tiene sitio.
+const SCAN_COPIES =
+  'Una «copia escaneada» (scanCopies, o scanOf si el documento es el escaneo) es el mismo documento escaneado: no cuenta como otro; se puede abrir o leer por su id. ';
 const READING_RULES =
   'Cita cada afirmación con su documento. Regla de lectura: si la pregunta es concreta, busca dentro con searchKnowledge y su caseId, y no leas el expediente entero. ' +
   'Lee el expediente entero con readCaseFile solo si la pregunta pide el conjunto (resumir, analizarlo todo, qué falta). ' +
@@ -32,6 +34,7 @@ function registerReads(server: McpServer, api: ApiClient): void {
     {
       description:
         'Muestra el expediente de un caso: sus documentos ya leídos (con pageCount) y pendingDocuments, los que aún no se han leído. ' +
+        SCAN_COPIES +
         'Úsala siempre que la pregunta nombre un caso o un número de expediente; si no tienes su caseId, busca antes la ficha del caso con searchKnowledge (caseDocument true). ' +
         READING_RULES +
         ` ${CASE_MEMBERSHIP}`,

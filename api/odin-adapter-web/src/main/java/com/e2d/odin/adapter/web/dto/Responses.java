@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web.dto;
 
 import com.e2d.odin.application.casefile.CaseFileText;
 import com.e2d.odin.application.casefile.CaseFileView;
+import com.e2d.odin.application.document.ScanLinks;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.organization.MeView;
@@ -226,7 +227,11 @@ public final class Responses {
             List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics,
             boolean caseDocument, @Nullable Instant withdrawnAt,
             @Schema(description = "Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe.")
-            @Nullable String uploadedByName) {
+            @Nullable String uploadedByName,
+            @Schema(description = "De quién es copia escaneada este documento. Solo en el listado y la ficha.")
+            @Nullable ScanLink scanOf,
+            @Schema(description = "Escaneos enlazados a este documento. Solo en el listado y la ficha; vacío en el resto.")
+            List<ScanLink> scanCopies) {
         public static DocumentView from(DocumentEntry entry) {
             return from(new TaggedDocument(entry, Optional.empty(), List.of()));
         }
@@ -246,7 +251,9 @@ public final class Responses {
                     d.supersededAt().orElse(null), d.pagesWithoutText(),
                     tagged.tagging().map(t -> t.status().name()).orElse(null),
                     tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
-                    d.withdrawnAt().orElse(null), names.get(d.uploadedBy()));
+                    d.withdrawnAt().orElse(null), names.get(d.uploadedBy()),
+                    tagged.scanLinks().scanOf().map(ScanLink::from).orElse(null),
+                    ScanLink.from(tagged.scanLinks().scanCopies()));
         }
     }
 
@@ -380,16 +387,28 @@ public final class Responses {
         }
     }
 
+    /** Un documento enlazado como «copia escaneada» (D3): el principal o uno de sus escaneos. */
+    public record ScanLink(UUID documentId, String title) {
+        static ScanLink from(DocumentRef ref) {
+            return new ScanLink(ref.id().value(), ref.title());
+        }
+
+        static List<ScanLink> from(List<DocumentRef> refs) {
+            return refs.stream().map(ScanLink::from).toList();
+        }
+    }
+
     /** Vista del trabajador: solo documentos listos y sin datos internos del proceso. */
     public record WorkerDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, Instant uploadedAt, boolean superseded, @Nullable Replacement replacement,
-            List<TopicLabelView> topics, boolean caseDocument) {
+            List<TopicLabelView> topics, boolean caseDocument, List<ScanLink> scanCopies) {
         public static WorkerDocumentView from(TaggedDocument tagged) {
             Document d = tagged.entry().document();
             return new WorkerDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
                     tagged.entry().replacement().map(Replacement::from).orElse(null),
-                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
+                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
+                    ScanLink.from(tagged.scanLinks().scanCopies()));
         }
     }
 
@@ -397,15 +416,17 @@ public final class Responses {
     public record CaseFileDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
             @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status,
-            @Nullable String uploadedByName, @Nullable String addedByName) {
+            @Nullable String uploadedByName, @Nullable String addedByName, @Nullable ScanLink scanOf,
+            List<ScanLink> scanCopies) {
         static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
-                @Nullable Instant addedAt, Map<UserId, String> names) {
+                @Nullable Instant addedAt, Map<UserId, String> names, ScanLinks links) {
             Document d = entry.document();
             return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
                     d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
                     addedBy == null ? null : addedBy.value(), addedAt, d.status().name(), names.get(d.uploadedBy()),
-                    addedBy == null ? null : names.get(addedBy));
+                    addedBy == null ? null : names.get(addedBy), links.scanOf().map(ScanLink::from).orElse(null),
+                    ScanLink.from(links.scanCopies()));
         }
     }
 
@@ -413,10 +434,10 @@ public final class Responses {
             int pendingDocuments, int unreadableDocuments) {
         public static CaseFileResponse from(CaseFileView view) {
             return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null,
-                    view.names()),
+                    view.names(), ScanLinks.NONE),
                     view.documents().stream()
                             .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt(),
-                                    view.names())).toList(),
+                                    view.names(), d.scanLinks())).toList(),
                     view.pendingDocuments(), view.unreadableDocuments());
         }
     }

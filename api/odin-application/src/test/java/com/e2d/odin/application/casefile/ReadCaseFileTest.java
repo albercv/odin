@@ -141,4 +141,19 @@ class ReadCaseFileTest {
         assertThat(all.pages()).hasSize(1);
         assertThat(all.complete()).isTrue();
     }
+
+    @Test
+    void theTextOfAScanWhoseMainIsInTheCaseFileIsNotRepeated() {
+        Document caseDoc = withPages(w.caseIn(w.project), 1, 10);
+        Document main = withPages(w.documentIn(w.project), 1, 10);
+        Document scan = withPages(w.documentIn(w.project), 2, 10);
+        w.docs.markScanOf(w.company, scan.id(), main.id());
+        put(caseDoc, main);
+        put(caseDoc, scan);
+
+        var text = read(caseDoc, 1000, Optional.empty());
+
+        assertThat(text.pages()).extracting(p -> p.documentId()).containsExactly(caseDoc.id(), main.id());
+        assertThat(text.documentsTotal()).isEqualTo(2);
+    }
 }
