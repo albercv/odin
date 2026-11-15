@@ -1,7 +1,6 @@
 import type { Me } from './api/client.js';
 
-export const UNAVAILABLE_PROJECT = 'Proyecto no disponible';
-export const NO_PROJECT = 'Sin proyecto (general de la empresa)';
+import { noProject, unavailableProject, type ProjectTerms } from './terms.js';
 
 export interface ProjectNames {
   nameOf(projectId: string | null | undefined): string;
@@ -9,12 +8,12 @@ export interface ProjectNames {
 }
 
 // Los nombres salen de GET /v1/me. Un id que no está se vuelve a pedir una vez (un proyecto añadido con el MCP en marcha);
-// si sigue sin estar, es «Proyecto no disponible»: nunca se devuelve el id ni el nombre de otro proyecto.
+// si sigue sin estar, es «<Proyecto> no disponible»: nunca se devuelve el id ni el nombre de otro proyecto.
 // Sin id (la API manda null) es lo general de la empresa, que ve todo el que la ve.
-export function createProjectNames(me: Me, reload: () => Promise<Me>): ProjectNames {
+export function createProjectNames(me: Me, reload: () => Promise<Me>, terms: ProjectTerms): ProjectNames {
   let byId = namesOf(me);
   return {
-    nameOf: (projectId) => (projectId == null ? NO_PROJECT : (byId.get(projectId) ?? UNAVAILABLE_PROJECT)),
+    nameOf: (projectId) => (projectId == null ? noProject(terms) : (byId.get(projectId) ?? unavailableProject(terms))),
     refreshFor: async (projectIds) => {
       if ([...projectIds].some((id) => id != null && !byId.has(id))) byId = namesOf(await reload());
     },
