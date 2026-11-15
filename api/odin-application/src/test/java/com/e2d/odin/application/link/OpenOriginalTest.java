@@ -105,11 +105,4 @@ class OpenOriginalTest {
     void aWorkerCannotUseTheAdministratorRoute() {
         assertThatThrownBy(() -> w.openOriginal().execute(w.worker, doc.id())).isInstanceOf(ForbiddenException.class);
     }
-
-    @Test
-    void aLinkDownloadWritesNoEntryFromTheAdminAudit() {
-        w.openOriginal().execute(token(), HOME);
-
-        assertThat(w.audit.entries).isEmpty();
-    }
 }

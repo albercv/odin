@@ -53,13 +53,26 @@ public class AddToCaseFiles {
         this.clock = clock;
     }
 
+    /** La ruta del trabajador desde el chat: deja una entrada por caso de la llamada. */
     public int execute(Actor actor, List<CaseFileAssignment> assignments) {
+        int added = applyAsWorker(actor, assignments);
+        record(actor, actor.requireCompany(), assignments);
+        return added;
+    }
+
+    /** Lo mismo sin entrada: el enlace de subida ya deja la de la subida. */
+    public int applyAsWorker(Actor actor, List<CaseFileAssignment> assignments) {
         return add(actor, CaseFileAccess.forWrite(actor, Optional.empty(), organizations, projectMembers), assignments);
     }
 
-    /** La ruta del administrador, que nombra la empresa: deja una entrada por llamada. */
+    /** La ruta del administrador, que nombra la empresa: deja una entrada por caso de la llamada. */
     public int execute(Actor actor, CompanyId companyId, List<CaseFileAssignment> assignments) {
         int added = apply(actor, companyId, assignments);
+        record(actor, companyId, assignments);
+        return added;
+    }
+
+    private void record(Actor actor, CompanyId companyId, List<CaseFileAssignment> assignments) {
         for (CaseFileAssignment a : assignments) {
             Document caseDocument = documents.findById(CompanyScope.of(companyId), ProjectVisibility.all(), a.caseId())
                     .orElseThrow();
@@ -67,7 +80,6 @@ public class AddToCaseFiles {
                     AuditEntry.by(actor, AuditAction.CASE_FILE_DOCUMENTS_ADDED), caseDocument),
                     a.documentIds().stream().map(id -> id.value().toString()).sorted().toList()));
         }
-        return added;
     }
 
     /** Como {@link #execute(Actor, CompanyId, List)} pero sin entrada: quien llama ya deja la suya. */

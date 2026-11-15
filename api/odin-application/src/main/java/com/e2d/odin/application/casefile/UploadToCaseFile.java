@@ -56,7 +56,7 @@ public class UploadToCaseFile {
         if (stored.duplicate() && !stored.document().id().equals(caseDocument.id())) {
             var assignments = List.of(new CaseFileAssignment(caseDocument.id(), Set.of(stored.document().id())));
             if (actor.role() == Role.WORKER) {
-                addToCaseFiles.execute(actor, assignments);
+                addToCaseFiles.applyAsWorker(actor, assignments);
             } else {
                 addToCaseFiles.apply(actor, caseDocument.companyId(), assignments);
             }

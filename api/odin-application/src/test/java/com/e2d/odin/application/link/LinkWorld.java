@@ -82,18 +82,18 @@ final class LinkWorld {
     }
 
     IssueUploadLink issueUpload() {
-        return new IssueUploadLink(orgs, members, docs, new LinkIssuer(links, tokens, secrets, ids, clock, settings));
+        return new IssueUploadLink(orgs, members, docs, new LinkIssuer(links, tokens, secrets, ids, clock, settings, audit));
     }
 
     IssueOriginalLink issueOriginal() {
-        return new IssueOriginalLink(orgs, members, docs, new LinkIssuer(links, tokens, secrets, ids, clock, settings));
+        return new IssueOriginalLink(orgs, members, docs, new LinkIssuer(links, tokens, secrets, ids, clock, settings, audit));
     }
 
     UploadByLink uploadByLink() {
         var upload = new UploadDocument(docs, orgs, store, detector, new UploadSettings(1000), ids, clock, audit);
         var add = new AddToCaseFiles(orgs, members, docs, caseFiles, ids, clock, audit);
         return new UploadByLink(resolve(), links, new UploadToCaseFile(upload, add, caseFiles, ids, clock, audit),
-                new UploadToProject(upload, docs));
+                new UploadToProject(upload, docs), audit);
     }
 
     /** Cambia lo que la empresa tiene activado. */

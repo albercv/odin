@@ -15,7 +15,12 @@ public record UploadOutcome(DocumentEntry entry, boolean duplicate) {
 
     /** La entrada de una subida del administrador: título, tamaño y huella; nunca el contenido. */
     public AuditEntry auditEntry(Actor actor, int sizeBytes) {
-        return AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.DOCUMENT_UPLOADED), document())
+        return auditEntry(AuditEntry.by(actor, AuditAction.DOCUMENT_UPLOADED), sizeBytes);
+    }
+
+    /** Lo mismo sobre una entrada ya construida, para que el enlace ponga su propio autor. */
+    public AuditEntry auditEntry(AuditEntry base, int sizeBytes) {
+        return AuditSupport.onDocument(base, document())
                 .with("sizeBytes", sizeBytes).with("sha256", document().sha256()).with("duplicate", duplicate);
     }
 }
