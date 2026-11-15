@@ -692,6 +692,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/activity/seal-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sealCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/users/{userId}": {
         parameters: {
             query?: never;
@@ -1212,6 +1228,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_5"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_6"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity/integrity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["integrity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["exportCsv"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1775,6 +1839,18 @@ export interface components {
             reviewedAt: string;
             note?: string;
         };
+        SealCheck: {
+            /**
+             * Format: int64
+             * @description El id de la cabeza guardada como sello.
+             */
+            id?: number;
+            /** @description La huella de ese eslabón guardada como sello. */
+            hash?: string;
+        };
+        SealCheckView: {
+            matches: boolean;
+        };
         UpdateUser: {
             firstName?: string;
             lastName?: string;
@@ -2182,6 +2258,48 @@ export interface components {
             cards: components["schemas"]["CardView"][];
             /** Format: int32 */
             total: number;
+        };
+        ActivityPageView: {
+            items: components["schemas"]["ActivityRowView"][];
+            /** @description Pásalo como cursor para la página siguiente; nulo si no hay más. */
+            nextCursor?: string | null;
+        };
+        ActivityRowView: {
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: uuid */
+            companyId?: string;
+            /** Format: uuid */
+            projectId?: string;
+            actorKind: string;
+            /** Format: uuid */
+            actorUserId?: string;
+            /** @description Nombre en el momento de actuar; 'Persona suprimida' si la persona ya no consta. */
+            actorName?: string | null;
+            actorRole?: string;
+            channel: string;
+            via?: string;
+            action: string;
+            targetKind?: string;
+            targetId?: string;
+            targetLabel?: string;
+            outcome: string;
+            details: {
+                [key: string]: unknown;
+            };
+        };
+        ActivityIntegrityView: {
+            logEnabled: boolean;
+            intact: boolean;
+            /** Format: int64 */
+            firstBrokenId?: number;
+            /** Format: int64 */
+            headId?: number;
+            headHash?: string;
+            /** Format: date-time */
+            headAt?: string;
         };
     };
     responses: never;
@@ -3616,6 +3734,30 @@ export interface operations {
             };
         };
     };
+    sealCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SealCheck"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealCheckView"];
+                };
+            };
+        };
+    };
     delete: {
         parameters: {
             query?: never;
@@ -4499,6 +4641,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CardPage"];
+                };
+            };
+        };
+    };
+    list_6: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                companyId?: string;
+                projectId?: string;
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED";
+                actorUserId?: string;
+                channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
+                outcome?: "DONE" | "DENIED" | "FAILED";
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPageView"];
+                };
+            };
+        };
+    };
+    integrity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityIntegrityView"];
+                };
+            };
+        };
+    };
+    exportCsv: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                companyId?: string;
+                projectId?: string;
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED";
+                actorUserId?: string;
+                channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
+                outcome?: "DONE" | "DENIED" | "FAILED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };
