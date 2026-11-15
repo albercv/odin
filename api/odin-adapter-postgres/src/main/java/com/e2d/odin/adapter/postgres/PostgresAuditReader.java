@@ -14,6 +14,7 @@ import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -95,5 +96,16 @@ public class PostgresAuditReader implements AuditReader {
     public boolean sealMatches(long id, String hash) {
         return tx.inScope(CompanyScope.all(), jdbc -> jdbc.sql("SELECT audit_seal_matches(:id, :hash)")
                 .param("id", id).param("hash", hash).query(Boolean.class).single());
+    }
+
+    @Override
+    public long rowsReturnedToChatKey(String keyPrefix, Instant since) {
+        return tx.inScope(CompanyScope.all(), jdbc -> jdbc.sql("""
+                SELECT COALESCE(SUM(CAST(details ->> 'rowCount' AS bigint)), 0) FROM audit_event
+                 WHERE action = 'CHAT_QUERY' AND outcome = 'DONE' AND channel = 'CHAT_ADMIN'
+                   AND details ->> 'prefix' = :prefix
+                   AND occurred_at >= :since AND occurred_at < :until""")
+                .param("prefix", keyPrefix).param("since", Sql.ts(since))
+                .param("until", Sql.ts(since.plus(1, java.time.temporal.ChronoUnit.DAYS))).query(Long.class).single());
     }
 }

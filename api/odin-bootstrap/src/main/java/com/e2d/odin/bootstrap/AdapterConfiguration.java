@@ -2,6 +2,8 @@ package com.e2d.odin.bootstrap;
 
 import com.e2d.odin.adapter.filestore.FileSystemOriginalFileStore;
 import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
+import com.e2d.odin.adapter.postgres.PostgresAdminChatKeyRepository;
+import com.e2d.odin.application.port.AdminChatKeyRepository;
 import com.e2d.odin.adapter.postgres.PostgresAuditLog;
 import com.e2d.odin.adapter.postgres.PostgresAuditReader;
 import com.e2d.odin.adapter.postgres.PostgresAuditSettings;
@@ -112,6 +114,11 @@ public class AdapterConfiguration {
     @Bean
     ProjectMemberRepository projectMemberRepository(ScopedTransactions tx) {
         return new PostgresProjectMemberRepository(tx);
+    }
+
+    @Bean
+    AdminChatKeyRepository adminChatKeyRepository(ScopedTransactions tx) {
+        return new PostgresAdminChatKeyRepository(tx);
     }
 
     @Bean

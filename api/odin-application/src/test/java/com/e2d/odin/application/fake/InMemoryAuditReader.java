@@ -37,4 +37,9 @@ public class InMemoryAuditReader implements AuditReader {
     public boolean sealMatches(long id, String hash) {
         return false;
     }
+
+    @Override
+    public long rowsReturnedToChatKey(String keyPrefix, java.time.Instant since) {
+        return 0;
+    }
 }

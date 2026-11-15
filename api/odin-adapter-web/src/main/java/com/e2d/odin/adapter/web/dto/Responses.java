@@ -144,13 +144,37 @@ public final class Responses {
     public record MeTagging(int pendingDocuments) {
     }
 
-    public record Me(UUID userId, String displayName, Role role, MeCompany company, List<MeProject> projects,
-            List<TopicView> topics, MeTagging tagging) {
+    public record Me(@Schema(description = "WORKER con la clave del trabajador; ADMIN_CHAT con la del administrador "
+            + "para el chat (sin capacidades, proyectos ni temas).") String kind, UUID userId, String displayName,
+            Role role, @Schema(description = "Nulo con una clave de ámbito de grupo.", nullable = true)
+            @Nullable MeCompany company, List<MeProject> projects, List<TopicView> topics, MeTagging tagging) {
         public static Me from(MeView m) {
-            return new Me(m.userId().value(), m.displayName(), m.role(), MeCompany.from(m.company()),
+            return new Me("WORKER", m.userId().value(), m.displayName(), m.role(), MeCompany.from(m.company()),
                     m.projects().stream().map(MeProject::from).toList(),
                     m.topics().stream().map(TopicView::from).toList(), new MeTagging(m.taggingPending()));
         }
+
+        public static Me adminChat(com.e2d.odin.application.identity.DescribeAdminChat.Me m) {
+            return new Me("ADMIN_CHAT", m.actor().userId().value(), m.actor().displayName(), m.actor().role(),
+                    m.company().map(c -> new MeCompany(c.id().value(), c.name(), Set.of())).orElse(null), List.of(),
+                    List.of(), new MeTagging(0));
+        }
+    }
+
+    public record ActivityKeyView(UUID id, String prefix, @Nullable UUID companyId, Instant createdAt,
+            Instant expiresAt) {
+        public static ActivityKeyView from(com.e2d.odin.domain.identity.AdminChatKey k) {
+            return new ActivityKeyView(k.id(), k.prefix(), k.companyId().map(c -> c.value()).orElse(null),
+                    k.createdAt(), k.expiresAt());
+        }
+    }
+
+    public record ActivityKeysView(@Schema(description = "El registro y la consulta desde el chat están encendidos.")
+            boolean chatAvailable, @Nullable ActivityKeyView key) {
+    }
+
+    public record IssuedActivityKeyView(UUID id, String prefix,
+            @Schema(description = "Se muestra una sola vez; no se guarda.") String token, Instant expiresAt) {
     }
 
     public record MemberView(UUID userId, String displayName, String firstName, @Nullable String lastName,
