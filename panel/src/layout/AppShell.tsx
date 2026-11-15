@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type S } from '../api/client';
 import { useLoad } from '../components/useLoad';
+import { Activity } from '../pages/Activity';
 import { Account } from '../pages/Account';
 import { Companies } from '../pages/Companies';
 import { Company } from '../pages/Company';
@@ -75,6 +76,16 @@ function CompanyPage({ page, companyId, me, onPendingChanged }: CompanyPageProps
   );
 }
 
+/** Pages that span companies: the activity log (both kinds of admin) and the group's administration. */
+function AdminPages({ page, me, companies }: { page: Page; me: S['AdminMe']; companies: S['CompanyRef'][] }) {
+  return (
+    <>
+      {page === 'activity' && <Activity me={me} companies={companies} />}
+      {page === 'groupAdmins' && me.role === 'GROUP_ADMIN' && <GroupAdmins me={me} />}
+    </>
+  );
+}
+
 function NoCompany({ loading, failed }: { loading: boolean; failed: boolean }) {
   if (failed) return <Notice message="No se han podido cargar las empresas. Vuelve a intentarlo en un momento." />;
   if (loading) return <p>Cargando…</p>;
@@ -95,7 +106,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
   const open = (id: string) => { setCompanyId(id); setPage('company'); };
   const change = (id: string) => { if (route.caseId) { leave(); setPageNow('documents'); } return isGroup ? open(id) : setCompanyId(id); };
   const companyName = companies.find((c) => c.id === companyId)?.name;
-  const needsCompany = page !== 'companies' && page !== 'account' && page !== 'groupAdmins';
+  const needsCompany = page !== 'companies' && page !== 'account' && page !== 'groupAdmins' && page !== 'activity';
   return (
     <div className={styles.shell}>
       <Sidebar isGroup={isGroup} name={me.displayName} companyName={companyId ? companyName : undefined} page={page}
@@ -103,7 +114,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         pending={pending} setPage={setPage} onLogout={onLogout} />
       <main className={styles.main}>
         {!route.caseId && page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} onProfileChanged={onProfileChanged} />}
-        {!route.caseId && page === 'groupAdmins' && isGroup && <GroupAdmins me={me} />}
+        {!route.caseId && <AdminPages page={page} me={me} companies={companies} />}
         {!route.caseId && page === 'companies' && <Companies onOpen={open} onChanged={groupCompanies.reload} />}
         {needsCompany && !companyId && <NoCompany loading={isGroup && !groupCompanies.data && !groupCompanies.error} failed={isGroup && !!groupCompanies.error} />}
         {route.caseId && companyId && <CaseFile key={route.caseId} companyId={companyId} caseId={route.caseId} />}
