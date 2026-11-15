@@ -308,6 +308,18 @@ class WorkerApiTest extends WebTestSupport {
     }
 
     @Test
+    void workerListingCarriesTheScanCopiesOfEachDocument() throws Exception {
+        CompanyId company = newCompany();
+        Document main = Fixtures.readyDocument(w.docs, company, "principal");
+        Document scan = Fixtures.readyDocument(w.docs, company, "escaneo");
+        w.docs.markScanOf(company, scan.id(), main.id());
+        mvc.perform(get("/v1/documents").header(AUTH, workerKey(company))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='" + main.id().value() + "')].scanCopies[0].documentId")
+                        .value(scan.id().value().toString()))
+                .andExpect(jsonPath("$[?(@.id=='" + main.id().value() + "')].scanCopies[0].title").value(scan.title()));
+    }
+
+    @Test
     void workerListingShowsOnlyReadyDocumentsWithoutInternalFields() throws Exception {
         CompanyId company = newCompany();
         Document ready = Fixtures.readyDocument(w.docs, company, "texto");

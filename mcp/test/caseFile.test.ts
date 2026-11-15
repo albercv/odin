@@ -278,3 +278,20 @@ describe('case file tools', () => {
     expect(INSTRUCTIONS.length).toBeLessThanOrEqual(2200);
   });
 });
+
+describe('scanned copies', () => {
+  it('toolDescriptionsExplainTheScannedCopy', async () => {
+    const client = await connect(() => ({ status: 200, body: BODY }));
+    const tools = (await client.listTools()).tools;
+    for (const name of ['getCaseFile', 'listDocuments']) {
+      expect(tools.find((t) => t.name === name)?.description).toContain('«copia escaneada»');
+    }
+  });
+
+  it('getCaseFileReturnsScanOfAndScanCopies', async () => {
+    const body = { documents: [{ id: 'd1', scanCopies: [{ documentId: 's1', title: 'Escaneo' }] }, { id: 'd2', scanOf: { documentId: 'z', title: 'Principal' } }] };
+    const client = await connect(() => ({ status: 200, body }));
+    const result = await client.callTool({ name: 'getCaseFile', arguments: { caseId: CASE } });
+    expect(JSON.parse(textOf(result))).toEqual(body);
+  });
+});

@@ -137,6 +137,8 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
+  document: (documentId: string) => request<S['DocumentView']>('GET', `${a}/documents/${documentId}`),
+  unlinkScanCopy: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/scan-of`),
   documentPage,
   withdraw: (documentId: string) => request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/withdrawal`),
   restore: (documentId: string) => request<S['DocumentView']>('DELETE', `${a}/documents/${documentId}/withdrawal`),

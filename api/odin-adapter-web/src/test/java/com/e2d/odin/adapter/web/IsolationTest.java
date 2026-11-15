@@ -106,6 +106,21 @@ class IsolationTest extends WebTestSupport {
     }
 
     @Test
+    void otherCompanyAdminCannotUnlinkAForeignScanCopy() throws Exception {
+        CompanyId a = newCompany();
+        CompanyId b = newCompany();
+        Document main = Fixtures.readyDocument(w.docs, a, "principal de A");
+        Document scan = Fixtures.readyDocument(w.docs, a, "escaneo de A");
+        w.docs.markScanOf(a, scan.id(), main.id());
+        var other = adminCookie(Role.COMPANY_ADMIN, Optional.of(b));
+
+        mvc.perform(delete("/v1/admin/documents/" + scan.id().value() + "/scan-of").cookie(other))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/v1/admin/documents/" + main.id().value()).cookie(other)).andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(scan.id()).orElseThrow().scanOf()).isPresent();
+    }
+
+    @Test
     void otherCompanyAdminCannotMarkForeignDocument() throws Exception {
         CompanyId a = newCompany();
         CompanyId b = newCompany();

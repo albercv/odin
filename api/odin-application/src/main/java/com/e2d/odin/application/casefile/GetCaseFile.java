@@ -1,5 +1,6 @@
 package com.e2d.odin.application.casefile;
 
+import com.e2d.odin.application.document.ScanLinks;
 import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
@@ -74,10 +75,25 @@ public class GetCaseFile {
         Set<DocumentId> toCount = new HashSet<>(readable.keySet());
         toCount.add(caseId);
         Map<DocumentId, Integer> pages = caseFiles.pageCounts(access.scope(), access.visibility(), toCount);
-        List<CaseFileDocumentView> views = relations.stream().filter(r -> readable.containsKey(r.documentId()))
-                .map(r -> new CaseFileDocumentView(readable.get(r.documentId()),
-                        pages.getOrDefault(r.documentId(), 0), r.addedBy(), r.addedAt())).toList();
+        List<CaseFileDocumentView> views = views(access, relations, readable, pages, listUnread);
         return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views, pending, unreadable, names(caseEntry, views));
+    }
+
+    private List<CaseFileDocumentView> views(CaseFileAccess access, List<CaseFileEntry> relations,
+            Map<DocumentId, DocumentEntry> readable, Map<DocumentId, Integer> pages, boolean listUnread) {
+        Map<DocumentId, ScanLinks> links = ScanLinks.of(documents, access.scope(), access.visibility(),
+                listUnread ? Optional.empty() : Optional.of(DocumentStatus.READY),
+                readable.values().stream().map(DocumentEntry::document).toList());
+        // Un escaneo cuyo principal está en el expediente sale solo dentro de las copias de su principal.
+        return relations.stream().filter(r -> readable.containsKey(r.documentId()))
+                .filter(r -> !isScanOfAnother(readable, r.documentId()))
+                .map(r -> new CaseFileDocumentView(readable.get(r.documentId()),
+                        pages.getOrDefault(r.documentId(), 0), r.addedBy(), r.addedAt(), links.get(r.documentId())))
+                .toList();
+    }
+
+    private static boolean isScanOfAnother(Map<DocumentId, DocumentEntry> readable, DocumentId id) {
+        return readable.get(id).document().scanOf().filter(readable::containsKey).isPresent();
     }
 
     private Map<UserId, String> names(DocumentEntry caseEntry, List<CaseFileDocumentView> views) {

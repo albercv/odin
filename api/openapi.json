@@ -3310,6 +3310,26 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/scan-of" : {
+      "delete" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "unlinkScanCopy",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}" : {
       "delete" : {
         "tags" : [ "admin-case-file-controller" ],
@@ -3447,9 +3467,33 @@
           "uploadedByName" : {
             "type" : "string",
             "description" : "Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe."
+          },
+          "scanOf" : {
+            "$ref" : "#/components/schemas/ScanLink",
+            "description" : "De quién es copia escaneada este documento. Solo en el listado y la ficha."
+          },
+          "scanCopies" : {
+            "type" : "array",
+            "description" : "Escaneos enlazados a este documento. Solo en el listado y la ficha; vacío en el resto.",
+            "items" : {
+              "$ref" : "#/components/schemas/ScanLink"
+            }
           }
         },
-        "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
+        "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "scanCopies", "status", "title", "topics", "uploadedAt" ]
+      },
+      "ScanLink" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "title" ]
       },
       "TopicLabelView" : {
         "type" : "object",
@@ -4855,9 +4899,15 @@
           },
           "caseDocument" : {
             "type" : "boolean"
+          },
+          "scanCopies" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ScanLink"
+            }
           }
         },
-        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
+        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "scanCopies", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -4948,9 +4998,18 @@
           },
           "addedByName" : {
             "type" : "string"
+          },
+          "scanOf" : {
+            "$ref" : "#/components/schemas/ScanLink"
+          },
+          "scanCopies" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ScanLink"
+            }
           }
         },
-        "required" : [ "filename", "format", "id", "pageCount", "paginated", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
+        "required" : [ "filename", "format", "id", "pageCount", "paginated", "scanCopies", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
       },
       "CaseFileResponse" : {
         "type" : "object",

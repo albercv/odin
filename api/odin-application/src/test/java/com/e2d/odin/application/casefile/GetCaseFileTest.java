@@ -214,4 +214,37 @@ class GetCaseFileTest {
         assertThatThrownBy(() -> w.getCaseFile().execute(Actors.companyAdmin(Fixtures.company(w.orgs)), w.company,
                 caseDoc.id())).isInstanceOf(ForbiddenException.class);
     }
+
+    @Test
+    void aScanWhoseMainIsInTheCaseFileOnlyAppearsInsideTheMain() {
+        Document caseDoc = w.caseIn(w.project);
+        Document main = w.documentIn(w.project);
+        Document scan = w.documentIn(w.project);
+        w.docs.markScanOf(w.company, scan.id(), main.id());
+        put(caseDoc, main, w.worker);
+        put(caseDoc, scan, w.worker);
+
+        var view = w.getCaseFile().execute(w.worker, caseDoc.id());
+
+        assertThat(view.documents()).singleElement().satisfies(d -> {
+            assertThat(d.document().document().id()).isEqualTo(main.id());
+            assertThat(d.scanLinks().scanCopies()).extracting(r -> r.id()).containsExactly(scan.id());
+        });
+    }
+
+    @Test
+    void aScanWhoseMainIsNotInTheCaseFileIsAPlainDocumentWithItsMain() {
+        Document caseDoc = w.caseIn(w.project);
+        Document main = w.documentIn(w.project);
+        Document scan = w.documentIn(w.project);
+        w.docs.markScanOf(w.company, scan.id(), main.id());
+        put(caseDoc, scan, w.worker);
+
+        var view = w.getCaseFile().execute(w.worker, caseDoc.id());
+
+        assertThat(view.documents()).singleElement().satisfies(d -> {
+            assertThat(d.document().document().id()).isEqualTo(scan.id());
+            assertThat(d.scanLinks().scanOf()).hasValueSatisfying(r -> assertThat(r.id()).isEqualTo(main.id()));
+        });
+    }
 }
