@@ -37,6 +37,7 @@ import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
 import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
@@ -396,7 +397,10 @@ public class TestWiring {
     }
 
     @Bean ListOpenIntakeBatches listOpenIntakeBatches() {
-        return new ListOpenIntakeBatches(intake);
+        return new ListOpenIntakeBatches(intake, docs);
+    }
+    @Bean CloseIntakeBatch closeIntakeBatch() {
+        return new CloseIntakeBatch(intake, clock());
     }
     @Bean ListIntakeProposals listIntakeProposals() {
         return new ListIntakeProposals(intake, docs);

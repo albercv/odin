@@ -511,7 +511,7 @@ public final class Responses {
             + "de proyectos por terminada; sin ella no se clasifica.")
     public record IntakeBatchView(UUID id, UUID companyId, String channel, String state, Instant createdAt,
             @Nullable Instant closedAt, int uploaded, int reading, int pending, int alreadyThere, int discarded,
-            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced,
+            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced, int toDecide,
             @Nullable Instant projectListClosedAt) {
         public static IntakeBatchView from(com.e2d.odin.application.intake.IntakeBatchView view) {
             var b = view.batch();
@@ -520,19 +520,19 @@ public final class Responses {
                     view.counts().pending(), b.alreadyThere(), b.discarded(),
                     view.warnings().stream().map(IntakeWarningView::from).toList(),
                     view.proposed().entrySet().stream().collect(java.util.stream.Collectors.toMap(
-                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced(),
+                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced(), view.toDecide(),
                     b.projectListClosedAt().orElse(null));
         }
     }
 
-    @Schema(description = "Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL.")
+    @Schema(description = "Un lote sin cerrar o cerrado con documentos sin ubicar. state: OPEN, READING, IN_REVIEW o CLOSED; channel: COMMAND o PANEL.")
     public record IntakeBatchSummary(UUID id, String state, String channel, Instant createdAt) {
         static IntakeBatchSummary from(com.e2d.odin.domain.intake.IntakeBatch b) {
             return new IntakeBatchSummary(b.id().value(), b.state().name(), b.channel().name(), b.createdAt());
         }
     }
 
-    @Schema(description = "Los lotes de la empresa que no están cerrados, el más reciente primero.")
+    @Schema(description = "Los lotes de la empresa que no están cerrados y los cerrados con documentos sin ubicar, el más reciente primero.")
     public record OpenIntakeBatches(List<IntakeBatchSummary> batches) {
         public static OpenIntakeBatches from(List<com.e2d.odin.domain.intake.IntakeBatch> batches) {
             return new OpenIntakeBatches(batches.stream().map(IntakeBatchSummary::from).toList());

@@ -596,6 +596,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload": {
         parameters: {
             query?: never;
@@ -1640,6 +1656,8 @@ export interface components {
             };
             /** Format: int32 */
             unplaced: number;
+            /** Format: int32 */
+            toDecide: number;
             /** Format: date-time */
             projectListClosedAt?: string;
         };
@@ -2080,7 +2098,7 @@ export interface components {
             /** Format: date-time */
             revokedAt?: string;
         };
-        /** @description Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL. */
+        /** @description Un lote sin cerrar o cerrado con documentos sin ubicar. state: OPEN, READING, IN_REVIEW o CLOSED; channel: COMMAND o PANEL. */
         IntakeBatchSummary: {
             /** Format: uuid */
             id: string;
@@ -2089,7 +2107,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
-        /** @description Los lotes de la empresa que no están cerrados, el más reciente primero. */
+        /** @description Los lotes de la empresa que no están cerrados y los cerrados con documentos sin ubicar, el más reciente primero. */
         OpenIntakeBatches: {
             batches: components["schemas"]["IntakeBatchSummary"][];
         };
@@ -3391,6 +3409,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    closeBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
             };
         };
     };

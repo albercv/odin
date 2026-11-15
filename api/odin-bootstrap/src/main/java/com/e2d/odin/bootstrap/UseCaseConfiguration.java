@@ -30,7 +30,9 @@ import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.ClassifyIntake;
+import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.ListOpenIntakeBatches;
+import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.port.ProjectProposer;
@@ -583,8 +585,19 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ListOpenIntakeBatches listOpenIntakeBatches(IntakeRepository intake) {
-        return new ListOpenIntakeBatches(intake);
+    ListOpenIntakeBatches listOpenIntakeBatches(IntakeRepository intake, DocumentRepository documents) {
+        return new ListOpenIntakeBatches(intake, documents);
+    }
+
+    @Bean
+    CloseIntakeBatch closeIntakeBatch(IntakeRepository intake, Clock clock, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CloseIntakeBatch(intake, clock) {
+            @Override
+            public IntakeBatch execute(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId));
+            }
+        };
     }
 
     @Bean

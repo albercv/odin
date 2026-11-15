@@ -24,6 +24,9 @@ public interface IntakeRepository {
     /** Los lotes de la empresa que no están cerrados, el más reciente primero. */
     List<IntakeBatch> findOpen(CompanyId companyId);
 
+    /** Los lotes cerrados de la empresa, el más reciente primero. */
+    List<IntakeBatch> findClosed(CompanyId companyId);
+
     /** Los lotes en lectura o en revisión de todas las empresas: es lo que recorre la tarea programada. */
     List<IntakeBatch> findReadingOrInReview();
 

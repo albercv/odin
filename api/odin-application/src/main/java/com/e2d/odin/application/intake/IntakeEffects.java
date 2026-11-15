@@ -75,6 +75,15 @@ public class IntakeEffects {
         return batch;
     }
 
+    /** El lote para colocar o descartar lo que queda sin ubicar: en revisión o ya cerrado con pendientes. */
+    IntakeBatch unplacedEditable(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
+        IntakeBatch batch = IntakeBatches.require(intake, actor, companyId, batchId);
+        if (batch.state() != IntakeState.IN_REVIEW && batch.state() != IntakeState.CLOSED) {
+            throw new ConflictException("El lote no está en revisión: está en " + batch.state());
+        }
+        return batch;
+    }
+
     static void requireOpen(IntakeProposal p) {
         if (!p.open()) {
             throw new ConflictException("La propuesta ya está decidida");
