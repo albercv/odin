@@ -7,6 +7,7 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
@@ -41,7 +42,8 @@ class UpdateMemberTest {
     private final FakePasswordHasher passwords = new FakePasswordHasher();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final UpdateMember update = new UpdateMember(users, memberships, organizations, passwords, sessions);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final UpdateMember update = new UpdateMember(users, memberships, organizations, passwords, sessions, audit);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());

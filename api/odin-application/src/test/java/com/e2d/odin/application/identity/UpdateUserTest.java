@@ -6,12 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
+import com.e2d.odin.application.fake.InMemoryUserRepository;
+import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
-import com.e2d.odin.application.fake.InMemoryUserRepository;
-import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
@@ -34,7 +35,8 @@ class UpdateUserTest {
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final UpdateUser update = new UpdateUser(users, memberships, sessions);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final UpdateUser update = new UpdateUser(users, memberships, sessions, audit);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
     private final UserId adminId = new UserId(UUID.randomUUID());

@@ -1,11 +1,15 @@
 package com.e2d.odin.application.identity;
 
+import com.e2d.odin.application.audit.AuditSupport;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.User;
@@ -22,9 +26,11 @@ public class UpdateMember {
     private final OrganizationRepository organizations;
     private final PasswordHasher passwords;
     private final AdminSessions sessions;
+    private final AuditLog audit;
 
     public UpdateMember(UserRepository users, MembershipRepository memberships, OrganizationRepository organizations,
-            PasswordHasher passwords, AdminSessions sessions) {
+            PasswordHasher passwords, AdminSessions sessions, AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.organizations = organizations;
@@ -49,10 +55,17 @@ public class UpdateMember {
                 .orElseThrow(() -> new NotFoundException("Empresa no encontrada")).code();
         User user = personReadyFor(person, current, updated, changes.password());
         memberships.save(updated);
+        audit.record(AuditEntry.by(actor, AuditAction.MEMBER_UPDATED).onCompany(companyId)
+                .on("USER", userId.value().toString(), null).with("before", state(current))
+                .with("after", state(updated)));
         if (losesAdministration(current, updated)) {
             UserAdministration.closeSessionsIfNoLongerAdministering(user, memberships, sessions);
         }
         return MemberView.of(user, updated, companyCode, actor);
+    }
+
+    private static java.util.Map<String, Object> state(Membership membership) {
+        return java.util.Map.of("roles", AuditSupport.sorted(membership.roles()), "active", membership.active());
     }
 
     /** Dar o quitar la administración, o activar o desactivar una pertenencia que la tiene. */

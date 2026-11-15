@@ -9,6 +9,7 @@ import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
@@ -49,8 +50,9 @@ class RemoveMemberTest {
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
     private final InMemoryOrganizationRepository projects = new InMemoryOrganizationRepository();
     private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(projects);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private final RemoveMember remove = new RemoveMember(users, memberships, keys, projectMembers, sessions,
-            new MutableClock());
+            new MutableClock(), audit);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
@@ -175,7 +177,7 @@ class RemoveMemberTest {
 
         remove.execute(Actors.companyAdmin(company), company, personId);
         new AddMember(users, memberships, organizations, projectMembers,
-                new FakePasswordHasher(), new SequenceIdGenerator(), new SequencePersonCodeGenerator())
+                new FakePasswordHasher(), new SequenceIdGenerator(), new SequencePersonCodeGenerator(), new InMemoryAuditLog())
                 .execute(Actors.companyAdmin(company), company,
                         new NewMember("Pili", "Pérez", Optional.of("p@demo.test"), Set.of(Role.WORKER), Optional.empty(),
                                 Set.of()));
@@ -210,7 +212,7 @@ class RemoveMemberTest {
 
         remove.execute(Actors.companyAdmin(company), company, pili);
         MemberAdded again = new AddMember(users, memberships, organizations, projectMembers,
-                new FakePasswordHasher(), new SequenceIdGenerator(), new SequencePersonCodeGenerator()).execute(Actors.companyAdmin(company), company,
+                new FakePasswordHasher(), new SequenceIdGenerator(), new SequencePersonCodeGenerator(), new InMemoryAuditLog()).execute(Actors.companyAdmin(company), company,
                 new NewMember("Pili", "Pérez", Optional.of("pili@demo.test"), Set.of(Role.WORKER), Optional.empty(),
                         Set.of()));
 

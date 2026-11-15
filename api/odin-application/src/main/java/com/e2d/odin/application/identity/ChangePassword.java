@@ -1,10 +1,13 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -19,9 +22,11 @@ public class ChangePassword {
     private final MembershipRepository memberships;
     private final PasswordHasher passwords;
     private final AdminSessions sessions;
+    private final AuditLog audit;
 
     public ChangePassword(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            AdminSessions sessions) {
+            AdminSessions sessions, AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.passwords = passwords;
@@ -44,6 +49,8 @@ public class ChangePassword {
             requireCurrentPassword(user, currentPassword);
         }
         users.save(user.withPasswordHash(passwords.hash(Validation.requirePassword(newPassword))));
+        audit.record(AuditEntry.by(actor, AuditAction.PASSWORD_CHANGED).on("USER", target.value().toString(), null)
+                .with("own", ownPassword));
         sessions.closeAllOf(target);
     }
 

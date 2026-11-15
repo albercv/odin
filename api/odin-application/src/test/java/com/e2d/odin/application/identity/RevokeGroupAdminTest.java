@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
@@ -31,7 +32,8 @@ class RevokeGroupAdminTest {
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final RevokeGroupAdmin revoke = new RevokeGroupAdmin(users, memberships, sessions);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final RevokeGroupAdmin revoke = new RevokeGroupAdmin(users, memberships, sessions, audit);
     private final UserId gemaId = new UserId(UUID.randomUUID());
     private final UserId gaelId = new UserId(UUID.randomUUID());
     private final Actor gema = new Actor(gemaId, "Gema", Role.GROUP_ADMIN, Set.of());

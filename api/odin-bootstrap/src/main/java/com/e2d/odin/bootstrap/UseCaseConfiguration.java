@@ -186,18 +186,24 @@ public class UseCaseConfiguration {
 
     @Bean
     LogInAdmin logInAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            AdminSessions sessions) {
-        return new LogInAdmin(users, memberships, passwords, sessions);
+            AdminSessions sessions, AuditLog audit, AuditContext auditContext) {
+        return new LogInAdmin(users, memberships, passwords, sessions, audit, auditContext);
     }
 
     @Bean
-    LogOutAdmin logOutAdmin(AdminSessions sessions) {
-        return new LogOutAdmin(sessions);
+    LogOutAdmin logOutAdmin(AdminSessions sessions, AuditLog audit, AuditContext auditContext) {
+        return new LogOutAdmin(sessions, audit, auditContext);
     }
 
     @Bean
-    CreateCompany createCompany(OrganizationRepository organizations, IdGenerator ids) {
-        return new CreateCompany(organizations, ids);
+    CreateCompany createCompany(OrganizationRepository organizations, IdGenerator ids, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CreateCompany(organizations, ids, audit) {
+            @Override
+            public Company execute(Actor actor, String name, String code) {
+                return transaction.execute(status -> super.execute(actor, name, code));
+            }
+        };
     }
 
     @Bean
@@ -206,18 +212,36 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateCompany updateCompany(OrganizationRepository organizations) {
-        return new UpdateCompany(organizations);
+    UpdateCompany updateCompany(OrganizationRepository organizations, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateCompany(organizations, audit) {
+            @Override
+            public Company execute(Actor actor, CompanyId id, CompanyChanges changes) {
+                return transaction.execute(status -> super.execute(actor, id, changes));
+            }
+        };
     }
 
     @Bean
-    SetCompanyCapabilities setCompanyCapabilities(OrganizationRepository organizations) {
-        return new SetCompanyCapabilities(organizations);
+    SetCompanyCapabilities setCompanyCapabilities(OrganizationRepository organizations, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new SetCompanyCapabilities(organizations, audit) {
+            @Override
+            public Company execute(Actor actor, CompanyId id, Set<Capability> capabilities) {
+                return transaction.execute(status -> super.execute(actor, id, capabilities));
+            }
+        };
     }
 
     @Bean
-    CreateProject createProject(OrganizationRepository organizations, IdGenerator ids) {
-        return new CreateProject(organizations, ids);
+    CreateProject createProject(OrganizationRepository organizations, IdGenerator ids, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CreateProject(organizations, ids, audit) {
+            @Override
+            public Project execute(Actor actor, CompanyId companyId, String name) {
+                return transaction.execute(status -> super.execute(actor, companyId, name));
+            }
+        };
     }
 
     @Bean
@@ -281,20 +305,38 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateProject updateProject(OrganizationRepository organizations) {
-        return new UpdateProject(organizations);
+    UpdateProject updateProject(OrganizationRepository organizations, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateProject(organizations, audit) {
+            @Override
+            public Project execute(Actor actor, CompanyId companyId, ProjectId id, ProjectChanges changes) {
+                return transaction.execute(status -> super.execute(actor, companyId, id, changes));
+            }
+        };
     }
 
     @Bean
     AddProjectMember addProjectMember(OrganizationRepository organizations, MembershipRepository memberships,
-            ProjectMemberRepository projectMembers) {
-        return new AddProjectMember(organizations, memberships, projectMembers);
+            ProjectMemberRepository projectMembers, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new AddProjectMember(organizations, memberships, projectMembers, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, ProjectId projectId, UserId userId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, projectId, userId));
+            }
+        };
     }
 
     @Bean
     RemoveProjectMember removeProjectMember(OrganizationRepository organizations,
-            ProjectMemberRepository projectMembers) {
-        return new RemoveProjectMember(organizations, projectMembers);
+            ProjectMemberRepository projectMembers, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RemoveProjectMember(organizations, projectMembers, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, ProjectId projectId, UserId userId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, projectId, userId));
+            }
+        };
     }
 
     @Bean
@@ -310,8 +352,14 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DeleteProject deleteProject(OrganizationRepository organizations, Clock clock) {
-        return new DeleteProject(organizations, clock);
+    DeleteProject deleteProject(OrganizationRepository organizations, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new DeleteProject(organizations, clock, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, ProjectId id) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, id));
+            }
+        };
     }
 
     @Bean
@@ -327,9 +375,9 @@ public class UseCaseConfiguration {
 
     @Bean
     RemoveMember removeMember(UserRepository users, MembershipRepository memberships, AccessKeyRepository keys,
-            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock, PlatformTransactionManager transactionManager) {
+            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new RemoveMember(users, memberships, keys, projectMembers, sessions, clock) {
+        return new RemoveMember(users, memberships, keys, projectMembers, sessions, clock, audit) {
             @Override
             public void execute(Actor actor, CompanyId companyId, UserId userId) {
                 transaction.executeWithoutResult(status -> super.execute(actor, companyId, userId));
@@ -362,15 +410,21 @@ public class UseCaseConfiguration {
 
     @Bean
     AddGroupAdmin addGroupAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            IdGenerator ids, PersonCodeGenerator personCodes) {
-        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes);
+            IdGenerator ids, PersonCodeGenerator personCodes, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes, audit) {
+            @Override
+            public GroupAdminAdded execute(Actor actor, NewGroupAdmin request) {
+                return transaction.execute(status -> super.execute(actor, request));
+            }
+        };
     }
 
     @Bean
     RevokeGroupAdmin revokeGroupAdmin(UserRepository users, MembershipRepository memberships,
-            AdminSessions sessions, PlatformTransactionManager transactionManager) {
+            AdminSessions sessions, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new RevokeGroupAdmin(users, memberships, sessions) {
+        return new RevokeGroupAdmin(users, memberships, sessions, audit) {
             @Override
             public void execute(Actor actor, UserId id) {
                 transaction.executeWithoutResult(status -> super.execute(actor, id));
@@ -380,9 +434,9 @@ public class UseCaseConfiguration {
 
     @Bean
     UpdateUser updateUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new UpdateUser(users, memberships, sessions) {
+        return new UpdateUser(users, memberships, sessions, audit) {
             @Override
             public User execute(Actor actor, UserId id, UserChanges changes) {
                 return transaction.execute(status -> super.execute(actor, id, changes));
@@ -392,22 +446,34 @@ public class UseCaseConfiguration {
 
     @Bean
     ChangePassword changePassword(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            AdminSessions sessions) {
-        return new ChangePassword(users, memberships, passwords, sessions);
+            AdminSessions sessions, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ChangePassword(users, memberships, passwords, sessions, audit) {
+            @Override
+            public void execute(Actor actor, UserId target, Optional<String> currentPassword, String newPassword) {
+                transaction.executeWithoutResult(status -> super.execute(actor, target, currentPassword, newPassword));
+            }
+        };
     }
 
     @Bean
     RecoverGroupAdmin recoverGroupAdmin(UserRepository users, PasswordHasher passwords, AdminSessions sessions,
-            InstallationSettings installationSettings) {
-        return new RecoverGroupAdmin(users, passwords, sessions, installationSettings);
+            InstallationSettings installationSettings, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RecoverGroupAdmin(users, passwords, sessions, installationSettings, audit) {
+            @Override
+            public void execute(String setupToken, Optional<String> email, String newPassword) {
+                transaction.executeWithoutResult(status -> super.execute(setupToken, email, newPassword));
+            }
+        };
     }
 
     @Bean
     DeleteUser deleteUser(UserRepository users, MembershipRepository memberships,
             ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new DeleteUser(users, memberships, projectMembers, sessions, clock) {
+        return new DeleteUser(users, memberships, projectMembers, sessions, clock, audit) {
             @Override
             public void execute(Actor actor, UserId id) {
                 transaction.executeWithoutResult(status -> super.execute(actor, id));
@@ -418,9 +484,9 @@ public class UseCaseConfiguration {
     @Bean
     AddMember addMember(UserRepository users, MembershipRepository memberships,
             OrganizationRepository organizations, ProjectMemberRepository projectMembers, PasswordHasher passwords,
-            IdGenerator ids, PersonCodeGenerator personCodes, PlatformTransactionManager transactionManager) {
+            IdGenerator ids, PersonCodeGenerator personCodes, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new AddMember(users, memberships, organizations, projectMembers, passwords, ids, personCodes) {
+        return new AddMember(users, memberships, organizations, projectMembers, passwords, ids, personCodes, audit) {
             @Override
             public MemberAdded execute(Actor actor, CompanyId companyId, NewMember newMember) {
                 return transaction.execute(status -> super.execute(actor, companyId, newMember));
@@ -431,9 +497,9 @@ public class UseCaseConfiguration {
     @Bean
     UpdateMember updateMember(UserRepository users, MembershipRepository memberships,
             OrganizationRepository organizations, PasswordHasher passwords, AdminSessions sessions,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new UpdateMember(users, memberships, organizations, passwords, sessions) {
+        return new UpdateMember(users, memberships, organizations, passwords, sessions, audit) {
             @Override
             public MemberView execute(Actor actor, CompanyId companyId, UserId userId, MemberChanges changes) {
                 return transaction.execute(status -> super.execute(actor, companyId, userId, changes));
@@ -442,15 +508,20 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    IssueAccessKey issueAccessKey(
-            AccessKeyRepository keys,
+    IssueAccessKey issueAccessKey(AccessKeyRepository keys,
             UserRepository users,
             MembershipRepository memberships,
             SecretHasher secrets,
             TokenGenerator tokens,
             IdGenerator ids,
-            Clock clock) {
-        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock);
+            Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock, audit) {
+            @Override
+            public IssuedKey execute(Actor actor, CompanyId companyId, UserId userId, String label) {
+                return transaction.execute(status -> super.execute(actor, companyId, userId, label));
+            }
+        };
     }
 
     @Bean
@@ -460,8 +531,14 @@ public class UseCaseConfiguration {
 
     @Bean
     RevokeAccessKey revokeAccessKey(AccessKeyRepository keys, UserRepository users, AccessLinkRepository links,
-            Clock clock) {
-        return new RevokeAccessKey(keys, users, links, clock);
+            Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RevokeAccessKey(keys, users, links, clock, audit) {
+            @Override
+            public void execute(Actor actor, AccessKeyId id) {
+                transaction.executeWithoutResult(status -> super.execute(actor, id));
+            }
+        };
     }
 
     @Bean
@@ -844,9 +921,9 @@ public class UseCaseConfiguration {
     @Bean
     SetUpInstallation setUpInstallation(OrganizationRepository organizations, UserRepository users,
             PasswordHasher passwords, IdGenerator ids, PersonCodeGenerator personCodes,
-            InstallationSettings installationSettings, PlatformTransactionManager transactionManager) {
+            InstallationSettings installationSettings, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new SetUpInstallation(organizations, users, passwords, ids, personCodes, installationSettings) {
+        return new SetUpInstallation(organizations, users, passwords, ids, personCodes, installationSettings, audit) {
             @Override
             public UserId execute(String setupToken, String groupName, String adminName, String adminEmail,
                     String password) {

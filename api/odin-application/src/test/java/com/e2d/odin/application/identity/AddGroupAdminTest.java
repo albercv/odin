@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.People;
@@ -28,8 +29,9 @@ class AddGroupAdminTest {
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final FakePasswordHasher passwords = new FakePasswordHasher();
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private final AddGroupAdmin add = new AddGroupAdmin(users, memberships, passwords, new SequenceIdGenerator(),
-            new SequencePersonCodeGenerator("7F3K", "9ZQ2"));
+            new SequencePersonCodeGenerator("7F3K", "9ZQ2"), audit);
 
     private static NewGroupAdmin person(String email, String password) {
         return new NewGroupAdmin("Gael", "Ruiz", email, Optional.ofNullable(password));

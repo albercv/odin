@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
@@ -42,8 +43,9 @@ class AddMemberTest {
     private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(organizations);
     private final FakePasswordHasher passwords = new FakePasswordHasher();
     private final SequencePersonCodeGenerator codes = new SequencePersonCodeGenerator("7F3K", "9ZQ2", "K4MN");
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private final AddMember add = new AddMember(users, memberships, organizations, projectMembers,
-            passwords, new SequenceIdGenerator(), codes);
+            passwords, new SequenceIdGenerator(), codes, audit);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final CompanyId other = new CompanyId(UUID.randomUUID());
     private final Actor groupAdmin = Actors.groupAdmin();
