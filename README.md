@@ -245,7 +245,7 @@ Esa lógica está detrás del puerto `AdminSessions` (`api/odin-application/src/
 
 Sin lector, los PDF escaneados y las imágenes no se leen: quedan «Esperando al lector OCR» y el panel dice «Esta instalación no lee documentos escaneados».
 
-Para leerlos, arranca el puente en el Mac, desde el repositorio OCR: `make serve`. En este equipo la URL del puente, vista desde Docker, va en `deploy/.env` (`ODIN_READER_URL`, y `ODIN_READER_TOKEN` si el puente lleva token). Al llegar el lector, los documentos que esperaban se leen solos. Un PDF con algunas páginas sin texto queda listo y el panel dice cuáles no se han leído.
+Para leerlos, el puente del lector tiene que estar en marcha en el Mac. Para que arranque solo al iniciar sesión y se levante si se cae: `make lector-arranque-instalar CONFIRMAR=ARRANQUE` (solo toca `~/Library/LaunchAgents`; `make lector-arranque-estado` lo comprueba y `make lector-arranque-quitar` lo deshace). Sin eso, se arranca a mano desde el repositorio OCR: `make serve`. En este equipo la URL del puente, vista desde Docker, va en `deploy/.env` (`ODIN_READER_URL`, y `ODIN_READER_TOKEN` si el puente lleva token). Al llegar el lector, los documentos que esperaban se leen solos. Un PDF con algunas páginas sin texto queda listo y el panel dice cuáles no se han leído.
 
 ## Etiquetado por tema
 

@@ -72,7 +72,7 @@ comprobar() {
 export CONFIRMAR_INSTALACION=PROPIETARIO # D-099: confirmada con CONFIRMAR=$PALABRA
 en_marcha || { echo "La instalación «$PROYECTO» no está en marcha (make up). No se ha cambiado nada." >&2; exit 1; }
 mkdir -p "$DATOS/copias"
-curl -s -m 3 http://127.0.0.1:8077/health > /dev/null || echo "Aviso: el puente OCR no responde; los escaneos esperarán al lector."
+curl -s -m 3 http://127.0.0.1:8077/health > /dev/null || echo "Aviso: el puente OCR no responde; los escaneos esperarán al lector. Para que arranque solo: make lector-arranque-instalar CONFIRMAR=ARRANQUE"
 copiar "despliegue-$MODO" || { echo "No se ha podido copiar. No se ha cambiado nada." >&2; exit 1; }
 COPIA_ENV="$DATOS/copias/env-antes-despliegue-$(date +%Y-%m-%d-%H%M%S)"
 cp -p "$ENV_FILE" "$COPIA_ENV"
