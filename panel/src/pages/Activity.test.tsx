@@ -13,7 +13,8 @@ const settings = 'GET /v1/admin/audit-settings';
 const put = 'PUT /v1/admin/audit-settings';
 const group: Me = { userId: 'g1', displayName: 'Ada Rey', firstName: 'Ada', lastName: 'Rey', personCode: 'ADAA', role: 'GROUP_ADMIN', companies: [], scannedDocumentsSupported: false };
 const company: Me = { ...group, role: 'COMPANY_ADMIN' };
-const companies = [{ id: 'c1', name: 'Acme', code: 'ACME', codeReviewed: true }];
+const LABEL = { singular: 'proyecto', plural: 'proyectos', feminine: false };
+const companies = [{ id: 'c1', name: 'Acme', code: 'ACME', codeReviewed: true, projectLabel: LABEL }];
 const row = (id: number, over = {}) => ({ id, occurredAt: `2026-11-1${id}T10:00:00Z`, actorKind: 'PERSON', actorName: `Persona ${id}`, actorRole: 'COMPANY_ADMIN',
   channel: 'PANEL', action: 'MEMBER_ADDED', targetLabel: `Objetivo ${id}`, outcome: 'DONE', details: { k: id }, ...over });
 const okIntegrity = { logEnabled: true, intact: true, headId: 7, headHash: 'abc123', headAt: '2026-11-14T09:00:00Z' };
@@ -224,7 +225,7 @@ test('revokeAsksForConfirmationAndDeletes', async () => {
 });
 
 test('companyAdminWithSeveralCompaniesPicksOne', async () => {
-  const two = [...companies, { id: 'c2', name: 'Beta', code: 'BETA', codeReviewed: true }];
+  const two = [...companies, { id: 'c2', name: 'Beta', code: 'BETA', codeReviewed: true, projectLabel: LABEL }];
   const calls = mockFetch({ [list]: () => ({ items: [] }), [integrity]: () => okIntegrity, [keys]: () => ({ chatAvailable: true }),
     [issue]: () => ({ status: 201, body: { id: 'k1', prefix: 'abcd1234', token: TOKEN, expiresAt: '2026-12-10T10:00:00Z' } }) });
   renderWithProviders(<Activity me={company} companies={two} />);

@@ -42,12 +42,12 @@ export function instructions(t: ProjectTerms): string {
 export async function buildServer(api: ApiClient): Promise<McpServer> {
   const me = await api.me();
   if (me.kind === 'ADMIN_CHAT') {
-    const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(projectTerms(undefined)) });
+    const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(DEFAULT_TERMS) });
     registerListActivity(server, api);
     return server;
   }
   const capabilities = new Set(me.company?.capabilities ?? []);
-  const terms = projectTerms(me.company?.projectLabel);
+  const terms = me.company ? projectTerms(me.company.projectLabel) : DEFAULT_TERMS;
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(terms) });
   const projects = createProjectNames(me, () => api.me(), terms);
   if (capabilities.has('SEARCH_KNOWLEDGE')) {

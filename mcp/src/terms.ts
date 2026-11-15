@@ -1,6 +1,6 @@
 import type { Me } from './api/client.js';
 
-export type ProjectLabel = Me['company']['projectLabel'];
+export type ProjectLabel = NonNullable<Me['company']>['projectLabel'];
 
 // Las palabras con las que el conector nombra los proyectos de la empresa, ya concordadas en género.
 export interface ProjectTerms {
