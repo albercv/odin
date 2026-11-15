@@ -7,6 +7,7 @@ import { Field } from '../ui/Field';
 import { PageHeader } from '../ui/PageHeader';
 import { Table, Td, Tr } from '../ui/Table';
 import { ACTIONS, CHANNELS, OUTCOMES, SYSTEM_ACTORS } from './activityLabels';
+import { ActivityChat } from './ActivityChat';
 import { ActivityFooter } from './ActivityFooter';
 import { ActivitySwitch } from './ActivitySwitch';
 import styles from './Activity.module.css';
@@ -87,6 +88,7 @@ export function Activity({ me, companies }: { me: S['AdminMe']; companies: S['Co
   const filters = Object.fromEntries(Object.entries(toFilters(draft)).filter(([, v]) => v));
   const { items, error, more } = useActivity(filters);
   const integrity = useLoad(api.activityIntegrity, []);
+  const [chatVersion, setChatVersion] = useState(0);
   const isGroup = me.role === 'GROUP_ADMIN';
   return (
     <div>
@@ -100,7 +102,8 @@ export function Activity({ me, companies }: { me: S['AdminMe']; companies: S['Co
       </Table>
       {more && <div className={styles.more}><Button onClick={more}>Cargar más</Button></div>}
       <ActivityFooter integrity={integrity.data} />
-      {isGroup && <ActivitySwitch onChanged={integrity.reload} />}
+      <ActivityChat companies={isGroup ? [] : companies} version={chatVersion} />
+      {isGroup && <ActivitySwitch onChanged={() => { integrity.reload(); setChatVersion((v) => v + 1); }} />}
     </div>
   );
 }

@@ -17,11 +17,14 @@ const companies = [{ id: 'c1', name: 'Acme', code: 'ACME', codeReviewed: true }]
 const row = (id: number, over = {}) => ({ id, occurredAt: `2026-11-1${id}T10:00:00Z`, actorKind: 'PERSON', actorName: `Persona ${id}`, actorRole: 'COMPANY_ADMIN',
   channel: 'PANEL', action: 'MEMBER_ADDED', targetLabel: `Objetivo ${id}`, outcome: 'DONE', details: { k: id }, ...over });
 const okIntegrity = { logEnabled: true, intact: true, headId: 7, headHash: 'abc123', headAt: '2026-11-14T09:00:00Z' };
+const keys = 'GET /v1/admin/activity-keys';
+const issue = 'POST /v1/admin/activity-keys';
 const off = { enabled: false, chatEnabled: false };
 
 const show = (routes: Routes = {}, me: Me = group) => {
   const calls = mockFetch({
-    [list]: () => ({ items: [row(2), row(1)], nextCursor: null }), [integrity]: () => okIntegrity, [settings]: () => ({ enabled: true, chatEnabled: false }), ...routes,
+    [list]: () => ({ items: [row(2), row(1)], nextCursor: null }), [integrity]: () => okIntegrity, [settings]: () => ({ enabled: true, chatEnabled: false }),
+    [keys]: () => ({ chatAvailable: true }), ...routes,
   });
   renderWithProviders(<Activity me={me} companies={companies} />);
   return calls;
@@ -157,4 +160,87 @@ test('noSortControls', async () => {
   expect(screen.queryByRole('button', { name: /ordenar/i })).toBeNull();
   expect(document.querySelector('[aria-sort]')).toBeNull();
   expect(screen.queryByLabelText(/ordenar/i)).toBeNull();
+});
+
+const activeKey = { id: 'k1', prefix: 'abcd1234', createdAt: '2026-11-10T10:00:00Z', expiresAt: '2026-12-10T10:00:00Z' };
+const TOKEN = 'odin-adm_abcd1234_secretoSecreto';
+const askKey = async (password = 'buena') => {
+  await userEvent.click(await screen.findByRole('button', { name: 'Emitir clave' }));
+  await userEvent.type(screen.getByLabelText('Contraseña actual'), password);
+  await userEvent.click(screen.getByRole('button', { name: 'Emitir' }));
+};
+
+test('chatDisabledSaysSoAndOffersNoKey', async () => {
+  show({ [keys]: () => ({ chatAvailable: false }) });
+  expect(await screen.findByText(/La consulta desde el chat está desactivada/)).toBeInTheDocument();
+  expect(screen.getByText(/administrador del grupo puede activarla/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Emitir clave' })).toBeNull();
+});
+
+test('showsTheActiveKeyWithoutToken', async () => {
+  show({ [keys]: () => ({ chatAvailable: true, key: activeKey }) });
+  expect(await screen.findByText(/abcd1234/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Revocar' })).toBeInTheDocument();
+});
+
+test('issuingShowsTheTokenOnceAndForgetsItOnClose', async () => {
+  const calls = show({ [issue]: () => ({ status: 201, body: { id: 'k1', prefix: 'abcd1234', token: TOKEN, expiresAt: '2026-12-10T10:00:00Z' } }) });
+  await askKey();
+  expect(await screen.findByText(TOKEN)).toBeInTheDocument();
+  expect(screen.getByText('Guárdala ahora: no se volverá a mostrar. Caduca en 30 días.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Copiar' })).toBeInTheDocument();
+  expect(calls.find((c) => c.key === issue)?.body).toEqual({ password: 'buena' });
+  await userEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+  expect(screen.queryByText(TOKEN)).toBeNull();
+});
+
+test('copyTokenPutsItOnTheClipboard', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  show({ [issue]: () => ({ status: 201, body: { id: 'k1', prefix: 'abcd1234', token: TOKEN, expiresAt: '2026-12-10T10:00:00Z' } }) });
+  await askKey();
+  await userEvent.click(await screen.findByRole('button', { name: 'Copiar' }));
+  expect(writeText).toHaveBeenCalledWith(TOKEN);
+});
+
+test('wrongPasswordAndChatDisabledAreShownInSpanish', async () => {
+  show({ [issue]: () => ({ status: 403, body: { detail: 'x' } }) });
+  await askKey('mala');
+  expect(await screen.findByText('La contraseña actual no es correcta.')).toBeInTheDocument();
+});
+
+test('conflictOnIssueExplainsTheChatIsOff', async () => {
+  show({ [issue]: () => ({ status: 409, body: { detail: 'x' } }) });
+  await askKey();
+  expect(await screen.findByText('La consulta desde el chat no está activada.')).toBeInTheDocument();
+});
+
+test('revokeAsksForConfirmationAndDeletes', async () => {
+  const calls = show({ [keys]: () => ({ chatAvailable: true, key: activeKey }), 'DELETE /v1/admin/activity-keys/k1': () => ({ status: 204 }) });
+  await userEvent.click(await screen.findByRole('button', { name: 'Revocar' }));
+  expect(calls.some((c) => c.key.startsWith('DELETE'))).toBe(false);
+  await userEvent.click(screen.getByRole('button', { name: 'Revocar la clave' }));
+  await waitFor(() => expect(calls.some((c) => c.key === 'DELETE /v1/admin/activity-keys/k1')).toBe(true));
+});
+
+test('companyAdminWithSeveralCompaniesPicksOne', async () => {
+  const two = [...companies, { id: 'c2', name: 'Beta', code: 'BETA', codeReviewed: true }];
+  const calls = mockFetch({ [list]: () => ({ items: [] }), [integrity]: () => okIntegrity, [keys]: () => ({ chatAvailable: true }),
+    [issue]: () => ({ status: 201, body: { id: 'k1', prefix: 'abcd1234', token: TOKEN, expiresAt: '2026-12-10T10:00:00Z' } }) });
+  renderWithProviders(<Activity me={company} companies={two} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Emitir clave' }));
+  await userEvent.selectOptions(screen.getByLabelText('Empresa de la clave'), 'c2');
+  await userEvent.type(screen.getByLabelText('Contraseña actual'), 'buena');
+  await userEvent.click(screen.getByRole('button', { name: 'Emitir' }));
+  await screen.findByText(TOKEN);
+  expect(calls.find((c) => c.key === issue)?.body).toEqual({ password: 'buena', companyId: 'c2' });
+});
+
+test('groupAdminChatToggleSendsThePasswordAndTheLegalNote', async () => {
+  const calls = show({ [put]: () => ({ enabled: true, chatEnabled: true }) });
+  expect(await screen.findByText('Lo que se consulta por el chat llega a la IA del administrador, que es un tercero. Actívalo solo tras la validación legal.')).toBeInTheDocument();
+  await userEvent.click(await screen.findByRole('button', { name: 'Activar la consulta desde el chat' }));
+  await userEvent.type(screen.getByLabelText('Contraseña actual'), 'buena');
+  await userEvent.click(screen.getByRole('button', { name: 'Activar' }));
+  await waitFor(() => expect(calls.find((c) => c.key === put)?.body).toEqual({ chatEnabled: true, password: 'buena' }));
 });
