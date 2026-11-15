@@ -12,17 +12,17 @@ public class SpreadsheetTextReader implements DocumentTextReader {
 
     @Override
     public boolean supports(DocumentFormat format) {
-        return format == DocumentFormat.XLSX || format == DocumentFormat.XLS;
+        return format == DocumentFormat.XLSX || format == DocumentFormat.XLS || format == DocumentFormat.ODS;
     }
 
     @Override
     public ReadResult read(byte[] content, DocumentFormat format) {
         SpreadsheetPager pager = new SpreadsheetPager();
         try {
-            if (format == DocumentFormat.XLSX) {
-                XlsxSheets.read(content, pager);
-            } else {
-                XlsSheets.read(content, pager);
+            switch (format) {
+                case XLSX -> XlsxSheets.read(content, pager);
+                case ODS -> OdsSheets.read(content, pager);
+                default -> XlsSheets.read(content, pager);
             }
         } catch (UnsupportedFormatException e) {
             throw e;

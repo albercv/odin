@@ -54,10 +54,24 @@ public class MagicBytesFormatDetector implements DocumentFormatDetector {
             if (names.contains("word/document.xml")) {
                 return Optional.of(DocumentFormat.DOCX);
             }
-            return names.contains("xl/workbook.xml") ? Optional.of(DocumentFormat.XLSX) : Optional.empty();
+            if (names.contains("xl/workbook.xml")) {
+                return Optional.of(DocumentFormat.XLSX);
+            }
+            return isOds(content) ? Optional.of(DocumentFormat.ODS) : Optional.empty();
         }
         return startsWith(content, OLE2) && hasWorkbookStream(content)
                 ? Optional.of(DocumentFormat.XLS) : Optional.empty();
+    }
+
+    private static boolean isOds(byte[] content) {
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(content))) {
+            ZipEntry first = zip.getNextEntry();
+            return first != null && "mimetype".equals(first.getName())
+                    && "application/vnd.oasis.opendocument.spreadsheet"
+                            .equals(new String(zip.readNBytes(100), StandardCharsets.US_ASCII).trim());
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private static Set<String> zipEntryNames(byte[] content) {

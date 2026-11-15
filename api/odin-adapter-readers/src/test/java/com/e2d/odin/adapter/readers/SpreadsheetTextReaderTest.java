@@ -27,6 +27,14 @@ class SpreadsheetTextReaderTest {
     }
 
     @Test
+    void readsOds() throws Exception {
+        byte[] ods = OdsSheetsTest.ods("<table:table table:name=\"Hoja1\"><table:table-row><table:table-cell>"
+                + "<text:p>dato</text:p></table:table-cell></table:table-row></table:table>");
+        assertThat(reader.supports(DocumentFormat.ODS)).isTrue();
+        assertThat(reader.read(ods, DocumentFormat.ODS).pageTexts()).containsExactly("Hoja «Hoja1»\ndato");
+    }
+
+    @Test
     void xlsxShowsDisplayedValuesAndHiddenSheets() throws Exception {
         ReadResult result = reader.read(book(new XSSFWorkbook()), DocumentFormat.XLSX);
         assertDisplayed(result);
