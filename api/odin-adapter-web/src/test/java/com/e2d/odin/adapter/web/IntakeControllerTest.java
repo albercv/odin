@@ -395,7 +395,7 @@ class IntakeControllerTest extends WebTestSupport {
     void closingTheBatchLeavesTheDontKnowDocumentsUnplacedAndKeepsTheTrayOpenForThem() throws Exception {
         oneProposedOneUnplaced();
         mvc.perform(post(batch + "/close").cookie(admin)).andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("Quedan 1 propuestas por decidir. Decídelas antes de cerrar la carga."));
+                .andExpect(jsonPath("$.detail").value("Queda 1 propuesta por decidir. Decídelas antes de cerrar la carga."));
         postJson(batch + "/proposals/" + firstProposal.id() + "/decide", "{\"decision\":\"DONT_KNOW\"}")
                 .andExpect(status().isOk());
 

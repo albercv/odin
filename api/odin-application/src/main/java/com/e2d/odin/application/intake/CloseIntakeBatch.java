@@ -35,7 +35,8 @@ public class CloseIntakeBatch {
         List<IntakeProposal> open = intake.proposals(companyId, batchId).stream().filter(IntakeProposal::open).toList();
         long toDecide = open.stream().filter(p -> p.state() == DecisionState.PROPOSED).count();
         if (toDecide > 0) {
-            throw new ConflictException("Quedan " + toDecide + " propuestas por decidir. Decídelas antes de cerrar la carga.");
+            throw new ConflictException((toDecide == 1 ? "Queda 1 propuesta" : "Quedan " + toDecide + " propuestas")
+                    + " por decidir. Decídelas antes de cerrar la carga.");
         }
         Instant now = clock.instant();
         open.forEach(p -> intake.save(p.reject(actor.userId(), now)));

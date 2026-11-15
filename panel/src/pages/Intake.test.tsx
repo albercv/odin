@@ -354,10 +354,10 @@ test('closeTheLoadIsDisabledWhileProposalsAreUndecided', async () => {
 });
 
 test('closeTheLoadShowsTheApiRefusal', async () => {
-  show({ [batchRoute]: () => batch({ toDecide: 0 }), [closeBatch]: () => ({ status: 409, body: { detail: 'Quedan 1 propuestas por decidir. Decídelas antes de cerrar la carga.' } }) });
+  show({ [batchRoute]: () => batch({ toDecide: 0 }), [closeBatch]: () => ({ status: 409, body: { detail: 'Queda 1 propuesta por decidir. Decídelas antes de cerrar la carga.' } }) });
   await userEvent.click(await screen.findByRole('button', { name: 'Cerrar la carga' }));
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar la carga' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Quedan 1 propuestas por decidir');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Queda 1 propuesta por decidir');
 });
 
 test('aClosedBatchShowsOnlyTheUnplacedStepAndNoCloseButton', async () => {

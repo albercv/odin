@@ -19,7 +19,7 @@ export function IntakeClose({ companyId, batch, onClosed }: { companyId: string;
     <div className={styles.tools}>
       <Notice message={error} />
       <Button variant="primary" disabled={toDecide > 0} onClick={close}>Cerrar la carga</Button>
-      {toDecide > 0 && <span className={styles.reason}>Quedan {toDecide} propuestas por decidir</span>}
+      {toDecide > 0 && <span className={styles.reason}>{toDecide === 1 ? 'Queda 1 propuesta por decidir' : `Quedan ${toDecide} propuestas por decidir`}</span>}
     </div>
   );
 }
