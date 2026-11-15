@@ -41,9 +41,10 @@ public class ListIntakeProposals {
                 .filter(IntakeProposal::open).filter(filter::matches).toList();
         titles.putAll(documents.titlesOf(companyId, proposed.stream().flatMap(p -> p.targetDocumentId().stream())
                 .filter(t -> !titles.containsKey(t)).distinct().toList()));
+        Map<DocumentId, String> types = intake.intakeTypes(companyId, batchId);
         Map<Key, List<IntakeProposalItem>> groups = new LinkedHashMap<>();
         proposed.stream().map(p -> new IntakeProposalItem(p, titles.getOrDefault(p.documentId(), ""),
-                        p.targetDocumentId().map(titles::get)))
+                        p.targetDocumentId().map(titles::get), Optional.ofNullable(types.get(p.documentId()))))
                 .sorted(Comparator.comparing(IntakeProposalItem::title).thenComparing(i -> i.proposal().id()))
                 .forEach(i -> groups.computeIfAbsent(key(i.proposal()), k -> new java.util.ArrayList<>()).add(i));
         return groups.entrySet().stream()

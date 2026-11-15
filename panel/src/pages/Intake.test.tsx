@@ -17,7 +17,7 @@ const batch = (changes = {}) => ({
 const obra = { id: 'p1', companyId: 'c1', name: 'Calle Olmo 24', restricted: true, memberCount: 0 };
 const otra = { id: 'p2', companyId: 'c1', name: 'Residencial Sur', restricted: true, memberCount: 0 };
 const item = (id: string, title: string, reason: string, extra = {}) => ({ id, documentId: `d-${id}`, title, source: 'RULES', reason, ...extra });
-const projectGroup = { kind: 'PROJECT', confidence: 'HIGH', projectId: 'p1', proposals: [item('a', 'Factura 12', 'Calle Olmo 24, cabecera'), item('b', 'Acta 3', 'obra Calle Olmo 24')] };
+const projectGroup = { kind: 'PROJECT', confidence: 'HIGH', projectId: 'p1', proposals: [item('a', 'Factura 12', 'Calle Olmo 24, cabecera', { documentType: 'poliza' }), item('b', 'Acta 3', 'obra Calle Olmo 24')] };
 const pairGroup = { kind: 'SUPERSEDES', confidence: 'HIGH', projectId: 'p1', proposals: [item('c', 'Póliza 2026', 'sustituye a la póliza nº 8', { targetDocumentId: 'd-old', targetTitle: 'Póliza 2025' })] };
 const openBatches = { batches: [{ id: 'b1', state: 'IN_REVIEW', channel: 'COMMAND', createdAt: '2026-11-13T10:00:00Z' }, { id: 'b0', state: 'IN_REVIEW', channel: 'COMMAND', createdAt: '2026-11-01T10:00:00Z' }] };
 const candidates = { candidates: [{ name: 'Calle Olmo 24', origin: 'IMPORTED', documentCount: 9, state: 'PROPOSED' }] };
@@ -246,8 +246,16 @@ test('decidesOneByOneReject', () => decide('Rechazar Factura 12', { decision: 'R
 test('decidesOneByOneCorrectProject', () => decide('Corregir proyecto de Factura 12', { decision: 'CORRECT_PROJECT', projectId: 'p2' },
   () => userEvent.selectOptions(screen.getByLabelText('Proyecto correcto de Factura 12'), 'Residencial Sur')));
 
+test('proposalRowsShowTheDocumentType', async () => {
+  show({});
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Ver documentos de Calle Olmo 24' }));
+  expect(screen.getByText('Póliza')).toBeInTheDocument();
+  expect(screen.getAllByText('Tipo sin identificar').length).toBeGreaterThan(0);
+});
+
 test('unplacedDocumentsCanBePlacedOrDiscarded', async () => {
-  const docs = { documents: [{ id: 'u1', title: 'Escaneo suelto', path: 'cliente/varios', status: 'READY' }] };
+  const docs = { documents: [{ id: 'u1', title: 'Escaneo suelto', path: 'cliente/varios', status: 'READY', documentType: null }] };
   const calls = show({
     [`GET ${base}/b1/documents?unplaced=true`]: () => docs,
     [`POST ${base}/b1/documents/u1/place`]: () => ({ status: 204 }), [`POST ${base}/b1/documents/u1/withdraw`]: () => ({}),
@@ -255,6 +263,7 @@ test('unplacedDocumentsCanBePlacedOrDiscarded', async () => {
   await step('2. Proyectos');
   const section = await screen.findByRole('region', { name: 'Sin ubicar' });
   expect(within(section).getByText('cliente/varios')).toBeInTheDocument();
+  expect(within(section).getByText('Tipo sin identificar')).toBeInTheDocument();
   await userEvent.click(within(section).getByRole('button', { name: 'De toda la empresa Escaneo suelto' }));
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/documents/u1/place`)?.body).toEqual({ companyWide: true }));
   await userEvent.selectOptions(within(section).getByLabelText('Proyecto de Escaneo suelto'), 'Calle Olmo 24');

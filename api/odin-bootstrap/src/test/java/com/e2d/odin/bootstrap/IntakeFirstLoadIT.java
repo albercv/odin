@@ -185,6 +185,21 @@ class IntakeFirstLoadIT {
             }
         }
         assertThat(checked).as("documentos con proyecto de confianza alta").isEqualTo(9);
+        assertTheTrayShowsTypes(groups);
+    }
+
+    /** La bandeja trae el tipo en cada propuesta (null o texto) y alguno está reconocido. */
+    private void assertTheTrayShowsTypes(JsonNode groups) {
+        Set<String> types = new HashSet<>();
+        for (JsonNode group : groups.get("groups")) {
+            for (JsonNode item : group.get("proposals")) {
+                assertThat(item.has("documentType")).as(item.get("title").asString()).isTrue();
+                if (!item.get("documentType").isNull()) {
+                    types.add(item.get("documentType").asString());
+                }
+            }
+        }
+        assertThat(types).as("tipos reconocidos en la bandeja").isNotEmpty();
     }
 
     private void confirmGroup(String batch, JsonNode groups, String projectId) {
@@ -202,6 +217,7 @@ class IntakeFirstLoadIT {
     private void placeWhatIsLeft(String batch) {
         JsonNode left = api.get(base + "/" + batch + "/documents?unplaced=true", "Cookie", cookie).json().get("documents");
         assertThat(left).as("las dos normas sin proyecto").hasSize(2);
+        left.forEach(d -> assertThat(d.get("documentType").asString()).as("tipo de lo sin ubicar").isEqualTo("norma"));
         String keep = left.get(0).get("id").asString();
         String drop = left.get(1).get("id").asString();
         assertThat(api.post(base + "/" + batch + "/documents/" + keep + "/place", map("companyWide", true), "Cookie", cookie)
@@ -232,6 +248,8 @@ class IntakeFirstLoadIT {
     private void assertSeenOnlyBy(String worker, String project) {
         Set<String> expected = idsOf(project);
         assertThat(visibleTo(worker)).as(worker + " ve los de " + project).containsAll(expected);
+        assertThat(api.get("/v1/documents?limit=200", "Authorization", workerKeys.get(worker)).body())
+                .as("el trabajador no ve el tipo de la primera carga").doesNotContain("documentType", "intakeType", "intake_type");
         for (String id : expected) {
             assertThat(readable(worker, id)).isTrue();
             assertThat(searchFinds(worker, id)).as(worker + " encuentra " + id).isTrue();

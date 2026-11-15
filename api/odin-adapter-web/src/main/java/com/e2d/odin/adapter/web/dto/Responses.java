@@ -540,16 +540,20 @@ public final class Responses {
     }
 
     @Schema(description = "Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). "
-            + "path: la ruta de su carpeta al subirlo.")
-    public record IntakeDocumentView(UUID id, String title, @Nullable String path, String status) {
-        static IntakeDocumentView from(Document d) {
-            return new IntakeDocumentView(d.id().value(), d.title(), d.intakePath().orElse(null), d.status().name());
+            + "path: la ruta de su carpeta al subirlo. documentType: el tipo que le calculó la clasificación "
+            + "(acta, contrato, poliza…), o null si no se reconoció.")
+    public record IntakeDocumentView(UUID id, String title, @Nullable String path, String status,
+            @Nullable String documentType) {
+        static IntakeDocumentView from(Document d, java.util.Map<com.e2d.odin.domain.shared.DocumentId, String> types) {
+            return new IntakeDocumentView(d.id().value(), d.title(), d.intakePath().orElse(null), d.status().name(),
+                    types.get(d.id()));
         }
     }
 
     public record IntakeDocuments(List<IntakeDocumentView> documents) {
-        public static IntakeDocuments from(List<Document> documents) {
-            return new IntakeDocuments(documents.stream().map(IntakeDocumentView::from).toList());
+        public static IntakeDocuments from(List<Document> documents,
+                java.util.Map<com.e2d.odin.domain.shared.DocumentId, String> types) {
+            return new IntakeDocuments(documents.stream().map(d -> IntakeDocumentView.from(d, types)).toList());
         }
     }
 
@@ -578,15 +582,17 @@ public final class Responses {
 
     @Schema(description = "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. "
             + "targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la "
-            + "misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL.")
+            + "misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. documentType: el tipo del documento de "
+            + "la fila (no el del destino), o null si no se reconoció.")
     public record IntakeProposalItem(UUID id, UUID documentId, String title, @Nullable UUID targetDocumentId,
-            @Nullable String targetTitle, @Nullable String caseNumber, String source, String reason) {
+            @Nullable String targetTitle, @Nullable String caseNumber, String source, String reason,
+            @Nullable String documentType) {
         static IntakeProposalItem from(com.e2d.odin.application.intake.IntakeProposalItem i) {
             com.e2d.odin.domain.intake.IntakeProposal p = i.proposal();
             return new IntakeProposalItem(p.id(), p.documentId().value(), i.title(),
                     p.targetDocumentId().map(d -> d.value()).orElse(null), i.targetTitle().orElse(null),
                     p.caseNumber().orElse(null),
-                    p.source().name(), p.reason());
+                    p.source().name(), p.reason(), i.documentType().orElse(null));
         }
     }
 

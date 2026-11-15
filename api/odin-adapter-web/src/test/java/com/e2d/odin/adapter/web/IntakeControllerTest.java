@@ -358,6 +358,19 @@ class IntakeControllerTest extends WebTestSupport {
     }
 
     @Test
+    void theTrayShowsTheDocumentTypeOfEachRowAndNullWhenUnrecognised() throws Exception {
+        oneProposedOneUnplaced();
+        w.intake.saveClassification(company, new com.e2d.odin.domain.intake.IntakeBatchId(java.util.UUID.fromString(
+                batch.substring(batch.lastIndexOf('/') + 1))), java.util.Map.of(second.id(), "acta"), List.of());
+        var unrecognised = org.hamcrest.Matchers.nullValue();
+
+        mvc.perform(get(batch + "/proposals").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.groups[0].proposals[0].documentType").value("acta"));
+        mvc.perform(get(batch + "/documents").param("unplaced", "true").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[0].documentType").value(unrecognised));
+    }
+
+    @Test
     void anUnplacedDocumentIsListedAndPlacedByTheAdminWithExactlyOneDestination() throws Exception {
         oneProposedOneUnplaced();
         String place = batch + "/documents/" + first.id().value() + "/place";

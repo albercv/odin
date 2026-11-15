@@ -132,6 +132,31 @@ public class PostgresIntakeRepository implements IntakeRepository {
                 p -> jdbc.sql(INSERT_PROPOSAL + " ON CONFLICT DO NOTHING").params(proposalParams(p)).update()));
     }
 
+    @Override
+    public void saveClassification(CompanyId companyId, IntakeBatchId batchId, Map<DocumentId, String> types,
+            List<List<IntakeProposal>> proposalGroups) {
+        tx.runInScope(CompanyScope.of(companyId), ALL, jdbc -> {
+            types.forEach((document, type) -> jdbc.sql(UPDATE_TYPE).param("type", type).param("id", document.value())
+                    .param("company", companyId.value()).param("batch", batchId.value()).update());
+            proposalGroups.forEach(group -> group.forEach(
+                    p -> jdbc.sql(INSERT_PROPOSAL + " ON CONFLICT DO NOTHING").params(proposalParams(p)).update()));
+        });
+    }
+
+    private static final String UPDATE_TYPE = """
+            UPDATE document SET intake_type = :type
+            WHERE id = :id AND company_id = :company AND intake_batch_id = :batch""";
+
+    @Override
+    public Map<DocumentId, String> intakeTypes(CompanyId companyId, IntakeBatchId batchId) {
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("""
+                SELECT id, intake_type FROM document
+                WHERE company_id = :company AND intake_batch_id = :batch AND intake_type IS NOT NULL""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "id")), rs.getString("intake_type"))).list()
+                .stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
     private static final String INSERT_PROPOSAL = """
             INSERT INTO intake_proposal (id, company_id, batch_id, document_id, kind, target_project_id,
                 target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at)

@@ -120,7 +120,7 @@ public class ClassifyIntake {
         all.stream().filter(d -> !done.contains(d.id())).forEach(d -> proposeFor(run, d));
         links(run, all);
         duplicates(run, all, existing);
-        saveNew(run, existing);
+        saveNew(run, existing, all);
         finish(batch);
     }
 
@@ -137,10 +137,14 @@ public class ClassifyIntake {
                 .forEach(p -> p.targetProjectId().ifPresent(id -> run.projectOf.put(p.documentId(), id.value().toString())));
     }
 
-    private void saveNew(Run run, List<IntakeProposal> existing) {
+    private void saveNew(Run run, List<IntakeProposal> existing, List<IntakeDocument> all) {
         Set<String> known = existing.stream().map(ClassifyIntake::key).collect(Collectors.toSet());
-        run.made.stream().filter(p -> known.add(key(p))).collect(Collectors.groupingBy(IntakeProposal::documentId,
-                LinkedHashMap::new, Collectors.toList())).values().forEach(intake::addProposals);
+        List<List<IntakeProposal>> groups = run.made.stream().filter(p -> known.add(key(p)))
+                .collect(Collectors.groupingBy(IntakeProposal::documentId, LinkedHashMap::new, Collectors.toList()))
+                .values().stream().toList();
+        Map<DocumentId, String> types = new HashMap<>();
+        all.forEach(d -> CaseFileRules.documentType(d.text()).ifPresent(t -> types.put(d.id(), t)));
+        intake.saveClassification(run.company(), run.batch.id(), types, groups);
     }
 
     private static String key(IntakeProposal p) {

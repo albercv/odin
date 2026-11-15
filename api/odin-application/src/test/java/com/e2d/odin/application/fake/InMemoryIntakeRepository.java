@@ -8,6 +8,7 @@ import com.e2d.odin.domain.intake.IntakeState;
 import com.e2d.odin.domain.intake.ProjectCandidate;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
+import com.e2d.odin.domain.shared.DocumentId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,5 +94,19 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     public synchronized List<IntakeProposal> proposals(CompanyId companyId, IntakeBatchId batchId) {
         return proposals.values().stream()
                 .filter(p -> p.companyId().equals(companyId) && p.batchId().equals(batchId)).toList();
+    }
+
+    private final java.util.Map<DocumentId, String> types = new java.util.HashMap<>();
+
+    @Override
+    public synchronized void saveClassification(CompanyId companyId, IntakeBatchId batchId,
+            java.util.Map<DocumentId, String> newTypes, List<List<IntakeProposal>> groups) {
+        groups.forEach(this::addProposals);
+        types.putAll(newTypes);
+    }
+
+    @Override
+    public synchronized java.util.Map<DocumentId, String> intakeTypes(CompanyId companyId, IntakeBatchId batchId) {
+        return java.util.Map.copyOf(types);
     }
 }
