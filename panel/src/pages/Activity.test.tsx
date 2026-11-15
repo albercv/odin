@@ -142,7 +142,7 @@ test('enablingNeedsReferenceAndPasswordAndShowsTheWrongPassword', async () => {
   await userEvent.type(screen.getByLabelText('Contraseña actual'), 'mala');
   await userEvent.click(screen.getByRole('button', { name: 'Encender' }));
   expect(await screen.findByText('La contraseña actual no es correcta.')).toBeInTheDocument();
-  expect(calls.find((c) => c.key === put)?.body).toEqual({ enabled: true, usagePolicyReference: 'intranet/politica', password: 'mala' });
+  expect(calls.find((c) => c.key === put)?.body).toEqual({ enabled: true, chatEnabled: false, usagePolicyReference: 'intranet/politica', password: 'mala' });
 });
 
 test('disablingAsksOnlyForThePassword', async () => {
@@ -151,7 +151,7 @@ test('disablingAsksOnlyForThePassword', async () => {
   expect(screen.queryByLabelText('Referencia de la política de uso publicada')).toBeNull();
   await userEvent.type(screen.getByLabelText('Contraseña actual'), 'buena');
   await userEvent.click(screen.getByRole('button', { name: 'Apagar' }));
-  await waitFor(() => expect(calls.find((c) => c.key === put)?.body).toEqual({ enabled: false, password: 'buena' }));
+  await waitFor(() => expect(calls.find((c) => c.key === put)?.body).toEqual({ enabled: false, chatEnabled: false, password: 'buena' }));
 });
 
 test('noSortControls', async () => {
@@ -242,5 +242,13 @@ test('groupAdminChatToggleSendsThePasswordAndTheLegalNote', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Activar la consulta desde el chat' }));
   await userEvent.type(screen.getByLabelText('Contraseña actual'), 'buena');
   await userEvent.click(screen.getByRole('button', { name: 'Activar' }));
-  await waitFor(() => expect(calls.find((c) => c.key === put)?.body).toEqual({ chatEnabled: true, password: 'buena' }));
+  await waitFor(() => expect(calls.find((c) => c.key === put)?.body).toEqual({ enabled: true, chatEnabled: true, password: 'buena' }));
+});
+
+test('switchingTheLogKeepsTheCurrentChatState', async () => {
+  const calls = show({ [settings]: () => ({ enabled: true, chatEnabled: true }), [put]: () => ({ enabled: false, chatEnabled: true }) });
+  await userEvent.click(await screen.findByRole('button', { name: 'Apagar el registro' }));
+  await userEvent.type(screen.getByLabelText('Contraseña actual'), 'buena');
+  await userEvent.click(screen.getByRole('button', { name: 'Apagar' }));
+  await waitFor(() => expect(calls.find((c) => c.key === put)?.body).toEqual({ enabled: false, chatEnabled: true, password: 'buena' }));
 });
