@@ -13,8 +13,13 @@ Diseño: `docs/superpowers/specs/2026-11-09-api-central-design.md`.
 ## Repositorio
 
 - Privado en GitHub (`albercv/odin`). Solo entra quien invite el propietario.
-- Ramas (gitflow): `develop` integra lo aprobado y es la que se sube; `main` recibe los cierres de sprint. Cada trabajo va en `feature/<nombre>`, que sale de `develop`, y cada tarea en `task/<feature>/<tarea>`, que se mezcla con `--no-ff` en su feature. Una feature entra en `develop` solo con el visto bueno del propietario.
-- Lo que está en construcción vive en sus ramas `feature/…` y no se sube hasta que entra en `develop`.
+- Ramas (gitflow, D-114):
+  - `feature/<nombre>` sale de `develop`, y cada tarea va en `task/<feature>/<tarea>`, que se mezcla con `--no-ff` en su feature.
+  - Antes de pedir el visto bueno, la feature se pone al día con `develop` y, si trae migración, se ensaya la actualización sobre una copia de la base.
+  - Con el visto bueno del propietario, la feature entra en `develop` con `--no-ff` y la instalación del propietario se actualiza desde `develop`.
+  - `main` recibe los cierres de sprint por una rama `release/<versión>` y lleva su etiqueta. Las instalaciones de clientes salen solo de `main`. Un arreglo urgente sale de `main` en `hotfix/<nombre>` y vuelve a `main` y a `develop`.
+  - No hay ramas de integración aparte: las `integracion/…` quedan retiradas.
+- Se suben `develop`, `main` y sus etiquetas cada vez que cambian. Lo que está en construcción vive en sus ramas `feature/…` y no se sube.
 - Nunca se suben `deploy/.env`, `data/` ni documentos reales: los excluye `.gitignore`, y antes de cada subida se revisa el historial en busca de claves.
 
 ## Requisitos
@@ -136,7 +141,7 @@ Para probar Odín desde Claude Desktop con datos ficticios. Las órdenes actúan
 | `make datos-prueba-cargar` | Hace el primer arranque y carga los datos de prueba por la API. Solo en una instalación vacía: si ya tiene datos, para sin tocarlos. Si falla a medias, la vuelve a dejar vacía |
 | `make mcp-claude-desktop [TRABAJADOR=marta\|javier\|ignacio]` | Compila `mcp/` de la copia desde la que se lanza y lo copia en `data/mcp-claude-desktop/`. Añade o actualiza solo la entrada `odin` de `~/Library/Application Support/Claude/claude_desktop_config.json`, con copia previa en `data/copias/`, apuntando a esa copia del MCP: recompilar o cambiar de rama no cambia el MCP de Claude Desktop. Usa la clave de ese trabajador sin mostrarla (por defecto, `marta`). Después hay que reiniciar Claude Desktop |
 | `make instalacion-restaurar COPIA=data/copias/odin-….sql CONFIRMAR=BORRAR` | Vuelve a una copia, con sus originales. Antes copia lo que hay |
-| `make instalacion-actualizar CONFIRMAR=ACTUALIZAR` | Actualiza solo el código de la instalación a `integracion/instalacion` y **conserva la base y los originales**. Antes copia la base, los originales, `deploy/.env` y la configuración de Claude Desktop. Reintenta los documentos fallidos y renueva el MCP de Claude Desktop sin cambiar su trabajador. Si algo falla, vuelve a la copia. Es la orden para actualizar una instalación en uso |
+| `make instalacion-actualizar CONFIRMAR=ACTUALIZAR` | Actualiza solo el código de la instalación a `develop` y **conserva la base y los originales**. Antes copia la base, los originales, `deploy/.env` y la configuración de Claude Desktop. Reintenta los documentos fallidos y renueva el MCP de Claude Desktop sin cambiar su trabajador. Si algo falla, vuelve a la copia. Es la orden para actualizar una instalación en uso |
 | `make instalacion-anadir-proyecto DATOS_PROYECTO=<carpeta> CONFIRMAR=ANADIR` | Añade un proyecto nuevo, con sus documentos, sustituciones, fichas y expedientes, a una instalación en uso, **sin vaciarla ni tocar lo que ya tiene**. La carpeta tiene el formato del archivo ficticio (`manifiesto.json` con un solo proyecto de una empresa que ya existe, `corpus/` y, si hay, `expedientes.json` y `expedientes/`). Lo ven los trabajadores de prueba de `MIEMBROS` (por defecto `marta`), que escriben sus fichas. Antes copia la base y los originales, comprueba el aislamiento por la API y saca el recuento; si algo falla, vuelve a la copia. Sin `CONFIRMAR` solo revisa los datos y explica qué haría |
 | `make instalacion-desplegar CONFIRMAR=DESPLEGAR [TRABAJADOR=marta]` | Como la anterior, pero **vacía la instalación** y carga el archivo ficticio completo. Borra lo que se haya hecho en ella (queda en la copia): solo con autorización expresa del propietario en cada ocasión |
 

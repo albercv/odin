@@ -40,10 +40,12 @@ Este fichero es configuración del proyecto. No guardar aquí requisitos, planes
 
 superpowers: diseño aprobado (spec) → plan (`superpowers:writing-plans`) → ejecución con subagentes (Sonnet para lo complejo, Haiku para lo mecánico) → `superpowers:verification-before-completion`.
 
-## Git (gitflow, solo local)
+## Git (gitflow, D-114)
 
 - Ramas: `main` (cierres de sprint), `develop` (integración), `feature/<nombre>` (sale de `develop`), `task/<feature>/<tarea>` (sale de su feature).
 - Cada tarea en su propia rama `task/…`; al terminar, merge `--no-ff` a su feature.
-- Una feature pasa a `develop` solo cuando el propietario la aprueba; `develop` pasa a `main` al cierre de sprint.
-- Sin remoto de momento: no hacer push.
+- Una feature se pone al día con `develop` (y ensaya su migración sobre una copia, si la trae) antes de pedir el visto bueno. Con el visto bueno del propietario entra en `develop` con `--no-ff`, y la instalación del propietario se actualiza desde `develop` (`make instalacion-actualizar`).
+- `develop` pasa a `main` al cierre de sprint por `release/<versión>`, con etiqueta. Las instalaciones de clientes salen solo de `main`. Arreglos urgentes: `hotfix/<nombre>` desde `main`, de vuelta a `main` y a `develop`.
+- Sin ramas de integración aparte: las `integracion/…` están retiradas.
+- Remoto privado en GitHub (`albercv/odin`): solo se suben `develop`, `main` y sus etiquetas, y solo lo hace el CEO con el sí del propietario, con la copia filtrada sin `experimentos/` y tras revisar que no haya claves.
 - Ningún commit ni PR lleva atribución a Claude: sin `Co-Authored-By` ni firmas de Claude Code.
