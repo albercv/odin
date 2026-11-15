@@ -3,6 +3,7 @@ import type { ApiClient } from './api/client.js';
 import { createProjectNames } from './projects.js';
 import { registerCaseFileTools } from './tools/caseFile.js';
 import { registerFindSimilarCases } from './tools/findSimilarCases.js';
+import { registerListActivity } from './tools/listActivity.js';
 import { registerListDocuments } from './tools/listDocuments.js';
 import { registerListMyKnowledgeCards } from './tools/listMyKnowledgeCards.js';
 import { registerListMyQuestions } from './tools/listMyQuestions.js';
@@ -33,8 +34,12 @@ export const INSTRUCTIONS = [
 
 export async function buildServer(api: ApiClient): Promise<McpServer> {
   const me = await api.me();
-  const capabilities = new Set(me.company.capabilities);
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: INSTRUCTIONS });
+  if (me.kind === 'ADMIN_CHAT') {
+    registerListActivity(server, api);
+    return server;
+  }
+  const capabilities = new Set(me.company?.capabilities ?? []);
   const projects = createProjectNames(me, () => api.me());
   if (capabilities.has('SEARCH_KNOWLEDGE')) {
     registerSearchKnowledge(server, api, projects, capabilities.has('CASE_FILES'));
