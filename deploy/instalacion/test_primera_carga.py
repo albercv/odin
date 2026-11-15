@@ -73,7 +73,7 @@ class FalsoOdin(BaseHTTPRequestHandler):
             self.responder(500, {"detail": "disco lleno"})
         elif self.path == f"{base}/{LOTE}/files":
             ruta = re.search(rb'name="path"\r\n\r\n(.*?)\r\n--', cuerpo, re.S).group(1).decode()
-            if ruta.endswith(".xlsx"):
+            if ruta.endswith(".pptx"):
                 return self.responder(415, {"detail": "Ese formato no se admite"})
             if ruta.endswith(".enorme"):
                 return self.responder(413, {"detail": "El fichero supera el límite"})
@@ -161,7 +161,7 @@ class PrimeraCargaTest(unittest.TestCase):
     # subir, saltar, reanudar
 
     def test_unFicheroQueLaApiNoAdmiteSeSaltaConSuMotivoYSigue(self):
-        self.crear("hoja.xlsx")
+        self.crear("hoja.pptx")
         self.crear("plano.enorme")
         self.crear("dos.txt", "2")
         self.crear("vacio.txt", "")
@@ -169,10 +169,10 @@ class PrimeraCargaTest(unittest.TestCase):
         self.assertEqual(0, codigo, texto)
         self.assertEqual(["dos.txt"], self.estado["subidos"])
         self.assertTrue(self.estado["cerrado"])
-        self.assertIn("Se salta: hoja.xlsx: Ese formato no se admite", texto)
+        self.assertIn("Se salta: hoja.pptx: Ese formato no se admite", texto)
         self.assertIn("Se salta: plano.enorme: El fichero supera el límite", texto)
         final = texto[texto.rindex("Saltados"):]
-        for ruta in ("hoja.xlsx", "plano.enorme", "vacio.txt"):
+        for ruta in ("hoja.pptx", "plano.enorme", "vacio.txt"):
             self.assertIn(ruta, final)
 
     def test_subeConSuRutaRelativaYCierraLaSubida(self):

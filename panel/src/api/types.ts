@@ -1461,6 +1461,12 @@ export interface components {
             code: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
             codeReviewed: boolean;
+            projectLabel: components["schemas"]["ProjectLabelView"];
+        };
+        ProjectLabelView: {
+            singular: string;
+            plural: string;
+            feminine: boolean;
         };
         UpdateAuditSettings: {
             enabled?: boolean;
@@ -1928,10 +1934,17 @@ export interface components {
             /** @description Si el documento es la ficha de un caso resuelto. */
             caseDocument: boolean;
         };
+        ProjectLabelBody: {
+            singular?: string;
+            plural?: string;
+            feminine?: boolean;
+        };
         UpdateCompany: {
             name?: string;
             /** @description Solo lo cambia el administrador del grupo. */
             code?: string;
+            /** @description Cómo llama la empresa a sus proyectos; si no se envía, no cambia. */
+            projectLabel?: components["schemas"]["ProjectLabelBody"];
         };
         TopicPatch: {
             name?: string;
@@ -1952,6 +1965,7 @@ export interface components {
             target: "CASE" | "PROJECT";
             caseTitle?: string;
             projectName: string;
+            projectLabel: components["schemas"]["ProjectLabelView"];
             /** Format: date-time */
             expiresAt: string;
         };
@@ -1974,6 +1988,7 @@ export interface components {
             id: string;
             name: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
+            projectLabel: components["schemas"]["ProjectLabelView"];
         };
         MeProject: {
             /** Format: uuid */
@@ -2121,6 +2136,7 @@ export interface components {
             name: string;
             code: string;
             codeReviewed: boolean;
+            projectLabel: components["schemas"]["ProjectLabelView"];
         };
         DocumentTopicView: {
             /** Format: uuid */

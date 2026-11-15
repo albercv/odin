@@ -7,6 +7,7 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectLabel;
 import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
@@ -51,6 +52,30 @@ class PostgresOrganizationRepositoryIT extends AbstractPostgresIT {
         assertThat(orgs.findCompany(id)).contains(updated);
         orgs.saveCompany(updated.withCapabilities(Set.of()));
         assertThat(orgs.findCompany(id).orElseThrow().capabilities()).isEmpty();
+    }
+
+    @Test
+    void savesAndReadsTheProjectLabelAndDefaultsWhenAbsent() {
+        CompanyId id = newCompany();
+        assertThat(orgs.findCompany(id).orElseThrow().projectLabel()).isEqualTo(ProjectLabel.DEFAULT);
+
+        orgs.saveCompany(orgs.findCompany(id).orElseThrow().withProjectLabel(new ProjectLabel("comunidad", "comunidades", true)));
+        assertThat(orgs.findCompany(id).orElseThrow().projectLabel())
+                .isEqualTo(new ProjectLabel("comunidad", "comunidades", true));
+
+        orgs.saveCompany(orgs.findCompany(id).orElseThrow().withProjectLabel(ProjectLabel.DEFAULT));
+        assertThat(orgs.findCompany(id).orElseThrow().projectLabel()).isEqualTo(ProjectLabel.DEFAULT);
+    }
+
+    @Test
+    void databaseRejectsAPartialProjectLabel() {
+        CompanyId id = newCompany();
+        assertThatThrownBy(() -> {
+            try (Connection c = Db.owner().getConnection(); Statement s = c.createStatement()) {
+                s.execute("UPDATE company SET project_label_singular = 'obra', project_label_plural = 'obras'"
+                        + " WHERE id = '" + id.value() + "'");
+            }
+        }).isInstanceOf(SQLException.class);
     }
 
     @Test

@@ -5,8 +5,8 @@ import { currentMonth } from '../components/MonthPicker';
 import { mockFetch } from '../mockApi';
 import { renderWithProviders } from '../ui/renderWithProviders';
 
-const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true };
-const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true };
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
+const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
 const me = { userId: 'u1', displayName: 'Ana', firstName: 'Ana', personCode: 'AAAA', role: 'GROUP_ADMIN' as const, companies: [acme, beta], scannedDocumentsSupported: false };
 const quiet = { pendingDocuments: 0, window: { always: true }, timezone: 'Europe/Madrid' };
 
@@ -85,4 +85,19 @@ test('groupWithoutCompaniesShowsAnEmptyState', async () => {
   shell();
   await userEvent.click(await screen.findByRole('link', { name: 'Documentos' }));
   expect(await screen.findByRole('heading', { name: 'Todavía no hay empresas' })).toBeInTheDocument();
+});
+
+test('theChosenCompanyWordForProjectsReachesTheScreens', async () => {
+  const comunidades = { singular: 'comunidad', plural: 'comunidades', feminine: true };
+  mockFetch({
+    'GET /v1/admin/companies': () => [{ ...acme, capabilities: [] }, { ...beta, capabilities: [], projectLabel: comunidades }],
+    'GET /v1/admin/companies/c1/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }), 'GET /v1/admin/companies/c2/cards?status=PENDING&offset=0&limit=10': () => ({ cards: [], total: 0 }),
+    'GET /v1/admin/companies/c1/projects': () => [], 'GET /v1/admin/companies/c1/members': () => [],
+    'GET /v1/admin/companies/c2/projects': () => [], 'GET /v1/admin/companies/c2/members': () => [],
+  });
+  shell();
+  await userEvent.click(await screen.findByRole('link', { name: 'Empresa' }));
+  expect(await screen.findByRole('heading', { name: 'Proyectos' })).toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Empresa' }), 'Beta');
+  expect(await screen.findByRole('heading', { name: 'Comunidades' })).toBeInTheDocument();
 });

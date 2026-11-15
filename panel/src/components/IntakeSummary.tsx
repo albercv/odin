@@ -1,11 +1,12 @@
 import type { S } from '../api/client';
 import { Section } from '../ui/Section';
+import { useProjectTerms, type ProjectTerms } from './projectTerms';
 import styles from './Intake.module.css';
 
-const PROPOSED: Record<string, string> = {
-  PROJECT: 'Proyectos propuestos', COMPANY_WIDE: 'De toda la empresa propuestos', SAME_AS_SCAN: 'Escaneos propuestos',
+const proposed = (t: ProjectTerms): Record<string, string> => ({
+  PROJECT: `${t.Many} ${t.agree('propuestos', 'propuestas')}`, COMPANY_WIDE: 'De toda la empresa propuestos', SAME_AS_SCAN: 'Escaneos propuestos',
   SUPERSEDES: 'Versiones propuestas', CASE_MARK: 'Casos propuestos', CASE_LINK: 'Enlaces propuestos',
-};
+});
 
 const pendingWarning = (n: number) => `${n === 1 ? '1 documento sigue pendiente y ningún trabajador lo ve' : `${n} documentos siguen pendientes y ningún trabajador los ve`}. «No lo sé» los deja ocultos, sin plazo.`;
 
@@ -21,6 +22,7 @@ function Count({ label, value }: { label: string; value: number }) {
 
 /** Counts of the batch: never per person (D-005). */
 export function IntakeSummary({ batch }: { batch: S['IntakeBatchView'] }) {
+  const labels = proposed(useProjectTerms());
   return (
     <>
       <Warnings batch={batch} />
@@ -30,7 +32,7 @@ export function IntakeSummary({ batch }: { batch: S['IntakeBatchView'] }) {
             <Count label="Subidos" value={batch.uploaded} /><Count label="En lectura" value={batch.reading} />
             <Count label="Sin confirmar" value={batch.pending} /><Count label="Ya estaban" value={batch.alreadyThere} />
             <Count label="Descartados" value={batch.discarded} /><Count label="Sin ubicar" value={batch.unplaced} />
-            {Object.entries(batch.proposed).map(([kind, n]) => <Count key={kind} label={PROPOSED[kind] ?? kind} value={n} />)}
+            {Object.entries(batch.proposed).map(([kind, n]) => <Count key={kind} label={labels[kind] ?? kind} value={n} />)}
           </dl>
         </div>
       </Section>

@@ -8,6 +8,7 @@ import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.organization.ProjectLabel;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ConflictException;
 import com.e2d.odin.domain.shared.ForbiddenException;
@@ -88,6 +89,27 @@ class UpdateCompanyTest {
                 .isInstanceOf(ConflictException.class).hasMessage("Ya existe una empresa con ese código");
         assertThat(update.execute(Actors.groupAdmin(), company, code(stored(company).code())).code())
                 .isEqualTo(stored(company).code());
+    }
+
+    @Test
+    void groupAdminChangesTheProjectLabelAndOmittingItKeepsIt() {
+        ProjectLabel label = ProjectLabel.of("Comunidad", "Comunidades", true);
+        update.execute(Actors.groupAdmin(), company,
+                new CompanyChanges(Optional.empty(), Optional.empty(), Optional.of(label)));
+        assertThat(stored(company).projectLabel()).isEqualTo(new ProjectLabel("comunidad", "comunidades", true));
+
+        update.execute(Actors.groupAdmin(), company, name("Nuevo"));
+        assertThat(stored(company).projectLabel()).isEqualTo(new ProjectLabel("comunidad", "comunidades", true));
+    }
+
+    @Test
+    void companyAdminCannotChangeTheProjectLabel() {
+        Company before = stored(company);
+
+        assertThatThrownBy(() -> update.execute(Actors.companyAdmin(company), company, new CompanyChanges(
+                Optional.empty(), Optional.empty(), Optional.of(ProjectLabel.of("obra", "obras", true)))))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(stored(company)).isEqualTo(before);
     }
 
     @Test

@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { Sidebar } from './Sidebar';
 
-const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true };
-const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true };
+const acme = { id: 'c1', name: 'Acme', code: 'ACM', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
+const beta = { id: 'c2', name: 'Beta', code: 'BET', codeReviewed: true, projectLabel: { singular: 'proyecto', plural: 'proyectos', feminine: false } };
 
 type Props = Partial<React.ComponentProps<typeof Sidebar>>;
 const show = (props: Props = {}) => {

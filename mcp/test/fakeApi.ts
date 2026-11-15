@@ -40,17 +40,18 @@ export async function startFakeApi(handler: Handler): Promise<FakeApi> {
 export interface MeExtras {
   topics?: { id: string; name: string; definition: string }[];
   pendingDocuments?: number;
+  projectLabel?: { singular: string; plural: string; feminine: boolean };
 }
 
 export const meWith = (
   capabilities: string[],
   companyName = 'Empresa Uno',
   projects: { id: string; name: string }[] = [],
-  { topics = [], pendingDocuments = 0 }: MeExtras = {},
+  { topics = [], pendingDocuments = 0, projectLabel = { singular: 'proyecto', plural: 'proyectos', feminine: false } }: MeExtras = {},
 ) => ({
   status: 200,
   body: {
-    userId: 'u1', displayName: 'Ana', role: 'WORKER', company: { id: 'c1', name: companyName, capabilities }, projects,
+    userId: 'u1', displayName: 'Ana', role: 'WORKER', company: { id: 'c1', name: companyName, capabilities, projectLabel }, projects,
     topics, tagging: { pendingDocuments },
   },
 });

@@ -122,8 +122,12 @@ public final class Requests {
             @Schema(description = "De 2 a 6 letras mayúsculas o cifras; único en el grupo.") String code) {
     }
 
+    public record ProjectLabelBody(String singular, String plural, boolean feminine) {
+    }
+
     public record UpdateCompany(String name,
-            @Schema(description = "Solo lo cambia el administrador del grupo.") String code) {
+            @Schema(description = "Solo lo cambia el administrador del grupo.") String code,
+            @Schema(description = "Cómo llama la empresa a sus proyectos; si no se envía, no cambia.") ProjectLabelBody projectLabel) {
     }
 
     public record AddMember(String firstName, String lastName, String email, Set<Role> roles, String password,

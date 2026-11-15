@@ -16,7 +16,9 @@ import datos_prueba as dp
 
 ESTADOS = {"PENDING", "APPROVED", "REJECTED", "CORRECTED"}
 TIPOS = {".csv": "text/csv", ".md": "text/markdown", ".txt": "text/plain", ".pdf": "application/pdf",
-         ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+         ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+         ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+         ".xls": "application/vnd.ms-excel", ".ods": "application/vnd.oasis.opendocument.spreadsheet"}
 CONSULTAS = 4  # documentos de texto con cuya frase más larga se comprueba el aislamiento
 
 Destino = namedtuple("Destino", "empresa miembros")
@@ -226,7 +228,7 @@ def main(argv):
     m, expedientes = leer(carpeta)
     fallos = problemas(m, expedientes, carpeta, int(entorno.get("ODIN_UPLOAD_MAX_BYTES", 52428800)))
     if expedientes and importlib.util.find_spec("cargar_expedientes") is None:
-        fallos.append("hay expedientes y falta su cargador (encargo 13): lanza la orden desde integracion/instalacion")
+        fallos.append("hay expedientes y falta su cargador (encargo 13): lanza la orden desde develop")
     if fallos:
         raise SystemExit("Los datos no se pueden cargar. No se ha cambiado nada.\n- " + "\n- ".join(fallos))
     api, cred = dp.conectar(entorno), dp.leer_json(dp.CREDENCIALES / "credenciales.local.json")

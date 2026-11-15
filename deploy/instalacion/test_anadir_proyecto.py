@@ -107,7 +107,9 @@ class TipoTest(unittest.TestCase):
 
     def test_tipoPorLaExtension(self):
         esperado = {"a.csv": "text/csv", "a.md": "text/markdown", "a.txt": "text/plain", "a.pdf": "application/pdf",
-                    "a.png": "image/png", "a.jpg": "image/jpeg"}
+                    "a.png": "image/png", "a.jpg": "image/jpeg",
+                    "a.xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "a.xls": "application/vnd.ms-excel", "a.ods": "application/vnd.oasis.opendocument.spreadsheet"}
         self.assertEqual(esperado, {n: ap.tipo_de(Path(n)) for n in esperado})
 
 

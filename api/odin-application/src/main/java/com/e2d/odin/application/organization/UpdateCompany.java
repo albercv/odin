@@ -10,6 +10,7 @@ import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.NotFoundException;
+import java.util.Map;
 
 public class UpdateCompany {
 
@@ -27,13 +28,19 @@ public class UpdateCompany {
         Company company = organizations.findCompany(id).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         Company named = changes.name().map(n -> company.withName(Validation.requireText(n, "el nombre")))
                 .orElse(company);
-        Company updated = changes.code().map(named::withCode).orElse(named).withCodeReviewed(true);
+        Company coded = changes.code().map(named::withCode).orElse(named);
+        Company updated = changes.projectLabel().map(coded::withProjectLabel).orElse(coded).withCodeReviewed(true);
         CompanyCodes.requireFree(organizations, updated.code(), id);
         organizations.saveCompany(updated);
-        audit.record(AuditEntry.by(actor, AuditAction.COMPANY_UPDATED).onCompany(id)
+        AuditEntry entry = AuditEntry.by(actor, AuditAction.COMPANY_UPDATED).onCompany(id)
                 .on("COMPANY", id.value().toString(), updated.name())
                 .with("nameChanged", !company.name().equals(updated.name()))
-                .with("codeChanged", !company.code().equals(updated.code())));
+                .with("codeChanged", !company.code().equals(updated.code()));
+        if (!company.projectLabel().equals(updated.projectLabel())) {
+            entry = entry.with("before", Map.of("projectLabel", company.projectLabel()))
+                    .with("after", Map.of("projectLabel", updated.projectLabel()));
+        }
+        audit.record(entry);
         return updated;
     }
 }

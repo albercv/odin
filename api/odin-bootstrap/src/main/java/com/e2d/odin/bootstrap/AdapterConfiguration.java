@@ -33,6 +33,7 @@ import com.e2d.odin.adapter.readers.MagicBytesFormatDetector;
 import com.e2d.odin.adapter.readers.PdfBoxTextReader;
 import com.e2d.odin.adapter.readers.PlainTextReader;
 import com.e2d.odin.adapter.readers.PoiDocxTextReader;
+import com.e2d.odin.adapter.readers.SpreadsheetTextReader;
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
@@ -204,6 +205,11 @@ public class AdapterConfiguration {
     @Bean
     DocumentTextReader docxReader() {
         return new PoiDocxTextReader();
+    }
+
+    @Bean
+    DocumentTextReader spreadsheetReader() {
+        return new SpreadsheetTextReader();
     }
 
     @Bean

@@ -5,6 +5,7 @@ import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.organization.Group;
 import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.organization.ProjectLabel;
 import com.e2d.odin.domain.organization.ProjectSummary;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
@@ -19,6 +20,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 public class PostgresOrganizationRepository implements OrganizationRepository {
+
+    private static final String COMPANY_COLUMNS = "id, name, code, code_reviewed, project_label_singular, "
+            + "project_label_plural, project_label_feminine";
 
     private static final CompanyScope ALL = CompanyScope.all();
     private final ScopedTransactions tx;
@@ -45,10 +49,15 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
     public void saveCompany(Company c) {
         tx.runInScope(ALL, jdbc -> {
             jdbc.sql("""
-                    INSERT INTO company (id, name, code, code_reviewed) VALUES (:id, :name, :code, :reviewed)
-                    ON CONFLICT (id) DO UPDATE SET name = :name, code = :code, code_reviewed = :reviewed""")
+                    INSERT INTO company (id, name, code, code_reviewed, project_label_singular, project_label_plural,
+                        project_label_feminine) VALUES (:id, :name, :code, :reviewed, :singular, :plural, :feminine)
+                    ON CONFLICT (id) DO UPDATE SET name = :name, code = :code, code_reviewed = :reviewed,
+                        project_label_singular = :singular, project_label_plural = :plural,
+                        project_label_feminine = :feminine""")
                     .param("id", c.id().value()).param("name", c.name()).param("code", c.code())
-                    .param("reviewed", c.codeReviewed()).update();
+                    .param("reviewed", c.codeReviewed()).param("singular", storedLabel(c, ProjectLabel::singular))
+                    .param("plural", storedLabel(c, ProjectLabel::plural))
+                    .param("feminine", storedLabel(c, ProjectLabel::feminine)).update();
             jdbc.sql("DELETE FROM company_capability WHERE company_id = :id").param("id", c.id().value()).update();
             for (Capability capability : c.capabilities()) {
                 jdbc.sql("INSERT INTO company_capability (company_id, capability) VALUES (:id, :capability)")
@@ -59,19 +68,19 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
 
     @Override
     public Optional<Company> findCompany(CompanyId id) {
-        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT id, name, code, code_reviewed FROM company WHERE id = :id")
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT " + COMPANY_COLUMNS + " FROM company WHERE id = :id")
                 .param("id", id.value()).query((rs, n) -> company(jdbc, rs)).optional());
     }
 
     @Override
     public Optional<Company> findCompanyByCode(String code) {
-        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT id, name, code, code_reviewed FROM company WHERE code = :code")
+        return tx.inScope(ALL, jdbc -> jdbc.sql("SELECT " + COMPANY_COLUMNS + " FROM company WHERE code = :code")
                 .param("code", code).query((rs, n) -> company(jdbc, rs)).optional());
     }
 
     @Override
     public List<Company> listCompanies(CompanyScope scope) {
-        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql("SELECT id, name, code, code_reviewed FROM company WHERE "
+        return tx.inScope(scope, jdbc -> Sql.scoped(jdbc.sql("SELECT " + COMPANY_COLUMNS + " FROM company WHERE "
                 + Sql.inScope("id") + " ORDER BY seq"), scope)
                 .query((rs, n) -> company(jdbc, rs)).list());
     }
@@ -126,7 +135,19 @@ public class PostgresOrganizationRepository implements OrganizationRepository {
         jdbc.sql("SELECT capability FROM company_capability WHERE company_id = :id").param("id", id)
                 .query(String.class).list().forEach(c -> capabilities.add(Capability.valueOf(c)));
         return new Company(new CompanyId(id), rs.getString("name"), rs.getString("code"), capabilities,
-                rs.getBoolean("code_reviewed"));
+                rs.getBoolean("code_reviewed"), label(rs));
+    }
+
+    private static ProjectLabel label(java.sql.ResultSet rs) throws java.sql.SQLException {
+        String singular = rs.getString("project_label_singular");
+        return singular == null ? ProjectLabel.DEFAULT
+                : new ProjectLabel(singular, rs.getString("project_label_plural"),
+                        rs.getBoolean("project_label_feminine"));
+    }
+
+    /** El valor por defecto no se guarda: nulo en las tres columnas. */
+    private static <T> T storedLabel(Company c, java.util.function.Function<ProjectLabel, T> field) {
+        return c.projectLabel().equals(ProjectLabel.DEFAULT) ? null : field.apply(c.projectLabel());
     }
 
     private static Project project(java.sql.ResultSet rs) throws java.sql.SQLException {

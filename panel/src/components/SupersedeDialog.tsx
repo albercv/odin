@@ -6,6 +6,7 @@ import form from '../ui/Form.module.css';
 import { FormDialog } from '../ui/FormDialog';
 import { SearchBox } from '../ui/SearchBox';
 import { Notice } from './Notice';
+import { useProjectTerms } from './projectTerms';
 import { useAction } from './useLoad';
 import { useServerPage } from './useServerPage';
 
@@ -16,6 +17,7 @@ const FETCHED = 50;
 const HELP = 'Usa esta marca cuando un documento sustituye entero a otro, como una póliza renovada. Un anexo que cambia una parte no sustituye al contrato.';
 
 function Candidates({ candidates, hint, empty, projects, chosen, onChoose }: { hint: boolean; empty: boolean; candidates: S['DocumentView'][]; projects: S['ProjectView'][]; chosen?: S['DocumentView']; onChoose: (d: S['DocumentView']) => void }) {
+  const t = useProjectTerms();
   return (
     <fieldset className={form.group}>
       <legend>Documento que lo sustituye</legend>
@@ -24,7 +26,7 @@ function Candidates({ candidates, hint, empty, projects, chosen, onChoose }: { h
       {candidates.map((d) => (
         <label key={d.id} className={form.check}>
           <input type="radio" name="replacement" checked={chosen?.id === d.id} onChange={() => onChoose(d)} />
-          {`${d.title} · ${projectName(d.projectId, projects)} · ${formatDate(d.uploadedAt)}`}
+          {`${d.title} · ${projectName(d.projectId, projects, t.noneOne)} · ${formatDate(d.uploadedAt)}`}
         </label>
       ))}
     </fieldset>
