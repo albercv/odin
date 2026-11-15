@@ -228,8 +228,38 @@ class PrimeraCargaTest(unittest.TestCase):
         self.estado["lotes"] = [{"id": LOTE, "state": "READING", "channel": "COMMAND"}]
         self.crear("uno.txt")
         codigo, texto = self.lanzar()
-        self.assertIn("en curso", str(codigo))
+        self.assertIn("leyéndose", str(codigo))
         self.assertEqual([], self.estado["subidos"])
+
+    def test_unaCargaEnRevisionNoBloqueaYElResumenLoAvisa(self):
+        self.estado["lotes"] = [{"id": "otro", "state": "IN_REVIEW", "channel": "COMMAND"}]
+        self.crear("uno.txt")
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertIn(("POST", f"/v1/admin/companies/{EMPRESA}/intake-batches"), self.estado["peticiones"])
+        self.assertEqual(["uno.txt"], self.estado["subidos"])
+        self.assertIn("Hay otra primera carga pendiente de revisar en el panel; esta se revisa aparte.", texto)
+
+    def test_unaCargaEnRevisionNoImpideReutilizarElLoteAbierto(self):
+        self.estado["lotes"] = [{"id": LOTE, "state": "OPEN", "channel": "COMMAND"},
+                                {"id": "otro", "state": "IN_REVIEW", "channel": "COMMAND"}]
+        self.crear("uno.txt")
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertNotIn(("POST", f"/v1/admin/companies/{EMPRESA}/intake-batches"), self.estado["peticiones"])
+        self.assertIn("esta se revisa aparte", texto)
+
+    def test_unaCargaCerradaConPendientesNoBloqueaYTambienSeAvisa(self):
+        self.estado["lotes"] = [{"id": "otro", "state": "CLOSED", "channel": "COMMAND"}]
+        self.crear("uno.txt")
+        codigo, texto = self.lanzar()
+        self.assertEqual(0, codigo, texto)
+        self.assertIn("esta se revisa aparte", texto)
+
+    def test_sinOtraCargaPendienteNoHayAviso(self):
+        self.crear("uno.txt")
+        codigo, texto = self.lanzar()
+        self.assertNotIn("esta se revisa aparte", texto)
 
     # confirmación
 
