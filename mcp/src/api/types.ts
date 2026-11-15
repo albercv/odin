@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/audit-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get"];
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/upload-links/{token}/documents": {
         parameters: {
             query?: never;
@@ -689,7 +705,7 @@ export interface paths {
         delete: operations["delete"];
         options?: never;
         head?: never;
-        patch: operations["update"];
+        patch: operations["update_1"];
         trace?: never;
     };
     "/v1/admin/documents/{documentId}": {
@@ -699,13 +715,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get"];
+        get: operations["get_1"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_1"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}": {
@@ -721,7 +737,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}/topics/{topicId}": {
@@ -769,7 +785,7 @@ export interface paths {
         delete: operations["remove_1"];
         options?: never;
         head?: never;
-        patch: operations["update_3"];
+        patch: operations["update_4"];
         trace?: never;
     };
     "/v1/upload-links/{token}": {
@@ -1051,7 +1067,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_1"];
+        get: operations["get_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1333,6 +1349,23 @@ export interface components {
             code: string;
             capabilities: ("SEARCH_KNOWLEDGE" | "SAVE_KNOWLEDGE_CARD" | "SIMILAR_CASES" | "CASE_FILES" | "UPLOAD_DOCUMENTS")[];
             codeReviewed: boolean;
+        };
+        UpdateAuditSettings: {
+            enabled?: boolean;
+            /** @description Dónde está publicada la política de uso. Obligatorio para encender. */
+            usagePolicyReference?: string;
+            chatEnabled?: boolean;
+            /** @description La contraseña actual del administrador, para volver a identificarse. */
+            password?: string;
+        };
+        AuditSettingsView: {
+            enabled: boolean;
+            usagePolicyReference?: string;
+            chatEnabled: boolean;
+            /** Format: uuid */
+            updatedBy?: string;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         UploadReceipt: {
             filename: string;
@@ -2381,6 +2414,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyView"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditSettingsView"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAuditSettings"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditSettingsView"];
                 };
             };
         };
@@ -3559,7 +3636,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3585,7 +3662,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    get_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3607,7 +3684,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3633,7 +3710,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -3776,7 +3853,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -4182,7 +4259,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
