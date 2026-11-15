@@ -36,17 +36,19 @@ export function registerListActivity(server: McpServer, api: ApiClient): void {
         cursor: z.string().optional().describe('nextCursor de la llamada anterior'),
       },
     },
-    async (args) => {
-      if (Date.parse(args.to) - Date.parse(args.from) > MAX_RANGE_MS) return failure('El intervalo es de 7 días como máximo por llamada.');
-      const query = new URLSearchParams({ from: args.from, to: args.to });
-      for (const key of FILTERS) if (args[key]) query.set(key, args[key]);
-      try {
-        return jsonResult(await api.activity(query.toString()));
-      } catch (error) {
-        return failure(error instanceof ApiError && MESSAGES[error.status] ? MESSAGES[error.status]! : errorMessage(error));
-      }
-    },
+    (args) => run(api, args),
   );
+}
+
+async function run(api: ApiClient, args: { from: string; to: string } & Partial<Record<(typeof FILTERS)[number], string>>) {
+  if (Date.parse(args.to) - Date.parse(args.from) > MAX_RANGE_MS) return failure('El intervalo es de 7 días como máximo por llamada.');
+  const query = new URLSearchParams({ from: args.from, to: args.to });
+  for (const key of FILTERS) if (args[key]) query.set(key, args[key]);
+  try {
+    return jsonResult(await api.activity(query.toString()));
+  } catch (error) {
+    return failure(error instanceof ApiError && MESSAGES[error.status] ? MESSAGES[error.status]! : errorMessage(error));
+  }
 }
 
 const failure = (text: string): CallToolResult => ({ content: [{ type: 'text', text }], isError: true });
