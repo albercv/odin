@@ -2,60 +2,34 @@ package com.e2d.odin.adapter.web;
 
 import com.e2d.odin.application.audit.GetAuditSettings;
 import com.e2d.odin.application.audit.UpdateAuditSettings;
-import com.e2d.odin.application.fake.InMemoryAuditLog;
-import com.e2d.odin.application.fake.InMemoryAuditSettings;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
-import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
-import com.e2d.odin.application.link.DescribeUploadLink;
-import com.e2d.odin.application.link.IssueOriginalLink;
-import com.e2d.odin.application.link.IssueUploadLink;
-import com.e2d.odin.application.link.LinkIssuer;
-import com.e2d.odin.application.link.LinkSettings;
-import com.e2d.odin.application.link.OpenOriginal;
-import com.e2d.odin.application.link.ResolveLink;
-import com.e2d.odin.application.link.UploadByLink;
-import com.e2d.odin.application.casefile.UploadToCaseFile;
-import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.casefile.GetCaseFile;
-import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
+import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
-import com.e2d.odin.application.identity.UserNames;
-import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
-import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.RestoreDocument;
+import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UpdateDocument;
-import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.document.UploadDocument;
+import com.e2d.odin.application.document.UploadToProject;
+import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
+import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
-import com.e2d.odin.application.fake.InMemoryDeliveryMeter;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
+import com.e2d.odin.application.fake.InMemoryAuditSettings;
 import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
+import com.e2d.odin.application.fake.InMemoryDeliveryMeter;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryKnowledgeCardRepository;
-import com.e2d.odin.application.intake.AddFileToIntake;
-import com.e2d.odin.application.intake.CloseIntakeUpload;
-import com.e2d.odin.application.intake.CloseProjectList;
-import com.e2d.odin.application.intake.ConfirmIntakeProposals;
-import com.e2d.odin.application.intake.ConfirmProjectCandidates;
-import com.e2d.odin.application.intake.DecideIntakeProposal;
-import com.e2d.odin.application.intake.DiscardIntakeDocument;
-import com.e2d.odin.application.intake.IntakeEffects;
-import com.e2d.odin.application.intake.ListIntakeProposals;
-import com.e2d.odin.application.intake.ListOpenIntakeBatches;
-import com.e2d.odin.application.intake.ListUnplacedDocuments;
-import com.e2d.odin.application.intake.OpenIntakeOriginal;
-import com.e2d.odin.application.intake.PlaceIntakeDocument;
-import com.e2d.odin.application.intake.GetIntakeBatch;
-import com.e2d.odin.application.intake.ImportProjectList;
-import com.e2d.odin.application.intake.ListProjectCandidates;
-import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryOriginalFileStore;
@@ -71,15 +45,14 @@ import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.SequencePersonCodeGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
+import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
-import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.DeleteUser;
-import com.e2d.odin.application.identity.ListGroupAdmins;
-import com.e2d.odin.application.identity.RevokeGroupAdmin;
 import com.e2d.odin.application.identity.DescribeAdmin;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
+import com.e2d.odin.application.identity.ListGroupAdmins;
 import com.e2d.odin.application.identity.ListMembers;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
@@ -87,13 +60,41 @@ import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.RemoveMember;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.identity.RevokeAccessKey;
+import com.e2d.odin.application.identity.RevokeGroupAdmin;
 import com.e2d.odin.application.identity.SetUpInstallation;
 import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.UpdateUser;
+import com.e2d.odin.application.identity.UserNames;
+import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
+import com.e2d.odin.application.intake.ConfirmIntakeProposals;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.DecideIntakeProposal;
+import com.e2d.odin.application.intake.DiscardIntakeDocument;
+import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.ImportProjectList;
+import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
+import com.e2d.odin.application.intake.ListProjectCandidates;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
+import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
+import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
+import com.e2d.odin.application.link.DescribeUploadLink;
+import com.e2d.odin.application.link.IssueOriginalLink;
+import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.LinkIssuer;
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.link.ResolveLink;
+import com.e2d.odin.application.link.UploadByLink;
 import com.e2d.odin.application.organization.AddProjectMember;
 import com.e2d.odin.application.organization.CreateCompany;
 import com.e2d.odin.application.organization.CreateProject;
@@ -108,28 +109,28 @@ import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.application.organization.UpdateCompany;
 import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditContext;
+import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.search.FindSimilarCases;
-import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.search.ListDocuments;
 import com.e2d.odin.application.search.ListMyQuestions;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
+import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.shared.SessionSettings;
+import com.e2d.odin.application.shared.TaggingWindow;
+import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.application.topic.CreateTopic;
 import com.e2d.odin.application.topic.DeleteTopic;
 import com.e2d.odin.application.topic.GetTaggingStatus;
 import com.e2d.odin.application.topic.ListDocumentTopics;
 import com.e2d.odin.application.topic.ListTopics;
 import com.e2d.odin.application.topic.ReviewDocumentTopics;
-import com.e2d.odin.application.shared.TaggingWindow;
 import com.e2d.odin.application.topic.UpdateTopic;
-import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.usage.GetDeliveredVolume;
 import com.e2d.odin.application.usage.GetUsageStats;
 import com.e2d.odin.application.usage.ListGaps;
-import com.e2d.odin.application.shared.InstallationSettings;
-import com.e2d.odin.application.shared.SessionSettings;
-import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.domain.document.DocumentFormat;
 import java.time.Clock;
 import java.time.LocalTime;
@@ -142,6 +143,7 @@ public class TestWiring {
 
     static final long MAX_UPLOAD = 1000;
 
+    final InMemoryAuditLog auditLog = new InMemoryAuditLog();
     final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(orgs);
     final InMemoryUserRepository users = new InMemoryUserRepository();
@@ -186,19 +188,19 @@ public class TestWiring {
     }
 
     @Bean SetUpInstallation setUpInstallation() {
-        return new SetUpInstallation(orgs, users, passwords, ids, personCodes, new InstallationSettings("setup-secret"));
+        return new SetUpInstallation(orgs, users, passwords, ids, personCodes, new InstallationSettings("setup-secret"), auditLog());
     }
 
     @Bean LogInAdmin logInAdmin() {
-        return new LogInAdmin(users, memberships, passwords, adminSessions());
+        return new LogInAdmin(users, memberships, passwords, adminSessions(), auditLog(), () -> AuditContext.SYSTEM);
     }
 
     @Bean LogOutAdmin logOutAdmin() {
-        return new LogOutAdmin(adminSessions());
+        return new LogOutAdmin(adminSessions(), auditLog(), () -> AuditContext.SYSTEM);
     }
 
     @Bean CreateCompany createCompany() {
-        return new CreateCompany(orgs, ids);
+        return new CreateCompany(orgs, ids, auditLog());
     }
 
     @Bean ListCompanies listCompanies() {
@@ -206,15 +208,15 @@ public class TestWiring {
     }
 
     @Bean UpdateCompany updateCompany() {
-        return new UpdateCompany(orgs);
+        return new UpdateCompany(orgs, auditLog());
     }
 
     @Bean SetCompanyCapabilities setCompanyCapabilities() {
-        return new SetCompanyCapabilities(orgs);
+        return new SetCompanyCapabilities(orgs, auditLog());
     }
 
     @Bean CreateProject createProject() {
-        return new CreateProject(orgs, ids);
+        return new CreateProject(orgs, ids, auditLog());
     }
 
     @Bean ListProjects listProjects() {
@@ -222,15 +224,15 @@ public class TestWiring {
     }
 
     @Bean UpdateProject updateProject() {
-        return new UpdateProject(orgs);
+        return new UpdateProject(orgs, auditLog());
     }
 
     @Bean AddProjectMember addProjectMember() {
-        return new AddProjectMember(orgs, memberships, projectMembers);
+        return new AddProjectMember(orgs, memberships, projectMembers, auditLog());
     }
 
     @Bean RemoveProjectMember removeProjectMember() {
-        return new RemoveProjectMember(orgs, projectMembers);
+        return new RemoveProjectMember(orgs, projectMembers, auditLog());
     }
 
     @Bean ListProjectMembers listProjectMembers() {
@@ -242,11 +244,11 @@ public class TestWiring {
     }
 
     @Bean DeleteProject deleteProject() {
-        return new DeleteProject(orgs, clock);
+        return new DeleteProject(orgs, clock, auditLog());
     }
 
     @Bean AddMember addMember() {
-        return new AddMember(users, memberships, orgs, projectMembers, passwords, ids, personCodes);
+        return new AddMember(users, memberships, orgs, projectMembers, passwords, ids, personCodes, auditLog());
     }
 
     @Bean ListMembers listMembers() {
@@ -254,15 +256,19 @@ public class TestWiring {
     }
 
     @Bean UpdateMember updateMember() {
-        return new UpdateMember(users, memberships, orgs, passwords, adminSessions());
+        return new UpdateMember(users, memberships, orgs, passwords, adminSessions(), auditLog());
     }
 
     @Bean RemoveMember removeMember() {
-        return new RemoveMember(users, memberships, keys, projectMembers, adminSessions(), clock);
+        return new RemoveMember(users, memberships, keys, projectMembers, adminSessions(), clock, auditLog());
     }
 
     @Bean DescribeAdmin describeAdmin() {
         return new DescribeAdmin(users);
+    }
+
+    @Bean InMemoryAuditLog auditLog() {
+        return auditLog;
     }
 
     @Bean InMemoryAuditSettings auditSettings() {
@@ -274,7 +280,7 @@ public class TestWiring {
     }
 
     @Bean UpdateAuditSettings updateAuditSettings(InMemoryAuditSettings settings) {
-        return new UpdateAuditSettings(settings, new InMemoryAuditLog(), users, passwords);
+        return new UpdateAuditSettings(settings, auditLog(), users, passwords);
     }
 
     @Bean ListGroupAdmins listGroupAdmins() {
@@ -282,31 +288,31 @@ public class TestWiring {
     }
 
     @Bean AddGroupAdmin addGroupAdmin() {
-        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes);
+        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes, auditLog());
     }
 
     @Bean RevokeGroupAdmin revokeGroupAdmin() {
-        return new RevokeGroupAdmin(users, memberships, adminSessions());
+        return new RevokeGroupAdmin(users, memberships, adminSessions(), auditLog());
     }
 
     @Bean UpdateUser updateUser() {
-        return new UpdateUser(users, memberships, adminSessions());
+        return new UpdateUser(users, memberships, adminSessions(), auditLog());
     }
 
     @Bean ChangePassword changePassword() {
-        return new ChangePassword(users, memberships, passwords, adminSessions());
+        return new ChangePassword(users, memberships, passwords, adminSessions(), auditLog());
     }
 
     @Bean RecoverGroupAdmin recoverGroupAdmin() {
-        return new RecoverGroupAdmin(users, passwords, adminSessions(), new InstallationSettings("setup-secret"));
+        return new RecoverGroupAdmin(users, passwords, adminSessions(), new InstallationSettings("setup-secret"), auditLog());
     }
 
     @Bean DeleteUser deleteUser() {
-        return new DeleteUser(users, memberships, projectMembers, adminSessions(), clock);
+        return new DeleteUser(users, memberships, projectMembers, adminSessions(), clock, auditLog());
     }
 
     @Bean IssueAccessKey issueAccessKey() {
-        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock);
+        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock, auditLog());
     }
 
     @Bean ListAccessKeys listAccessKeys() {
@@ -314,7 +320,7 @@ public class TestWiring {
     }
 
     @Bean RevokeAccessKey revokeAccessKey() {
-        return new RevokeAccessKey(keys, users, links, clock);
+        return new RevokeAccessKey(keys, users, links, clock, auditLog());
     }
 
     @Bean LinkSettings linkSettings() {

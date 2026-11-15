@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.FakePasswordHasher;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
@@ -24,8 +25,9 @@ class SetUpInstallationTest {
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private final SetUpInstallation setUp = new SetUpInstallation(organizations, users, new FakePasswordHasher(),
-            new SequenceIdGenerator(), new SequencePersonCodeGenerator("7F3K"), new InstallationSettings("token-secreto"));
+            new SequenceIdGenerator(), new SequencePersonCodeGenerator("7F3K"), new InstallationSettings("token-secreto"), audit);
 
     @Test
     void createsGroupAndFirstAdmin() {

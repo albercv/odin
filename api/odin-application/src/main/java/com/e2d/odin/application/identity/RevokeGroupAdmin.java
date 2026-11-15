@@ -1,9 +1,12 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.NotFoundException;
@@ -16,8 +19,11 @@ public class RevokeGroupAdmin {
     private final UserRepository users;
     private final MembershipRepository memberships;
     private final AdminSessions sessions;
+    private final AuditLog audit;
 
-    public RevokeGroupAdmin(UserRepository users, MembershipRepository memberships, AdminSessions sessions) {
+    public RevokeGroupAdmin(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
+            AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.sessions = sessions;
@@ -33,6 +39,7 @@ public class RevokeGroupAdmin {
         UserAdministration.requireAnotherActiveGroupAdmin(users, user);
         User revoked = user.withGroupAdmin(false);
         users.save(revoked);
+        audit.record(AuditEntry.by(actor, AuditAction.GROUP_ADMIN_REVOKED).on("USER", id.value().toString(), null));
         UserAdministration.closeSessionsIfNoLongerAdministering(revoked, memberships, sessions);
     }
 }

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
@@ -18,7 +19,8 @@ import org.junit.jupiter.api.Test;
 class CreateProjectTest {
 
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
-    private final CreateProject create = new CreateProject(organizations, new SequenceIdGenerator());
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final CreateProject create = new CreateProject(organizations, new SequenceIdGenerator(), audit);
     private final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(organizations);
     private final CompanyId company = Fixtures.company(organizations);
 

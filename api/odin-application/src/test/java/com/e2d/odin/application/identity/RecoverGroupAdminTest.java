@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
@@ -35,7 +36,7 @@ class RecoverGroupAdminTest {
     private final UserId adminId = new UserId(UUID.randomUUID());
 
     private RecoverGroupAdmin recover(String configuredToken) {
-        return new RecoverGroupAdmin(users, passwords, sessions, new InstallationSettings(configuredToken));
+        return new RecoverGroupAdmin(users, passwords, sessions, new InstallationSettings(configuredToken), new InMemoryAuditLog());
     }
 
     private void saveGroupAdmin(boolean active) {

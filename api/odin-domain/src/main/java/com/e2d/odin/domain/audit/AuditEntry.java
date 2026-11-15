@@ -35,6 +35,16 @@ public record AuditEntry(AuditAction action, AuditOutcome outcome, AuditActorKin
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Map.of());
     }
 
+    public static AuditEntry byUnknownPerson(AuditAction action) {
+        return new AuditEntry(action, AuditOutcome.DONE, AuditActorKind.PERSON, Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Map.of());
+    }
+
+    public static AuditEntry byInstaller(AuditAction action) {
+        return new AuditEntry(action, AuditOutcome.DONE, AuditActorKind.INSTALLER, Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Map.of());
+    }
+
     public AuditEntry denied() {
         return new AuditEntry(action, AuditOutcome.DENIED, actorKind, actorUserId, actorRole, actorName, company,
                 project, via, target, details);

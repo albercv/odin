@@ -79,9 +79,9 @@ public class SessionController {
 
     @DeleteMapping("/session")
     @ApiResponse(responseCode = "204", description = "Sesión cerrada")
-    public ResponseEntity<Void> logout(
+    public ResponseEntity<Void> logout(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @CookieValue(name = ActorResolutionFilter.SESSION_COOKIE, required = false) String token) {
-        logOut.execute(token);
+        logOut.execute(actor, token);
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie("", true).toString()).build();
     }
 

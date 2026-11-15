@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryIntakeRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
@@ -43,7 +44,7 @@ class ProjectListTest {
     private final ImportProjectList importList = new ImportProjectList(intake);
     private final ListProjectCandidates list = new ListProjectCandidates(intake, docs);
     private final ConfirmProjectCandidates confirm = new ConfirmProjectCandidates(intake, orgs,
-            new CreateProject(orgs, ids));
+            new CreateProject(orgs, ids, new InMemoryAuditLog()));
     private final MutableClock clock = new MutableClock();
     private final CloseProjectList closeList = new CloseProjectList(intake, docs, list,
             new InstallationSettings("t", true), clock);
@@ -182,7 +183,7 @@ class ProjectListTest {
     @Test
     void mergingLinksAnExistingProjectAndCreatesNone() {
         importText("C/ Olmo 24");
-        ProjectId existing = new CreateProject(orgs, ids).execute(admin, company, "Calle Olmo 24").id();
+        ProjectId existing = new CreateProject(orgs, ids, new InMemoryAuditLog()).execute(admin, company, "Calle Olmo 24").id();
 
         List<ProjectCandidate> done = confirm.execute(admin, company, batch.id(), List.of(
                 new ProjectDecision("C/ Olmo 24", Action.MERGE, Optional.of(existing))));
@@ -206,7 +207,7 @@ class ProjectListTest {
     @Test
     void aBadDecisionChangesNothingNotEvenTheValidOnes() {
         importText("Calle Olmo 24\nCalle Haya 2");
-        new CreateProject(orgs, ids).execute(admin, company, "Calle Haya 2");
+        new CreateProject(orgs, ids, new InMemoryAuditLog()).execute(admin, company, "Calle Haya 2");
         ProjectDecision good = new ProjectDecision("Calle Olmo 24", Action.CREATE, Optional.empty());
 
         // el nombre ya es un proyecto: hay que unirlo, no crearlo

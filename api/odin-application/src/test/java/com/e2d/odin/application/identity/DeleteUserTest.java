@@ -5,16 +5,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
-import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
+import com.e2d.odin.application.fake.InMemoryUserRepository;
+import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
-import com.e2d.odin.application.fake.InMemoryUserRepository;
-import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
@@ -37,7 +38,8 @@ class DeleteUserTest {
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
     private final InMemoryProjectMemberRepository projectMembers = new InMemoryProjectMemberRepository(organizations);
-    private final DeleteUser delete = new DeleteUser(users, memberships, projectMembers, sessions, new MutableClock());
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final DeleteUser delete = new DeleteUser(users, memberships, projectMembers, sessions, new MutableClock(), audit);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
 

@@ -1,8 +1,11 @@
 package com.e2d.odin.application.organization;
 
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.organization.Company;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -12,8 +15,11 @@ public class UpdateCompany {
 
     private final OrganizationRepository organizations;
 
-    public UpdateCompany(OrganizationRepository organizations) {
+    private final AuditLog audit;
+
+    public UpdateCompany(OrganizationRepository organizations, AuditLog audit) {
         this.organizations = organizations;
+        this.audit = audit;
     }
 
     public Company execute(Actor actor, CompanyId id, CompanyChanges changes) {
@@ -24,6 +30,10 @@ public class UpdateCompany {
         Company updated = changes.code().map(named::withCode).orElse(named).withCodeReviewed(true);
         CompanyCodes.requireFree(organizations, updated.code(), id);
         organizations.saveCompany(updated);
+        audit.record(AuditEntry.by(actor, AuditAction.COMPANY_UPDATED).onCompany(id)
+                .on("COMPANY", id.value().toString(), updated.name())
+                .with("nameChanged", !company.name().equals(updated.name()))
+                .with("codeChanged", !company.code().equals(updated.code())));
         return updated;
     }
 }
