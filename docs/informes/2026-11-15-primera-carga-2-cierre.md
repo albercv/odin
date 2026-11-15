@@ -22,7 +22,7 @@ Fecha: 2026-11-15. Rama `feature/primera-carga-2`, que sale de lo instalado (779
 
 ## Migración
 
-`V27__intake_round_two.sql` añade dos columnas que admiten nulos: `document.intake_type`, y `intake_batch.closed_by` con su CHECK. No toca datos.
+`V29__intake_round_two.sql` (era V27; pasa a V29 porque el encargo 20 instaló la V28) añade dos columnas que admiten nulos: `document.intake_type`, y `intake_batch.closed_by` con su CHECK. No toca datos.
 
 ## Verificación
 
@@ -46,7 +46,7 @@ Fecha: 2026-11-15. Rama `feature/primera-carga-2`, que sale de lo instalado (779
 ## Decisiones tomadas
 
 1. **`ESCRIBIR` como valor neutro.** Es el verbo de la acción, igual que `CONFIRMAR=BORRAR` o `ACTUALIZAR`. El mensaje de `comun.sh` sigue diciendo «del propietario», porque solo sale en pilas de ensayo; `experimentos/` no se ha tocado.
-2. **El tipo, solo en la bandeja.** Las cargas clasificadas antes de la V27 lo enseñan como «Tipo sin identificar».
+2. **El tipo, solo en la bandeja.** Las cargas clasificadas antes de esta migración lo enseñan como «Tipo sin identificar».
 3. **La clasificación guarda en una sola transacción** los tipos y las propuestas de toda una pasada. Antes era una transacción por documento.
 4. **Cerrar con propuestas por decidir da 409** («Quedan N propuestas por decidir…»). Así, el cierre solo convierte los «No lo sé».
 5. **El lote lleva un campo nuevo, `toDecide`.** `proposed` cuenta también los «No lo sé», así que no servía para ese 409.
