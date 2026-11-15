@@ -12,6 +12,7 @@ import { Notice } from './Notice';
 import { ProjectMembers, whoSees } from './ProjectMembers';
 import { RenameForm } from './RenameForm';
 import { useAction, useLoad } from './useLoad';
+import { useProjectTerms } from './projectTerms';
 import { includesText, usePagedList } from './usePagedList';
 
 type Panel = 'rename' | 'access' | undefined;
@@ -20,8 +21,9 @@ type RowProps = { project: S['ProjectView']; companyId: string; onChanged: () =>
 function ProjectActions({ project, companyId, onChanged, panel, show }: RowProps & { panel: Panel; show: (p: Panel) => void }) {
   const { error, act } = useAction();
   const confirm = useConfirm();
+  const t = useProjectTerms();
   const remove = async () => {
-    if (!(await confirm({ message: `¿Borrar el proyecto ${project.name}? Sus documentos se conservan.`, confirmLabel: 'Borrar', danger: true }))) return;
+    if (!(await confirm({ message: `¿Borrar ${t.the} ${t.one} ${project.name}? Sus documentos se conservan.`, confirmLabel: 'Borrar', danger: true }))) return;
     if (await act(() => api.deleteProject(companyId, project.id))) onChanged();
   };
   return (
@@ -40,11 +42,12 @@ function ProjectRow(props: RowProps) {
   const { project, companyId, onChanged } = props;
   const [panel, setPanel] = useState<Panel>();
   const show = (p: Panel) => setPanel(panel === p ? undefined : p);
+  const t = useProjectTerms();
   return (
     <>
       <Tr>
-        <Td label="Proyecto">{project.name}</Td>
-        <Td label="Quién lo ve">{whoSees(project)}</Td>
+        <Td label={t.One}>{project.name}</Td>
+        <Td label={t.agree('Quién lo ve', 'Quién la ve')}>{whoSees(project)}</Td>
         <Td className={tableStyles.actions}><ProjectActions {...props} panel={panel} show={show} /></Td>
       </Tr>
       {panel && (
@@ -66,15 +69,17 @@ export function Projects({ companyId, version = 0 }: { companyId: string; versio
   const list = useLoad(() => api.projects(companyId), [companyId, version]);
   const [adding, setAdding] = useState(false);
   const paged = usePagedList(list.data ?? NONE, byName, 10);
+  const t = useProjectTerms();
   return (
-    <Section title="Proyectos" description="Un proyecto nuevo nace cerrado: solo lo ven sus miembros." actions={<Button icon="plus" onClick={() => setAdding(true)}>Nuevo proyecto</Button>}>
+    <Section title={t.Many} description={`${t.AOne} ${t.agree('nuevo', 'nueva')} nace ${t.agree('cerrado', 'cerrada')}: solo ${t.agree('lo', 'la')} ven sus miembros.`}
+      actions={<Button icon="plus" onClick={() => setAdding(true)}>{t.newOne}</Button>}>
       <Notice message={list.error} />
-      <SearchBox label="Buscar proyectos" onSearch={paged.setQuery} resultCount={paged.total} />
-      <Table columns={['Proyecto', 'Quién lo ve']}>
+      <SearchBox label={`Buscar ${t.many}`} onSearch={paged.setQuery} resultCount={paged.total} />
+      <Table columns={[t.One, t.agree('Quién lo ve', 'Quién la ve')]}>
         {paged.visible.map((p) => <ProjectRow key={p.id} project={p} companyId={companyId} onChanged={list.reload} />)}
       </Table>
-      <Pagination label="Páginas de proyectos" page={paged.page} pageCount={paged.pageCount} onPage={paged.setPage} />
-      <NameDialog title="Nuevo proyecto" label="Nombre del proyecto" submitLabel="Crear proyecto" open={adding}
+      <Pagination label={`Páginas de ${t.many}`} page={paged.page} pageCount={paged.pageCount} onPage={paged.setPage} />
+      <NameDialog title={t.newOne} label={`Nombre ${t.agree('del', 'de la')} ${t.one}`} submitLabel={`Crear ${t.one}`} open={adding}
         onSubmit={(name) => api.createProject(companyId, name)} onClose={() => setAdding(false)} onDone={list.reload} />
     </Section>
   );

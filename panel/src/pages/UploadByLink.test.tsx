@@ -87,3 +87,9 @@ test('caseDuplicateKeepsTheNormalText', async () => {
   await userEvent.upload(await screen.findByLabelText('Elegir ficheros'), files('a.jpg'));
   expect(await screen.findByText('recibido: a.jpg')).toBeInTheDocument();
 });
+
+test('showsTheCompanyWordForProject', async () => {
+  show({ [info]: () => ({ ...ok, target: 'PROJECT', projectLabel: { singular: 'comunidad', plural: 'comunidades', feminine: true } }) });
+  expect(await screen.findByRole('heading', { name: 'Subir documentos a la comunidad' })).toBeInTheDocument();
+  expect(screen.getByText('Comunidad')).toBeInTheDocument();
+});

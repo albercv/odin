@@ -7,6 +7,7 @@ import { Section } from '../ui/Section';
 import type { Step } from './IntakeCandidates';
 import { IntakeProposalRow, type Decision } from './IntakeProposalRow';
 import { Notice } from './Notice';
+import { useProjectTerms, type ProjectTerms } from './projectTerms';
 import { useAction, useLoad } from './useLoad';
 import styles from './Intake.module.css';
 
@@ -18,8 +19,8 @@ const KIND: Record<string, string> = {
   CASE_MARK: 'Documentos de caso', CASE_LINK: 'Enlaces a fichas de caso',
 };
 const noun = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const EFFECT: Record<string, (n: number, project: string) => string> = {
-  PROJECT: (n, project) => `¿Confirmar ${noun(n, 'documento', 'documentos')} en ${project}? Desde ese momento los verán quienes ven el proyecto.`,
+const EFFECT: Record<string, (n: number, project: string, t: ProjectTerms) => string> = {
+  PROJECT: (n, project, t) => `¿Confirmar ${noun(n, 'documento', 'documentos')} en ${project}? Desde ese momento los verán quienes ven ${t.the} ${t.one}.`,
   COMPANY_WIDE: (n) => `¿Confirmar ${noun(n, 'documento', 'documentos')} como de toda la empresa? Desde ese momento los verá toda la empresa.`,
   SAME_AS_SCAN: (n) => `¿Confirmar ${noun(n, 'pareja', 'parejas')} de escaneo y copia? Cada escaneo quedará enlazado con su copia.`,
   SUPERSEDES: (n) => `¿Confirmar ${noun(n, 'versión', 'versiones')}? Cada una sustituirá a la anterior.`,
@@ -27,9 +28,9 @@ const EFFECT: Record<string, (n: number, project: string) => string> = {
   CASE_LINK: (n) => `¿Confirmar ${noun(n, 'documento', 'documentos')} en sus fichas de caso? Se añadirán a la ficha con el número que citan.`,
 };
 
-const groupLabel = (g: Group, projects: S['ProjectView'][]) => {
+const groupLabel = (g: Group, projects: S['ProjectView'][], t: ProjectTerms) => {
   const project = projects.find((p) => p.id === g.projectId)?.name;
-  if (g.kind === 'PROJECT') return project ?? 'Proyecto sin nombre';
+  if (g.kind === 'PROJECT') return project ?? `${t.One} sin nombre`;
   return project ? `${KIND[g.kind] ?? g.kind} (${project})` : KIND[g.kind] ?? g.kind;
 };
 
@@ -54,11 +55,12 @@ type GroupProps = { group: Group; label: string; projects: S['ProjectView'][]; r
 function GroupCard({ group, label, projects, run, ids }: GroupProps) {
   const [open, setOpen] = useState(false);
   const confirm = useConfirm();
+  const t = useProjectTerms();
   const count = group.proposals.length;
   // never ask to confirm documents in a project whose name is not known (D2: informed consent)
   const unknownProject = group.kind === 'PROJECT' && !projects.some((p) => p.id === group.projectId);
   const confirmGroup = async () => {
-    const message = (EFFECT[group.kind]?.(count, label) ?? `¿Confirmar ${noun(count, 'documento', 'documentos')}?`) + (count > PART ? PARTS_NOTE : '');
+    const message = (EFFECT[group.kind]?.(count, label, t) ?? `¿Confirmar ${noun(count, 'documento', 'documentos')}?`) + (count > PART ? PARTS_NOTE : '');
     if (await confirm({ message, confirmLabel: 'Confirmar' })) run(() => confirmInParts(ids, group.proposals.map((p) => p.id)));
   };
   const decide = (id: string, d: Decision) => run(() => intake.decide(ids.company, ids.batch, id, d));
@@ -86,6 +88,7 @@ type Props = Step & { kinds: string[]; title: string; description: string; empty
 export function IntakeGroups({ companyId, batchId, projects, onChanged, kinds, title, description, empty, children }: Props) {
   const list = useLoad(() => intake.proposals(companyId, batchId), [companyId, batchId]);
   const { error, act } = useAction();
+  const t = useProjectTerms();
   // refresh also after a failure: part of a group may have been confirmed
   const run: Run = async (fn) => { await act(fn); list.reload(); onChanged(); };
   const groups = (list.data?.groups ?? []).filter((g) => kinds.includes(g.kind));
@@ -95,7 +98,7 @@ export function IntakeGroups({ companyId, batchId, projects, onChanged, kinds, t
         <div className={styles.body}>
           <Notice message={list.error ?? error} />
           {list.data && groups.length === 0 && <EmptyState title={empty} />}
-          {groups.map((g) => <GroupCard key={`${g.kind}-${g.confidence}-${g.projectId}`} group={g} label={groupLabel(g, projects)} projects={projects} run={run} ids={{ company: companyId, batch: batchId }} />)}
+          {groups.map((g) => <GroupCard key={`${g.kind}-${g.confidence}-${g.projectId}`} group={g} label={groupLabel(g, projects, t)} projects={projects} run={run} ids={{ company: companyId, batch: batchId }} />)}
         </div>
       </Section>
       {children}
