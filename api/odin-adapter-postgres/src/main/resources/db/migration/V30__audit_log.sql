@@ -163,3 +163,6 @@ REVOKE ALL ON FUNCTION audit_event_hash(audit_event), audit_event_immutable(), a
     audit_chain_head(), audit_verify(), audit_seal_matches(bigint, text), audit_update_settings(boolean, text, boolean, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION audit_append(uuid, uuid, text, uuid, text, text, text, text, text, text, text, text, text, jsonb, text),
     audit_chain_head(), audit_verify(), audit_seal_matches(bigint, text), audit_update_settings(boolean, text, boolean, uuid) TO odin_app;
+
+-- La consulta del panel ordena siempre por fecha e id.
+CREATE INDEX audit_event_time_idx ON audit_event (occurred_at DESC, id DESC);

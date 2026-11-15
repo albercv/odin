@@ -3,10 +3,12 @@ package com.e2d.odin.bootstrap;
 import com.e2d.odin.adapter.filestore.FileSystemOriginalFileStore;
 import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
 import com.e2d.odin.adapter.postgres.PostgresAuditLog;
+import com.e2d.odin.adapter.postgres.PostgresAuditReader;
 import com.e2d.odin.adapter.postgres.PostgresAuditSettings;
 import com.e2d.odin.adapter.web.security.RequestAuditContext;
 import com.e2d.odin.application.port.AuditContext;
 import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.application.port.AuditReader;
 import com.e2d.odin.application.port.AuditSettingsRepository;
 import com.e2d.odin.adapter.postgres.PostgresAccessLinkRepository;
 import com.e2d.odin.adapter.postgres.PostgresAdminSessionRepository;
@@ -80,6 +82,11 @@ public class AdapterConfiguration {
     @Bean
     AuditLog auditLog(DataSource dataSource, AuditContext context, ScopedTransactions tx) {
         return new PostgresAuditLog(dataSource, context);
+    }
+
+    @Bean
+    AuditReader auditReader(ScopedTransactions tx) {
+        return new PostgresAuditReader(tx);
     }
 
     @Bean

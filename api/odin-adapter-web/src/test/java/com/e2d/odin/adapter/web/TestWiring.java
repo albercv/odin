@@ -1,6 +1,10 @@
 package com.e2d.odin.adapter.web;
 
+import com.e2d.odin.application.audit.CheckAuditSeal;
+import com.e2d.odin.application.audit.ExportAuditActivity;
+import com.e2d.odin.application.audit.GetAuditIntegrity;
 import com.e2d.odin.application.audit.GetAuditSettings;
+import com.e2d.odin.application.audit.ListAuditActivity;
 import com.e2d.odin.application.audit.UpdateAuditSettings;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
 import com.e2d.odin.application.casefile.GetCaseFile;
@@ -24,6 +28,7 @@ import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
 import com.e2d.odin.application.fake.InMemoryAuditLog;
+import com.e2d.odin.application.fake.InMemoryAuditReader;
 import com.e2d.odin.application.fake.InMemoryAuditSettings;
 import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDeliveryMeter;
@@ -273,6 +278,26 @@ public class TestWiring {
 
     @Bean InMemoryAuditSettings auditSettings() {
         return new InMemoryAuditSettings();
+    }
+
+    @Bean InMemoryAuditReader auditReader() {
+        return new InMemoryAuditReader();
+    }
+
+    @Bean ListAuditActivity listAuditActivity(InMemoryAuditReader reader) {
+        return new ListAuditActivity(reader);
+    }
+
+    @Bean ExportAuditActivity exportAuditActivity(InMemoryAuditReader reader) {
+        return new ExportAuditActivity(reader, auditLog());
+    }
+
+    @Bean GetAuditIntegrity getAuditIntegrity(InMemoryAuditReader reader, InMemoryAuditSettings settings) {
+        return new GetAuditIntegrity(reader, settings);
+    }
+
+    @Bean CheckAuditSeal checkAuditSeal(InMemoryAuditReader reader) {
+        return new CheckAuditSeal(reader);
     }
 
     @Bean GetAuditSettings getAuditSettings(InMemoryAuditSettings settings) {
