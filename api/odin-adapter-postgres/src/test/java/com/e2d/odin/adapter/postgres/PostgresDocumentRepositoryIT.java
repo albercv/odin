@@ -9,6 +9,7 @@ import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
@@ -256,6 +257,39 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         newDocument(a, ua, "Pendiente", DocumentStatus.PENDING_READER);
         newDocument(a, ua, "Leyendo", DocumentStatus.READER_PROCESSING);
         assertThat(docs.claimNextForProcessing(NOW.plus(Duration.ofDays(1)), STALE)).isEmpty();
+    }
+
+    @Test
+    void claimNextForProcessingPrefersHandUploadedOverIntake() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        IntakeBatch batch = newIntakeBatch(a, ua);
+        Document intake = newIntakeDocument(batch, ua, "Primera carga", DocumentStatus.RECEIVED);
+        Document manual = newDocument(a, ua, "A mano", DocumentStatus.RECEIVED);
+        assertThat(docs.claimNextForProcessing(NOW, STALE).orElseThrow().id()).isEqualTo(manual.id());
+        assertThat(docs.claimNextForProcessing(NOW, STALE).orElseThrow().id()).isEqualTo(intake.id());
+    }
+
+    @Test
+    void claimNextForReaderPrefersHandUploadedOverIntake() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        IntakeBatch batch = newIntakeBatch(a, ua);
+        Document intake = newIntakeDocument(batch, ua, "Primera carga", DocumentStatus.PENDING_READER);
+        Document manual = newDocument(a, ua, "A mano", DocumentStatus.PENDING_READER);
+        assertThat(docs.claimNextForReader(NOW, STALE).orElseThrow().id()).isEqualTo(manual.id());
+        assertThat(docs.claimNextForReader(NOW, STALE).orElseThrow().id()).isEqualTo(intake.id());
+    }
+
+    @Test
+    void claimTakesIntakeDocumentsInSeqOrderWhenThereIsNoHandUploaded() {
+        CompanyId a = newCompany();
+        UserId ua = newUser(a);
+        IntakeBatch batch = newIntakeBatch(a, ua);
+        Document first = newIntakeDocument(batch, ua, "Uno", DocumentStatus.RECEIVED);
+        Document second = newIntakeDocument(batch, ua, "Dos", DocumentStatus.RECEIVED);
+        assertThat(docs.claimNextForProcessing(NOW, STALE).orElseThrow().id()).isEqualTo(first.id());
+        assertThat(docs.claimNextForProcessing(NOW, STALE).orElseThrow().id()).isEqualTo(second.id());
     }
 
     @Test

@@ -4,6 +4,9 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Membership;
+import com.e2d.odin.domain.intake.IntakeBatch;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeChannel;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.organization.Capability;
@@ -74,6 +77,24 @@ abstract class AbstractPostgresIT {
         Document d = new Document(new DocumentId(UUID.randomUUID()), company, Optional.empty(), title, "f.pdf",
                 DocumentFormat.PDF, UUID.randomUUID().toString(), status, Optional.empty(), true, uploader, NOW,
                 Optional.empty(), 0, Optional.empty(), Optional.empty());
+        docs.save(d);
+        return d;
+    }
+
+    /** Un lote de primera carga abierto: la base admite uno abierto por empresa. */
+    IntakeBatch newIntakeBatch(CompanyId company, UserId uploader) {
+        IntakeBatch batch = IntakeBatch.open(new IntakeBatchId(UUID.randomUUID()), company, uploader,
+                IntakeChannel.PANEL, NOW);
+        new PostgresIntakeRepository(tx).save(batch);
+        return batch;
+    }
+
+    /** Un documento de primera carga: el mismo que {@link #newDocument} pero dentro de un lote. */
+    Document newIntakeDocument(IntakeBatch batch, UserId uploader, String title, DocumentStatus status) {
+        CompanyId company = batch.companyId();
+        Document d = new Document(new DocumentId(UUID.randomUUID()), company, Optional.empty(), title, "f.pdf",
+                DocumentFormat.PDF, UUID.randomUUID().toString(), status, Optional.empty(), true, uploader, NOW,
+                Optional.empty(), 0, Optional.empty(), Optional.empty()).withIntake(batch.id(), "Carpeta/f.pdf");
         docs.save(d);
         return d;
     }
