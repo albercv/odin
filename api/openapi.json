@@ -3956,20 +3956,23 @@
         "type" : "object",
         "properties" : {
           "enabled" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "Enciende o apaga el registro de actividad."
           },
           "usagePolicyReference" : {
             "type" : "string",
             "description" : "Dónde está publicada la política de uso. Obligatorio para encender."
           },
           "chatEnabled" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "Permite o no la consulta del registro desde el chat."
           },
           "password" : {
             "type" : "string",
             "description" : "La contraseña actual del administrador, para volver a identificarse."
           }
-        }
+        },
+        "required" : [ "chatEnabled", "enabled" ]
       },
       "AuditSettingsView" : {
         "type" : "object",
