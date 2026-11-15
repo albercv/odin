@@ -4,7 +4,7 @@
 - **Base:** `feature/monitorizacion` sale de `integracion/instalacion` 7791802 (V25 encargo 17, V26 primera carga). Cada tarea en `task/monitorizacion/<tarea>`, merge `--no-ff` a la feature.
 - **Decisiones:** D-113 adopta las 20 recomendaciones del diseño (apartado 8), de forma provisional. Intocable: el interruptor nace apagado; sin política de uso publicada no se registra nada; validación legal antes de activarlo en un cliente (D-022); nada que puntúe o juzgue a personas (D-005).
 - **Método (propietario, 15 nov.):** subagentes Sonnet para implementar; sin rondas de revisión; se verifica con pruebas (las de lo tocado durante la tarea, `make check` al final). Las pruebas de aislamiento son obligatorias.
-- **Migración:** una sola, `V29__audit_log.sql`. Las tareas posteriores la amplían (no está desplegada en ningún sitio). El CTO tiene la V27 y el CTO 2 la V28: si se instalan en otro orden, se renumera al integrar.
+- **Migración:** una sola, `V30__audit_log.sql` (era V29; el CTO 2 tiene la V28 en develop y el CTO la V29). Las tareas posteriores la amplían (no está desplegada en ningún sitio).
 
 ## Restricciones globales (todas las tareas)
 
@@ -36,7 +36,7 @@
 
 **Rama:** `task/monitorizacion/registro`.
 
-- **Migración `V29__audit_log.sql`:**
+- **Migración `V30__audit_log.sql`:**
   - `audit_event`: `id bigint generated always as identity` (orden de la cadena y cursor), `occurred_at timestamptz`, `group_id`, `company_id` (nulo en acciones de grupo o de instalación), `project_id`, `actor_kind` (`PERSON`, `SYSTEM`, `INSTALLER`, `LINK`), `actor_user_id`, `actor_role`, `channel` (`PANEL`, `API`, `CHAT`, `CHAT_ADMIN`, `SCRIPT`, `SYSTEM`), `via`, `action`, `target_kind`, `target_id`, `target_label`, `outcome` (`DONE`, `DENIED`, `FAILED`), `details jsonb`, `request_id`, `chain_key`, `prev_hash`, `hash`. Únicos `(chain_key, prev_hash)` y `hash`. Índices `(company_id, occurred_at desc, id desc)` y `(action, occurred_at desc, id desc)`.
   - `audit_actor (user_id pk, display_name, email, updated_at)`: fuera de la huella; `audit_append` hace upsert cuando el actor es persona.
   - `audit_setting` (una fila, ver ruling 4).
@@ -98,7 +98,7 @@
 
 **Rama:** `task/monitorizacion/clave-chat`.
 
-- **Migración (amplía V29):** `admin_chat_key` (id, user_id, ámbito: grupo o empresa, prefijo, huella del token, `created_at`, `expires_at` a 30 días, `revoked_at`).
+- **Migración (amplía V30):** `admin_chat_key` (id, user_id, ámbito: grupo o empresa, prefijo, huella del token, `created_at`, `expires_at` a 30 días, `revoked_at`).
 - **Emisión y revocación** desde el panel por el administrador (contraseña en el cuerpo, ruling 3), solo si `audit_setting.chat_enabled`; el administrador de grupo enciende `chat_enabled` en el mismo interruptor. Entradas de emisión y revocación (solo el prefijo).
 - **Categoría de ruta propia** para `GET /v1/activity`; el servidor comprueba en cada llamada el tipo de clave, que la persona sigue siendo administradora de ese ámbito, la caducidad y la revocación. Una clave de trabajador en `/v1/activity` → 403; la clave de administrador en cualquier ruta de trabajador o de administración → 401/403.
 - **`GET /v1/activity`:** intervalo de fechas obligatorio de 7 días como máximo; 50 filas por llamada; tope de 500 filas al día por clave (ruling 10); sin correo en la salida; cada llamada deja su entrada (`CHAT_QUERY`, filtros y número de filas en `details`, canal `CHAT_ADMIN`). Superar el tope o salirse del ámbito → negado y registrado.
