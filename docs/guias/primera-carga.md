@@ -62,6 +62,8 @@ Nadie ve un documento hasta que tú lo confirmas.
 
 En cada propuesta puedes confirmarla, corregir el proyecto, marcarla «de toda la empresa» o rechazarla. **«Ver el original»** abre el documento para decidir viéndolo; también en «Sin ubicar». Un grupo de más de 500 documentos se confirma en partes de 500, cada una todo o nada: si una falla, el panel dice cuántas se aplicaron. Un documento que aún se está leyendo no se puede decidir: espera a que termine.
 
+**«Confirmar todos los grupos seguros»** (encima de los grupos, en cada paso) confirma de una vez los grupos de confianza alta. Antes enseña un resumen con cuántos grupos y documentos son y a qué proyectos van, y no confirma nada hasta que pulses «Confirmar N grupos». Los grupos de confianza baja no entran y siguen uno a uno; tampoco los de un proyecto que aún no está en la lista. Si uno falla, para y dice cuántos grupos se habían confirmado; lo confirmado no se deshace.
+
 - **«No lo sé»** deja el documento oculto y pendiente, sin plazo, y guarda quién lo dijo y cuándo. Puedes volver a él cuando lo sepas. Mientras quede alguno, la carga sigue abierta, pero no impide empezar otra.
 - **Descartar** retira el documento. No vuelve a entrar si repites la orden en esta misma carga; en una primera carga nueva, sí, porque para ella es un fichero que falta.
 
