@@ -28,7 +28,7 @@ public class PlaceIntakeDocument {
 
     public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId,
             Optional<ProjectId> projectId, boolean companyWide) {
-        IntakeBatch batch = effects.inReview(actor, companyId, batchId);
+        IntakeBatch batch = effects.unplacedEditable(actor, companyId, batchId);
         if (projectId.isPresent() == companyWide) {
             throw new ValidationException("Indica un proyecto o «de toda la empresa», solo uno de los dos");
         }

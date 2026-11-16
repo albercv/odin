@@ -37,6 +37,7 @@ import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UnlinkScanCopy;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadToProject;
@@ -72,6 +73,7 @@ import com.e2d.odin.application.identity.UserChanges;
 import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.intake.AddFileToIntake;
 import com.e2d.odin.application.intake.ClassifyIntake;
+import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
@@ -855,8 +857,19 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ListOpenIntakeBatches listOpenIntakeBatches(IntakeRepository intake) {
-        return new ListOpenIntakeBatches(intake);
+    ListOpenIntakeBatches listOpenIntakeBatches(IntakeRepository intake, DocumentRepository documents) {
+        return new ListOpenIntakeBatches(intake, documents);
+    }
+
+    @Bean
+    CloseIntakeBatch closeIntakeBatch(IntakeRepository intake, Clock clock, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CloseIntakeBatch(intake, clock) {
+            @Override
+            public IntakeBatch execute(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId));
+            }
+        };
     }
 
     @Bean
@@ -938,6 +951,11 @@ public class UseCaseConfiguration {
     ListCompanyDocuments listCompanyDocuments(DocumentRepository documents, TopicRepository topics,
             TaggingRepository tagging) {
         return new ListCompanyDocuments(documents, topics, tagging);
+    }
+
+    @Bean
+    UnlinkScanCopy unlinkScanCopy(DocumentRepository documents) {
+        return new UnlinkScanCopy(documents);
     }
 
     @Bean

@@ -39,7 +39,7 @@ public class DiscardIntakeDocument {
     }
 
     public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId) {
-        IntakeBatch batch = effects.inReview(actor, companyId, batchId);
+        IntakeBatch batch = effects.unplacedEditable(actor, companyId, batchId);
         Document d = documents.findEntryIncludingWithdrawn(CompanyScope.of(companyId), ProjectVisibility.all(),
                 documentId).map(DocumentEntry::document)
                 .filter(x -> x.intakeBatchId().equals(Optional.of(batchId)))

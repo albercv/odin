@@ -60,6 +60,18 @@ class IntakeProposalsIT extends AbstractPostgresIT {
     }
 
     @Test
+    void classificationSavesTheTypesAndProposalsTogetherAndOtherCompaniesSeeNone() {
+        JdbcClient.create(Db.owner()).sql("UPDATE document SET intake_pending = true, intake_batch_id = '"
+                + batch.id().value() + "' WHERE id = '" + document.id().value() + "'").update();
+        intake.saveClassification(company, batch.id(), Map.of(document.id(), "acta"),
+                List.of(List.of(proposal(document.id(), ProposalKind.PROJECT, Optional.of(project)))));
+
+        assertThat(intake.intakeTypes(company, batch.id())).containsExactlyEntriesOf(Map.of(document.id(), "acta"));
+        assertThat(intake.proposals(company, batch.id())).hasSize(1);
+        assertThat(intake.intakeTypes(newCompany(), batch.id())).isEmpty();
+    }
+
+    @Test
     void sameDocumentAndKindWithAnotherTargetIsAnotherProposal() {
         ProjectId other = newProject(company, "Calle Haya 2");
 

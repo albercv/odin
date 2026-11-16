@@ -22,7 +22,11 @@ function EntryRow({ d, onRemove }: { d: Entry; onRemove: () => void }) {
   const [label, tone] = CASE_STATUS[d.status] ?? [d.status, 'off' as const];
   return (
     <Tr>
-      <Td label="Título">{d.title}{d.superseded && <> <StatusPill tone="off">Sustituido</StatusPill></>}</Td>
+      <Td label="Título">
+        {d.title}{d.superseded && <> <StatusPill tone="off">Sustituido</StatusPill></>}
+        {d.scanOf && <div>{`Copia escaneada de ${d.scanOf.title}`}</div>}
+        {d.scanCopies?.map((c) => <div key={c.documentId}>{`Copia escaneada: ${c.title}`}</div>)}
+      </Td>
       <Td label="Estado"><StatusPill tone={tone}>{label}</StatusPill></Td>
       <Td label="Añadido">{d.addedAt ? formatDate(d.addedAt) : ''}</Td>
       <Td className={tableStyles.actions}><a href={originalUrl(d.id)} download aria-label={`Descargar original de ${d.title}`}>Descargar original</a> <RowAction text="Quitar" label="Quitar del expediente" target={d.title} onClick={onRemove} /></Td>

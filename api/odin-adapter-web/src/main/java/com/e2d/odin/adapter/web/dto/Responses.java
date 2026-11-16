@@ -2,6 +2,7 @@ package com.e2d.odin.adapter.web.dto;
 
 import com.e2d.odin.application.casefile.CaseFileText;
 import com.e2d.odin.application.casefile.CaseFileView;
+import com.e2d.odin.application.document.ScanLinks;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.organization.MeView;
@@ -290,7 +291,11 @@ public final class Responses {
             List<Integer> pagesWithoutText, @Nullable String taggingStatus, List<TopicLabelView> topics,
             boolean caseDocument, @Nullable Instant withdrawnAt,
             @Schema(description = "Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe.")
-            @Nullable String uploadedByName) {
+            @Nullable String uploadedByName,
+            @Schema(description = "De quién es copia escaneada este documento. Solo en el listado y la ficha.")
+            @Nullable ScanLink scanOf,
+            @Schema(description = "Escaneos enlazados a este documento. Solo en el listado y la ficha; vacío en el resto.")
+            List<ScanLink> scanCopies) {
         public static DocumentView from(DocumentEntry entry) {
             return from(new TaggedDocument(entry, Optional.empty(), List.of()));
         }
@@ -310,7 +315,9 @@ public final class Responses {
                     d.supersededAt().orElse(null), d.pagesWithoutText(),
                     tagged.tagging().map(t -> t.status().name()).orElse(null),
                     tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
-                    d.withdrawnAt().orElse(null), names.get(d.uploadedBy()));
+                    d.withdrawnAt().orElse(null), names.get(d.uploadedBy()),
+                    tagged.scanLinks().scanOf().map(ScanLink::from).orElse(null),
+                    ScanLink.from(tagged.scanLinks().scanCopies()));
         }
     }
 
@@ -444,16 +451,28 @@ public final class Responses {
         }
     }
 
+    /** Un documento enlazado como «copia escaneada» (D3): el principal o uno de sus escaneos. */
+    public record ScanLink(UUID documentId, String title) {
+        static ScanLink from(DocumentRef ref) {
+            return new ScanLink(ref.id().value(), ref.title());
+        }
+
+        static List<ScanLink> from(List<DocumentRef> refs) {
+            return refs.stream().map(ScanLink::from).toList();
+        }
+    }
+
     /** Vista del trabajador: solo documentos listos y sin datos internos del proceso. */
     public record WorkerDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, Instant uploadedAt, boolean superseded, @Nullable Replacement replacement,
-            List<TopicLabelView> topics, boolean caseDocument) {
+            List<TopicLabelView> topics, boolean caseDocument, List<ScanLink> scanCopies) {
         public static WorkerDocumentView from(TaggedDocument tagged) {
             Document d = tagged.entry().document();
             return new WorkerDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
                     tagged.entry().replacement().map(Replacement::from).orElse(null),
-                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument());
+                    tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
+                    ScanLink.from(tagged.scanLinks().scanCopies()));
         }
     }
 
@@ -461,15 +480,17 @@ public final class Responses {
     public record CaseFileDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
             @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status,
-            @Nullable String uploadedByName, @Nullable String addedByName) {
+            @Nullable String uploadedByName, @Nullable String addedByName, @Nullable ScanLink scanOf,
+            List<ScanLink> scanCopies) {
         static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
-                @Nullable Instant addedAt, Map<UserId, String> names) {
+                @Nullable Instant addedAt, Map<UserId, String> names, ScanLinks links) {
             Document d = entry.document();
             return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
                     d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
                     addedBy == null ? null : addedBy.value(), addedAt, d.status().name(), names.get(d.uploadedBy()),
-                    addedBy == null ? null : names.get(addedBy));
+                    addedBy == null ? null : names.get(addedBy), links.scanOf().map(ScanLink::from).orElse(null),
+                    ScanLink.from(links.scanCopies()));
         }
     }
 
@@ -477,10 +498,10 @@ public final class Responses {
             int pendingDocuments, int unreadableDocuments) {
         public static CaseFileResponse from(CaseFileView view) {
             return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null,
-                    view.names()),
+                    view.names(), ScanLinks.NONE),
                     view.documents().stream()
                             .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt(),
-                                    view.names())).toList(),
+                                    view.names(), d.scanLinks())).toList(),
                     view.pendingDocuments(), view.unreadableDocuments());
         }
     }
@@ -555,7 +576,7 @@ public final class Responses {
             + "de proyectos por terminada; sin ella no se clasifica.")
     public record IntakeBatchView(UUID id, UUID companyId, String channel, String state, Instant createdAt,
             @Nullable Instant closedAt, int uploaded, int reading, int pending, int alreadyThere, int discarded,
-            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced,
+            List<IntakeWarningView> warnings, java.util.Map<String, Integer> proposed, int unplaced, int toDecide,
             @Nullable Instant projectListClosedAt) {
         public static IntakeBatchView from(com.e2d.odin.application.intake.IntakeBatchView view) {
             var b = view.batch();
@@ -564,19 +585,19 @@ public final class Responses {
                     view.counts().pending(), b.alreadyThere(), b.discarded(),
                     view.warnings().stream().map(IntakeWarningView::from).toList(),
                     view.proposed().entrySet().stream().collect(java.util.stream.Collectors.toMap(
-                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced(),
+                            e -> e.getKey().name(), java.util.Map.Entry::getValue)), view.unplaced(), view.toDecide(),
                     b.projectListClosedAt().orElse(null));
         }
     }
 
-    @Schema(description = "Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL.")
+    @Schema(description = "Un lote sin cerrar o cerrado con documentos sin ubicar. state: OPEN, READING, IN_REVIEW o CLOSED; channel: COMMAND o PANEL.")
     public record IntakeBatchSummary(UUID id, String state, String channel, Instant createdAt) {
         static IntakeBatchSummary from(com.e2d.odin.domain.intake.IntakeBatch b) {
             return new IntakeBatchSummary(b.id().value(), b.state().name(), b.channel().name(), b.createdAt());
         }
     }
 
-    @Schema(description = "Los lotes de la empresa que no están cerrados, el más reciente primero.")
+    @Schema(description = "Los lotes de la empresa que no están cerrados y los cerrados con documentos sin ubicar, el más reciente primero.")
     public record OpenIntakeBatches(List<IntakeBatchSummary> batches) {
         public static OpenIntakeBatches from(List<com.e2d.odin.domain.intake.IntakeBatch> batches) {
             return new OpenIntakeBatches(batches.stream().map(IntakeBatchSummary::from).toList());
@@ -584,16 +605,20 @@ public final class Responses {
     }
 
     @Schema(description = "Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). "
-            + "path: la ruta de su carpeta al subirlo.")
-    public record IntakeDocumentView(UUID id, String title, @Nullable String path, String status) {
-        static IntakeDocumentView from(Document d) {
-            return new IntakeDocumentView(d.id().value(), d.title(), d.intakePath().orElse(null), d.status().name());
+            + "path: la ruta de su carpeta al subirlo. documentType: el tipo que le calculó la clasificación "
+            + "(acta, contrato, poliza…), o null si no se reconoció.")
+    public record IntakeDocumentView(UUID id, String title, @Nullable String path, String status,
+            @Nullable String documentType) {
+        static IntakeDocumentView from(Document d, java.util.Map<com.e2d.odin.domain.shared.DocumentId, String> types) {
+            return new IntakeDocumentView(d.id().value(), d.title(), d.intakePath().orElse(null), d.status().name(),
+                    types.get(d.id()));
         }
     }
 
     public record IntakeDocuments(List<IntakeDocumentView> documents) {
-        public static IntakeDocuments from(List<Document> documents) {
-            return new IntakeDocuments(documents.stream().map(IntakeDocumentView::from).toList());
+        public static IntakeDocuments from(List<Document> documents,
+                java.util.Map<com.e2d.odin.domain.shared.DocumentId, String> types) {
+            return new IntakeDocuments(documents.stream().map(d -> IntakeDocumentView.from(d, types)).toList());
         }
     }
 
@@ -622,15 +647,17 @@ public final class Responses {
 
     @Schema(description = "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. "
             + "targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la "
-            + "misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL.")
+            + "misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. documentType: el tipo del documento de "
+            + "la fila (no el del destino), o null si no se reconoció.")
     public record IntakeProposalItem(UUID id, UUID documentId, String title, @Nullable UUID targetDocumentId,
-            @Nullable String targetTitle, @Nullable String caseNumber, String source, String reason) {
+            @Nullable String targetTitle, @Nullable String caseNumber, String source, String reason,
+            @Nullable String documentType) {
         static IntakeProposalItem from(com.e2d.odin.application.intake.IntakeProposalItem i) {
             com.e2d.odin.domain.intake.IntakeProposal p = i.proposal();
             return new IntakeProposalItem(p.id(), p.documentId().value(), i.title(),
                     p.targetDocumentId().map(d -> d.value()).orElse(null), i.targetTitle().orElse(null),
                     p.caseNumber().orElse(null),
-                    p.source().name(), p.reason());
+                    p.source().name(), p.reason(), i.documentType().orElse(null));
         }
     }
 

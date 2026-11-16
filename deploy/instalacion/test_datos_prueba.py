@@ -289,7 +289,11 @@ class ProtegerPropietarioTest(unittest.TestCase):
             self.proteger({}, "odin", escribe=True)
 
     def test_escribirEnLaDelPropietarioConfirmadoPasa(self):
-        self.proteger({}, "odin", escribe=True, confirmacion="PROPIETARIO")
+        self.proteger({}, "odin", escribe=True, confirmacion="ESCRIBIR")
+
+    def test_elValorAntiguoPropietarioYaNoConfirma(self):
+        with self.assertRaises(SystemExit):
+            self.proteger({}, "odin", escribe=True, confirmacion="PROPIETARIO")
 
     def test_otraPalabraNoConfirma(self):
         with self.assertRaises(SystemExit):

@@ -22,6 +22,7 @@ import com.e2d.odin.application.casefile.UploadToCaseFile;
 import com.e2d.odin.application.document.GetDocument;
 import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.MarkCaseDocuments;
+import com.e2d.odin.application.document.UnlinkScanCopy;
 import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
@@ -79,6 +80,7 @@ import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
@@ -476,7 +478,10 @@ public class TestWiring {
     }
 
     @Bean ListOpenIntakeBatches listOpenIntakeBatches() {
-        return new ListOpenIntakeBatches(intake);
+        return new ListOpenIntakeBatches(intake, docs);
+    }
+    @Bean CloseIntakeBatch closeIntakeBatch() {
+        return new CloseIntakeBatch(intake, clock());
     }
     @Bean ListIntakeProposals listIntakeProposals() {
         return new ListIntakeProposals(intake, docs);
@@ -500,6 +505,10 @@ public class TestWiring {
 
     @Bean ListCompanyDocuments listCompanyDocuments() {
         return new ListCompanyDocuments(docs, topics, tagging);
+    }
+
+    @Bean UnlinkScanCopy unlinkScanCopy() {
+        return new UnlinkScanCopy(docs);
     }
 
     @Bean GetDocument getDocument() {
