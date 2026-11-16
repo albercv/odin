@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -49,6 +50,7 @@ import java.util.stream.Stream;
 public class ClassifyIntake {
 
     private static final int REASON_MAX = IntakeProposal.MAX_REASON;
+    private static final System.Logger LOG = System.getLogger(ClassifyIntake.class.getName());
 
     private final IntakeRepository intake;
     private final DocumentRepository documents;
@@ -56,9 +58,16 @@ public class ClassifyIntake {
     private final IdGenerator ids;
     private final InstallationSettings installation;
     private final Clock clock;
+    private final Consumer<String> timingsLog;
 
     public ClassifyIntake(IntakeRepository intake, DocumentRepository documents, Optional<ProjectProposer> proposer,
             IdGenerator ids, InstallationSettings installation, Clock clock) {
+        this(intake, documents, proposer, ids, installation, clock, line -> LOG.log(System.Logger.Level.INFO, line));
+    }
+
+    ClassifyIntake(IntakeRepository intake, DocumentRepository documents, Optional<ProjectProposer> proposer,
+            IdGenerator ids, InstallationSettings installation, Clock clock, Consumer<String> timingsLog) {
+        this.timingsLog = timingsLog;
         this.intake = intake;
         this.documents = documents;
         this.proposer = proposer;
@@ -85,6 +94,10 @@ public class ClassifyIntake {
         final Map<DocumentId, String> projectOf = new HashMap<>();
         final List<IntakeProposal> made = new ArrayList<>();
         boolean modelAllowed;
+        long rulesMs;
+        long modelMs;
+        long modelCalls;
+        long caseFileMs;
 
         Run(IntakeBatch batch) {
             this.batch = batch;
@@ -113,15 +126,34 @@ public class ClassifyIntake {
         }
         intake.candidates(run.company(), batch.id()).stream().filter(c -> c.state() == DecisionState.CONFIRMED)
                 .forEach(c -> run.confirmed.put(c.name(), c.projectId().orElseThrow()));
-        List<IntakeProposal> existing = intake.proposals(run.company(), batch.id());
+        measuredPass(run);
+        finish(batch);
+    }
+
+    /** Hace la pasada y deja una línea con lo que tardó cada paso (el modelo aparte de las reglas). */
+    private void measuredPass(Run run) {
+        long start = clock.millis();
+        List<IntakeProposal> existing = intake.proposals(run.company(), run.batch.id());
         rememberUnambiguous(run, existing.stream().filter(p -> p.kind() == ProposalKind.PROJECT).toList());
         Set<DocumentId> done = existing.stream().map(IntakeProposal::documentId).collect(Collectors.toSet());
-        List<IntakeDocument> all = documents.intakeReadyDocuments(run.company(), batch.id());
-        all.stream().filter(d -> !done.contains(d.id())).forEach(d -> proposeFor(run, d));
+        List<IntakeDocument> all = documents.intakeReadyDocuments(run.company(), run.batch.id());
+        List<IntakeDocument> todo = all.stream().filter(d -> !done.contains(d.id())).toList();
+        todo.forEach(d -> proposeFor(run, d));
+        long t = clock.millis();
         links(run, all);
+        long linksMs = clock.millis() - t;
+        t = clock.millis();
         duplicates(run, all, existing);
+        long duplicatesMs = clock.millis() - t;
+        t = clock.millis();
         saveNew(run, existing, all);
-        finish(batch);
+        long saveMs = clock.millis() - t;
+        if (!todo.isEmpty()) {
+            timingsLog.accept(String.format("intake-classify batch=%s docs=%d rules_ms=%d model_ms=%d model_calls=%d "
+                    + "casefile_ms=%d links_ms=%d duplicates_ms=%d save_ms=%d total_ms=%d", run.batch.id().value(),
+                    todo.size(), run.rulesMs, run.modelMs, run.modelCalls, run.caseFileMs, linksMs, duplicatesMs, saveMs,
+                    clock.millis() - start));
+        }
     }
 
     private void finish(IntakeBatch batch) {
@@ -153,10 +185,15 @@ public class ClassifyIntake {
     }
 
     private void proposeFor(Run run, IntakeDocument d) {
+        long start = clock.millis();
+        long modelBefore = run.modelMs;
         List<IntakeProposal> projects = projectProposals(run, d);
+        run.rulesMs += clock.millis() - start - (run.modelMs - modelBefore);
         run.made.addAll(projects);
         rememberUnambiguous(run, projects);
+        start = clock.millis();
         CaseFileRules.CaseMark mark = CaseFileRules.detect(d.text());
+        run.caseFileMs += clock.millis() - start;
         if (mark.caseFile() && !mark.reason().isBlank()) {
             run.made.add(proposal(run, d.id(), ProposalKind.CASE_MARK, Optional.empty(), Optional.empty(),
                     mark.number(), ProposalConfidence.HIGH, ProposalSource.RULES, mark.reason()));
@@ -182,7 +219,7 @@ public class ClassifyIntake {
             return match.candidates().stream().map(c -> candidateProposal(run, d, c)).flatMap(Optional::stream)
                     .toList();
         }
-        Optional<String> byModel = run.modelAllowed && match.candidates().isEmpty() ? ask(names, d.text())
+        Optional<String> byModel = run.modelAllowed && match.candidates().isEmpty() ? ask(run, names, d.text())
                 : Optional.empty();
         if (byModel.isPresent() && !beginning(d.text()).isBlank()) {
             return List.of(project(run, d, byModel.get(), ProposalConfidence.LOW, ProposalSource.MODEL,
@@ -200,11 +237,15 @@ public class ClassifyIntake {
     }
 
     /** El modelo no debería lanzar, pero un fallo suyo no tumba el lote: no propone nada. */
-    private Optional<String> ask(List<String> names, String text) {
+    private Optional<String> ask(Run run, List<String> names, String text) {
+        long start = clock.millis();
+        run.modelCalls++;
         try {
             return proposer.orElseThrow().propose(names, text).filter(names::contains);
         } catch (RuntimeException e) {
             return Optional.empty();
+        } finally {
+            run.modelMs += clock.millis() - start;
         }
     }
 
