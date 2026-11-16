@@ -1,9 +1,12 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.User;
@@ -20,8 +23,11 @@ public class UpdateUser {
     private final UserRepository users;
     private final MembershipRepository memberships;
     private final AdminSessions sessions;
+    private final AuditLog audit;
 
-    public UpdateUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions) {
+    public UpdateUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
+            AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.sessions = sessions;
@@ -42,10 +48,23 @@ public class UpdateUser {
         Optional<String> email = changes.email().map(e -> newEmail(actor, user, theirMemberships, e)).orElse(user.email());
         User updated = user.withNames(firstName, lastName).withEmail(email).withActive(active);
         users.save(updated);
+        audit.record(userUpdated(actor, user, updated));
         if (user.active() && !active) {
             sessions.closeAllOf(id);
         }
         return updated;
+    }
+
+    /** Nombre y correo son datos personales: solo se anota que cambiaron. */
+    private static AuditEntry userUpdated(Actor actor, User before, User after) {
+        AuditEntry entry = AuditEntry.by(actor, AuditAction.USER_UPDATED).on("USER", before.id().value().toString(), null)
+                .with("nameChanged", !before.firstName().equals(after.firstName()) || !before.lastName().equals(after.lastName()))
+                .with("emailChanged", !before.email().equals(after.email()));
+        if (before.active() != after.active()) {
+            entry = entry.with("before", java.util.Map.of("active", before.active()))
+                    .with("after", java.util.Map.of("active", after.active()));
+        }
+        return entry;
     }
 
     /** El administrador del grupo edita a cualquiera y cada persona a sí misma; el de empresa, solo a quien no está en otras empresas. */

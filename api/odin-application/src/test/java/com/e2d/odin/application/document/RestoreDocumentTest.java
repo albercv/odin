@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -22,8 +23,8 @@ class RestoreDocumentTest {
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     private final MutableClock clock = new MutableClock();
-    private final WithdrawDocument withdraw = new WithdrawDocument(docs, clock);
-    private final RestoreDocument restore = new RestoreDocument(docs);
+    private final WithdrawDocument withdraw = new WithdrawDocument(docs, clock, new InMemoryAuditLog());
+    private final RestoreDocument restore = new RestoreDocument(docs, new InMemoryAuditLog());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 

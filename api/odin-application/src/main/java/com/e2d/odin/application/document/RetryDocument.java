@@ -1,5 +1,9 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.domain.document.Document;
@@ -14,9 +18,11 @@ import com.e2d.odin.domain.shared.ProjectVisibility;
 public class RetryDocument {
 
     private final DocumentRepository documents;
+    private final AuditLog audit;
 
-    public RetryDocument(DocumentRepository documents) {
+    public RetryDocument(DocumentRepository documents, AuditLog audit) {
         this.documents = documents;
+        this.audit = audit;
     }
 
     public DocumentEntry execute(Actor actor, DocumentId id) {
@@ -28,6 +34,7 @@ public class RetryDocument {
         }
         Document requeued = document.requeue().resetAttempts();
         documents.save(requeued);
+        audit.record(AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.DOCUMENT_RETRIED), document));
         return documents.findEntry(actor.scope(), ProjectVisibility.all(), id).orElseThrow();
     }
 }

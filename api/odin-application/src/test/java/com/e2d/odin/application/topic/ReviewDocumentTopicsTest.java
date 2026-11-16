@@ -1,5 +1,6 @@
 package com.e2d.odin.application.topic;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -32,7 +33,7 @@ class ReviewDocumentTopicsTest {
     private final InMemoryTopicRepository topics = new InMemoryTopicRepository();
     private final InMemoryTaggingRepository tagging = new InMemoryTaggingRepository(orgs, docs, topics);
     private final MutableClock clock = new MutableClock();
-    private final ReviewDocumentTopics review = new ReviewDocumentTopics(docs, topics, tagging, clock);
+    private final ReviewDocumentTopics review = new ReviewDocumentTopics(docs, topics, tagging, clock, new InMemoryAuditLog());
     private final CompanyId company = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);
     private final Topic water = topic(company, "Agua");

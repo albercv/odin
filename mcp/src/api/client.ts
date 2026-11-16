@@ -17,6 +17,7 @@ export type CaseFile = components['schemas']['CaseFileResponse'];
 export type CaseFileText = components['schemas']['CaseFileTextResponse'];
 export type CaseFileAdded = components['schemas']['CaseFileAdded'];
 export type IssuedLink = components['schemas']['IssuedLink'];
+export type ActivityPage = components['schemas']['ActivityPageView'];
 export type SaveCardRequest = components['schemas']['SaveCard'];
 
 export class ApiError extends Error {
@@ -51,6 +52,7 @@ export interface ApiClient {
   requestUploadLink(caseId: string): Promise<IssuedLink>;
   requestProjectUploadLink(projectId: string): Promise<IssuedLink>;
   originalLink(documentId: string, page?: number): Promise<IssuedLink>;
+  activity(query: string): Promise<ActivityPage>;
 }
 
 export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
@@ -78,6 +80,7 @@ export function createApiClient(baseUrl: string, accessKey: string): ApiClient {
     saveCard: (body) => call('POST', '/v1/cards', body),
     myCards: (status) => call('GET', `/v1/me/cards${status ? `?status=${enc(status)}` : ''}`),
     myQuestions: (limit) => call('GET', `/v1/me/questions${limit ? `?limit=${limit}` : ''}`),
+    activity: (query) => call('GET', `/v1/activity?${query}`),
     ...caseFileCalls(call),
     originalLink: (documentId, page) => call('POST', `/v1/documents/${enc(documentId)}/original-links`, page === undefined ? {} : { page }),
   };

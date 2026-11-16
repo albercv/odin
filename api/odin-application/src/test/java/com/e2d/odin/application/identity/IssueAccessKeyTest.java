@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
@@ -13,17 +14,17 @@ import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.domain.identity.AccessKey;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.shared.ValidationException;
 import java.util.Optional;
-import java.util.UUID;
-import com.e2d.odin.domain.identity.Membership;
-import com.e2d.odin.domain.shared.NotFoundException;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class IssueAccessKeyTest {
@@ -31,8 +32,9 @@ class IssueAccessKeyTest {
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final InMemoryAccessKeyRepository keys = new InMemoryAccessKeyRepository();
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private final IssueAccessKey issue = new IssueAccessKey(keys, users, memberships,
-            new FakeSecretHasher(), new SequenceTokenGenerator(), new SequenceIdGenerator(), new MutableClock());
+            new FakeSecretHasher(), new SequenceTokenGenerator(), new SequenceIdGenerator(), new MutableClock(), audit);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
 
     private User saveUser(Role role, boolean active) {

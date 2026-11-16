@@ -1,9 +1,12 @@
 package com.e2d.odin.application.link;
 
+import com.e2d.odin.application.audit.AuditSupport;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.shared.WorkerAccess;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.link.AccessLinkKind;
 import com.e2d.odin.domain.organization.Capability;
@@ -36,7 +39,8 @@ public class IssueOriginalLink {
         var document = documents.findById(actor.scope(), granted.content(), documentId)
                 .filter(d -> d.withdrawnAt().isEmpty())
                 .orElseThrow(() -> new NotFoundException("Documento no encontrado"));
-        return issuer.issue(AccessLinkKind.ORIGINAL, actor, document.id(), "/v1/originals/",
+        AuditEntry entry = AuditSupport.onDocument(AuditEntry.by(actor, AuditAction.ORIGINAL_LINK_ISSUED), document);
+        return issuer.issue(AccessLinkKind.ORIGINAL, actor, document.id(), entry, "/v1/originals/",
                 page.map(p -> "#page=" + p).orElse(""));
     }
 }

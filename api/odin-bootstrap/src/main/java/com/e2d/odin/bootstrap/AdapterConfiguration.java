@@ -2,6 +2,16 @@ package com.e2d.odin.bootstrap;
 
 import com.e2d.odin.adapter.filestore.FileSystemOriginalFileStore;
 import com.e2d.odin.adapter.postgres.PostgresAccessKeyRepository;
+import com.e2d.odin.adapter.postgres.PostgresAdminChatKeyRepository;
+import com.e2d.odin.application.port.AdminChatKeyRepository;
+import com.e2d.odin.adapter.postgres.PostgresAuditLog;
+import com.e2d.odin.adapter.postgres.PostgresAuditReader;
+import com.e2d.odin.adapter.postgres.PostgresAuditSettings;
+import com.e2d.odin.adapter.web.security.RequestAuditContext;
+import com.e2d.odin.application.port.AuditContext;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.application.port.AuditReader;
+import com.e2d.odin.application.port.AuditSettingsRepository;
 import com.e2d.odin.adapter.postgres.PostgresAccessLinkRepository;
 import com.e2d.odin.adapter.postgres.PostgresAdminSessionRepository;
 import com.e2d.odin.adapter.postgres.PostgresDeliveryMeter;
@@ -68,6 +78,26 @@ public class AdapterConfiguration {
     }
 
     @Bean
+    AuditContext auditContext() {
+        return new RequestAuditContext();
+    }
+
+    @Bean
+    AuditLog auditLog(DataSource dataSource, AuditContext context, ScopedTransactions tx) {
+        return new PostgresAuditLog(dataSource, context);
+    }
+
+    @Bean
+    AuditReader auditReader(ScopedTransactions tx) {
+        return new PostgresAuditReader(tx);
+    }
+
+    @Bean
+    AuditSettingsRepository auditSettingsRepository(ScopedTransactions tx) {
+        return new PostgresAuditSettings(tx);
+    }
+
+    @Bean
     OrganizationRepository organizationRepository(ScopedTransactions tx) {
         return new PostgresOrganizationRepository(tx);
     }
@@ -85,6 +115,11 @@ public class AdapterConfiguration {
     @Bean
     ProjectMemberRepository projectMemberRepository(ScopedTransactions tx) {
         return new PostgresProjectMemberRepository(tx);
+    }
+
+    @Bean
+    AdminChatKeyRepository adminChatKeyRepository(ScopedTransactions tx) {
+        return new PostgresAdminChatKeyRepository(tx);
     }
 
     @Bean

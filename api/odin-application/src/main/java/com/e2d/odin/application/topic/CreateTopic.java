@@ -1,5 +1,8 @@
 package com.e2d.odin.application.topic;
 
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.TopicRepository;
@@ -18,8 +21,11 @@ public class CreateTopic {
     private final OrganizationRepository organizations;
     private final TopicRepository topics;
     private final IdGenerator ids;
+    private final AuditLog audit;
 
-    public CreateTopic(OrganizationRepository organizations, TopicRepository topics, IdGenerator ids) {
+    public CreateTopic(OrganizationRepository organizations, TopicRepository topics, IdGenerator ids,
+            AuditLog audit) {
+        this.audit = audit;
         this.organizations = organizations;
         this.topics = topics;
         this.ids = ids;
@@ -37,6 +43,8 @@ public class CreateTopic {
         }
         Topic topic = new Topic(new TopicId(ids.newId()), companyId, topicName, topicDefinition);
         topics.save(topic);
+        audit.record(AuditEntry.by(actor, AuditAction.TOPIC_CREATED).onCompany(companyId)
+                .on("TOPIC", topic.id().value().toString(), topic.name()));
         return topic;
     }
 }

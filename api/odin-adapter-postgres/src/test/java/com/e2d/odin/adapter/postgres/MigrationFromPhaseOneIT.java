@@ -7,6 +7,7 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.identity.MemberChanges;
@@ -25,13 +26,12 @@ import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UserId;
-
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
@@ -270,7 +270,7 @@ class MigrationFromPhaseOneIT {
 
         try {
             MemberView updated = new UpdateMember(users, memberships, new PostgresOrganizationRepository(tx),
-                    new FakePasswordHasher(), sessions).execute(
+                    new FakePasswordHasher(), sessions, new InMemoryAuditLog()).execute(
                     Actors.companyAdmin(new CompanyId(COMPANY)), new CompanyId(COMPANY), worker,
                     new MemberChanges(Optional.empty(), Optional.of(true), Optional.empty()));
 

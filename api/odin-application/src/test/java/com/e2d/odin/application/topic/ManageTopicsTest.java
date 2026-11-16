@@ -1,5 +1,6 @@
 package com.e2d.odin.application.topic;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -23,9 +24,9 @@ class ManageTopicsTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryTopicRepository topics = new InMemoryTopicRepository();
-    private final CreateTopic create = new CreateTopic(orgs, topics, new SequenceIdGenerator());
-    private final UpdateTopic update = new UpdateTopic(topics);
-    private final DeleteTopic delete = new DeleteTopic(topics, new MutableClock());
+    private final CreateTopic create = new CreateTopic(orgs, topics, new SequenceIdGenerator(), new InMemoryAuditLog());
+    private final UpdateTopic update = new UpdateTopic(topics, new InMemoryAuditLog());
+    private final DeleteTopic delete = new DeleteTopic(topics, new MutableClock(), new InMemoryAuditLog());
     private final ListTopics list = new ListTopics(topics);
     private final CompanyId company = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);

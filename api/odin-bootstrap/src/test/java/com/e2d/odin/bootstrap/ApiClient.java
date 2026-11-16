@@ -54,6 +54,11 @@ final class ApiClient {
                 .PUT(BodyPublishers.ofString(MAPPER.writeValueAsString(body))), headers);
     }
 
+    Reply patch(String path, Object body, String... headers) {
+        return send(HttpRequest.newBuilder(URI.create(base + path)).header("Content-Type", "application/json")
+                .method("PATCH", BodyPublishers.ofString(MAPPER.writeValueAsString(body))), headers);
+    }
+
     Reply delete(String path, String... headers) {
         return send(HttpRequest.newBuilder(URI.create(base + path)).DELETE(), headers);
     }

@@ -140,7 +140,7 @@ class MemberAtomicityIT {
         givenCompany();
         AddMember add = new UseCaseConfiguration().addMember(users, failingMemberships(), organizations,
                 projectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(),
-                new SecureRandomPersonCodeGenerator(), transactionManager);
+                new SecureRandomPersonCodeGenerator(), transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> add.execute(GROUP_ADMIN, company,
                 new NewMember("Wanda", "Pérez", Optional.of("atomica@e.test"), Set.of(Role.WORKER), Optional.empty(),
@@ -163,7 +163,7 @@ class MemberAtomicityIT {
         };
         AddMember add = new UseCaseConfiguration().addMember(users, memberships, organizations,
                 failingProjectMembers, new BcryptPasswordHasher(), new RandomUuidGenerator(),
-                new SecureRandomPersonCodeGenerator(), transactionManager);
+                new SecureRandomPersonCodeGenerator(), transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> add.execute(GROUP_ADMIN, company, new NewMember("Wanda", "Pérez",
                 Optional.of("proyecto@e.test"), Set.of(Role.WORKER), Optional.empty(), Set.of(project))))
@@ -181,7 +181,7 @@ class MemberAtomicityIT {
                 false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         UpdateMember update = new UseCaseConfiguration().updateMember(users, failingMemberships(),
-                organizations, new BcryptPasswordHasher(), NO_SESSIONS, transactionManager);
+                organizations, new BcryptPasswordHasher(), NO_SESSIONS, transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> update.execute(GROUP_ADMIN, company, id, new MemberChanges(
                 Optional.of(Set.of(Role.COMPANY_ADMIN)), Optional.empty(), Optional.of("clave-muy-larga-1"))))
@@ -200,7 +200,7 @@ class MemberAtomicityIT {
         organizations.saveProject(new Project(project, company, "Obra", true));
         projectMembers.add(company, project, id);
         DeleteUser delete = new UseCaseConfiguration().deleteUser(failingUserDelete(), memberships, projectMembers,
-                NO_SESSIONS, Clock.systemUTC(), transactionManager);
+                NO_SESSIONS, Clock.systemUTC(), transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> delete.execute(GROUP_ADMIN, id)).isInstanceOf(IllegalStateException.class);
 
@@ -215,7 +215,7 @@ class MemberAtomicityIT {
                 false, true, Optional.empty()));
         memberships.save(new Membership(id, company, Set.of(Role.WORKER), true));
         DeleteUser delete = new UseCaseConfiguration().deleteUser(failingUserDelete(), memberships, projectMembers,
-                NO_SESSIONS, Clock.systemUTC(), transactionManager);
+                NO_SESSIONS, Clock.systemUTC(), transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> delete.execute(GROUP_ADMIN, id)).isInstanceOf(IllegalStateException.class);
 
@@ -233,7 +233,7 @@ class MemberAtomicityIT {
                 "portatil", "atomic01", "hash", Instant.now(), Optional.empty()));
         RemoveMember remove = new UseCaseConfiguration().removeMember(users, memberships, failingKeySave(), projectMembers,
                 NO_SESSIONS,
-                Clock.systemUTC(), transactionManager);
+                Clock.systemUTC(), transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
 
@@ -257,7 +257,7 @@ class MemberAtomicityIT {
             }
         };
         RemoveMember remove = new UseCaseConfiguration().removeMember(users, failingDelete, keys, projectMembers, NO_SESSIONS,
-                Clock.systemUTC(), transactionManager);
+                Clock.systemUTC(), transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
 
@@ -282,7 +282,7 @@ class MemberAtomicityIT {
         };
         RemoveMember remove = new UseCaseConfiguration().removeMember(users, failingDelete,
                 new PostgresAccessKeyRepository(tx), projectMembers, NO_SESSIONS, Clock.systemUTC(),
-                transactionManager);
+                transactionManager, new NoAudit());
 
         assertThatThrownBy(() -> remove.execute(GROUP_ADMIN, company, id)).isInstanceOf(IllegalStateException.class);
 

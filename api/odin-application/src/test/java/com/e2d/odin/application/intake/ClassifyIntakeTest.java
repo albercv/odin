@@ -1,5 +1,6 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -62,7 +63,7 @@ class ClassifyIntakeTest {
 
     @BeforeEach
     void openReadingBatch() {
-        batch = new StartIntake(intake, orgs, ids, new MutableClock())
+        batch = new StartIntake(intake, orgs, ids, new MutableClock(), new InMemoryAuditLog())
                 .execute(Actors.companyAdmin(company), company, IntakeChannel.PANEL).startReading();
         intake.save(batch);
         olmoId = Fixtures.project(orgs, company);
@@ -523,7 +524,7 @@ class ClassifyIntakeTest {
     @Test
     void aBatchOfAnotherCompanyIsClassifiedOnlyWithItsOwnDocumentsAndList() {
         confirmed(OLMO, olmoId);
-        IntakeBatch otherBatch = new StartIntake(intake, orgs, ids, new MutableClock())
+        IntakeBatch otherBatch = new StartIntake(intake, orgs, ids, new MutableClock(), new InMemoryAuditLog())
                 .execute(Actors.companyAdmin(other), other, IntakeChannel.PANEL).startReading();
         intake.save(otherBatch);
         Document mine = pending("a/uno.pdf", OLMO_TEXT);
@@ -540,7 +541,7 @@ class ClassifyIntakeTest {
     @Test
     void aFailureWhileSavingADocumentLeavesItWithNoProposalsAndTheNextPassProposesItFully() {
         FailingOnce failing = new FailingOnce();
-        batch = new StartIntake(failing, orgs, ids, new MutableClock())
+        batch = new StartIntake(failing, orgs, ids, new MutableClock(), new InMemoryAuditLog())
                 .execute(Actors.companyAdmin(company), company, IntakeChannel.PANEL).startReading()
                 .closeProjectList(Actors.companyAdmin(company).userId(), java.time.Instant.EPOCH);
         failing.save(batch);

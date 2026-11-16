@@ -123,7 +123,7 @@ public class AdminDocumentController {
         UploadOutcome outcome = caseId == null
                 ? upload.execute(actor, new CompanyId(companyId), project, name, file.getOriginalFilename(),
                         file.getBytes(), caseDocument)
-                : uploadToCaseFile.execute(actor,
+                : uploadToCaseFile.executeAsAdmin(actor,
                         addToCaseFiles.requireTarget(actor, new CompanyId(companyId), new DocumentId(caseId), project),
                         name, file.getOriginalFilename(), file.getBytes());
         return ResponseEntity.status(outcome.duplicate() ? HttpStatus.OK : HttpStatus.CREATED)

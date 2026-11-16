@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.domain.organization.Capability;
@@ -19,7 +20,8 @@ import org.junit.jupiter.api.Test;
 class CreateCompanyTest {
 
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
-    private final CreateCompany create = new CreateCompany(organizations, new SequenceIdGenerator());
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final CreateCompany create = new CreateCompany(organizations, new SequenceIdGenerator(), audit);
 
     @Test
     void onlyGroupAdmin() {

@@ -4,6 +4,7 @@ import { createProjectNames } from './projects.js';
 import { DEFAULT_TERMS, projectTerms, type ProjectTerms } from './terms.js';
 import { registerCaseFileTools } from './tools/caseFile.js';
 import { registerFindSimilarCases } from './tools/findSimilarCases.js';
+import { registerListActivity } from './tools/listActivity.js';
 import { registerListDocuments } from './tools/listDocuments.js';
 import { registerListMyKnowledgeCards } from './tools/listMyKnowledgeCards.js';
 import { registerListMyQuestions } from './tools/listMyQuestions.js';
@@ -40,8 +41,13 @@ export function instructions(t: ProjectTerms): string {
 
 export async function buildServer(api: ApiClient): Promise<McpServer> {
   const me = await api.me();
-  const capabilities = new Set(me.company.capabilities);
-  const terms = projectTerms(me.company.projectLabel);
+  if (me.kind === 'ADMIN_CHAT') {
+    const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(DEFAULT_TERMS) });
+    registerListActivity(server, api);
+    return server;
+  }
+  const capabilities = new Set(me.company?.capabilities ?? []);
+  const terms = me.company ? projectTerms(me.company.projectLabel) : DEFAULT_TERMS;
   const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(terms) });
   const projects = createProjectNames(me, () => api.me(), terms);
   if (capabilities.has('SEARCH_KNOWLEDGE')) {

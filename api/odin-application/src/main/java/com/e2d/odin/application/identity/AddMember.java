@@ -1,5 +1,8 @@
 package com.e2d.odin.application.identity;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.organization.ProjectMembers;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
@@ -7,9 +10,10 @@ import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
-import com.e2d.odin.application.organization.ProjectMembers;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
@@ -32,10 +36,12 @@ public class AddMember {
     private final PasswordHasher passwords;
     private final IdGenerator ids;
     private final PersonCodeGenerator personCodes;
+    private final AuditLog audit;
 
     public AddMember(UserRepository users, MembershipRepository memberships, OrganizationRepository organizations,
             ProjectMemberRepository projectMembers, PasswordHasher passwords, IdGenerator ids,
-            PersonCodeGenerator personCodes) {
+            PersonCodeGenerator personCodes, AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.organizations = organizations;
@@ -70,8 +76,16 @@ public class AddMember {
         Membership membership = new Membership(ready.id(), companyId, roles, true);
         memberships.save(membership);
         newMember.projectIds().forEach(projectId -> projectMembers.add(companyId, projectId, ready.id()));
+        recordAdded(actor, companyId, ready, roles, existing.isPresent(), newMember.projectIds().size());
         return new MemberAdded(ready, membership, company, existing.isPresent(),
                 administrator && existing.flatMap(User::passwordHash).isPresent());
+    }
+
+    private void recordAdded(Actor actor, CompanyId companyId, User user, Set<Role> roles, boolean alreadyExisted,
+            int projects) {
+        audit.record(AuditEntry.by(actor, AuditAction.MEMBER_ADDED).onCompany(companyId)
+                .on("USER", user.id().value().toString(), null).with("roles", AuditSupport.sorted(roles))
+                .with("alreadyExisted", alreadyExisted).with("projects", projects));
     }
 
     private void requireAssignableProjects(CompanyId companyId, Set<Role> roles, Set<ProjectId> projectIds) {

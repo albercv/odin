@@ -6,21 +6,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
+import com.e2d.odin.application.port.AuditContext;
 import com.e2d.odin.application.shared.SessionSettings;
+import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.Optional;
-import java.util.UUID;
-import com.e2d.odin.domain.identity.Membership;
-import com.e2d.odin.domain.identity.User;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class LogInAdminTest {
@@ -29,9 +31,10 @@ class LogInAdminTest {
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     private final FakeSecretHasher secrets = new FakeSecretHasher();
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private final LogInAdmin logIn = new LogInAdmin(users, memberships, new FakePasswordHasher(),
             new StoredAdminSessions(sessions, secrets, new SequenceTokenGenerator(), new SessionSettings(),
-                    new MutableClock()));
+                    new MutableClock()), audit, () -> AuditContext.SYSTEM);
     private final UserId adminId = new UserId(UUID.randomUUID());
 
     LogInAdminTest() {

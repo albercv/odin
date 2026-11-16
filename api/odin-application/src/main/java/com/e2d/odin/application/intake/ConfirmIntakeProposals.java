@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.IntakeBatch;
@@ -22,10 +26,12 @@ public class ConfirmIntakeProposals {
 
     private final IntakeRepository intake;
     private final IntakeEffects effects;
+    private final AuditLog audit;
 
-    public ConfirmIntakeProposals(IntakeRepository intake, IntakeEffects effects) {
+    public ConfirmIntakeProposals(IntakeRepository intake, IntakeEffects effects, AuditLog audit) {
         this.intake = intake;
         this.effects = effects;
+        this.audit = audit;
     }
 
     /** Devuelve cuántas propuestas se han confirmado. */
@@ -46,6 +52,9 @@ public class ConfirmIntakeProposals {
         }).toList();
         effects.confirm(actor, batch, selected, all);
         effects.closeIfDone(batch);
+        audit.record(AuditSupport.withIds(AuditSupport.onIntake(
+                AuditEntry.by(actor, AuditAction.INTAKE_PROPOSALS_CONFIRMED), companyId, batchId),
+                proposalIds.stream().map(UUID::toString).toList()));
         return selected.size();
     }
 }

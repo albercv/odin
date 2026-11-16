@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
 import com.e2d.odin.application.fake.MutableClock;
@@ -18,7 +19,8 @@ import org.junit.jupiter.api.Test;
 class DeleteProjectTest {
 
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
-    private final DeleteProject delete = new DeleteProject(organizations, new MutableClock());
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final DeleteProject delete = new DeleteProject(organizations, new MutableClock(), audit);
     private final CompanyId company = Fixtures.company(organizations);
     private final ProjectId project = Fixtures.companyWideProject(organizations, company);
 

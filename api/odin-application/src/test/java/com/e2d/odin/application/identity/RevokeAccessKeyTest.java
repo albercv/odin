@@ -7,6 +7,7 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAccessLinkRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
@@ -30,7 +31,8 @@ class RevokeAccessKeyTest {
     private final InMemoryMembershipRepository memberships = new InMemoryMembershipRepository();
     private final InMemoryAccessLinkRepository links = new InMemoryAccessLinkRepository();
     private final MutableClock clock = new MutableClock();
-    private final RevokeAccessKey revoke = new RevokeAccessKey(keys, users, links, clock);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final RevokeAccessKey revoke = new RevokeAccessKey(keys, users, links, clock, audit);
     private final CompanyId company = Fixtures.company(new InMemoryOrganizationRepository());
     private final AccessKeyId keyId = new AccessKeyId(UUID.randomUUID());
 

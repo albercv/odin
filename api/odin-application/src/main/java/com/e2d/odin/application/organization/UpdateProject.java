@@ -1,8 +1,11 @@
 package com.e2d.odin.application.organization;
 
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -15,8 +18,11 @@ public class UpdateProject {
 
     private final OrganizationRepository organizations;
 
-    public UpdateProject(OrganizationRepository organizations) {
+    private final AuditLog audit;
+
+    public UpdateProject(OrganizationRepository organizations, AuditLog audit) {
         this.organizations = organizations;
+        this.audit = audit;
     }
 
     public Project execute(Actor actor, CompanyId companyId, ProjectId id, ProjectChanges changes) {
@@ -31,6 +37,10 @@ public class UpdateProject {
         }
         updated = updated.withRestricted(changes.restricted().orElse(project.restricted()));
         organizations.saveProject(updated);
+        audit.record(AuditEntry.by(actor, AuditAction.PROJECT_UPDATED).onCompany(companyId).onProject(id)
+                .on("PROJECT", id.value().toString(), updated.name())
+                .with("nameChanged", !project.name().equals(updated.name()))
+                .with("restricted", updated.restricted()));
         return updated;
     }
 }

@@ -1,5 +1,6 @@
 package com.e2d.odin.application.knowledge;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -25,7 +26,7 @@ class ReviewCardTest {
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
-    private final ReviewCard review = new ReviewCard(cards, new MutableClock());
+    private final ReviewCard review = new ReviewCard(cards, new MutableClock(), new InMemoryAuditLog());
     private final ListCardsForReview list = new ListCardsForReview(cards);
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);

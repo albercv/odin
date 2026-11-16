@@ -9,6 +9,7 @@ import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryCaseFileRepository;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
 import com.e2d.odin.application.fake.InMemoryIntakeRepository;
@@ -51,7 +52,8 @@ class CloseIntakeBatchTest {
     private final SequenceIdGenerator ids = new SequenceIdGenerator();
     private final CompanyId company = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);
-    private final CloseIntakeBatch close = new CloseIntakeBatch(intake, clock);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final CloseIntakeBatch close = new CloseIntakeBatch(intake, clock, audit);
     private IntakeBatch batch;
     private ProjectId olmo;
     private DecideIntakeProposal decide;
@@ -62,15 +64,15 @@ class CloseIntakeBatchTest {
     @BeforeEach
     void inReview() {
         olmo = Fixtures.project(orgs, company);
-        batch = new StartIntake(intake, orgs, ids, clock).execute(admin, company, IntakeChannel.PANEL).startReading()
+        batch = new StartIntake(intake, orgs, ids, clock, audit).execute(admin, company, IntakeChannel.PANEL).startReading()
                 .finishReading();
         intake.save(batch);
-        IntakeEffects effects = new IntakeEffects(intake, docs, orgs, new MarkCaseDocuments(docs, files, clock),
-                new SupersedeDocument(docs, clock), new AddToCaseFiles(orgs, members, docs, files, ids, clock),
+        IntakeEffects effects = new IntakeEffects(intake, docs, orgs, new MarkCaseDocuments(docs, files, clock, audit),
+                new SupersedeDocument(docs, clock, audit), new AddToCaseFiles(orgs, members, docs, files, ids, clock, audit),
                 new InstallationSettings("t", true), clock);
-        decide = new DecideIntakeProposal(intake, effects);
-        place = new PlaceIntakeDocument(effects);
-        discard = new DiscardIntakeDocument(docs, new WithdrawDocument(docs, clock), effects);
+        decide = new DecideIntakeProposal(intake, effects, audit);
+        place = new PlaceIntakeDocument(effects, audit);
+        discard = new DiscardIntakeDocument(docs, new WithdrawDocument(docs, clock, audit), effects, audit);
         get = new GetIntakeBatch(intake, docs, new InstallationSettings("t", true), new IntakeSettings(true));
     }
 

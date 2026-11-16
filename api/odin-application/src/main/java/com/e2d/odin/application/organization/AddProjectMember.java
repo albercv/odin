@@ -1,9 +1,12 @@
 package com.e2d.odin.application.organization;
 
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.Role;
@@ -18,9 +21,11 @@ public class AddProjectMember {
     private final OrganizationRepository organizations;
     private final MembershipRepository memberships;
     private final ProjectMemberRepository projectMembers;
+    private final AuditLog audit;
 
     public AddProjectMember(OrganizationRepository organizations, MembershipRepository memberships,
-            ProjectMemberRepository projectMembers) {
+            ProjectMemberRepository projectMembers, AuditLog audit) {
+        this.audit = audit;
         this.organizations = organizations;
         this.memberships = memberships;
         this.projectMembers = projectMembers;
@@ -34,5 +39,7 @@ public class AddProjectMember {
                 .orElse(Set.of());
         ProjectMembers.requireWorker(roles);
         projectMembers.add(companyId, projectId, userId);
+        audit.record(AuditEntry.by(actor, AuditAction.PROJECT_MEMBER_ADDED).onCompany(companyId).onProject(projectId)
+                .on("USER", userId.value().toString(), null));
     }
 }

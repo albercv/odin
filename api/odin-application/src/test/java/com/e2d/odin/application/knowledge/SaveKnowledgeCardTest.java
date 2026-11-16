@@ -30,7 +30,7 @@ class SaveKnowledgeCardTest {
     private final InMemoryKnowledgeCardRepository cards = new InMemoryKnowledgeCardRepository();
     private final InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(orgs);
     private final SaveKnowledgeCard save = new SaveKnowledgeCard(orgs, members, cards, new SequenceIdGenerator(),
-            new MutableClock());
+            new MutableClock(), new com.e2d.odin.application.fake.InMemoryAuditLog());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 

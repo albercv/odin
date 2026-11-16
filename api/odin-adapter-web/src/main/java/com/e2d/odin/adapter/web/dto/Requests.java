@@ -20,6 +20,22 @@ public final class Requests {
     public record Setup(String setupToken, String groupName, String adminName, String adminEmail, String password) {
     }
 
+    public record UpdateAuditSettings(
+            @Schema(description = "Enciende o apaga el registro de actividad.", requiredMode = Schema.RequiredMode.REQUIRED) Boolean enabled,
+            @Schema(description = "Dónde está publicada la política de uso. Obligatorio para encender.") String usagePolicyReference,
+            @Schema(description = "Permite o no la consulta del registro desde el chat.", requiredMode = Schema.RequiredMode.REQUIRED) Boolean chatEnabled,
+            @Schema(description = "La contraseña actual del administrador, para volver a identificarse.") String password) {
+    }
+
+    public record IssueActivityKey(@Schema(description = "La contraseña actual del administrador.") String password,
+            @Schema(description = "Empresa de la clave. Ausente para el administrador del grupo; el de empresa puede "
+                    + "omitirla si administra una sola.", nullable = true) UUID companyId) {
+    }
+
+    public record SealCheck(@Schema(description = "El id de la cabeza guardada como sello.") long id,
+            @Schema(description = "La huella de ese eslabón guardada como sello.") String hash) {
+    }
+
     public record Login(String email, String password) {
     }
 

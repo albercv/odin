@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/audit-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get"];
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/upload-links/{token}/documents": {
         parameters: {
             query?: never;
@@ -692,6 +708,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/activity/seal-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sealCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["current"];
+        put?: never;
+        post: operations["issue_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/users/{userId}": {
         parameters: {
             query?: never;
@@ -705,7 +753,7 @@ export interface paths {
         delete: operations["delete"];
         options?: never;
         head?: never;
-        patch: operations["update"];
+        patch: operations["update_1"];
         trace?: never;
     };
     "/v1/admin/documents/{documentId}": {
@@ -715,13 +763,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get"];
+        get: operations["get_1"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_1"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}": {
@@ -737,7 +785,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/v1/admin/companies/{companyId}/topics/{topicId}": {
@@ -785,7 +833,7 @@ export interface paths {
         delete: operations["remove_1"];
         options?: never;
         head?: never;
-        patch: operations["update_3"];
+        patch: operations["update_4"];
         trace?: never;
     };
     "/v1/upload-links/{token}": {
@@ -1067,7 +1115,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_1"];
+        get: operations["get_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1220,6 +1268,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_6"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity/integrity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["integrity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["exportCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cases/{caseId}/file/documents/{documentId}": {
         parameters: {
             query?: never;
@@ -1295,6 +1407,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["remove_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/activity-keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1380,6 +1508,25 @@ export interface components {
             singular: string;
             plural: string;
             feminine: boolean;
+        };
+        UpdateAuditSettings: {
+            /** @description Enciende o apaga el registro de actividad. */
+            enabled: boolean;
+            /** @description Dónde está publicada la política de uso. Obligatorio para encender. */
+            usagePolicyReference?: string;
+            /** @description Permite o no la consulta del registro desde el chat. */
+            chatEnabled: boolean;
+            /** @description La contraseña actual del administrador, para volver a identificarse. */
+            password?: string;
+        };
+        AuditSettingsView: {
+            enabled: boolean;
+            usagePolicyReference?: string;
+            chatEnabled: boolean;
+            /** Format: uuid */
+            updatedBy?: string;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         UploadReceipt: {
             filename: string;
@@ -1791,6 +1938,36 @@ export interface components {
             reviewedAt: string;
             note?: string;
         };
+        SealCheck: {
+            /**
+             * Format: int64
+             * @description El id de la cabeza guardada como sello.
+             */
+            id?: number;
+            /** @description La huella de ese eslabón guardada como sello. */
+            hash?: string;
+        };
+        SealCheckView: {
+            matches: boolean;
+        };
+        IssueActivityKey: {
+            /** @description La contraseña actual del administrador. */
+            password?: string;
+            /**
+             * Format: uuid
+             * @description Empresa de la clave. Ausente para el administrador del grupo; el de empresa puede omitirla si administra una sola.
+             */
+            companyId?: string | null;
+        };
+        IssuedActivityKeyView: {
+            /** Format: uuid */
+            id: string;
+            prefix: string;
+            /** @description Se muestra una sola vez; no se guarda. */
+            token: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         UpdateUser: {
             firstName?: string;
             lastName?: string;
@@ -1838,12 +2015,15 @@ export interface components {
             expiresAt: string;
         };
         Me: {
+            /** @description WORKER con la clave del trabajador; ADMIN_CHAT con la del administrador para el chat (sin capacidades, proyectos ni temas). */
+            kind: string;
             /** Format: uuid */
             userId: string;
             displayName: string;
             /** @enum {string} */
             role: "GROUP_ADMIN" | "COMPANY_ADMIN" | "WORKER";
-            company: components["schemas"]["MeCompany"];
+            /** @description Nulo con una clave de ámbito de grupo. */
+            company?: components["schemas"]["MeCompany"];
             projects: components["schemas"]["MeProject"][];
             topics: components["schemas"]["TopicView"][];
             tagging: components["schemas"]["MeTagging"];
@@ -2214,6 +2394,64 @@ export interface components {
             /** Format: int32 */
             total: number;
         };
+        ActivityPageView: {
+            items: components["schemas"]["ActivityRowView"][];
+            /** @description Pásalo como cursor para la página siguiente; nulo si no hay más. */
+            nextCursor?: string | null;
+        };
+        ActivityRowView: {
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: uuid */
+            companyId?: string;
+            /** Format: uuid */
+            projectId?: string;
+            actorKind: string;
+            /** Format: uuid */
+            actorUserId?: string;
+            /** @description Nombre en el momento de actuar; 'Persona suprimida' si la persona ya no consta. */
+            actorName?: string | null;
+            actorRole?: string;
+            channel: string;
+            via?: string;
+            action: string;
+            targetKind?: string;
+            targetId?: string;
+            targetLabel?: string;
+            outcome: string;
+            details: {
+                [key: string]: unknown;
+            };
+        };
+        ActivityIntegrityView: {
+            logEnabled: boolean;
+            intact: boolean;
+            /** Format: int64 */
+            firstBrokenId?: number;
+            /** Format: int64 */
+            headId?: number;
+            headHash?: string;
+            /** Format: date-time */
+            headAt?: string;
+        };
+        ActivityKeyView: {
+            /** Format: uuid */
+            id: string;
+            prefix: string;
+            /** Format: uuid */
+            companyId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        ActivityKeysView: {
+            /** @description El registro y la consulta desde el chat están encendidos. */
+            chatAvailable: boolean;
+            key?: components["schemas"]["ActivityKeyView"];
+        };
     };
     responses: never;
     parameters: never;
@@ -2445,6 +2683,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyView"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditSettingsView"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAuditSettings"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditSettingsView"];
                 };
             };
         };
@@ -3626,6 +3908,74 @@ export interface operations {
             };
         };
     };
+    sealCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SealCheck"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealCheckView"];
+                };
+            };
+        };
+    };
+    current: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityKeysView"];
+                };
+            };
+        };
+    };
+    issue_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActivityKey"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedActivityKeyView"];
+                };
+            };
+        };
+    };
     delete: {
         parameters: {
             query?: never;
@@ -3646,7 +3996,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3672,7 +4022,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    get_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3694,7 +4044,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3720,7 +4070,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -3863,7 +4213,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -4269,7 +4619,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -4513,6 +4863,115 @@ export interface operations {
             };
         };
     };
+    list_6: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                companyId?: string;
+                projectId?: string;
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
+                actorUserId?: string;
+                channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
+                outcome?: "DONE" | "DENIED" | "FAILED";
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPageView"];
+                };
+            };
+        };
+    };
+    integrity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityIntegrityView"];
+                };
+            };
+        };
+    };
+    exportCsv: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                companyId?: string;
+                projectId?: string;
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
+                actorUserId?: string;
+                channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
+                outcome?: "DONE" | "DENIED" | "FAILED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
+    activity: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                companyId?: string;
+                projectId?: string;
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
+                actorUserId?: string;
+                channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
+                outcome?: "DONE" | "DENIED" | "FAILED";
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPageView"];
+                };
+            };
+        };
+    };
     remove_2: {
         parameters: {
             query?: never;
@@ -4602,6 +5061,26 @@ export interface operations {
                 companyId: string;
                 caseId: string;
                 documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
             };
             cookie?: never;
         };

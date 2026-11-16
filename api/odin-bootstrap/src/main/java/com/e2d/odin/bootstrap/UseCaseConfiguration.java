@@ -1,96 +1,112 @@
 package com.e2d.odin.bootstrap;
 
-import com.e2d.odin.application.document.GetDocument;
-import com.e2d.odin.application.identity.UserNames;
-import com.e2d.odin.application.document.ListCompanyDocuments;
-import com.e2d.odin.application.document.ProcessPendingDocuments;
-import com.e2d.odin.application.document.RetryDocument;
+import com.e2d.odin.application.audit.CheckAuditSeal;
+import com.e2d.odin.application.audit.ExportAuditActivity;
+import com.e2d.odin.application.audit.GetAuditIntegrity;
+import com.e2d.odin.application.audit.GetAuditSettings;
+import com.e2d.odin.application.audit.ListAuditActivity;
+import com.e2d.odin.application.audit.ListChatActivity;
+import com.e2d.odin.application.identity.DescribeAdminChat;
+import com.e2d.odin.application.identity.DescribeAdminChatKey;
+import com.e2d.odin.application.identity.IssueAdminChatKey;
+import com.e2d.odin.application.identity.IssuedAdminChatKey;
+import com.e2d.odin.application.identity.ResolveAdminChatKey;
+import com.e2d.odin.application.identity.RevokeAdminChatKey;
+import com.e2d.odin.application.port.AdminChatKeyRepository;
+import com.e2d.odin.application.audit.UpdateAuditSettings;
 import com.e2d.odin.application.casefile.AddToCaseFiles;
-import com.e2d.odin.application.link.DescribeUploadLink;
-import com.e2d.odin.application.link.IssueOriginalLink;
-import com.e2d.odin.application.link.IssueUploadLink;
-import com.e2d.odin.application.link.LinkIssuer;
-import com.e2d.odin.application.link.LinkSettings;
-import com.e2d.odin.application.link.OpenOriginal;
-import com.e2d.odin.application.link.ResolveLink;
-import com.e2d.odin.application.link.UploadByLink;
-import com.e2d.odin.application.casefile.UploadToCaseFile;
-import com.e2d.odin.application.document.UploadToProject;
-import com.e2d.odin.application.port.AccessLinkRepository;
+import com.e2d.odin.domain.topic.Topic;
+import com.e2d.odin.domain.topic.TopicId;
+import com.e2d.odin.application.topic.TopicChanges;
+import com.e2d.odin.domain.intake.IntakeBatch;
+import com.e2d.odin.domain.intake.IntakeChannel;
+import com.e2d.odin.domain.document.DocumentEntry;
+import com.e2d.odin.application.casefile.CaseFileAssignment;
+import com.e2d.odin.domain.knowledge.KnowledgeCard;
+import com.e2d.odin.domain.knowledge.ReviewDecision;
+import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
+import com.e2d.odin.application.casefile.UploadToCaseFile;
+import com.e2d.odin.application.document.GetDocument;
+import com.e2d.odin.application.document.ListCompanyDocuments;
 import com.e2d.odin.application.document.MarkCaseDocuments;
-import com.e2d.odin.application.shared.CaseFileSettings;
+import com.e2d.odin.application.document.ProcessPendingDocuments;
 import com.e2d.odin.application.document.RestoreDocument;
+import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
 import com.e2d.odin.application.document.UnlinkScanCopy;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
-import com.e2d.odin.application.intake.AddFileToIntake;
-import com.e2d.odin.application.intake.ClassifyIntake;
-import com.e2d.odin.application.intake.CloseIntakeBatch;
-import com.e2d.odin.application.intake.ListOpenIntakeBatches;
-import com.e2d.odin.domain.intake.IntakeBatch;
-import com.e2d.odin.application.intake.CloseIntakeUpload;
-import com.e2d.odin.application.intake.CloseProjectList;
-import com.e2d.odin.application.port.ProjectProposer;
-import java.util.Optional;
-import org.springframework.beans.factory.ObjectProvider;
-import com.e2d.odin.application.intake.ConfirmProjectCandidates;
-import com.e2d.odin.application.intake.ConfirmIntakeProposals;
-import com.e2d.odin.application.intake.DecideIntakeProposal;
-import com.e2d.odin.application.intake.DiscardIntakeDocument;
-import com.e2d.odin.application.intake.GetIntakeBatch;
-import com.e2d.odin.application.intake.IntakeDecision;
-import com.e2d.odin.application.intake.IntakeEffects;
-import com.e2d.odin.application.intake.ListIntakeProposals;
-import com.e2d.odin.application.intake.ListUnplacedDocuments;
-import com.e2d.odin.application.intake.OpenIntakeOriginal;
-import com.e2d.odin.application.intake.PlaceIntakeDocument;
-import com.e2d.odin.domain.intake.IntakeProposal;
-import com.e2d.odin.domain.shared.DocumentId;
-import com.e2d.odin.domain.shared.ProjectId;
-import java.util.UUID;
-import com.e2d.odin.application.intake.ImportProjectList;
-import com.e2d.odin.application.intake.ListProjectCandidates;
-import com.e2d.odin.domain.intake.IntakeBatchId;
-import com.e2d.odin.domain.intake.ProjectCandidate;
-import com.e2d.odin.application.intake.ProjectDecision;
-import com.e2d.odin.application.intake.StartIntake;
-import com.e2d.odin.application.port.IntakeRepository;
+import com.e2d.odin.application.document.UploadToProject;
 import com.e2d.odin.application.document.WithdrawDocument;
 import com.e2d.odin.application.identity.AddGroupAdmin;
 import com.e2d.odin.application.identity.AddMember;
-import com.e2d.odin.application.identity.ListGroupAdmins;
-import com.e2d.odin.application.identity.RevokeGroupAdmin;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.DescribeAdmin;
+import com.e2d.odin.application.identity.GroupAdminAdded;
 import com.e2d.odin.application.identity.IssueAccessKey;
+import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
+import com.e2d.odin.application.identity.ListGroupAdmins;
 import com.e2d.odin.application.identity.ListMembers;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.MemberAdded;
 import com.e2d.odin.application.identity.MemberChanges;
 import com.e2d.odin.application.identity.MemberView;
+import com.e2d.odin.application.identity.NewGroupAdmin;
 import com.e2d.odin.application.identity.NewMember;
 import com.e2d.odin.application.identity.RecoverGroupAdmin;
 import com.e2d.odin.application.identity.RemoveMember;
 import com.e2d.odin.application.identity.ResolveActor;
 import com.e2d.odin.application.identity.RevokeAccessKey;
+import com.e2d.odin.application.identity.RevokeGroupAdmin;
 import com.e2d.odin.application.identity.SetUpInstallation;
 import com.e2d.odin.application.identity.StoredAdminSessions;
 import com.e2d.odin.application.identity.UpdateMember;
 import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.UserChanges;
+import com.e2d.odin.application.identity.UserNames;
+import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.ClassifyIntake;
+import com.e2d.odin.application.intake.CloseIntakeBatch;
+import com.e2d.odin.application.intake.CloseIntakeUpload;
+import com.e2d.odin.application.intake.CloseProjectList;
+import com.e2d.odin.application.intake.ConfirmIntakeProposals;
+import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.DecideIntakeProposal;
+import com.e2d.odin.application.intake.DiscardIntakeDocument;
+import com.e2d.odin.application.intake.GetIntakeBatch;
+import com.e2d.odin.application.intake.ImportProjectList;
+import com.e2d.odin.application.intake.IntakeDecision;
+import com.e2d.odin.application.intake.IntakeEffects;
+import com.e2d.odin.application.intake.ListIntakeProposals;
+import com.e2d.odin.application.intake.ListOpenIntakeBatches;
+import com.e2d.odin.application.intake.ListProjectCandidates;
+import com.e2d.odin.application.intake.ListUnplacedDocuments;
+import com.e2d.odin.application.intake.OpenIntakeOriginal;
+import com.e2d.odin.application.intake.PlaceIntakeDocument;
+import com.e2d.odin.application.intake.ProjectDecision;
+import com.e2d.odin.application.intake.StartIntake;
 import com.e2d.odin.application.knowledge.ListCardsForReview;
 import com.e2d.odin.application.knowledge.ListMyKnowledgeCards;
 import com.e2d.odin.application.knowledge.ReviewCard;
 import com.e2d.odin.application.knowledge.SaveKnowledgeCard;
+import com.e2d.odin.application.link.DescribeUploadLink;
+import com.e2d.odin.application.link.IssueOriginalLink;
+import com.e2d.odin.application.link.IssueUploadLink;
+import com.e2d.odin.application.link.IssuedLink;
+import com.e2d.odin.application.link.LinkIssuer;
+import com.e2d.odin.application.link.LinkSettings;
+import com.e2d.odin.application.link.OpenOriginal;
+import com.e2d.odin.application.link.ResolveLink;
+import com.e2d.odin.application.link.UploadByLink;
 import com.e2d.odin.application.organization.AddProjectMember;
+import com.e2d.odin.application.organization.CompanyChanges;
 import com.e2d.odin.application.organization.CreateCompany;
 import com.e2d.odin.application.organization.CreateProject;
 import com.e2d.odin.application.organization.DeleteProject;
@@ -99,19 +115,26 @@ import com.e2d.odin.application.organization.ListCompanies;
 import com.e2d.odin.application.organization.ListMemberProjects;
 import com.e2d.odin.application.organization.ListProjectMembers;
 import com.e2d.odin.application.organization.ListProjects;
+import com.e2d.odin.application.organization.ProjectChanges;
 import com.e2d.odin.application.organization.RemoveProjectMember;
 import com.e2d.odin.application.organization.SetCompanyCapabilities;
 import com.e2d.odin.application.organization.UpdateCompany;
 import com.e2d.odin.application.organization.UpdateProject;
 import com.e2d.odin.application.port.AccessKeyRepository;
+import com.e2d.odin.application.port.AccessLinkRepository;
 import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditContext;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.application.port.AuditReader;
+import com.e2d.odin.application.port.AuditSettingsRepository;
+import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
-import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
 import com.e2d.odin.application.port.IdGenerator;
+import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.KnowledgeCardRepository;
 import com.e2d.odin.application.port.KnowledgeSearch;
 import com.e2d.odin.application.port.MembershipRepository;
@@ -120,11 +143,12 @@ import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.port.PasswordHasher;
 import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.ProjectMemberRepository;
-import com.e2d.odin.application.port.TaggingRepository;
-import com.e2d.odin.application.port.TopicRepository;
+import com.e2d.odin.application.port.ProjectProposer;
 import com.e2d.odin.application.port.QuestionLog;
 import com.e2d.odin.application.port.SecretHasher;
+import com.e2d.odin.application.port.TaggingRepository;
 import com.e2d.odin.application.port.TokenGenerator;
+import com.e2d.odin.application.port.TopicRepository;
 import com.e2d.odin.application.port.UsageStatistics;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.search.FindSimilarCases;
@@ -133,9 +157,15 @@ import com.e2d.odin.application.search.ListMyQuestions;
 import com.e2d.odin.application.search.ReadPage;
 import com.e2d.odin.application.search.SearchKnowledge;
 import com.e2d.odin.application.search.VerifyCitation;
+import com.e2d.odin.application.shared.CaseFileSettings;
+import com.e2d.odin.application.shared.InstallationSettings;
+import com.e2d.odin.application.shared.IntakeSettings;
+import com.e2d.odin.application.shared.ProcessingSettings;
+import com.e2d.odin.application.shared.SessionSettings;
+import com.e2d.odin.application.shared.TaggingWindow;
+import com.e2d.odin.application.shared.UploadSettings;
 import com.e2d.odin.application.topic.CreateTopic;
 import com.e2d.odin.application.topic.DeleteTopic;
-import com.e2d.odin.application.shared.TaggingWindow;
 import com.e2d.odin.application.topic.GetTaggingStatus;
 import com.e2d.odin.application.topic.ListDocumentTopics;
 import com.e2d.odin.application.topic.ListTopics;
@@ -144,18 +174,27 @@ import com.e2d.odin.application.topic.UpdateTopic;
 import com.e2d.odin.application.usage.GetDeliveredVolume;
 import com.e2d.odin.application.usage.GetUsageStats;
 import com.e2d.odin.application.usage.ListGaps;
-import com.e2d.odin.application.shared.InstallationSettings;
-import com.e2d.odin.application.shared.IntakeSettings;
-import com.e2d.odin.application.shared.ProcessingSettings;
-import com.e2d.odin.application.shared.SessionSettings;
-import com.e2d.odin.application.shared.UploadSettings;
+import com.e2d.odin.domain.audit.AuditSettings;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.User;
+import com.e2d.odin.domain.intake.IntakeBatchId;
+import com.e2d.odin.domain.intake.IntakeProposal;
+import com.e2d.odin.domain.intake.ProjectCandidate;
+import com.e2d.odin.domain.organization.Capability;
+import com.e2d.odin.domain.organization.Company;
+import com.e2d.odin.domain.organization.Project;
+import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -184,18 +223,24 @@ public class UseCaseConfiguration {
 
     @Bean
     LogInAdmin logInAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            AdminSessions sessions) {
-        return new LogInAdmin(users, memberships, passwords, sessions);
+            AdminSessions sessions, AuditLog audit, AuditContext auditContext) {
+        return new LogInAdmin(users, memberships, passwords, sessions, audit, auditContext);
     }
 
     @Bean
-    LogOutAdmin logOutAdmin(AdminSessions sessions) {
-        return new LogOutAdmin(sessions);
+    LogOutAdmin logOutAdmin(AdminSessions sessions, AuditLog audit, AuditContext auditContext) {
+        return new LogOutAdmin(sessions, audit, auditContext);
     }
 
     @Bean
-    CreateCompany createCompany(OrganizationRepository organizations, IdGenerator ids) {
-        return new CreateCompany(organizations, ids);
+    CreateCompany createCompany(OrganizationRepository organizations, IdGenerator ids, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CreateCompany(organizations, ids, audit) {
+            @Override
+            public Company execute(Actor actor, String name, String code) {
+                return transaction.execute(status -> super.execute(actor, name, code));
+            }
+        };
     }
 
     @Bean
@@ -204,33 +249,71 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateCompany updateCompany(OrganizationRepository organizations) {
-        return new UpdateCompany(organizations);
+    UpdateCompany updateCompany(OrganizationRepository organizations, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateCompany(organizations, audit) {
+            @Override
+            public Company execute(Actor actor, CompanyId id, CompanyChanges changes) {
+                return transaction.execute(status -> super.execute(actor, id, changes));
+            }
+        };
     }
 
     @Bean
-    SetCompanyCapabilities setCompanyCapabilities(OrganizationRepository organizations) {
-        return new SetCompanyCapabilities(organizations);
+    SetCompanyCapabilities setCompanyCapabilities(OrganizationRepository organizations, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new SetCompanyCapabilities(organizations, audit) {
+            @Override
+            public Company execute(Actor actor, CompanyId id, Set<Capability> capabilities) {
+                return transaction.execute(status -> super.execute(actor, id, capabilities));
+            }
+        };
     }
 
     @Bean
-    CreateProject createProject(OrganizationRepository organizations, IdGenerator ids) {
-        return new CreateProject(organizations, ids);
+    CreateProject createProject(OrganizationRepository organizations, IdGenerator ids, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CreateProject(organizations, ids, audit) {
+            @Override
+            public Project execute(Actor actor, CompanyId companyId, String name) {
+                return transaction.execute(status -> super.execute(actor, companyId, name));
+            }
+        };
     }
 
     @Bean
-    CreateTopic createTopic(OrganizationRepository organizations, TopicRepository topics, IdGenerator ids) {
-        return new CreateTopic(organizations, topics, ids);
+    CreateTopic createTopic(OrganizationRepository organizations, TopicRepository topics, IdGenerator ids,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CreateTopic(organizations, topics, ids, audit) {
+            @Override
+            public Topic execute(Actor actor, CompanyId companyId, String name, String definition) {
+                return transaction.execute(status -> super.execute(actor, companyId, name, definition));
+            }
+        };
     }
 
     @Bean
-    UpdateTopic updateTopic(TopicRepository topics) {
-        return new UpdateTopic(topics);
+    UpdateTopic updateTopic(TopicRepository topics, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateTopic(topics, audit) {
+            @Override
+            public Topic execute(Actor actor, CompanyId companyId, TopicId id, TopicChanges changes) {
+                return transaction.execute(status -> super.execute(actor, companyId, id, changes));
+            }
+        };
     }
 
     @Bean
-    DeleteTopic deleteTopic(TopicRepository topics, Clock clock) {
-        return new DeleteTopic(topics, clock);
+    DeleteTopic deleteTopic(TopicRepository topics, Clock clock, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new DeleteTopic(topics, clock, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, TopicId id) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, id));
+            }
+        };
     }
 
     @Bean
@@ -240,8 +323,24 @@ public class UseCaseConfiguration {
 
     @Bean
     ReviewDocumentTopics reviewDocumentTopics(DocumentRepository documents, TopicRepository topics,
-            TaggingRepository tagging, Clock clock) {
-        return new ReviewDocumentTopics(documents, topics, tagging, clock);
+            TaggingRepository tagging, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ReviewDocumentTopics(documents, topics, tagging, clock, audit) {
+            @Override
+            public void add(Actor actor, DocumentId documentId, TopicId topicId) {
+                transaction.executeWithoutResult(status -> super.add(actor, documentId, topicId));
+            }
+
+            @Override
+            public void remove(Actor actor, DocumentId documentId, TopicId topicId) {
+                transaction.executeWithoutResult(status -> super.remove(actor, documentId, topicId));
+            }
+
+            @Override
+            public void retag(Actor actor, DocumentId documentId) {
+                transaction.executeWithoutResult(status -> super.retag(actor, documentId));
+            }
+        };
     }
 
     @Bean
@@ -279,20 +378,38 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UpdateProject updateProject(OrganizationRepository organizations) {
-        return new UpdateProject(organizations);
+    UpdateProject updateProject(OrganizationRepository organizations, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateProject(organizations, audit) {
+            @Override
+            public Project execute(Actor actor, CompanyId companyId, ProjectId id, ProjectChanges changes) {
+                return transaction.execute(status -> super.execute(actor, companyId, id, changes));
+            }
+        };
     }
 
     @Bean
     AddProjectMember addProjectMember(OrganizationRepository organizations, MembershipRepository memberships,
-            ProjectMemberRepository projectMembers) {
-        return new AddProjectMember(organizations, memberships, projectMembers);
+            ProjectMemberRepository projectMembers, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new AddProjectMember(organizations, memberships, projectMembers, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, ProjectId projectId, UserId userId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, projectId, userId));
+            }
+        };
     }
 
     @Bean
     RemoveProjectMember removeProjectMember(OrganizationRepository organizations,
-            ProjectMemberRepository projectMembers) {
-        return new RemoveProjectMember(organizations, projectMembers);
+            ProjectMemberRepository projectMembers, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RemoveProjectMember(organizations, projectMembers, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, ProjectId projectId, UserId userId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, projectId, userId));
+            }
+        };
     }
 
     @Bean
@@ -308,8 +425,14 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    DeleteProject deleteProject(OrganizationRepository organizations, Clock clock) {
-        return new DeleteProject(organizations, clock);
+    DeleteProject deleteProject(OrganizationRepository organizations, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new DeleteProject(organizations, clock, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, ProjectId id) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, id));
+            }
+        };
     }
 
     @Bean
@@ -325,14 +448,99 @@ public class UseCaseConfiguration {
 
     @Bean
     RemoveMember removeMember(UserRepository users, MembershipRepository memberships, AccessKeyRepository keys,
-            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock, PlatformTransactionManager transactionManager) {
+            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new RemoveMember(users, memberships, keys, projectMembers, sessions, clock) {
+        return new RemoveMember(users, memberships, keys, projectMembers, sessions, clock, audit) {
             @Override
             public void execute(Actor actor, CompanyId companyId, UserId userId) {
                 transaction.executeWithoutResult(status -> super.execute(actor, companyId, userId));
             }
         };
+    }
+
+    @Bean
+    ListAuditActivity listAuditActivity(AuditReader reader) {
+        return new ListAuditActivity(reader);
+    }
+
+    @Bean
+    ExportAuditActivity exportAuditActivity(AuditReader reader, AuditLog audit) {
+        return new ExportAuditActivity(reader, audit);
+    }
+
+    @Bean
+    GetAuditIntegrity getAuditIntegrity(AuditReader reader, AuditSettingsRepository settings) {
+        return new GetAuditIntegrity(reader, settings);
+    }
+
+    @Bean
+    CheckAuditSeal checkAuditSeal(AuditReader reader) {
+        return new CheckAuditSeal(reader);
+    }
+
+    @Bean
+    GetAuditSettings getAuditSettings(AuditSettingsRepository settings) {
+        return new GetAuditSettings(settings);
+    }
+
+    @Bean
+    UpdateAuditSettings updateAuditSettings(AuditSettingsRepository settings, AuditLog audit, UserRepository users,
+            PasswordHasher passwords, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateAuditSettings(settings, audit, users, passwords) {
+            @Override
+            public AuditSettings execute(Actor actor, String password, boolean enabled, String reference,
+                    boolean chatEnabled) {
+                return transaction.execute(status -> super.execute(actor, password, enabled, reference, chatEnabled));
+            }
+        };
+    }
+
+    @Bean
+    ResolveAdminChatKey resolveAdminChatKey(AdminChatKeyRepository keys, UserRepository users,
+            MembershipRepository memberships, AuditSettingsRepository settings, SecretHasher secrets, Clock clock) {
+        return new ResolveAdminChatKey(keys, users, memberships, settings, secrets, clock);
+    }
+
+    @Bean
+    IssueAdminChatKey issueAdminChatKey(AdminChatKeyRepository keys, UserRepository users,
+            AuditSettingsRepository settings, PasswordHasher passwords, SecretHasher secrets, TokenGenerator tokens,
+            IdGenerator ids, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueAdminChatKey(keys, users, settings, passwords, secrets, tokens, ids, clock, audit) {
+            @Override
+            public IssuedAdminChatKey execute(Actor actor, String password, Optional<CompanyId> company) {
+                return transaction.execute(status -> super.execute(actor, password, company));
+            }
+        };
+    }
+
+    @Bean
+    RevokeAdminChatKey revokeAdminChatKey(AdminChatKeyRepository keys, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RevokeAdminChatKey(keys, clock, audit) {
+            @Override
+            public void execute(Actor actor, UUID keyId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, keyId));
+            }
+        };
+    }
+
+    @Bean
+    DescribeAdminChatKey describeAdminChatKey(AdminChatKeyRepository keys, AuditSettingsRepository settings,
+            Clock clock) {
+        return new DescribeAdminChatKey(keys, settings, clock);
+    }
+
+    @Bean
+    DescribeAdminChat describeAdminChat(OrganizationRepository organizations) {
+        return new DescribeAdminChat(organizations);
+    }
+
+    @Bean
+    ListChatActivity listChatActivity(ListAuditActivity list, AuditReader reader, AuditLog audit, Clock clock) {
+        return new ListChatActivity(list, reader, audit, clock);
     }
 
     @Bean
@@ -342,15 +550,21 @@ public class UseCaseConfiguration {
 
     @Bean
     AddGroupAdmin addGroupAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            IdGenerator ids, PersonCodeGenerator personCodes) {
-        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes);
+            IdGenerator ids, PersonCodeGenerator personCodes, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new AddGroupAdmin(users, memberships, passwords, ids, personCodes, audit) {
+            @Override
+            public GroupAdminAdded execute(Actor actor, NewGroupAdmin request) {
+                return transaction.execute(status -> super.execute(actor, request));
+            }
+        };
     }
 
     @Bean
     RevokeGroupAdmin revokeGroupAdmin(UserRepository users, MembershipRepository memberships,
-            AdminSessions sessions, PlatformTransactionManager transactionManager) {
+            AdminSessions sessions, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new RevokeGroupAdmin(users, memberships, sessions) {
+        return new RevokeGroupAdmin(users, memberships, sessions, audit) {
             @Override
             public void execute(Actor actor, UserId id) {
                 transaction.executeWithoutResult(status -> super.execute(actor, id));
@@ -360,9 +574,9 @@ public class UseCaseConfiguration {
 
     @Bean
     UpdateUser updateUser(UserRepository users, MembershipRepository memberships, AdminSessions sessions,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new UpdateUser(users, memberships, sessions) {
+        return new UpdateUser(users, memberships, sessions, audit) {
             @Override
             public User execute(Actor actor, UserId id, UserChanges changes) {
                 return transaction.execute(status -> super.execute(actor, id, changes));
@@ -372,22 +586,34 @@ public class UseCaseConfiguration {
 
     @Bean
     ChangePassword changePassword(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            AdminSessions sessions) {
-        return new ChangePassword(users, memberships, passwords, sessions);
+            AdminSessions sessions, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ChangePassword(users, memberships, passwords, sessions, audit) {
+            @Override
+            public void execute(Actor actor, UserId target, Optional<String> currentPassword, String newPassword) {
+                transaction.executeWithoutResult(status -> super.execute(actor, target, currentPassword, newPassword));
+            }
+        };
     }
 
     @Bean
     RecoverGroupAdmin recoverGroupAdmin(UserRepository users, PasswordHasher passwords, AdminSessions sessions,
-            InstallationSettings installationSettings) {
-        return new RecoverGroupAdmin(users, passwords, sessions, installationSettings);
+            InstallationSettings installationSettings, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RecoverGroupAdmin(users, passwords, sessions, installationSettings, audit) {
+            @Override
+            public void execute(String setupToken, Optional<String> email, String newPassword) {
+                transaction.executeWithoutResult(status -> super.execute(setupToken, email, newPassword));
+            }
+        };
     }
 
     @Bean
     DeleteUser deleteUser(UserRepository users, MembershipRepository memberships,
             ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new DeleteUser(users, memberships, projectMembers, sessions, clock) {
+        return new DeleteUser(users, memberships, projectMembers, sessions, clock, audit) {
             @Override
             public void execute(Actor actor, UserId id) {
                 transaction.executeWithoutResult(status -> super.execute(actor, id));
@@ -398,9 +624,9 @@ public class UseCaseConfiguration {
     @Bean
     AddMember addMember(UserRepository users, MembershipRepository memberships,
             OrganizationRepository organizations, ProjectMemberRepository projectMembers, PasswordHasher passwords,
-            IdGenerator ids, PersonCodeGenerator personCodes, PlatformTransactionManager transactionManager) {
+            IdGenerator ids, PersonCodeGenerator personCodes, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new AddMember(users, memberships, organizations, projectMembers, passwords, ids, personCodes) {
+        return new AddMember(users, memberships, organizations, projectMembers, passwords, ids, personCodes, audit) {
             @Override
             public MemberAdded execute(Actor actor, CompanyId companyId, NewMember newMember) {
                 return transaction.execute(status -> super.execute(actor, companyId, newMember));
@@ -411,9 +637,9 @@ public class UseCaseConfiguration {
     @Bean
     UpdateMember updateMember(UserRepository users, MembershipRepository memberships,
             OrganizationRepository organizations, PasswordHasher passwords, AdminSessions sessions,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new UpdateMember(users, memberships, organizations, passwords, sessions) {
+        return new UpdateMember(users, memberships, organizations, passwords, sessions, audit) {
             @Override
             public MemberView execute(Actor actor, CompanyId companyId, UserId userId, MemberChanges changes) {
                 return transaction.execute(status -> super.execute(actor, companyId, userId, changes));
@@ -422,15 +648,20 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    IssueAccessKey issueAccessKey(
-            AccessKeyRepository keys,
+    IssueAccessKey issueAccessKey(AccessKeyRepository keys,
             UserRepository users,
             MembershipRepository memberships,
             SecretHasher secrets,
             TokenGenerator tokens,
             IdGenerator ids,
-            Clock clock) {
-        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock);
+            Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueAccessKey(keys, users, memberships, secrets, tokens, ids, clock, audit) {
+            @Override
+            public IssuedKey execute(Actor actor, CompanyId companyId, UserId userId, String label) {
+                return transaction.execute(status -> super.execute(actor, companyId, userId, label));
+            }
+        };
     }
 
     @Bean
@@ -440,26 +671,50 @@ public class UseCaseConfiguration {
 
     @Bean
     RevokeAccessKey revokeAccessKey(AccessKeyRepository keys, UserRepository users, AccessLinkRepository links,
-            Clock clock) {
-        return new RevokeAccessKey(keys, users, links, clock);
+            Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RevokeAccessKey(keys, users, links, clock, audit) {
+            @Override
+            public void execute(Actor actor, AccessKeyId id) {
+                transaction.executeWithoutResult(status -> super.execute(actor, id));
+            }
+        };
     }
 
     @Bean
     LinkIssuer linkIssuer(AccessLinkRepository links, TokenGenerator tokens, SecretHasher secrets, IdGenerator ids,
-            Clock clock, LinkSettings settings) {
-        return new LinkIssuer(links, tokens, secrets, ids, clock, settings);
+            Clock clock, LinkSettings settings, AuditLog audit) {
+        return new LinkIssuer(links, tokens, secrets, ids, clock, settings, audit);
     }
 
     @Bean
     IssueUploadLink issueUploadLink(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            DocumentRepository documents, LinkIssuer issuer) {
-        return new IssueUploadLink(organizations, projectMembers, documents, issuer);
+            DocumentRepository documents, LinkIssuer issuer, PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueUploadLink(organizations, projectMembers, documents, issuer) {
+            @Override
+            public IssuedLink execute(Actor actor, DocumentId caseId) {
+                return transaction.execute(status -> super.execute(actor, caseId));
+            }
+
+            @Override
+            public IssuedLink forProject(Actor actor, ProjectId projectId) {
+                return transaction.execute(status -> super.forProject(actor, projectId));
+            }
+        };
     }
 
     @Bean
     IssueOriginalLink issueOriginalLink(OrganizationRepository organizations,
-            ProjectMemberRepository projectMembers, DocumentRepository documents, LinkIssuer issuer) {
-        return new IssueOriginalLink(organizations, projectMembers, documents, issuer);
+            ProjectMemberRepository projectMembers, DocumentRepository documents, LinkIssuer issuer,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new IssueOriginalLink(organizations, projectMembers, documents, issuer) {
+            @Override
+            public IssuedLink execute(Actor actor, DocumentId documentId, Optional<Integer> page) {
+                return transaction.execute(status -> super.execute(actor, documentId, page));
+            }
+        };
     }
 
     @Bean
@@ -475,8 +730,8 @@ public class UseCaseConfiguration {
 
     @Bean
     UploadByLink uploadByLink(ResolveLink resolve, AccessLinkRepository links, UploadToCaseFile uploadToCaseFile,
-            UploadToProject uploadToProject) {
-        return new UploadByLink(resolve, links, uploadToCaseFile, uploadToProject);
+            UploadToProject uploadToProject, AuditLog audit) {
+        return new UploadByLink(resolve, links, uploadToCaseFile, uploadToProject, audit);
     }
 
     @Bean
@@ -486,13 +741,14 @@ public class UseCaseConfiguration {
 
     @Bean
     UploadToCaseFile uploadToCaseFile(UploadDocument upload, AddToCaseFiles addToCaseFiles,
-            CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
-        return new UploadToCaseFile(upload, addToCaseFiles, caseFiles, ids, clock);
+            CaseFileRepository caseFiles, IdGenerator ids, Clock clock, AuditLog audit) {
+        return new UploadToCaseFile(upload, addToCaseFiles, caseFiles, ids, clock, audit);
     }
 
     @Bean
-    OpenOriginal openOriginal(ResolveLink resolve, OriginalFileStore files, DocumentRepository documents) {
-        return new OpenOriginal(resolve, files, documents);
+    OpenOriginal openOriginal(ResolveLink resolve, OriginalFileStore files, DocumentRepository documents,
+            AuditLog audit) {
+        return new OpenOriginal(resolve, files, documents, audit);
     }
 
     @Bean
@@ -503,19 +759,26 @@ public class UseCaseConfiguration {
             DocumentFormatDetector detector,
             UploadSettings uploadSettings,
             IdGenerator ids,
-            Clock clock) {
-        return new UploadDocument(documents, organizations, files, detector, uploadSettings, ids, clock);
+            Clock clock,
+            AuditLog audit) {
+        return new UploadDocument(documents, organizations, files, detector, uploadSettings, ids, clock, audit);
     }
 
     @Bean
     StartIntake startIntake(IntakeRepository intake, OrganizationRepository organizations, IdGenerator ids,
-            Clock clock) {
-        return new StartIntake(intake, organizations, ids, clock);
+            Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new StartIntake(intake, organizations, ids, clock, audit) {
+            @Override
+            public IntakeBatch execute(Actor actor, CompanyId companyId, IntakeChannel channel) {
+                return transaction.execute(status -> super.execute(actor, companyId, channel));
+            }
+        };
     }
 
     @Bean
-    AddFileToIntake addFileToIntake(IntakeRepository intake, UploadDocument upload) {
-        return new AddFileToIntake(intake, upload);
+    AddFileToIntake addFileToIntake(IntakeRepository intake, UploadDocument upload, AuditLog audit) {
+        return new AddFileToIntake(intake, upload, audit);
     }
 
     /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
@@ -528,8 +791,15 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    CloseIntakeUpload closeIntakeUpload(IntakeRepository intake) {
-        return new CloseIntakeUpload(intake);
+    CloseIntakeUpload closeIntakeUpload(IntakeRepository intake, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new CloseIntakeUpload(intake, audit) {
+            @Override
+            public IntakeBatch execute(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
+                return transaction.execute(status -> super.execute(actor, companyId, batchId));
+            }
+        };
     }
 
     @Bean
@@ -539,9 +809,10 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ImportProjectList importProjectList(IntakeRepository intake, PlatformTransactionManager transactionManager) {
+    ImportProjectList importProjectList(IntakeRepository intake, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new ImportProjectList(intake) {
+        return new ImportProjectList(intake, audit) {
             @Override
             public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
                     byte[] content) {
@@ -558,15 +829,16 @@ public class UseCaseConfiguration {
     /** Sin transacción: lo que descubre se queda aunque falten candidatos por decidir (lo ve el administrador). */
     @Bean
     CloseProjectList closeProjectList(IntakeRepository intake, DocumentRepository documents,
-            ListProjectCandidates candidates, InstallationSettings installationSettings, Clock clock) {
-        return new CloseProjectList(intake, documents, candidates, installationSettings, clock);
+            ListProjectCandidates candidates, InstallationSettings installationSettings, Clock clock,
+            AuditLog audit) {
+        return new CloseProjectList(intake, documents, candidates, installationSettings, clock, audit);
     }
 
     @Bean
     ConfirmProjectCandidates confirmProjectCandidates(IntakeRepository intake, OrganizationRepository organizations,
-            CreateProject createProject, PlatformTransactionManager transactionManager) {
+            CreateProject createProject, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new ConfirmProjectCandidates(intake, organizations, createProject) {
+        return new ConfirmProjectCandidates(intake, organizations, createProject, audit) {
             @Override
             public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
                     List<ProjectDecision> decisions) {
@@ -590,9 +862,10 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    CloseIntakeBatch closeIntakeBatch(IntakeRepository intake, Clock clock, PlatformTransactionManager transactionManager) {
+    CloseIntakeBatch closeIntakeBatch(IntakeRepository intake, Clock clock, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new CloseIntakeBatch(intake, clock) {
+        return new CloseIntakeBatch(intake, clock, audit) {
             @Override
             public IntakeBatch execute(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
                 return transaction.execute(status -> super.execute(actor, companyId, batchId));
@@ -608,9 +881,9 @@ public class UseCaseConfiguration {
     /** Confirmar, decidir y descartar son todo o nada: una transacción por acción. */
     @Bean
     ConfirmIntakeProposals confirmIntakeProposals(IntakeRepository intake, IntakeEffects effects,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new ConfirmIntakeProposals(intake, effects) {
+        return new ConfirmIntakeProposals(intake, effects, audit) {
             @Override
             public int execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, List<UUID> proposalIds) {
                 return transaction.execute(status -> super.execute(actor, companyId, batchId, proposalIds));
@@ -620,9 +893,9 @@ public class UseCaseConfiguration {
 
     @Bean
     DecideIntakeProposal decideIntakeProposal(IntakeRepository intake, IntakeEffects effects,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new DecideIntakeProposal(intake, effects) {
+        return new DecideIntakeProposal(intake, effects, audit) {
             @Override
             public IntakeProposal execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, UUID proposalId,
                     IntakeDecision decision, Optional<ProjectId> projectId) {
@@ -639,14 +912,15 @@ public class UseCaseConfiguration {
 
     @Bean
     OpenIntakeOriginal openIntakeOriginal(IntakeRepository intake, DocumentRepository documents,
-            OriginalFileStore files) {
-        return new OpenIntakeOriginal(intake, documents, files);
+            OriginalFileStore files, AuditLog audit) {
+        return new OpenIntakeOriginal(intake, documents, files, audit);
     }
 
     @Bean
-    PlaceIntakeDocument placeIntakeDocument(IntakeEffects effects, PlatformTransactionManager transactionManager) {
+    PlaceIntakeDocument placeIntakeDocument(IntakeEffects effects, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new PlaceIntakeDocument(effects) {
+        return new PlaceIntakeDocument(effects, audit) {
             @Override
             public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId,
                     Optional<ProjectId> projectId, boolean companyWide) {
@@ -658,9 +932,10 @@ public class UseCaseConfiguration {
 
     @Bean
     DiscardIntakeDocument discardIntakeDocument(DocumentRepository documents,
-            WithdrawDocument withdrawDocument, IntakeEffects effects, PlatformTransactionManager transactionManager) {
+            WithdrawDocument withdrawDocument, IntakeEffects effects, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new DiscardIntakeDocument(documents, withdrawDocument, effects) {
+        return new DiscardIntakeDocument(documents, withdrawDocument, effects, audit) {
             @Override
             public void execute(Actor actor, CompanyId companyId, IntakeBatchId batchId, DocumentId documentId) {
                 transaction.executeWithoutResult(status -> super.execute(actor, companyId, batchId, documentId));
@@ -680,8 +955,8 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UnlinkScanCopy unlinkScanCopy(DocumentRepository documents) {
-        return new UnlinkScanCopy(documents);
+    UnlinkScanCopy unlinkScanCopy(DocumentRepository documents, AuditLog audit) {
+        return new UnlinkScanCopy(documents, audit);
     }
 
     @Bean
@@ -690,28 +965,63 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    RetryDocument retryDocument(DocumentRepository documents) {
-        return new RetryDocument(documents);
+    RetryDocument retryDocument(DocumentRepository documents, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RetryDocument(documents, audit) {
+            @Override
+            public DocumentEntry execute(Actor actor, DocumentId id) {
+                return transaction.execute(status -> super.execute(actor, id));
+            }
+        };
     }
 
     @Bean
-    UpdateDocument updateDocument(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
-        return new UpdateDocument(documents, caseFiles, clock);
+    UpdateDocument updateDocument(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new UpdateDocument(documents, caseFiles, clock, audit) {
+            @Override
+            public DocumentEntry execute(Actor actor, DocumentId documentId, boolean caseDocument) {
+                return transaction.execute(status -> super.execute(actor, documentId, caseDocument));
+            }
+        };
     }
 
     @Bean
-    WithdrawDocument withdrawDocument(DocumentRepository documents, Clock clock) {
-        return new WithdrawDocument(documents, clock);
+    WithdrawDocument withdrawDocument(DocumentRepository documents, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new WithdrawDocument(documents, clock, audit) {
+            @Override
+            public DocumentEntry execute(Actor actor, DocumentId documentId) {
+                return transaction.execute(status -> super.execute(actor, documentId));
+            }
+        };
     }
 
     @Bean
-    RestoreDocument restoreDocument(DocumentRepository documents) {
-        return new RestoreDocument(documents);
+    RestoreDocument restoreDocument(DocumentRepository documents, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RestoreDocument(documents, audit) {
+            @Override
+            public DocumentEntry execute(Actor actor, DocumentId documentId) {
+                return transaction.execute(status -> super.execute(actor, documentId));
+            }
+        };
     }
 
     @Bean
-    MarkCaseDocuments markCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock) {
-        return new MarkCaseDocuments(documents, caseFiles, clock);
+    MarkCaseDocuments markCaseDocuments(DocumentRepository documents, CaseFileRepository caseFiles, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new MarkCaseDocuments(documents, caseFiles, clock, audit) {
+            @Override
+            public int execute(Actor actor, CompanyId companyId, Set<DocumentId> documentIds, boolean caseDocument) {
+                return transaction.execute(status -> super.execute(actor, companyId, documentIds, caseDocument));
+            }
+        };
     }
 
     @Bean
@@ -729,15 +1039,38 @@ public class UseCaseConfiguration {
 
     @Bean
     AddToCaseFiles addToCaseFiles(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            DocumentRepository documents, CaseFileRepository caseFiles, IdGenerator ids, Clock clock) {
-        return new AddToCaseFiles(organizations, projectMembers, documents, caseFiles, ids, clock);
+            DocumentRepository documents, CaseFileRepository caseFiles, IdGenerator ids, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new AddToCaseFiles(organizations, projectMembers, documents, caseFiles, ids, clock, audit) {
+            @Override
+            public int execute(Actor actor, CompanyId companyId, List<CaseFileAssignment> assignments) {
+                return transaction.execute(status -> super.execute(actor, companyId, assignments));
+            }
+
+            @Override
+            public int execute(Actor actor, List<CaseFileAssignment> assignments) {
+                return transaction.execute(status -> super.execute(actor, assignments));
+            }
+        };
     }
 
     @Bean
     RemoveFromCaseFile removeFromCaseFile(OrganizationRepository organizations,
             ProjectMemberRepository projectMembers, DocumentRepository documents, CaseFileRepository caseFiles,
-            IdGenerator ids, Clock clock) {
-        return new RemoveFromCaseFile(organizations, projectMembers, documents, caseFiles, ids, clock);
+            IdGenerator ids, Clock clock, PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new RemoveFromCaseFile(organizations, projectMembers, documents, caseFiles, ids, clock, audit) {
+            @Override
+            public void execute(Actor actor, CompanyId companyId, DocumentId caseId, DocumentId documentId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, companyId, caseId, documentId));
+            }
+
+            @Override
+            public void execute(Actor actor, DocumentId caseId, DocumentId documentId) {
+                transaction.executeWithoutResult(status -> super.execute(actor, caseId, documentId));
+            }
+        };
     }
 
     @Bean
@@ -746,8 +1079,20 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    SupersedeDocument supersedeDocument(DocumentRepository documents, Clock clock) {
-        return new SupersedeDocument(documents, clock);
+    SupersedeDocument supersedeDocument(DocumentRepository documents, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new SupersedeDocument(documents, clock, audit) {
+            @Override
+            public DocumentEntry mark(Actor actor, DocumentId documentId, DocumentId replacementId) {
+                return transaction.execute(status -> super.mark(actor, documentId, replacementId));
+            }
+
+            @Override
+            public void unmark(Actor actor, DocumentId documentId) {
+                transaction.executeWithoutResult(status -> super.unmark(actor, documentId));
+            }
+        };
     }
 
     @Bean
@@ -756,8 +1101,16 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    ReviewCard reviewCard(KnowledgeCardRepository cards, Clock clock) {
-        return new ReviewCard(cards, clock);
+    ReviewCard reviewCard(KnowledgeCardRepository cards, Clock clock, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ReviewCard(cards, clock, audit) {
+            @Override
+            public KnowledgeCard execute(Actor actor, CardId id, ReviewDecision decision, Optional<String> correctedBody,
+                    Optional<String> note) {
+                return transaction.execute(status -> super.execute(actor, id, decision, correctedBody, note));
+            }
+        };
     }
 
     @Bean
@@ -766,8 +1119,16 @@ public class UseCaseConfiguration {
             ProjectMemberRepository projectMembers,
             KnowledgeCardRepository cards,
             IdGenerator ids,
-            Clock clock) {
-        return new SaveKnowledgeCard(organizations, projectMembers, cards, ids, clock);
+            Clock clock,
+            AuditLog audit,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new SaveKnowledgeCard(organizations, projectMembers, cards, ids, clock, audit) {
+            @Override
+            public KnowledgeCard execute(Actor actor, String title, String body, Optional<ProjectId> projectId) {
+                return transaction.execute(status -> super.execute(actor, title, body, projectId));
+            }
+        };
     }
 
     @Bean
@@ -840,9 +1201,9 @@ public class UseCaseConfiguration {
     @Bean
     SetUpInstallation setUpInstallation(OrganizationRepository organizations, UserRepository users,
             PasswordHasher passwords, IdGenerator ids, PersonCodeGenerator personCodes,
-            InstallationSettings installationSettings, PlatformTransactionManager transactionManager) {
+            InstallationSettings installationSettings, PlatformTransactionManager transactionManager, AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new SetUpInstallation(organizations, users, passwords, ids, personCodes, installationSettings) {
+        return new SetUpInstallation(organizations, users, passwords, ids, personCodes, installationSettings, audit) {
             @Override
             public UserId execute(String setupToken, String groupName, String adminName, String adminEmail,
                     String password) {
