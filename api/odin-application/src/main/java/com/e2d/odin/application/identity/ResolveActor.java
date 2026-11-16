@@ -2,13 +2,17 @@ package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.SecretComparison;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
+import com.e2d.odin.domain.identity.SessionExpiredException;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.UnauthorizedException;
@@ -28,9 +32,11 @@ public class ResolveActor {
     private final MembershipRepository memberships;
     private final AdminSessions sessions;
     private final SecretHasher secrets;
+    private final AuditLog audit;
 
     public ResolveActor(AccessKeyRepository keys, UserRepository users, MembershipRepository memberships,
-            AdminSessions sessions, SecretHasher secrets) {
+            AdminSessions sessions, SecretHasher secrets, AuditLog audit) {
+        this.audit = audit;
         this.keys = keys;
         this.users = users;
         this.memberships = memberships;
@@ -52,8 +58,25 @@ public class ResolveActor {
     }
 
     public Actor fromSessionToken(String token) {
-        return sessions.resolve(token).flatMap(users::findById).filter(User::active).map(this::administratorActor)
-                .orElseThrow(ResolveActor::unauthorized);
+        try {
+            return sessions.resolve(token).flatMap(users::findById).filter(User::active)
+                    .map(this::administratorActor).orElseThrow(ResolveActor::unauthorized);
+        } catch (SessionExpiredException e) {
+            recordExpiry(e);
+            throw e;
+        }
+    }
+
+    private void recordExpiry(SessionExpiredException e) {
+        users.findById(e.userId()).ifPresent(user -> audit.record(AuditEntry
+                .by(new Actor(user.id(), user.displayName(), roleOf(user), Set.of()), AuditAction.SESSION_EXPIRED)
+                .with("reason", e.reason().name())));
+    }
+
+    private Role roleOf(User user) {
+        return user.groupAdmin() ? Role.GROUP_ADMIN
+                : UserAdministration.companiesAdministeredBy(memberships, user.id()).isEmpty() ? Role.WORKER
+                        : Role.COMPANY_ADMIN;
     }
 
     private Actor administratorActor(User user) {

@@ -47,6 +47,7 @@ import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.DescribeAdmin;
+import com.e2d.odin.application.identity.OwnAdminSessions;
 import com.e2d.odin.application.identity.GroupAdminAdded;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.IssuedKey;
@@ -217,8 +218,13 @@ public class UseCaseConfiguration {
     @Bean
     ResolveActor resolveActor(
             AccessKeyRepository keys, UserRepository users, MembershipRepository memberships,
-            AdminSessions sessions, SecretHasher secrets) {
-        return new ResolveActor(keys, users, memberships, sessions, secrets);
+            AdminSessions sessions, SecretHasher secrets, AuditLog audit) {
+        return new ResolveActor(keys, users, memberships, sessions, secrets, audit);
+    }
+
+    @Bean
+    OwnAdminSessions ownAdminSessions(AdminSessions sessions, SessionSettings settings, AuditLog audit) {
+        return new OwnAdminSessions(sessions, settings, audit);
     }
 
     @Bean

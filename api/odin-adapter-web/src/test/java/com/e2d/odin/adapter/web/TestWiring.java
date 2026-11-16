@@ -63,6 +63,7 @@ import com.e2d.odin.application.identity.AddMember;
 import com.e2d.odin.application.identity.ChangePassword;
 import com.e2d.odin.application.identity.DeleteUser;
 import com.e2d.odin.application.identity.DescribeAdmin;
+import com.e2d.odin.application.identity.OwnAdminSessions;
 import com.e2d.odin.application.identity.IssueAccessKey;
 import com.e2d.odin.application.identity.ListAccessKeys;
 import com.e2d.odin.application.identity.ListGroupAdmins;
@@ -200,7 +201,11 @@ public class TestWiring {
     }
 
     @Bean ResolveActor resolveActor() {
-        return new ResolveActor(keys, users, memberships, adminSessions(), secrets);
+        return new ResolveActor(keys, users, memberships, adminSessions(), secrets, auditLog());
+    }
+
+    @Bean OwnAdminSessions ownAdminSessions() {
+        return new OwnAdminSessions(adminSessions(), new SessionSettings(), auditLog());
     }
 
     @Bean SetUpInstallation setUpInstallation() {

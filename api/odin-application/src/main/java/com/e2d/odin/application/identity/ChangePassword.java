@@ -49,9 +49,9 @@ public class ChangePassword {
             requireCurrentPassword(user, currentPassword);
         }
         users.save(user.withPasswordHash(passwords.hash(Validation.requirePassword(newPassword))));
+        int sessionsClosed = sessions.closeAllOf(target);
         audit.record(AuditEntry.by(actor, AuditAction.PASSWORD_CHANGED).on("USER", target.value().toString(), null)
-                .with("own", ownPassword));
-        sessions.closeAllOf(target);
+                .with("own", ownPassword).with("sessionsClosed", sessionsClosed));
     }
 
     private void requireCurrentPassword(User user, Optional<String> currentPassword) {

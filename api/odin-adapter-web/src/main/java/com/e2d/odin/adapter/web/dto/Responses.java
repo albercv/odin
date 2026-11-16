@@ -5,6 +5,7 @@ import com.e2d.odin.application.casefile.CaseFileView;
 import com.e2d.odin.application.document.ScanLinks;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
+import com.e2d.odin.application.identity.OwnAdminSessions;
 import com.e2d.odin.application.organization.MeView;
 import com.e2d.odin.application.search.PageView;
 import com.e2d.odin.application.shared.TaggingWindow;
@@ -32,6 +33,7 @@ import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
+import com.e2d.odin.domain.identity.AdminSession;
 import com.e2d.odin.domain.identity.Role;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.knowledge.CardReview;
@@ -88,12 +90,22 @@ public final class Responses {
     /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
     public record AdminMe(UUID userId, String displayName, String firstName, @Nullable String lastName,
             String personCode, Role role, @Nullable UUID companyId, List<CompanyRef> companies,
-            boolean scannedDocumentsSupported) {
-        public static AdminMe from(Actor a, User person, List<Company> administered, boolean scannedDocumentsSupported) {
+            boolean scannedDocumentsSupported, @Nullable Instant expiresAt) {
+        public static AdminMe from(Actor a, User person, List<Company> administered, boolean scannedDocumentsSupported,
+                @Nullable Instant expiresAt) {
             UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
             return new AdminMe(a.userId().value(), a.displayName(), person.firstName(), person.lastName().orElse(null),
                     person.personCode(), a.role(), onlyCompany,
-                    administered.stream().map(CompanyRef::from).toList(), scannedDocumentsSupported);
+                    administered.stream().map(CompanyRef::from).toList(), scannedDocumentsSupported, expiresAt);
+        }
+    }
+
+    public record AdminSessionView(UUID id, Instant createdAt, Instant lastSeenAt, @Nullable String userAgent,
+            @Nullable String ip, boolean current) {
+        public static AdminSessionView from(OwnAdminSessions.Listed l) {
+            AdminSession s = l.session();
+            return new AdminSessionView(s.id(), s.createdAt(), s.lastSeenAt(), s.userAgent().orElse(null),
+                    s.ip().orElse(null), l.current());
         }
     }
 

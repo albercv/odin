@@ -23,7 +23,7 @@ class AdminChatTokenTest {
     void adminChatTokenIsNeverAWorkerKey() {
         String token = AdminChatToken.format("abcdefgh", "secreto");
         ResolveActor workers = new ResolveActor(new InMemoryAccessKeyRepository(), new InMemoryUserRepository(),
-                new InMemoryMembershipRepository(), null, new FakeSecretHasher());
+                new InMemoryMembershipRepository(), null, new FakeSecretHasher(), null);
 
         assertThat(AdminChatToken.parse(token)).hasValueSatisfying(p -> {
             assertThat(p.prefix()).isEqualTo("abcdefgh");

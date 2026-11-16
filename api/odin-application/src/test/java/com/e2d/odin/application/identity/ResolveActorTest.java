@@ -6,12 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAccessKeyRepository;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
 import com.e2d.odin.application.shared.SessionSettings;
+import com.e2d.odin.domain.audit.AuditAction;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.AdminSession;
@@ -39,9 +41,10 @@ class ResolveActorTest {
     private final InMemoryAdminSessionRepository sessions = new InMemoryAdminSessionRepository();
     private final FakeSecretHasher secrets = new FakeSecretHasher();
     private final MutableClock clock = new MutableClock();
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private final ResolveActor resolve = new ResolveActor(keys, users, memberships,
             new StoredAdminSessions(sessions, secrets, new SequenceTokenGenerator(),
-                    new SessionSettings(Duration.ofHours(8)), clock), secrets);
+                    new SessionSettings(), clock), secrets, audit);
     private final UserId workerId = new UserId(UUID.randomUUID());
     private final AccessKeyId keyId = new AccessKeyId(UUID.randomUUID());
     private final CompanyId company = new CompanyId(UUID.randomUUID());
@@ -172,7 +175,7 @@ class ResolveActorTest {
     @Test
     void rejectsExpiredSession() {
         String token = givenSession();
-        clock.advance(Duration.ofHours(8).plusSeconds(1));
+        clock.advance(Duration.ofMinutes(30).plusSeconds(1));
 
         assertThatThrownBy(() -> resolve.fromSessionToken(token))
                 .isInstanceOf(UnauthorizedException.class).hasMessage(MESSAGE);
@@ -181,9 +184,9 @@ class ResolveActorTest {
     @Test
     void refreshesLastSeen() {
         String token = givenSession();
-        clock.advance(Duration.ofHours(7));
+        clock.advance(Duration.ofMinutes(20));
         resolve.fromSessionToken(token);
-        clock.advance(Duration.ofHours(7));
+        clock.advance(Duration.ofMinutes(20));
 
         Actor actor = resolve.fromSessionToken(token);
 
@@ -262,5 +265,20 @@ class ResolveActorTest {
 
         assertThat(actor.role()).isEqualTo(Role.COMPANY_ADMIN);
         assertThat(actor.companies()).containsExactlyInAnyOrder(company, companyB);
+    }
+
+    @Test
+    void expiredSessionIsUnauthorizedAndLeavesAnEntryWithItsReasonAndUser() {
+        String token = givenSession();
+        clock.advance(Duration.ofMinutes(31));
+
+        assertThatThrownBy(() -> resolve.fromSessionToken(token)).isInstanceOf(UnauthorizedException.class)
+                .hasMessage(MESSAGE);
+
+        assertThat(audit.entries).singleElement().satisfies(e -> {
+            assertThat(e.action()).isEqualTo(AuditAction.SESSION_EXPIRED);
+            assertThat(e.details()).containsEntry("reason", "IDLE").doesNotContainKeys("ip", "userAgent");
+            assertThat(e.actorRole()).contains("GROUP_ADMIN");
+        });
     }
 }

@@ -77,7 +77,7 @@ final class LinkWorld {
     }
 
     ResolveLink resolve() {
-        var actors = new ResolveActor(new InMemoryAccessKeyRepository(), users, memberships, null, secrets);
+        var actors = new ResolveActor(new InMemoryAccessKeyRepository(), users, memberships, null, secrets, null);
         return new ResolveLink(links, actors, orgs, members, docs, secrets, clock);
     }
 
