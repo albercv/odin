@@ -60,8 +60,23 @@ class MemberAtomicityIT {
 
     private static final AdminSessions NO_SESSIONS = new AdminSessions() {
         @Override
-        public String open(UserId userId) {
+        public String open(UserId userId, com.e2d.odin.application.port.AuditContext.AuditRequest client) {
             return "";
+        }
+
+        @Override
+        public Optional<com.e2d.odin.domain.identity.AdminSession> find(String token) {
+            return Optional.empty();
+        }
+
+        @Override
+        public java.util.List<com.e2d.odin.domain.identity.AdminSession> ofUser(UserId userId) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public boolean closeOwn(UserId userId, UUID id) {
+            return false;
         }
 
         @Override
@@ -74,7 +89,8 @@ class MemberAtomicityIT {
         }
 
         @Override
-        public void closeAllOf(UserId userId) {
+        public int closeAllOf(UserId userId) {
+            return 0;
         }
     };
 
