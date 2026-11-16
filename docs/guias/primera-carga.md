@@ -56,6 +56,8 @@ Si todos los ficheros ya estaban en Odín, la orden dice **«No hay nada nuevo q
 Nadie ve un documento hasta que tú lo confirmas.
 
 1. **Lista de proyectos:** importa la lista que exporta tu programa de gestión (un nombre por línea) o busca los proyectos en los textos de los documentos ya leídos. Decide cada candidato: crearlo, unirlo a un proyecto que ya existe o rechazarlo. Cuando no quede ninguno por decidir y la lectura haya terminado, pulsa **«Lista terminada: clasificar»**. Hasta entonces Odín no propone nada. Si no confirmas ningún proyecto, no hay propuestas de proyecto y colocas los documentos a mano; el resto de propuestas sale igual. Una vez terminada, la lista ya no se cambia en esta carga.
+   - **Renombrar:** si un nombre sale mal (cortado, con un CIF o con el nombre de una persona detrás), escribe el bueno en la fila y pulsa **«Renombrar»**. Odín sigue buscando también el nombre antiguo en los documentos y los propone a ese proyecto.
+   - **Juntar:** si dos candidatos son el mismo proyecto, elige el otro en **«Es el mismo que…»** y pulsa **«Juntar»**; quedan uno solo y se buscan los dos nombres. No es lo mismo que **«Unir»**, que enlaza el candidato con un proyecto que ya existe.
 2. **Proyectos:** Odín agrupa los documentos por proyecto y te enseña el motivo de cada uno. Confirma el grupo entero o decide documento a documento.
 3. **Parejas:** escaneos y su copia en texto, y versiones que sustituyen a otras.
 4. **Fichas y expedientes:** documentos de casos y enlaces a sus fichas.

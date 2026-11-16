@@ -39,6 +39,7 @@ import com.e2d.odin.application.port.ProjectProposer;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.EditProjectCandidates;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
 import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
@@ -571,6 +572,25 @@ public class UseCaseConfiguration {
             public List<ProjectCandidate> execute(Actor actor, CompanyId companyId, IntakeBatchId batchId,
                     List<ProjectDecision> decisions) {
                 return transaction.execute(status -> super.execute(actor, companyId, batchId, decisions));
+            }
+        };
+    }
+
+    @Bean
+    EditProjectCandidates editProjectCandidates(IntakeRepository intake, OrganizationRepository organizations,
+            PlatformTransactionManager transactionManager) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new EditProjectCandidates(intake, organizations) {
+            @Override
+            public List<ProjectCandidate> rename(Actor actor, CompanyId companyId, IntakeBatchId batchId, String name,
+                    String newName) {
+                return transaction.execute(status -> super.rename(actor, companyId, batchId, name, newName));
+            }
+
+            @Override
+            public List<ProjectCandidate> merge(Actor actor, CompanyId companyId, IntakeBatchId batchId,
+                    List<String> names, String into) {
+                return transaction.execute(status -> super.merge(actor, companyId, batchId, names, into));
             }
         };
     }

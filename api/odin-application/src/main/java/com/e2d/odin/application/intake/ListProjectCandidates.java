@@ -12,6 +12,7 @@ import com.e2d.odin.domain.shared.CompanyId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,14 +44,18 @@ public class ListProjectCandidates {
         }
         Map<String, ProjectCandidate> byKey = existing.stream()
                 .collect(Collectors.toMap(c -> ProjectRules.normalize(c.name()), Function.identity()));
+        Set<String> aliases = existing.stream().flatMap(c -> c.aliases().stream()).collect(Collectors.toSet());
         for (ProjectRules.Discovered found : ProjectRules.discover(documents.intakeTexts(companyId, batchId))) {
             ProjectCandidate current = byKey.get(ProjectRules.normalize(found.name()));
+            if (current == null && aliases.contains(ProjectRules.normalize(found.name()))) {
+                continue; // ya se renombró o se juntó: no resucita
+            }
             if (current == null) {
                 intake.save(new ProjectCandidate(companyId, batchId, found.name(), CandidateOrigin.DISCOVERED,
                         found.documentCount(), DecisionState.PROPOSED, Optional.empty()));
             } else if (current.state() == DecisionState.PROPOSED) {
                 intake.save(new ProjectCandidate(companyId, batchId, current.name(), current.origin(),
-                        found.documentCount(), current.state(), current.projectId()));
+                        found.documentCount(), current.state(), current.projectId(), current.aliases()));
             }
         }
         return intake.candidates(companyId, batchId);

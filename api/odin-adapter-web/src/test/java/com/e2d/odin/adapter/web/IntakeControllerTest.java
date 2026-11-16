@@ -158,6 +158,30 @@ class IntakeControllerTest extends WebTestSupport {
     }
 
     @Test
+    void candidatesAreRenamedAndMergedWithConflictsAndIsolation() throws Exception {
+        String candidates = batch + "/project-candidates";
+        mvc.perform(list("Calle Olmo 24\nC/ Olmo 24\nCalle Haya 2\n".getBytes(), admin)).andExpect(status().isOk());
+        postJson(candidates + "/rename", "{\"name\":\"C/ Olmo 24\",\"newName\":\"Calle Olmo 24 bis\"}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.candidates[?(@.name=='Calle Olmo 24 bis')]").exists())
+                .andExpect(jsonPath("$.candidates[?(@.name=='C/ Olmo 24')]").isEmpty());
+        postJson(candidates + "/merge", "{\"names\":[\"Calle Olmo 24 bis\"],\"into\":\"Calle Olmo 24\"}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.candidates", hasSize(2)));
+        postJson(candidates + "/confirm", "{\"decisions\":[{\"name\":\"Calle Haya 2\",\"decision\":\"REJECT\"}]}")
+                .andExpect(status().isOk());
+        postJson(candidates + "/rename", "{\"name\":\"Calle Olmo 24\",\"newName\":\"calle haya 2\"}")
+                .andExpect(status().isConflict());
+
+        CompanyId otherCompany = newCompany();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));
+        for (String body : List.of("/rename", "/merge")) {
+            mvc.perform(post(candidates + body).cookie(other).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post(candidates + body).header("Authorization", workerKey(company))
+                    .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Test
     void anAdminOfAnotherCompanyAndAWorkerCannotUseTheProjectList() throws Exception {
         CompanyId otherCompany = newCompany();
         Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(otherCompany));

@@ -35,6 +35,9 @@ public interface IntakeRepository {
 
     void save(ProjectCandidate candidate);
 
+    /** Quita un candidato por su nombre exacto (al juntarlo con otro o al renombrarlo). */
+    void deleteCandidate(CompanyId companyId, IntakeBatchId batchId, String name);
+
     List<ProjectCandidate> candidates(CompanyId companyId, IntakeBatchId batchId);
 
     void save(IntakeProposal proposal);

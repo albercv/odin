@@ -500,6 +500,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/rename": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["renameProjectCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mergeProjectCandidates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import": {
         parameters: {
             query?: never;
@@ -1701,6 +1733,12 @@ export interface components {
             /** Format: int32 */
             confirmed: number;
         };
+        RenameProjectCandidateRequest: {
+            /** @description Nombre del candidato PROPOSED, tal como sale en la lista. */
+            name: string;
+            /** @description El nombre nuevo. Si coincide con otro candidato PROPOSED, los junta. */
+            newName: string;
+        };
         /** @description origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado. */
         ProjectCandidateView: {
             name: string;
@@ -1713,6 +1751,12 @@ export interface components {
         };
         ProjectCandidates: {
             candidates: components["schemas"]["ProjectCandidateView"][];
+        };
+        MergeProjectCandidatesRequest: {
+            /** @description Los candidatos PROPOSED que se juntan y desaparecen. */
+            names: string[];
+            /** @description El candidato PROPOSED que se queda, con sus nombres y los de los demás como alias. */
+            into: string;
         };
         ConfirmProjectCandidatesRequest: {
             /** @description De 1 a 500 decisiones, todo o nada. */
@@ -3230,6 +3274,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
+    renameProjectCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameProjectCandidateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
+                };
+            };
+        };
+    };
+    mergeProjectCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeProjectCandidatesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCandidates"];
                 };
             };
         };

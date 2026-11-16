@@ -179,6 +179,87 @@ class ProjectListTest {
                 .isEqualTo(DecisionState.PROPOSED);
     }
 
+    private final EditProjectCandidates edit = new EditProjectCandidates(intake, orgs);
+
+    @Test
+    void renamingKeepsTheOldNameAsAliasAndCreateUsesTheNewOne() {
+        importText("C/ Olmo 24");
+
+        edit.rename(admin, company, batch.id(), "C/ Olmo 24", "Calle Olmo 24");
+        confirm.execute(admin, company, batch.id(), List.of(
+                new ProjectDecision("Calle Olmo 24", Action.CREATE, Optional.empty())));
+
+        assertThat(intake.candidates(company, batch.id())).singleElement()
+                .satisfies(c -> assertThat(c.aliases()).containsExactly("c olmo 24"));
+        assertThat(orgs.listProjects(company)).extracting(Project::name).containsExactly("Calle Olmo 24");
+    }
+
+    @Test
+    void renamingToAnotherProposedCandidateJoinsThemAddingTheCounts() {
+        pendingDocument("Comunidad: Calle Olmo 24");
+        pendingDocument("Comunidad: Calle Olmo 24 B");
+        list.discover(admin, company, batch.id());
+
+        List<ProjectCandidate> done = edit.rename(admin, company, batch.id(), "Calle Olmo 24 B", "calle olmo 24");
+
+        assertThat(done).singleElement().satisfies(c -> {
+            assertThat(c.name()).isEqualTo("Calle Olmo 24");
+            assertThat(c.documentCount()).isEqualTo(2);
+            assertThat(c.aliases()).containsExactly("calle olmo 24 b");
+        });
+    }
+
+    @Test
+    void renamingToADecidedCandidateOrAnExistingProjectIsAConflict() {
+        importText("Calle Olmo 24\nCalle Haya 2\nCalle Pino 7");
+        confirm.execute(admin, company, batch.id(), List.of(
+                new ProjectDecision("Calle Haya 2", Action.REJECT, Optional.empty())));
+        new CreateProject(orgs, ids).execute(admin, company, "Residencial Sol");
+
+        assertThatThrownBy(() -> edit.rename(admin, company, batch.id(), "Calle Olmo 24", "Calle Haya 2"))
+                .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> edit.rename(admin, company, batch.id(), "Calle Olmo 24", "residencial sol"))
+                .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> edit.rename(admin, company, batch.id(), "Calle Haya 2", "Calle Nueva"))
+                .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> edit.rename(admin, company, batch.id(), "Calle Olmo 24", "  "))
+                .isInstanceOf(ValidationException.class);
+        assertThat(names(intake.candidates(company, batch.id()))).containsExactlyInAnyOrder("Calle Olmo 24",
+                "Calle Haya 2", "Calle Pino 7");
+    }
+
+    @Test
+    void mergingJoinsAllOrNothingAndDiscoveryDoesNotBringTheAliasesBack() {
+        pendingDocument("Comunidad: Calle Olmo 24");
+        pendingDocument("Comunidad: Residencial Olmos");
+        list.discover(admin, company, batch.id());
+
+        assertThatThrownBy(() -> edit.merge(admin, company, batch.id(), List.of("Residencial Olmos", "Nada"),
+                "Calle Olmo 24")).isInstanceOf(NotFoundException.class);
+        assertThat(intake.candidates(company, batch.id())).hasSize(2);
+
+        edit.merge(admin, company, batch.id(), List.of("Residencial Olmos"), "Calle Olmo 24");
+        List<ProjectCandidate> again = list.discover(admin, company, batch.id());
+
+        assertThat(again).singleElement().satisfies(c -> {
+            assertThat(c.name()).isEqualTo("Calle Olmo 24");
+            assertThat(c.aliases()).containsExactly("residencial olmos");
+        });
+    }
+
+    @Test
+    void renamingAndMergingNeedTheListOpen() {
+        importText("Calle Olmo 24\nCalle Haya 2");
+        confirm.execute(admin, company, batch.id(), List.of(
+                new ProjectDecision("Calle Olmo 24", Action.REJECT, Optional.empty()),
+                new ProjectDecision("Calle Haya 2", Action.REJECT, Optional.empty())));
+        reading();
+        closeList.execute(admin, company, batch.id());
+
+        assertThatThrownBy(() -> edit.rename(admin, company, batch.id(), "Calle Haya 2", "X Y"))
+                .isInstanceOf(ConflictException.class);
+    }
+
     @Test
     void mergingLinksAnExistingProjectAndCreatesNone() {
         importText("C/ Olmo 24");

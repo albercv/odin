@@ -42,6 +42,7 @@ import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.EditProjectCandidates;
 import com.e2d.odin.application.intake.DecideIntakeProposal;
 import com.e2d.odin.application.intake.DiscardIntakeDocument;
 import com.e2d.odin.application.intake.IntakeEffects;
@@ -381,6 +382,10 @@ public class TestWiring {
 
     @Bean ConfirmProjectCandidates confirmProjectCandidates() {
         return new ConfirmProjectCandidates(intake, orgs, createProject());
+    }
+
+    @Bean EditProjectCandidates editProjectCandidates() {
+        return new EditProjectCandidates(intake, orgs);
     }
 
     @Bean IntakeEffects intakeEffects() {
