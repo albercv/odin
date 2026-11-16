@@ -269,4 +269,20 @@ class IntakeAuditTest {
         assertThat(e.details()).containsEntry("intakeBatchId", batch.id().value().toString());
         assertThat(e.toString()).doesNotContain("contenido del acta");
     }
+
+    @Test
+    void closingTheBatchRecordsOneEntryWithTheBatchAndTheRejectedCountButNoContent() {
+        inReview();
+        Document d = pending("contrato reservado");
+        IntakeProposal p = projectProposal(d);
+        intake.save(p.dontKnow(admin.userId(), clock.instant()));
+        audit.entries.clear();
+
+        new CloseIntakeBatch(intake, clock, audit).execute(admin, company, batch.id());
+
+        AuditEntry e = only(AuditAction.INTAKE_CLOSED);
+        assertThat(e.target()).contains(batchTarget());
+        assertThat(e.details()).containsEntry("rejected", 1);
+        assertThat(e.details().toString()).doesNotContain("contrato reservado");
+    }
 }

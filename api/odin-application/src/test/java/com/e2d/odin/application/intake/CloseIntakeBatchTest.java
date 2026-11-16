@@ -52,10 +52,10 @@ class CloseIntakeBatchTest {
     private final SequenceIdGenerator ids = new SequenceIdGenerator();
     private final CompanyId company = Fixtures.company(orgs);
     private final Actor admin = Actors.companyAdmin(company);
-    private final CloseIntakeBatch close = new CloseIntakeBatch(intake, clock);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final CloseIntakeBatch close = new CloseIntakeBatch(intake, clock, audit);
     private IntakeBatch batch;
     private ProjectId olmo;
-    private final InMemoryAuditLog audit = new InMemoryAuditLog();
     private DecideIntakeProposal decide;
     private PlaceIntakeDocument place;
     private DiscardIntakeDocument discard;

@@ -130,7 +130,7 @@ class IntakeConfirmationIT {
         unplaced = config.listUnplacedDocuments(intake, docs);
         discard = config.discardIntakeDocument(docs, new WithdrawDocument(docs, clock, new NoAudit()), effects,
                 transactionManager, new NoAudit());
-        close = config.closeIntakeBatch(intake, clock, transactionManager);
+        close = config.closeIntakeBatch(intake, clock, transactionManager, new NoAudit());
         listBatches = config.listOpenIntakeBatches(intake, docs);
         start = new StartIntake(intake, organizations, new RandomUuidGenerator(), clock, new NoAudit());
     }
