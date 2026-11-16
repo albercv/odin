@@ -34,6 +34,46 @@ class ProjectRulesTest {
     }
 
     @Test
+    void cleanCutsAtIdentityMarksAndDropsGenericOrTruncatedNames() {
+        assertThat(ProjectRules.clean("Residencial Mirador del Puerto CIF H-00000048")).contains("Residencial Mirador del Puerto");
+        assertThat(ProjectRules.clean("Residencial Mirador del Puerto Doña Rocío Villaverde"))
+                .contains("Residencial Mirador del Puerto");
+        assertThat(ProjectRules.clean("Calle Abeto 16 Tel. 600")).contains("Calle Abeto 16");
+        assertThat(ProjectRules.clean("Calle Abeto 16 Donostia")).contains("Calle Abeto 16 Donostia");
+        assertThat(ProjectRules.clean("Residencial Mirador del")).isEmpty();
+        assertThat(ProjectRules.clean("Avenida")).isEmpty();
+        assertThat(ProjectRules.clean("Avenida CIF X")).isEmpty();
+        for (String legit : List.of("Calle Abeto 16", "Residencial Mirador del Puerto", "Comunidad Avenida del Sol 3",
+                "Calle Don Ramón 3")) {
+            assertThat(ProjectRules.clean(legit)).contains(legit);
+        }
+    }
+
+    @Test
+    void discoverCleansDiscardsAndDeduplicatesByTheCleanName() {
+        String text = "Comunidad: Residencial Mirador del Puerto CIF H-00000048\n"
+                + "Comunidad de Propietarios Residencial Mirador del Puerto Doña Rocío Villaverde\n"
+                + "Comunidad: Residencial Mirador del\nComunidad: Avenida\n";
+
+        assertThat(ProjectRules.discover(List.of(text)))
+                .containsExactly(new ProjectRules.Discovered("Residencial Mirador del Puerto", 1));
+    }
+
+    @Test
+    void anAliasMatchesAsItsNameAndNameWithAliasIsNotAmbiguous() {
+        List<String> names = List.of("Calle Olmo 24", "Calle Haya 2");
+        java.util.Map<String, String> aliases = java.util.Map.of("residencial olmos", "Calle Olmo 24");
+
+        ProjectMatch alone = ProjectRules.match("Acta de Residencial Olmos", names, aliases, Optional.empty());
+        ProjectMatch both = ProjectRules.match("Calle Olmo 24 y Residencial Olmos", names, aliases, Optional.empty());
+
+        assertThat(alone.project()).contains("Calle Olmo 24");
+        assertThat(alone.confidence()).isEqualTo(ProposalConfidence.HIGH);
+        assertThat(both.project()).contains("Calle Olmo 24");
+        assertThat(both.confidence()).isEqualTo(ProposalConfidence.HIGH);
+    }
+
+    @Test
     void discoverFindsTheRiskAddressAndCutsTheSentenceTail() {
         assertThat(ProjectRules.discover("Domicilio del riesgo: Avenida del Puerto 3, Puerto Albar"))
                 .containsExactly("avenida del puerto 3");
