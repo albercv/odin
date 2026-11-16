@@ -95,7 +95,7 @@ public class SessionController {
     public Responses.AdminMe me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @CookieValue(name = ActorResolutionFilter.SESSION_COOKIE, required = false) String token) {
         return Responses.AdminMe.from(actor, describeAdmin.execute(actor), listCompanies.execute(actor),
-                installation.scannedDocumentsSupported(), ownSessions.expiresAt(token).orElse(null));
+                installation.scannedDocumentsSupported(), ownSessions.expiry(token).orElse(null));
     }
 
     @GetMapping("/sessions")

@@ -47,7 +47,10 @@ public class OwnAdminSessions {
         audit.record(AuditEntry.by(actor, AuditAction.SESSION_CLOSED).on("SESSION", id.toString(), null));
     }
 
-    public Optional<Instant> expiresAt(String token) {
-        return sessions.find(token).map(settings::expiresAt);
+    public record Expiry(Instant expiresAt, Instant absoluteExpiresAt) {
+    }
+
+    public Optional<Expiry> expiry(String token) {
+        return sessions.find(token).map(s -> new Expiry(settings.expiresAt(s), settings.absoluteExpiresAt(s)));
     }
 }

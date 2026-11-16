@@ -6,6 +6,7 @@ import com.e2d.odin.application.document.ScanLinks;
 import com.e2d.odin.application.document.UploadOutcome;
 import com.e2d.odin.application.identity.IssuedKey;
 import com.e2d.odin.application.identity.OwnAdminSessions;
+import com.e2d.odin.application.identity.OwnAdminSessions.Expiry;
 import com.e2d.odin.application.organization.MeView;
 import com.e2d.odin.application.search.PageView;
 import com.e2d.odin.application.shared.TaggingWindow;
@@ -90,13 +91,16 @@ public final class Responses {
     /** {@code companyId} solo viene si administra una única empresa: el panel entra directamente en ella. */
     public record AdminMe(UUID userId, String displayName, String firstName, @Nullable String lastName,
             String personCode, Role role, @Nullable UUID companyId, List<CompanyRef> companies,
-            boolean scannedDocumentsSupported, @Nullable Instant expiresAt) {
+            boolean scannedDocumentsSupported,
+            @Schema(description = "Cuándo caduca la sesión: el primero de la inactividad y el máximo.") @Nullable Instant expiresAt,
+            @Schema(description = "El máximo de la sesión desde que se abrió, aunque se use sin parar.") @Nullable Instant absoluteExpiresAt) {
         public static AdminMe from(Actor a, User person, List<Company> administered, boolean scannedDocumentsSupported,
-                @Nullable Instant expiresAt) {
+                @Nullable Expiry expiry) {
             UUID onlyCompany = administered.size() == 1 && !a.isGroupAdmin() ? administered.get(0).id().value() : null;
             return new AdminMe(a.userId().value(), a.displayName(), person.firstName(), person.lastName().orElse(null),
                     person.personCode(), a.role(), onlyCompany,
-                    administered.stream().map(CompanyRef::from).toList(), scannedDocumentsSupported, expiresAt);
+                    administered.stream().map(CompanyRef::from).toList(), scannedDocumentsSupported,
+                    expiry == null ? null : expiry.expiresAt(), expiry == null ? null : expiry.absoluteExpiresAt());
         }
     }
 

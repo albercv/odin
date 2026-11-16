@@ -108,6 +108,17 @@ class StoredAdminSessionsTest {
     }
 
     @Test
+    void absoluteExpiryIsFixedFromCreation() {
+        String token = sessions.open(userId);
+        Instant created = clock.instant();
+        clock.advance(Duration.ofMinutes(20));
+        sessions.resolve(token);
+
+        assertThat(new SessionSettings().absoluteExpiresAt(sessions.find(token).orElseThrow()))
+                .isEqualTo(created.plus(Duration.ofHours(12)));
+    }
+
+    @Test
     void closeOwnClosesOnlyOwnSessions() {
         sessions.open(userId);
         UserId other = new UserId(UUID.randomUUID());

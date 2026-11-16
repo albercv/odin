@@ -10,10 +10,14 @@ public record SessionSettings(Duration idleTimeout, Duration absoluteTimeout) {
         this(Duration.ofMinutes(30), Duration.ofHours(12));
     }
 
+    public Instant absoluteExpiresAt(AdminSession session) {
+        return session.createdAt().plus(absoluteTimeout);
+    }
+
     /** El primero de los dos límites que alcance la sesión. */
     public Instant expiresAt(AdminSession session) {
         Instant idle = session.lastSeenAt().plus(idleTimeout);
-        Instant absolute = session.createdAt().plus(absoluteTimeout);
+        Instant absolute = absoluteExpiresAt(session);
         return idle.isBefore(absolute) ? idle : absolute;
     }
 }
