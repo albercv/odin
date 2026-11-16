@@ -16,3 +16,4 @@
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .tools select { max-width: 100%; }
 .picker { display: block; margin-bottom: 16px; }
+.summaryList { margin: 0; padding-left: 18px; max-height: 240px; overflow-y: auto; }
