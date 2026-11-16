@@ -201,6 +201,39 @@ class ClassifyIntakeTest {
     }
 
     @Test
+    void aPassThatClassifiesDocumentsLogsOneLineWithTheTimeOfEachStepAndTheModelApart() {
+        confirmed(OLMO, olmoId);
+        pending("a/uno.pdf", "Carta sin proyecto en el texto");
+        modelAnswer = Optional.of(OLMO);
+        List<String> lines = new ArrayList<>();
+        java.util.concurrent.atomic.AtomicLong now = new java.util.concurrent.atomic.AtomicLong();
+        java.time.Clock ticking = new MutableClock() {
+            @Override
+            public java.time.Instant instant() {
+                return java.time.Instant.ofEpochMilli(now.addAndGet(10));
+            }
+        };
+
+        new ClassifyIntake(intake, docs, Optional.of(model), ids, new InstallationSettings("t", reader), ticking,
+                lines::add).execute();
+
+        assertThat(lines).singleElement().asString().matches("intake-classify batch=\\S+ docs=1 rules_ms=\\d+ "
+                + "model_ms=10 model_calls=1 casefile_ms=\\d+ links_ms=\\d+ duplicates_ms=\\d+ save_ms=\\d+ "
+                + "total_ms=\\d+");
+    }
+
+    @Test
+    void aPassWithNothingNewToClassifyLogsNothing() {
+        confirmed(OLMO, olmoId);
+        List<String> lines = new ArrayList<>();
+
+        new ClassifyIntake(intake, docs, Optional.empty(), ids, new InstallationSettings("t", reader), clock,
+                lines::add).execute();
+
+        assertThat(lines).isEmpty();
+    }
+
+    @Test
     void theModelIsAskedOnlyWhenRulesDoNotGiveHighAndAnswersWithLowAndTheLiteralStartOfTheText() {
         confirmed(OLMO, olmoId);
         pending("a/uno.pdf", "Carta sin proyecto en el texto");
