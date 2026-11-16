@@ -5,6 +5,7 @@ import com.e2d.odin.adapter.web.dto.Responses;
 import com.e2d.odin.adapter.web.link.OriginalResponse;
 import com.e2d.odin.adapter.web.security.CurrentActor;
 import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
 import com.e2d.odin.application.intake.CloseProjectList;
 import com.e2d.odin.application.intake.ConfirmIntakeProposals;
@@ -64,6 +65,7 @@ public class IntakeController {
     private final ListOpenIntakeBatches openBatches;
     private final AddFileToIntake addFile;
     private final CloseIntakeUpload closeUpload;
+    private final CloseIntakeBatch closeBatch;
     private final GetIntakeBatch get;
     private final ImportProjectList importList;
     private final ListProjectCandidates candidates;
@@ -82,7 +84,8 @@ public class IntakeController {
             ConfirmProjectCandidates confirmCandidates, ListIntakeProposals proposals,
             ConfirmIntakeProposals confirmProposals, DecideIntakeProposal decideProposal,
             DiscardIntakeDocument discardDocument, ListUnplacedDocuments unplaced, PlaceIntakeDocument placeDocument,
-            CloseProjectList closeProjectList, OpenIntakeOriginal openOriginal) {
+            CloseProjectList closeProjectList, OpenIntakeOriginal openOriginal, CloseIntakeBatch closeBatch) {
+        this.closeBatch = closeBatch;
         this.start = start;
         this.openBatches = openBatches;
         this.addFile = addFile;
@@ -144,6 +147,14 @@ public class IntakeController {
     public Responses.IntakeBatchView closeUpload(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID companyId, @PathVariable UUID batchId) {
         closeUpload.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId));
+        return get(actor, companyId, batchId);
+    }
+
+    /** «Cerrar la carga»: lo que sigue en «No lo sé» pasa a «Sin ubicar». 409 si no está en revisión o quedan propuestas por decidir. */
+    @PostMapping(BATCHES + "/{batchId}/close")
+    public Responses.IntakeBatchView closeBatch(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId) {
+        closeBatch.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId));
         return get(actor, companyId, batchId);
     }
 
@@ -235,8 +246,10 @@ public class IntakeController {
         if (!unplaced) {
             throw new ValidationException("Solo se listan los documentos sin colocar: unplaced=true");
         }
-        return Responses.IntakeDocuments.from(
-                this.unplaced.execute(actor, new CompanyId(companyId), new IntakeBatchId(batchId)));
+        CompanyId company = new CompanyId(companyId);
+        IntakeBatchId batch = new IntakeBatchId(batchId);
+        return Responses.IntakeDocuments.from(this.unplaced.execute(actor, company, batch),
+                this.unplaced.types(actor, company, batch));
     }
 
     /** El original de un documento pendiente del lote, para decidir viéndolo. */

@@ -358,6 +358,19 @@ class IntakeControllerTest extends WebTestSupport {
     }
 
     @Test
+    void theTrayShowsTheDocumentTypeOfEachRowAndNullWhenUnrecognised() throws Exception {
+        oneProposedOneUnplaced();
+        w.intake.saveClassification(company, new com.e2d.odin.domain.intake.IntakeBatchId(java.util.UUID.fromString(
+                batch.substring(batch.lastIndexOf('/') + 1))), java.util.Map.of(second.id(), "acta"), List.of());
+        var unrecognised = org.hamcrest.Matchers.nullValue();
+
+        mvc.perform(get(batch + "/proposals").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.groups[0].proposals[0].documentType").value("acta"));
+        mvc.perform(get(batch + "/documents").param("unplaced", "true").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[0].documentType").value(unrecognised));
+    }
+
+    @Test
     void anUnplacedDocumentIsListedAndPlacedByTheAdminWithExactlyOneDestination() throws Exception {
         oneProposedOneUnplaced();
         String place = batch + "/documents/" + first.id().value() + "/place";
@@ -376,6 +389,36 @@ class IntakeControllerTest extends WebTestSupport {
 
         org.assertj.core.api.Assertions.assertThat(w.docs.get(first.id()).orElseThrow().projectId()).contains(olmo);
         mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.unplaced").value(0));
+    }
+
+    @Test
+    void closingTheBatchLeavesTheDontKnowDocumentsUnplacedAndKeepsTheTrayOpenForThem() throws Exception {
+        oneProposedOneUnplaced();
+        mvc.perform(post(batch + "/close").cookie(admin)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Queda 1 propuesta por decidir. Decídelas antes de cerrar la carga."));
+        postJson(batch + "/proposals/" + firstProposal.id() + "/decide", "{\"decision\":\"DONT_KNOW\"}")
+                .andExpect(status().isOk());
+
+        mvc.perform(post(batch + "/close").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("CLOSED")).andExpect(jsonPath("$.unplaced").value(2))
+                .andExpect(jsonPath("$.toDecide").value(0));
+
+        mvc.perform(get(batch + "/documents").param("unplaced", "true").cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents", hasSize(2)));
+        mvc.perform(get(batches).cookie(admin)).andExpect(jsonPath("$.batches[0].state").value("CLOSED"));
+        mvc.perform(post(batch + "/close").cookie(admin)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("La carga solo se puede cerrar cuando está en revisión."));
+    }
+
+    @Test
+    void closingTheBatchIsRefusedToAnotherCompanyAdminAndToAWorker() throws Exception {
+        oneProposedOneUnplaced();
+        Cookie other = adminCookie(Role.COMPANY_ADMIN, Optional.of(newCompany()));
+
+        mvc.perform(post(batch + "/close").cookie(other)).andExpect(status().isForbidden());
+        mvc.perform(post(batch + "/close").header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(post(batch + "/close")).andExpect(status().isUnauthorized());
+        mvc.perform(get(batch).cookie(admin)).andExpect(jsonPath("$.state").value("IN_REVIEW"));
     }
 
     @Test

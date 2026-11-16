@@ -30,7 +30,7 @@ Qué hace con la carpeta:
 
 1. **Tu correo** y **tu contraseña**. La contraseña no se ve al escribirla y no se guarda en ningún sitio.
 2. **El resumen:** la empresa, cuántos ficheros y cuánto ocupan, lo que se salta y los avisos.
-3. **«¿Seguir? (s/n)»**. Escribe `s` para subir. Con `n` no se sube nada. Para no recibir esta pregunta, añade `ARGS="--si"`; sin la pregunta, si Odín está en sus puertos de siempre (8080, 8088 y 8090), la orden pide además `CONFIRMAR_INSTALACION=PROPIETARIO` delante de `make`.
+3. **«¿Seguir? (s/n)»**. Escribe `s` para subir. Con `n` no se sube nada. Para no recibir esta pregunta, añade `ARGS="--si"`; sin la pregunta, si Odín está en sus puertos de siempre (8080, 8088 y 8090), la orden pide además `CONFIRMAR_INSTALACION=ESCRIBIR` delante de `make`.
 
 ## Los avisos
 
@@ -38,7 +38,8 @@ Qué hace con la carpeta:
 - **Sin modelo local:** Odín no podrá proponer proyectos para los documentos que no se reconocen por su carpeta o su contenido. Los decides tú a mano.
 - **Poco espacio en el disco:** haz sitio antes de seguir.
 - **Hay una primera carga abierta sin cerrar:** la orden sigue con ella y no abre otra.
-- **Ya hay una primera carga en curso** (leyéndose o esperando tu revisión): la orden no sube nada. Termínala en el panel, en «Primera carga».
+- **Ya hay una primera carga leyéndose:** la orden no sube nada. Espera a que termine la lectura y vuelve a lanzarla.
+- **Hay otra primera carga pendiente de revisar en el panel:** la orden sube igual en una carga nueva, y esta se revisa aparte.
 
 ## Si se corta
 
@@ -61,10 +62,18 @@ Nadie ve un documento hasta que tú lo confirmas.
 
 En cada propuesta puedes confirmarla, corregir el proyecto, marcarla «de toda la empresa» o rechazarla. **«Ver el original»** abre el documento para decidir viéndolo; también en «Sin ubicar». Un grupo de más de 500 documentos se confirma en partes de 500, cada una todo o nada: si una falla, el panel dice cuántas se aplicaron. Un documento que aún se está leyendo no se puede decidir: espera a que termine.
 
-- **«No lo sé»** deja el documento oculto y pendiente, sin plazo, y guarda quién lo dijo y cuándo. Puedes volver a él cuando lo sepas. Mientras quede alguno, la carga sigue abierta y **no se puede empezar otra primera carga**: la orden lo rechaza hasta que lo decidas.
+- **«No lo sé»** deja el documento oculto y pendiente, sin plazo, y guarda quién lo dijo y cuándo. Puedes volver a él cuando lo sepas. Mientras quede alguno, la carga sigue abierta, pero no impide empezar otra.
 - **Descartar** retira el documento. No vuelve a entrar si repites la orden en esta misma carga; en una primera carga nueva, sí, porque para ella es un fichero que falta.
 
+**Copia escaneada:** un escaneo que confirmas como copia de un documento digital deja de salir en las listas y las búsquedas, y aparece como «Copia escaneada» en la ficha del documento principal y en el expediente. Si te equivocaste, abre la ficha del escaneo (desde la del principal, en «Copias escaneadas») y pulsa **«No es una copia escaneada»**: el escaneo vuelve a salir como un documento más.
+
 La carga se cierra sola cuando no queda ningún documento pendiente ni ninguna propuesta por decidir.
+
+## Cerrar la carga
+
+Si prefieres dejar de revisar con documentos todavía en «No lo sé», pulsa **«Cerrar la carga»** en la cabecera de la carga. Solo está activo cuando no queda ninguna propuesta por decidir (si quedan, el botón dice cuántas). Al cerrar, lo que seguía en «No lo sé» pasa a **«Sin ubicar»**, y la carga deja de estar en revisión. Los documentos sin ubicar siguen ocultos para los trabajadores hasta que los colocas en un proyecto, los marcas «de toda la empresa» o los descartas; la carga cerrada solo enseña ese paso, «Sin ubicar», y desaparece del panel cuando no le queda ninguno.
+
+Una carga en revisión, abierta o cerrada con documentos sin ubicar, **no impide empezar otra**: lanza la orden de nuevo y se sube en una carga nueva. Si hay varias cargas en el panel, elige la que quieres revisar en **«Carga a revisar»**.
 
 ## Cuánto tarda
 

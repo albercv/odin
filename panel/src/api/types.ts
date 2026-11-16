@@ -596,6 +596,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["closeBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload": {
         parameters: {
             query?: never;
@@ -1252,6 +1268,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/documents/{documentId}/scan-of": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unlinkScanCopy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}": {
         parameters: {
             query?: never;
@@ -1309,6 +1341,15 @@ export interface components {
             withdrawnAt?: string;
             /** @description Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe. */
             uploadedByName?: string;
+            /** @description De quién es copia escaneada este documento. Solo en el listado y la ficha. */
+            scanOf?: components["schemas"]["ScanLink"];
+            /** @description Escaneos enlazados a este documento. Solo en el listado y la ficha; vacío en el resto. */
+            scanCopies: components["schemas"]["ScanLink"][];
+        };
+        ScanLink: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
         };
         TopicLabelView: {
             /** Format: uuid */
@@ -1621,6 +1662,8 @@ export interface components {
             };
             /** Format: int32 */
             unplaced: number;
+            /** Format: int32 */
+            toDecide: number;
             /** Format: date-time */
             projectListClosedAt?: string;
         };
@@ -1866,6 +1909,7 @@ export interface components {
             replacement?: components["schemas"]["Replacement"];
             topics: components["schemas"]["TopicLabelView"][];
             caseDocument: boolean;
+            scanCopies: components["schemas"]["ScanLink"][];
         };
         Page: {
             /** Format: uuid */
@@ -1903,6 +1947,8 @@ export interface components {
             status: string;
             uploadedByName?: string;
             addedByName?: string;
+            scanOf?: components["schemas"]["ScanLink"];
+            scanCopies: components["schemas"]["ScanLink"][];
         };
         CaseFileResponse: {
             caseDocument: components["schemas"]["CaseFileDocumentView"];
@@ -2068,7 +2114,7 @@ export interface components {
             /** Format: date-time */
             revokedAt?: string;
         };
-        /** @description Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL. */
+        /** @description Un lote sin cerrar o cerrado con documentos sin ubicar. state: OPEN, READING, IN_REVIEW o CLOSED; channel: COMMAND o PANEL. */
         IntakeBatchSummary: {
             /** Format: uuid */
             id: string;
@@ -2077,7 +2123,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
-        /** @description Los lotes de la empresa que no están cerrados, el más reciente primero. */
+        /** @description Los lotes de la empresa que no están cerrados y los cerrados con documentos sin ubicar, el más reciente primero. */
         OpenIntakeBatches: {
             batches: components["schemas"]["IntakeBatchSummary"][];
         };
@@ -2092,7 +2138,7 @@ export interface components {
         IntakeProposalGroups: {
             groups: components["schemas"]["IntakeProposalGroup"][];
         };
-        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. */
+        /** @description Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. documentType: el tipo del documento de la fila (no el del destino), o null si no se reconoció. */
         IntakeProposalItem: {
             /** Format: uuid */
             id: string;
@@ -2105,17 +2151,19 @@ export interface components {
             caseNumber?: string;
             source: string;
             reason: string;
+            documentType?: string;
         };
         KnownFiles: {
             sha256: string[];
         };
-        /** @description Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. */
+        /** @description Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. documentType: el tipo que le calculó la clasificación (acta, contrato, poliza…), o null si no se reconoció. */
         IntakeDocumentView: {
             /** Format: uuid */
             id: string;
             title: string;
             path?: string;
             status: string;
+            documentType?: string;
         };
         IntakeDocuments: {
             documents: components["schemas"]["IntakeDocumentView"][];
@@ -3380,6 +3428,29 @@ export interface operations {
             };
         };
     };
+    closeBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                companyId: string;
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBatchView"];
+                };
+            };
+        };
+    };
     closeUpload: {
         parameters: {
             query?: never;
@@ -4489,6 +4560,26 @@ export interface operations {
             header?: never;
             path: {
                 userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    unlinkScanCopy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
             };
             cookie?: never;
         };

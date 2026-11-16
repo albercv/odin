@@ -478,3 +478,32 @@ test('clearingAZeroResultSearchNeverFlashesTheEmptyState', async () => {
   watch.disconnect();
   expect(flashed).toBe(false);
 });
+
+const scanned = { ...base, id: 'd9', title: 'Póliza 2022 escaneada', status: 'READY', projectId: 'p1', scanOf: { documentId: 'd1', title: 'Póliza 2022' }, scanCopies: [] as unknown[] };
+const withScan = { ...old, scanCopies: [{ documentId: 'd9', title: 'Póliza 2022 escaneada' }] };
+const scanUrl = 'GET /v1/admin/documents/d9';
+const unlinkUrl = 'DELETE /v1/admin/documents/d9/scan-of';
+
+test('detailListsScanCopiesAndOpensOneByIdAlthoughItIsNotInTheList', async () => {
+  show(routes([withScan, renewed], { [scanUrl]: () => ({ status: 200, body: scanned }) }));
+  await openMenu('Póliza 2022');
+  await userEvent.click(screen.getByRole('button', { name: 'Ver detalle de Póliza 2022' }));
+  const dialog = screen.getByRole('dialog', { name: 'Póliza 2022' });
+  expect(within(dialog).getByText('Copias escaneadas')).toBeInTheDocument();
+  expect(within(dialog).getByRole('link', { name: 'Ver el original de Póliza 2022 escaneada' })).toHaveAttribute('href', '/v1/admin/documents/d9/original');
+  await userEvent.click(within(dialog).getByRole('link', { name: 'Póliza 2022 escaneada' }));
+  expect(await screen.findByRole('dialog', { name: 'Póliza 2022 escaneada' })).toBeInTheDocument();
+  expect(screen.getByText(/Copia escaneada de/)).toHaveTextContent('Copia escaneada de Póliza 2022');
+});
+
+test('unlinkingAScanCopyAsksForConfirmationCallsTheApiAndRefreshes', async () => {
+  const calls = show(routes([scanned], { [scanUrl]: () => ({ status: 200, body: { ...scanned, scanOf: undefined } }), [unlinkUrl]: () => ({ status: 204 }) }));
+  await openMenu('Póliza 2022 escaneada');
+  await userEvent.click(screen.getByRole('button', { name: 'Ver detalle de Póliza 2022 escaneada' }));
+  await userEvent.click(screen.getByRole('button', { name: 'No es una copia escaneada' }));
+  expect(calls.some((c) => c.key === unlinkUrl)).toBe(false);
+  const confirm = screen.getByRole('dialog', { name: /Deshacer el enlace\. El escaneo volverá a salir como un documento más en las listas y las búsquedas\./ });
+  await userEvent.click(within(confirm).getByRole('button', { name: 'Deshacer el enlace' }));
+  await waitFor(() => expect(calls.some((c) => c.key === unlinkUrl)).toBe(true));
+  await waitFor(() => expect(screen.queryByText(/Copia escaneada de/)).toBeNull());
+});

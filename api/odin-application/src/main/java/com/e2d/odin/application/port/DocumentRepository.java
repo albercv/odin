@@ -3,6 +3,7 @@ package com.e2d.odin.application.port;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeCounts;
@@ -103,6 +104,20 @@ public interface DocumentRepository {
 
     /** Pone {@code scan_of}: el documento es el escaneo del original (D3). Solo sobre documentos visibles, no pendientes. */
     void markScanOf(CompanyId companyId, DocumentId scanId, DocumentId originalId);
+
+    /** Deja {@code scan_of} a NULL: el escaneo vuelve a salir en listas y búsquedas. 404 si no existe en la empresa. */
+    void clearScanOf(CompanyId companyId, DocumentId scanId);
+
+    /**
+     * Los escaneos enlazados a cada uno de esos originales, solo los visibles para quien mira (ni retirados ni
+     * pendientes ni de un proyecto que no ve) y, con {@code status}, solo en ese estado. Una consulta para todos.
+     */
+    java.util.Map<DocumentId, List<DocumentRef>> scanCopiesOf(CompanyScope scope, ProjectVisibility visibility,
+            Optional<DocumentStatus> status, Collection<DocumentId> originals);
+
+    /** Id y título de esos documentos, solo de los visibles para quien mira. */
+    java.util.Map<DocumentId, DocumentRef> refsOf(CompanyScope scope, ProjectVisibility visibility,
+            Collection<DocumentId> ids);
 
     /** Si algún documento de la empresa, sin retirar, espera al lector OCR o lo está pasando. */
     boolean readerQueueBusy(CompanyId companyId);

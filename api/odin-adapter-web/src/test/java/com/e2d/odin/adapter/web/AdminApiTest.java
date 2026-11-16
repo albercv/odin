@@ -168,6 +168,29 @@ class AdminApiTest extends WebTestSupport {
     }
 
     @Test
+    void scanLinkShowsInBothDocumentsAndDeletingItUndoesIt() throws Exception {
+        CompanyId company = newCompany();
+        Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));
+        Document main = Fixtures.readyDocument(w.docs, company, "contrato digital");
+        Document scan = Fixtures.readyDocument(w.docs, company, "contrato escaneado");
+        w.docs.markScanOf(company, scan.id(), main.id());
+        String url = "/v1/admin/documents/" + scan.id().value() + "/scan-of";
+
+        mvc.perform(get("/v1/admin/documents/" + main.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.scanCopies[0].documentId").value(scan.id().value().toString()))
+                .andExpect(jsonPath("$.scanCopies[0].title").value(scan.title()));
+        mvc.perform(get("/v1/admin/documents/" + scan.id().value()).cookie(admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.scanOf.documentId").value(main.id().value().toString()))
+                .andExpect(jsonPath("$.scanOf.title").value(main.title()));
+        mvc.perform(delete(url).header("Authorization", workerKey(company))).andExpect(status().isUnauthorized());
+        mvc.perform(delete(url).cookie(admin)).andExpect(status().isNoContent());
+        org.assertj.core.api.Assertions.assertThat(w.docs.get(scan.id()).orElseThrow().scanOf()).isEmpty();
+        mvc.perform(delete(url).cookie(admin)).andExpect(status().isNotFound());
+        mvc.perform(get("/v1/admin/documents/" + main.id().value()).cookie(admin))
+                .andExpect(jsonPath("$.scanCopies").isEmpty());
+    }
+
+    @Test
     void deleteSupersededByIs204EvenIfNotMarked() throws Exception {
         CompanyId company = newCompany();
         Cookie admin = adminCookie(Role.COMPANY_ADMIN, Optional.of(company));

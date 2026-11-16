@@ -29,7 +29,7 @@ import java.util.function.Function;
 
 public class PostgresIntakeRepository implements IntakeRepository {
 
-    private static final String BATCH_COLUMNS = "id, company_id, started_by, channel, state, created_at, closed_at, "
+    private static final String BATCH_COLUMNS = "id, company_id, started_by, channel, state, created_at, closed_at, closed_by, "
             + "already_there, discarded, project_list_closed_by, project_list_closed_at";
     private static final String PROPOSAL_COLUMNS = "id, company_id, batch_id, document_id, kind, target_project_id, "
             + "target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at";
@@ -46,15 +46,15 @@ public class PostgresIntakeRepository implements IntakeRepository {
     @Override
     public void save(IntakeBatch b) {
         tx.runInScope(CompanyScope.of(b.companyId()), ALL, jdbc -> jdbc.sql("""
-                INSERT INTO intake_batch (id, company_id, started_by, channel, state, created_at, closed_at,
+                INSERT INTO intake_batch (id, company_id, started_by, channel, state, created_at, closed_at, closed_by,
                     project_list_closed_by, project_list_closed_at)
-                VALUES (:id, :company, :by, :channel, :state, :created, :closed, :listBy, :listAt)
-                ON CONFLICT (id) DO UPDATE SET state = EXCLUDED.state, closed_at = EXCLUDED.closed_at,
+                VALUES (:id, :company, :by, :channel, :state, :created, :closed, :closedBy, :listBy, :listAt)
+                ON CONFLICT (id) DO UPDATE SET state = EXCLUDED.state, closed_at = EXCLUDED.closed_at, closed_by = EXCLUDED.closed_by,
                     project_list_closed_by = EXCLUDED.project_list_closed_by,
                     project_list_closed_at = EXCLUDED.project_list_closed_at""")
                 .param("id", b.id().value()).param("company", b.companyId().value()).param("by", b.startedBy().value())
                 .param("channel", b.channel().name()).param("state", b.state().name())
-                .param("created", Sql.ts(b.createdAt())).param("closed", Sql.ts(b.closedAt()))
+                .param("created", Sql.ts(b.createdAt())).param("closed", Sql.ts(b.closedAt())).param("closedBy", b.closedBy().map(UserId::value).orElse(null))
                 .param("listBy", b.projectListClosedBy().map(UserId::value).orElse(null))
                 .param("listAt", Sql.ts(b.projectListClosedAt())).update());
     }
@@ -85,6 +85,13 @@ public class PostgresIntakeRepository implements IntakeRepository {
     public List<IntakeBatch> findOpen(CompanyId companyId) {
         return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
                 + " FROM intake_batch WHERE company_id = :company AND state <> 'CLOSED' ORDER BY created_at DESC")
+                .param("company", companyId.value()).query((rs, n) -> batch(rs)).list());
+    }
+
+    @Override
+    public List<IntakeBatch> findClosed(CompanyId companyId) {
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("SELECT " + BATCH_COLUMNS
+                + " FROM intake_batch WHERE company_id = :company AND state = 'CLOSED' ORDER BY created_at DESC")
                 .param("company", companyId.value()).query((rs, n) -> batch(rs)).list());
     }
 
@@ -132,6 +139,31 @@ public class PostgresIntakeRepository implements IntakeRepository {
                 p -> jdbc.sql(INSERT_PROPOSAL + " ON CONFLICT DO NOTHING").params(proposalParams(p)).update()));
     }
 
+    @Override
+    public void saveClassification(CompanyId companyId, IntakeBatchId batchId, Map<DocumentId, String> types,
+            List<List<IntakeProposal>> proposalGroups) {
+        tx.runInScope(CompanyScope.of(companyId), ALL, jdbc -> {
+            types.forEach((document, type) -> jdbc.sql(UPDATE_TYPE).param("type", type).param("id", document.value())
+                    .param("company", companyId.value()).param("batch", batchId.value()).update());
+            proposalGroups.forEach(group -> group.forEach(
+                    p -> jdbc.sql(INSERT_PROPOSAL + " ON CONFLICT DO NOTHING").params(proposalParams(p)).update()));
+        });
+    }
+
+    private static final String UPDATE_TYPE = """
+            UPDATE document SET intake_type = :type
+            WHERE id = :id AND company_id = :company AND intake_batch_id = :batch""";
+
+    @Override
+    public Map<DocumentId, String> intakeTypes(CompanyId companyId, IntakeBatchId batchId) {
+        return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("""
+                SELECT id, intake_type FROM document
+                WHERE company_id = :company AND intake_batch_id = :batch AND intake_type IS NOT NULL""")
+                .param("company", companyId.value()).param("batch", batchId.value())
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "id")), rs.getString("intake_type"))).list()
+                .stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
     private static final String INSERT_PROPOSAL = """
             INSERT INTO intake_proposal (id, company_id, batch_id, document_id, kind, target_project_id,
                 target_document_id, case_number, confidence, source, reason, state, decided_by, decided_at)
@@ -169,7 +201,7 @@ public class PostgresIntakeRepository implements IntakeRepository {
         return new IntakeBatch(new IntakeBatchId(Sql.uuid(rs, "id")), new CompanyId(Sql.uuid(rs, "company_id")),
                 new UserId(Sql.uuid(rs, "started_by")), IntakeChannel.valueOf(rs.getString("channel")),
                 IntakeState.valueOf(rs.getString("state")), Sql.instant(rs, "created_at"),
-                Sql.optionalInstant(rs, "closed_at"), rs.getInt("already_there"), rs.getInt("discarded"),
+                Sql.optionalInstant(rs, "closed_at"), optional(rs, "closed_by", UserId::new), rs.getInt("already_there"), rs.getInt("discarded"),
                 optional(rs, "project_list_closed_by", UserId::new), Sql.optionalInstant(rs, "project_list_closed_at"));
     }
 

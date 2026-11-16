@@ -141,6 +141,14 @@ public record Document(
                 Optional.of(original));
     }
 
+    /** Deja de ser el escaneo de otro: vuelve a ser un documento más. */
+    public Document withoutScanOf() {
+        return new Document(id, companyId, projectId, title, filename, format, sha256, status, failureReason,
+                paginated, uploadedBy, uploadedAt, processingStartedAt, attemptCount, supersededBy, supersededAt,
+                pagesWithoutText, caseDocument, withdrawnAt, withdrawnBy, intakeBatchId, intakePending, intakePath,
+                Optional.empty());
+    }
+
     public Document startProcessing(Instant now) {
         return copy(DocumentStatus.PROCESSING, Optional.empty(), paginated, Optional.of(now), attemptCount + 1);
     }
