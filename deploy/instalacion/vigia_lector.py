@@ -91,6 +91,7 @@ def run(cmd, url, hang_after, interval):
         log("parada pedida: paro el puente")
         return 0
     finally:
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)  # un SIGTERM a mitad de la parada no debe dejar el puente vivo
         stop_group(child)
 
 

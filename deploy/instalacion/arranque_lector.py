@@ -82,7 +82,7 @@ def validate(cfg):
                  "make lector-arranque-instalar CONFIRMAR=ARRANQUE LECTOR_DIR=/ruta/OCR/.worktrees/puente-odin")
     if not cfg.vigia.is_file():
         sys.exit(f"No encuentro el vigía {cfg.vigia}. Falta vigia_lector.py en la copia principal de Odín: "
-                 "fusiona la rama del vigía allí y repite.")
+                 "llega al desplegar la versión que lo trae; despliégala y repite.")
     if not cfg.uv:
         sys.exit("No encuentro uv en el PATH. Instálalo (brew install uv) y repite.")
     hf_home = find_hf_home(cfg.lector)
