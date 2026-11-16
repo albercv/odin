@@ -42,6 +42,9 @@ class Base(unittest.TestCase):
         (self.lector / "serve.py").write_text("")
         self.hf = self.dir / "OCR" / ".cache" / "huggingface"
         (self.hf / "hub" / MODEL).mkdir(parents=True)
+        self.vigia = self.dir / "odin" / "deploy" / "instalacion" / "vigia_lector.py"
+        self.vigia.parent.mkdir(parents=True)
+        self.vigia.write_text("")
         self.agents = self.dir / "LaunchAgents"
         self.log = self.dir / "odin" / "data" / "puente-ocr.log"
         self.plist = self.agents / f"{LABEL}.plist"
@@ -51,7 +54,7 @@ class Base(unittest.TestCase):
 
     def cfg(self, **over):
         base = dict(lector=self.lector, uv="/opt/homebrew/bin/uv", agents=self.agents, log=self.log, uid=501,
-                    confirmar="ARRANQUE")
+                    confirmar="ARRANQUE", python="/usr/bin/python3", vigia=self.vigia)
         base.update(over)
         return al.Config(**base)
 
@@ -71,7 +74,7 @@ class PlistTest(Base):
     def test_contenidoDelPlist(self):
         d = plistlib.loads(al.build_plist(self.cfg(), self.hf))
         self.assertEqual(d["Label"], LABEL)
-        self.assertEqual(d["ProgramArguments"], ["/opt/homebrew/bin/uv", "run", "python", "serve.py", "--quant", "8"])
+        self.assertEqual(d["ProgramArguments"], ["/usr/bin/python3", str(self.vigia), "--", "/opt/homebrew/bin/uv", "run", "python", "serve.py", "--quant", "8"])
         self.assertEqual(d["WorkingDirectory"], str(self.lector))
         env = d["EnvironmentVariables"]
         self.assertEqual((env["HF_HUB_OFFLINE"], env["UV_OFFLINE"], env["HF_HOME"]), ("1", "1", str(self.hf)))
@@ -110,6 +113,15 @@ class InstalarTest(Base):
         self.assertNotEqual(code, 0)
         self.assertIn("serve.py", msg)
         self.assertIn("LECTOR_DIR", msg)
+        self.assertFalse(self.agents.exists())
+        self.assertEqual(run.calls, [])
+
+    def test_sinVigiaNoEscribeNada(self):
+        self.vigia.unlink()
+        run = Fake()
+        code, msg = self.instalar(run)
+        self.assertNotEqual(code, 0)
+        self.assertIn("vigia_lector.py", msg)
         self.assertFalse(self.agents.exists())
         self.assertEqual(run.calls, [])
 
