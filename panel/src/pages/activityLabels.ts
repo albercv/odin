@@ -18,7 +18,7 @@ export const ACTIONS: Record<string, string> = {
   CASE_FILE_DOCUMENTS_ADDED: 'Documentos añadidos al expediente', CASE_FILE_DOCUMENT_REMOVED: 'Documento quitado del expediente',
   INTAKE_STARTED: 'Primera carga iniciada', INTAKE_UPLOAD_CLOSED: 'Subida de la primera carga cerrada', INTAKE_PROJECT_LIST_IMPORTED: 'Lista de proyectos importada',
   INTAKE_PROJECTS_DECIDED: 'Proyectos decididos', INTAKE_PROJECT_LIST_CLOSED: 'Lista de proyectos cerrada', INTAKE_PROPOSALS_CONFIRMED: 'Propuestas confirmadas',
-  INTAKE_PROPOSAL_DECIDED: 'Propuesta decidida', INTAKE_DOCUMENT_DISCARDED: 'Documento descartado', INTAKE_DOCUMENT_PLACED: 'Documento colocado',
+  INTAKE_PROPOSAL_DECIDED: 'Propuesta decidida', INTAKE_DOCUMENT_DISCARDED: 'Documento descartado', INTAKE_DOCUMENT_PLACED: 'Documento colocado', INTAKE_CLOSED: 'Primera carga cerrada', DOCUMENT_SCAN_UNLINKED: 'Copia escaneada desvinculada',
   UPLOAD_LINK_ISSUED: 'Enlace de subida emitido', ORIGINAL_LINK_ISSUED: 'Enlace al original emitido', ACTIVITY_EXPORTED: 'Registro exportado',
 };
 

@@ -481,7 +481,7 @@ public class TestWiring {
         return new ListOpenIntakeBatches(intake, docs);
     }
     @Bean CloseIntakeBatch closeIntakeBatch() {
-        return new CloseIntakeBatch(intake, clock());
+        return new CloseIntakeBatch(intake, clock(), auditLog());
     }
     @Bean ListIntakeProposals listIntakeProposals() {
         return new ListIntakeProposals(intake, docs);
@@ -508,7 +508,7 @@ public class TestWiring {
     }
 
     @Bean UnlinkScanCopy unlinkScanCopy() {
-        return new UnlinkScanCopy(docs);
+        return new UnlinkScanCopy(docs, auditLog());
     }
 
     @Bean GetDocument getDocument() {

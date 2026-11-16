@@ -862,9 +862,10 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    CloseIntakeBatch closeIntakeBatch(IntakeRepository intake, Clock clock, PlatformTransactionManager transactionManager) {
+    CloseIntakeBatch closeIntakeBatch(IntakeRepository intake, Clock clock, PlatformTransactionManager transactionManager,
+            AuditLog audit) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        return new CloseIntakeBatch(intake, clock) {
+        return new CloseIntakeBatch(intake, clock, audit) {
             @Override
             public IntakeBatch execute(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
                 return transaction.execute(status -> super.execute(actor, companyId, batchId));
@@ -954,8 +955,8 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    UnlinkScanCopy unlinkScanCopy(DocumentRepository documents) {
-        return new UnlinkScanCopy(documents);
+    UnlinkScanCopy unlinkScanCopy(DocumentRepository documents, AuditLog audit) {
+        return new UnlinkScanCopy(documents, audit);
     }
 
     @Bean
