@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -16,7 +17,8 @@ import org.junit.jupiter.api.Test;
 class SetCompanyCapabilitiesTest {
 
     private final InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
-    private final SetCompanyCapabilities set = new SetCompanyCapabilities(organizations);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final SetCompanyCapabilities set = new SetCompanyCapabilities(organizations, audit);
     private final CompanyId company = Fixtures.companyWith(organizations, EnumSet.of(Capability.SEARCH_KNOWLEDGE));
 
     @Test

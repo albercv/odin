@@ -21,7 +21,8 @@ class UnlinkScanCopyTest {
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final com.e2d.odin.domain.shared.CompanyId company = Fixtures.company(orgs);
-    private final UnlinkScanCopy unlink = new UnlinkScanCopy(docs);
+    private final com.e2d.odin.application.fake.InMemoryAuditLog audit = new com.e2d.odin.application.fake.InMemoryAuditLog();
+    private final UnlinkScanCopy unlink = new UnlinkScanCopy(docs, audit);
 
     @Test
     void unlinkingPutsTheScanBackAndTheMainLosesTheCopy() {
@@ -38,6 +39,21 @@ class UnlinkScanCopyTest {
         assertThat(docs.get(scan.id()).orElseThrow().scanOf()).isEmpty();
         assertThat(ScanLinks.of(docs, scope, ProjectVisibility.all(), Optional.empty(), List.of(main))
                 .get(main.id()).scanCopies()).isEmpty();
+    }
+
+    @Test
+    void unlinkingRecordsOneEntryOnTheScanDocument() {
+        Document main = Fixtures.document(docs, company, DocumentStatus.READY);
+        Document scan = Fixtures.document(docs, company, DocumentStatus.READY);
+        docs.markScanOf(company, scan.id(), main.id());
+
+        unlink.execute(Actors.companyAdmin(company), scan.id());
+
+        assertThat(audit.entries).singleElement().satisfies(e -> {
+            assertThat(e.action()).isEqualTo(com.e2d.odin.domain.audit.AuditAction.DOCUMENT_SCAN_UNLINKED);
+            assertThat(e.target().orElseThrow().id()).isEqualTo(scan.id().value().toString());
+            assertThat(e.details()).containsEntry("mainDocumentId", main.id().value().toString());
+        });
     }
 
     @Test

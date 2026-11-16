@@ -1,9 +1,11 @@
 package com.e2d.odin.application.link;
 
 import com.e2d.odin.application.port.AccessLinkRepository;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.SecretHasher;
 import com.e2d.odin.application.port.TokenGenerator;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.link.AccessLink;
 import com.e2d.odin.domain.link.AccessLinkKind;
@@ -24,9 +26,11 @@ public class LinkIssuer {
     private final IdGenerator ids;
     private final Clock clock;
     private final LinkSettings settings;
+    private final AuditLog audit;
 
     public LinkIssuer(AccessLinkRepository links, TokenGenerator tokens, SecretHasher secrets, IdGenerator ids, Clock clock,
-            LinkSettings settings) {
+            LinkSettings settings, AuditLog audit) {
+        this.audit = audit;
         this.links = links;
         this.tokens = tokens;
         this.secrets = secrets;
@@ -36,26 +40,28 @@ public class LinkIssuer {
     }
 
     /** {@code pathBeforeToken} precede al token en la URL; {@code fragment} va después, con su almohadilla, si lo hay. */
-    IssuedLink issue(AccessLinkKind kind, Actor actor, DocumentId target, String pathBeforeToken, String fragment) {
+    IssuedLink issue(AccessLinkKind kind, Actor actor, DocumentId target, AuditEntry entry, String pathBeforeToken,
+            String fragment) {
         boolean upload = kind == AccessLinkKind.UPLOAD;
         return issue(kind, actor, upload ? Optional.of(target) : Optional.empty(), Optional.empty(),
-                upload ? Optional.empty() : Optional.of(target), pathBeforeToken, fragment);
+                upload ? Optional.empty() : Optional.of(target), entry, pathBeforeToken, fragment);
     }
 
     /** El enlace de subida a un proyecto: lleva el proyecto y ningún caso. */
-    IssuedLink issueForProject(Actor actor, ProjectId project, String pathBeforeToken) {
+    IssuedLink issueForProject(Actor actor, ProjectId project, AuditEntry entry, String pathBeforeToken) {
         return issue(AccessLinkKind.UPLOAD, actor, Optional.empty(), Optional.of(project), Optional.empty(),
-                pathBeforeToken, "");
+                entry, pathBeforeToken, "");
     }
 
     private IssuedLink issue(AccessLinkKind kind, Actor actor, Optional<DocumentId> caseId, Optional<ProjectId> projectId,
-            Optional<DocumentId> documentId, String pathBeforeToken, String fragment) {
+            Optional<DocumentId> documentId, AuditEntry entry, String pathBeforeToken, String fragment) {
         String prefix = settings.urlOf(pathBeforeToken);
         String token = tokens.randomToken(TOKEN_BYTES);
         Instant now = clock.instant();
         AccessLink link = new AccessLink(ids.newId(), kind, actor.requireCompany(), actor.userId(), caseId, projectId,
                 documentId, now, now.plus(settings.ttl()), Optional.empty(), 0);
         links.save(link, secrets.hash(token));
+        audit.record(entry.with("linkId", link.id().toString()));
         return new IssuedLink(prefix + token + fragment, link.expiresAt());
     }
 }

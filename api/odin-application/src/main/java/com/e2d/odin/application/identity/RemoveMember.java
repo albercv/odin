@@ -2,10 +2,13 @@ package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AccessKeyRepository;
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
 import com.e2d.odin.domain.identity.User;
@@ -28,9 +31,11 @@ public class RemoveMember {
     private final ProjectMemberRepository projectMembers;
     private final AdminSessions sessions;
     private final Clock clock;
+    private final AuditLog audit;
 
     public RemoveMember(UserRepository users, MembershipRepository memberships, AccessKeyRepository keys,
-            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock) {
+            ProjectMemberRepository projectMembers, AdminSessions sessions, Clock clock, AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.keys = keys;
@@ -55,6 +60,8 @@ public class RemoveMember {
                 .forEach(key -> keys.save(key.revoked(now)));
         projectMembers.removeAllOf(companyId, userId);
         memberships.delete(userId, companyId, now);
+        audit.record(AuditEntry.by(actor, AuditAction.MEMBER_REMOVED).onCompany(companyId)
+                .on("USER", userId.value().toString(), null));
         UserAdministration.closeSessionsIfNoLongerAdministering(person, memberships, sessions);
     }
 }

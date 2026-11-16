@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -30,7 +31,7 @@ class MarkCaseDocumentsTest {
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
     private final InMemoryCaseFileRepository files = new InMemoryCaseFileRepository(docs);
-    private final MarkCaseDocuments mark = new MarkCaseDocuments(docs, files, new MutableClock());
+    private final MarkCaseDocuments mark = new MarkCaseDocuments(docs, files, new MutableClock(), new InMemoryAuditLog());
     private final CompanyId companyA = Fixtures.company(orgs);
     private final CompanyId companyB = Fixtures.company(orgs);
 

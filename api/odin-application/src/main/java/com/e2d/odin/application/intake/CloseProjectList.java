@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.shared.InstallationSettings;
@@ -25,9 +29,11 @@ public class CloseProjectList {
     private final ListProjectCandidates candidates;
     private final InstallationSettings installation;
     private final Clock clock;
+    private final AuditLog audit;
 
     public CloseProjectList(IntakeRepository intake, DocumentRepository documents, ListProjectCandidates candidates,
-            InstallationSettings installation, Clock clock) {
+            InstallationSettings installation, Clock clock, AuditLog audit) {
+        this.audit = audit;
         this.intake = intake;
         this.documents = documents;
         this.candidates = candidates;
@@ -53,6 +59,8 @@ public class CloseProjectList {
         }
         IntakeBatch closed = batch.closeProjectList(actor.userId(), clock.instant());
         intake.save(closed);
+        audit.record(AuditSupport.onIntake(AuditEntry.by(actor, AuditAction.INTAKE_PROJECT_LIST_CLOSED), companyId,
+                batchId));
         return closed;
     }
 }

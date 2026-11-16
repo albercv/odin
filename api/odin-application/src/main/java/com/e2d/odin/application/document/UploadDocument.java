@@ -1,5 +1,6 @@
 package com.e2d.odin.application.document;
 
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.IdGenerator;
@@ -40,9 +41,11 @@ public class UploadDocument {
     private final UploadSettings settings;
     private final IdGenerator ids;
     private final Clock clock;
+    private final AuditLog audit;
 
     public UploadDocument(DocumentRepository documents, OrganizationRepository organizations, OriginalFileStore files,
-            DocumentFormatDetector detector, UploadSettings settings, IdGenerator ids, Clock clock) {
+            DocumentFormatDetector detector, UploadSettings settings, IdGenerator ids, Clock clock,
+            AuditLog audit) {
         this.documents = documents;
         this.organizations = organizations;
         this.files = files;
@@ -50,6 +53,7 @@ public class UploadDocument {
         this.settings = settings;
         this.ids = ids;
         this.clock = clock;
+        this.audit = audit;
     }
 
     public UploadOutcome execute(Actor actor, CompanyId companyId, Optional<ProjectId> projectId, String title,
@@ -58,12 +62,14 @@ public class UploadDocument {
         organizations.findCompany(companyId).orElseThrow(() -> new NotFoundException("Empresa no encontrada"));
         projectId.ifPresent(id -> organizations.findProject(companyId, id)
                 .orElseThrow(() -> new NotFoundException("Proyecto no encontrado")));
-        return store(actor, companyId, projectId, title, filename, content, caseDocument,
+        UploadOutcome outcome = store(actor, companyId, projectId, title, filename, content, caseDocument,
                 sha256 -> documents.findBySha256(companyId, sha256), documents::save, UnaryOperator.identity());
+        audit.record(outcome.auditEntry(actor, content.length));
+        return outcome;
     }
 
     /**
-     * La subida de una primera carga: el documento nace pendiente, sin proyecto y con su ruta. La huella se busca en la
+     * Sin entrada de registro: la deja quien llama (AddFileToIntake). La subida de una primera carga: el documento nace pendiente, sin proyecto y con su ruta. La huella se busca en la
      * empresa y, aunque esté retirada, en el propio lote, para que reanudar no devuelva lo que se descartó.
      */
     public UploadOutcome executeForIntake(Actor actor, CompanyId companyId, IntakeBatchId batchId, String path,
@@ -76,7 +82,8 @@ public class UploadDocument {
     }
 
     /**
-     * La subida a un expediente: quien llama ya comprobó que la persona puede, y los duplicados se buscan solo en el
+     * Sin entrada de registro: la deja quien llama (el administrador en UploadToCaseFile.executeAsAdmin, el enlace en
+     * su propio caso de uso). La subida a un expediente: quien llama ya comprobó que la persona puede, y los duplicados se buscan solo en el
      * proyecto del caso y entre lo general, sin delatar lo que haya en otros proyectos. Quien llama decide cómo se
      * guarda un documento nuevo ({@code persist}), para hacerlo junto con su entrada en el expediente.
      */

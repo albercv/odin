@@ -1,5 +1,6 @@
 package com.e2d.odin.application.identity;
 
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.PasswordHasher;
@@ -7,6 +8,8 @@ import com.e2d.odin.application.port.PersonCodeGenerator;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.ConflictException;
@@ -22,9 +25,11 @@ public class AddGroupAdmin {
     private final PasswordHasher passwords;
     private final IdGenerator ids;
     private final PersonCodeGenerator personCodes;
+    private final AuditLog audit;
 
     public AddGroupAdmin(UserRepository users, MembershipRepository memberships, PasswordHasher passwords,
-            IdGenerator ids, PersonCodeGenerator personCodes) {
+            IdGenerator ids, PersonCodeGenerator personCodes, AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.passwords = passwords;
@@ -47,6 +52,8 @@ public class AddGroupAdmin {
         User person = existing.orElseGet(() -> newPerson(request, email));
         User admin = UserAdministration.readyToAdminister(person, request.password(), passwords).withGroupAdmin(true);
         users.save(admin);
+        audit.record(AuditEntry.by(actor, AuditAction.GROUP_ADMIN_ADDED).on("USER", admin.id().value().toString(), null)
+                .with("alreadyExisted", existing.isPresent()));
         return new GroupAdminAdded(admin, existing.isPresent(), existing.flatMap(User::passwordHash).isPresent());
     }
 

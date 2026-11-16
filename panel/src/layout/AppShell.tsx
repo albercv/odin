@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type S } from '../api/client';
 import { useLoad } from '../components/useLoad';
+import { Activity } from '../pages/Activity';
 import { Account } from '../pages/Account';
 import { Companies } from '../pages/Companies';
 import { Company } from '../pages/Company';
@@ -59,7 +60,7 @@ function useGroupCompanies(isGroup: boolean) {
   return useLoad(() => (isGroup ? api.companies() : Promise.resolve<S['CompanyView'][]>([])), [isGroup]);
 }
 
-const needsCompany = (page: Page) => page !== 'companies' && page !== 'account' && page !== 'groupAdmins';
+const needsCompany = (page: Page) => page !== 'companies' && page !== 'account' && page !== 'groupAdmins' && page !== 'activity';
 
 /** The chosen company's name and its word for «project»; recomputed only when the list or the choice changes. */
 function useCurrentCompany(companies: S['CompanyRef'][], companyId: string) {
@@ -81,6 +82,16 @@ function CompanyPage({ page, companyId, me, onPendingChanged }: CompanyPageProps
       {page === 'usage' && <Usage key={companyId} companyId={companyId} />}
       {page === 'gaps' && <Gaps key={companyId} companyId={companyId} />}
       {page === 'intake' && <Intake key={companyId} companyId={companyId} />}
+    </>
+  );
+}
+
+/** Pages that span companies: the activity log (both kinds of admin) and the group's administration. */
+function AdminPages({ page, me, companies }: { page: Page; me: S['AdminMe']; companies: S['CompanyRef'][] }) {
+  return (
+    <>
+      {page === 'activity' && <Activity me={me} companies={companies} />}
+      {page === 'groupAdmins' && me.role === 'GROUP_ADMIN' && <GroupAdmins me={me} />}
     </>
   );
 }
@@ -112,7 +123,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
           pending={pending} setPage={setPage} onLogout={onLogout} />
         <main className={styles.main}>
           {!route.caseId && page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} onProfileChanged={onProfileChanged} />}
-          {!route.caseId && page === 'groupAdmins' && isGroup && <GroupAdmins me={me} />}
+          {!route.caseId && <AdminPages page={page} me={me} companies={companies} />}
           {!route.caseId && page === 'companies' && <Companies onOpen={open} onChanged={groupCompanies.reload} />}
           {needsCompany(page) && !companyId && <NoCompany loading={isGroup && !groupCompanies.data && !groupCompanies.error} failed={isGroup && !!groupCompanies.error} />}
           {route.caseId && companyId && <CaseFile key={route.caseId} companyId={companyId} caseId={route.caseId} />}

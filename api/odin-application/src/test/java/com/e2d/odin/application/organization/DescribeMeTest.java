@@ -4,16 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.Fixtures;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryDocumentRepository;
-import com.e2d.odin.application.fake.InMemoryTaggingRepository;
-import com.e2d.odin.application.fake.InMemoryTopicRepository;
-import com.e2d.odin.domain.topic.Topic;
-import com.e2d.odin.domain.topic.TopicId;
-import com.e2d.odin.domain.document.Document;
-import com.e2d.odin.domain.topic.TaggingStatus;
 import com.e2d.odin.application.fake.InMemoryOrganizationRepository;
 import com.e2d.odin.application.fake.InMemoryProjectMemberRepository;
+import com.e2d.odin.application.fake.InMemoryTaggingRepository;
+import com.e2d.odin.application.fake.InMemoryTopicRepository;
 import com.e2d.odin.application.fake.SequenceIdGenerator;
+import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.organization.Capability;
 import com.e2d.odin.domain.organization.Company;
@@ -21,6 +19,9 @@ import com.e2d.odin.domain.organization.Project;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.UserId;
+import com.e2d.odin.domain.topic.TaggingStatus;
+import com.e2d.odin.domain.topic.Topic;
+import com.e2d.odin.domain.topic.TopicId;
 import java.util.EnumSet;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -85,7 +86,7 @@ class DescribeMeTest {
         InMemoryOrganizationRepository organizations = new InMemoryOrganizationRepository();
         InMemoryProjectMemberRepository members = new InMemoryProjectMemberRepository(organizations);
         CompanyId company = Fixtures.company(organizations);
-        Project created = new CreateProject(organizations, new SequenceIdGenerator())
+        Project created = new CreateProject(organizations, new SequenceIdGenerator(), new InMemoryAuditLog())
                 .execute(Actors.companyAdmin(company), company, "Obra");
         Actor worker = Actors.worker(company);
         DescribeMe describe = Fixtures.describeMe(organizations, members);

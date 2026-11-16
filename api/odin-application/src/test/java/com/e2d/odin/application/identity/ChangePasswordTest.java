@@ -7,11 +7,13 @@ import com.e2d.odin.application.fake.Actors;
 import com.e2d.odin.application.fake.FakePasswordHasher;
 import com.e2d.odin.application.fake.FakeSecretHasher;
 import com.e2d.odin.application.fake.InMemoryAdminSessionRepository;
+import com.e2d.odin.application.fake.InMemoryAuditLog;
 import com.e2d.odin.application.fake.InMemoryMembershipRepository;
 import com.e2d.odin.application.fake.InMemoryUserRepository;
 import com.e2d.odin.application.fake.MutableClock;
 import com.e2d.odin.application.fake.People;
 import com.e2d.odin.application.fake.SequenceTokenGenerator;
+import com.e2d.odin.application.port.AuditContext;
 import com.e2d.odin.application.shared.SessionSettings;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Role;
@@ -36,7 +38,8 @@ class ChangePasswordTest {
     private final FakePasswordHasher passwords = new FakePasswordHasher();
     private final StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(),
             new FakeSecretHasher(), new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-    private final ChangePassword change = new ChangePassword(users, memberships, passwords, sessions);
+    private final InMemoryAuditLog audit = new InMemoryAuditLog();
+    private final ChangePassword change = new ChangePassword(users, memberships, passwords, sessions, audit);
     private final CompanyId company = new CompanyId(UUID.randomUUID());
     private final UserId adminId = new UserId(UUID.randomUUID());
     private final UserId workerId = new UserId(UUID.randomUUID());
@@ -151,7 +154,7 @@ class ChangePasswordTest {
 
     @Test
     void oldPasswordNoLongerLogsIn() {
-        LogInAdmin logIn = new LogInAdmin(users, memberships, passwords, sessions);
+        LogInAdmin logIn = new LogInAdmin(users, memberships, passwords, sessions, new InMemoryAuditLog(), () -> AuditContext.SYSTEM);
 
         change.execute(self, adminId, Optional.of(OLD), NEW);
 

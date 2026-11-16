@@ -1,10 +1,13 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AdminSessions;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.NotFoundException;
@@ -21,9 +24,11 @@ public class DeleteUser {
     private final ProjectMemberRepository projectMembers;
     private final AdminSessions sessions;
     private final Clock clock;
+    private final AuditLog audit;
 
     public DeleteUser(UserRepository users, MembershipRepository memberships, ProjectMemberRepository projectMembers,
-            AdminSessions sessions, Clock clock) {
+            AdminSessions sessions, Clock clock, AuditLog audit) {
+        this.audit = audit;
         this.users = users;
         this.memberships = memberships;
         this.projectMembers = projectMembers;
@@ -44,6 +49,7 @@ public class DeleteUser {
             memberships.delete(id, m.companyId(), now);
         });
         users.delete(id, now);
+        audit.record(AuditEntry.by(actor, AuditAction.USER_DELETED).on("USER", id.value().toString(), null));
         sessions.closeAllOf(id);
     }
 }

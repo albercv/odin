@@ -121,18 +121,18 @@ class IntakeConfirmationIT {
         Clock clock = Clock.systemUTC();
         UseCaseConfiguration config = new UseCaseConfiguration();
         IntakeEffects effects = config.intakeEffects(intake, docs, organizations,
-                new MarkCaseDocuments(docs, caseFiles, clock), new SupersedeDocument(docs, clock),
+                new MarkCaseDocuments(docs, caseFiles, clock, new NoAudit()), new SupersedeDocument(docs, clock, new NoAudit()),
                 new AddToCaseFiles(organizations, new PostgresProjectMemberRepository(tx), docs, caseFiles,
-                        new RandomUuidGenerator(), clock), new InstallationSettings("t", true), clock);
-        confirm = config.confirmIntakeProposals(intake, effects, transactionManager);
-        decide = config.decideIntakeProposal(intake, effects, transactionManager);
-        place = config.placeIntakeDocument(effects, transactionManager);
+                        new RandomUuidGenerator(), clock, new NoAudit()), new InstallationSettings("t", true), clock);
+        confirm = config.confirmIntakeProposals(intake, effects, transactionManager, new NoAudit());
+        decide = config.decideIntakeProposal(intake, effects, transactionManager, new NoAudit());
+        place = config.placeIntakeDocument(effects, transactionManager, new NoAudit());
         unplaced = config.listUnplacedDocuments(intake, docs);
-        close = config.closeIntakeBatch(intake, clock, transactionManager);
+        discard = config.discardIntakeDocument(docs, new WithdrawDocument(docs, clock, new NoAudit()), effects,
+                transactionManager, new NoAudit());
+        close = config.closeIntakeBatch(intake, clock, transactionManager, new NoAudit());
         listBatches = config.listOpenIntakeBatches(intake, docs);
-        start = new StartIntake(intake, organizations, new RandomUuidGenerator(), clock);
-        discard = config.discardIntakeDocument(docs, new WithdrawDocument(docs, clock), effects,
-                transactionManager);
+        start = new StartIntake(intake, organizations, new RandomUuidGenerator(), clock, new NoAudit());
     }
 
     @BeforeEach

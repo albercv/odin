@@ -62,6 +62,17 @@ async function allDocuments(companyId: string, withdrawn = false) {
   return { documents: documents.slice(0, MAX_DOCUMENTS), truncated: documents.length > MAX_DOCUMENTS };
 }
 
+export type ActivityFilters = Partial<Record<'from' | 'to' | 'companyId' | 'projectId' | 'action' | 'actorUserId' | 'channel' | 'outcome', string>>;
+
+const activityQuery = (filters: ActivityFilters, cursor?: string) => {
+  const query = new URLSearchParams();
+  Object.entries({ ...filters, cursor }).forEach(([k, v]) => { if (v) query.set(k, v); });
+  const text = query.toString();
+  return text ? `?${text}` : '';
+};
+
+export const activityCsvUrl = (filters: ActivityFilters) => `${a}/activity.csv${activityQuery(filters)}`;
+
 export const originalUrl = (documentId: string) => `${a}/documents/${documentId}/original`;
 /** The original of a pending document of a batch: only its admin opens it, from the tray. */
 export const intakeOriginalUrl = (companyId: string, batchId: string, documentId: string) =>
@@ -127,6 +138,14 @@ export const api = {
     request<S['MemberView']>('PATCH', `${co(id)}/members/${userId}`, changes),
   setActive: (id: string, userId: string, active: boolean) => api.updateMember(id, userId, { active }),
   removeMember: (id: string, userId: string) => request<void>('DELETE', `${co(id)}/members/${userId}`),
+  activity: (filters: ActivityFilters, cursor?: string) => request<S['ActivityPageView']>('GET', `${a}/activity${activityQuery(filters, cursor)}`),
+  activityIntegrity: () => request<S['ActivityIntegrityView']>('GET', `${a}/activity/integrity`),
+  checkSeal: (b: S['SealCheck']) => request<S['SealCheckView']>('POST', `${a}/activity/seal-check`, b),
+  auditSettings: () => request<S['AuditSettingsView']>('GET', `${a}/audit-settings`),
+  updateAuditSettings: (b: S['UpdateAuditSettings']) => request<S['AuditSettingsView']>('PUT', `${a}/audit-settings`, b),
+  activityKeys: () => request<S['ActivityKeysView']>('GET', `${a}/activity-keys`),
+  issueActivityKey: (b: S['IssueActivityKey']) => request<S['IssuedActivityKeyView']>('POST', `${a}/activity-keys`, b),
+  revokeActivityKey: (id: string) => request<void>('DELETE', `${a}/activity-keys/${id}`),
   groupAdmins: () => request<S['GroupAdminView'][]>('GET', `${a}/group-admins`),
   addGroupAdmin: (b: S['AddGroupAdmin']) => request<S['GroupAdminAdded']>('POST', `${a}/group-admins`, b),
   revokeGroupAdmin: (userId: string) => request<void>('DELETE', `${a}/group-admins/${userId}`),

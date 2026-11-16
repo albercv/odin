@@ -1,5 +1,9 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
@@ -20,8 +24,11 @@ public class StartIntake {
     private final OrganizationRepository organizations;
     private final IdGenerator ids;
     private final Clock clock;
+    private final AuditLog audit;
 
-    public StartIntake(IntakeRepository intake, OrganizationRepository organizations, IdGenerator ids, Clock clock) {
+    public StartIntake(IntakeRepository intake, OrganizationRepository organizations, IdGenerator ids, Clock clock,
+            AuditLog audit) {
+        this.audit = audit;
         this.intake = intake;
         this.organizations = organizations;
         this.ids = ids;
@@ -37,6 +44,8 @@ public class StartIntake {
         IntakeBatch batch = IntakeBatch.open(new IntakeBatchId(ids.newId()), companyId, actor.userId(), channel,
                 clock.instant());
         intake.save(batch);
+        audit.record(AuditSupport.onIntake(AuditEntry.by(actor, AuditAction.INTAKE_STARTED), companyId, batch.id())
+                .with("channel", channel.name()));
         return batch;
     }
 }

@@ -1,6 +1,10 @@
 package com.e2d.odin.application.intake;
 
+import com.e2d.odin.application.audit.AuditSupport;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.IntakeRepository;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.intake.DecisionState;
 import com.e2d.odin.domain.intake.IntakeBatch;
@@ -21,10 +25,12 @@ public class CloseIntakeBatch {
 
     private final IntakeRepository intake;
     private final Clock clock;
+    private final AuditLog audit;
 
-    public CloseIntakeBatch(IntakeRepository intake, Clock clock) {
+    public CloseIntakeBatch(IntakeRepository intake, Clock clock, AuditLog audit) {
         this.intake = intake;
         this.clock = clock;
+        this.audit = audit;
     }
 
     public IntakeBatch execute(Actor actor, CompanyId companyId, IntakeBatchId batchId) {
@@ -42,6 +48,8 @@ public class CloseIntakeBatch {
         open.forEach(p -> intake.save(p.reject(actor.userId(), now)));
         IntakeBatch closed = batch.close(actor.userId(), now);
         intake.save(closed);
+        audit.record(AuditSupport.onIntake(AuditEntry.by(actor, AuditAction.INTAKE_CLOSED), companyId, batchId)
+                .with("rejected", open.size()));
         return closed;
     }
 }

@@ -37,6 +37,22 @@ class OpenApiContractIT extends AbstractIT {
     }
 
     @Test
+    void activityRoutesNeitherSortGroupNorCount() {
+        JsonNode paths = servedContract().at("/paths");
+        List<String> routes = List.of("/v1/admin/activity", "/v1/admin/activity.csv");
+        for (String route : routes) {
+            List<String> parameters = paths.at("/" + route.replace("/", "~1") + "/get/parameters").valueStream()
+                    .map(p -> p.get("name").asString()).toList();
+            assertThat(parameters).doesNotContain("sort", "order", "orderBy", "group", "groupBy", "count")
+                    .contains("from", "to", "companyId", "projectId", "action", "actorUserId", "channel", "outcome");
+        }
+        assertThat(paths.at("/~1v1~1admin~1activity/get/parameters").valueStream()
+                .map(p -> p.get("name").asString())).contains("cursor");
+        assertThat(paths.has("/v1/admin/activity/integrity")).isTrue();
+        assertThat(paths.has("/v1/admin/activity/seal-check")).isTrue();
+    }
+
+    @Test
     void searchResponseSchemaIsDistinctFromItsRequestSchema() {
         JsonNode search = servedContract().at("/paths/~1v1~1search/post");
         JsonNode schemas = servedContract().at("/components/schemas");

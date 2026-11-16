@@ -1,6 +1,7 @@
 package com.e2d.odin.application.identity;
 
 import com.e2d.odin.application.port.AccessKeyRepository;
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.MembershipRepository;
 import com.e2d.odin.application.port.SecretHasher;
@@ -8,6 +9,8 @@ import com.e2d.odin.application.port.TokenGenerator;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.AccessPolicy;
 import com.e2d.odin.application.shared.Validation;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.AccessKey;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.identity.Membership;
@@ -32,9 +35,11 @@ public class IssueAccessKey {
     private final TokenGenerator tokens;
     private final IdGenerator ids;
     private final Clock clock;
+    private final AuditLog audit;
 
     public IssueAccessKey(AccessKeyRepository keys, UserRepository users, MembershipRepository memberships,
-            SecretHasher secrets, TokenGenerator tokens, IdGenerator ids, Clock clock) {
+            SecretHasher secrets, TokenGenerator tokens, IdGenerator ids, Clock clock, AuditLog audit) {
+        this.audit = audit;
         this.keys = keys;
         this.users = users;
         this.memberships = memberships;
@@ -56,6 +61,9 @@ public class IssueAccessKey {
         AccessKeyId id = new AccessKeyId(ids.newId());
         keys.save(new AccessKey(id, userId, companyId, Validation.requireText(label, "la etiqueta"),
                 prefix, secrets.hash(secret), clock.instant(), Optional.empty()));
+        audit.record(AuditEntry.by(actor, AuditAction.ACCESS_KEY_ISSUED).onCompany(companyId)
+                .on("ACCESS_KEY", id.value().toString(), null).with("prefix", prefix)
+                .with("workerId", userId.value().toString()));
         return new IssuedKey(id, prefix, "odin_" + prefix + "_" + secret);
     }
 

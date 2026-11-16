@@ -1,11 +1,14 @@
 package com.e2d.odin.application.knowledge;
 
+import com.e2d.odin.application.port.AuditLog;
 import com.e2d.odin.application.port.IdGenerator;
 import com.e2d.odin.application.port.KnowledgeCardRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.shared.Validation;
 import com.e2d.odin.application.shared.WorkerAccess;
+import com.e2d.odin.domain.audit.AuditAction;
+import com.e2d.odin.domain.audit.AuditEntry;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.knowledge.CardStatus;
 import com.e2d.odin.domain.knowledge.KnowledgeCard;
@@ -22,9 +25,11 @@ public class SaveKnowledgeCard {
     private final KnowledgeCardRepository cards;
     private final IdGenerator ids;
     private final Clock clock;
+    private final AuditLog audit;
 
     public SaveKnowledgeCard(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            KnowledgeCardRepository cards, IdGenerator ids, Clock clock) {
+            KnowledgeCardRepository cards, IdGenerator ids, Clock clock, AuditLog audit) {
+        this.audit = audit;
         this.organizations = organizations;
         this.projectMembers = projectMembers;
         this.cards = cards;
@@ -39,6 +44,9 @@ public class SaveKnowledgeCard {
                 Validation.requireText(title, "el título"), Validation.requireText(body, "el texto"),
                 Optional.empty(), actor.userId(), clock.instant(), CardStatus.PENDING, Optional.empty());
         cards.save(card);
+        AuditEntry entry = AuditEntry.by(actor, AuditAction.CARD_SAVED).onCompany(card.companyId())
+                .on("CARD", card.id().value().toString(), null);
+        audit.record(projectId.map(entry::onProject).orElse(entry));
         return card;
     }
 }
