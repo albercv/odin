@@ -35,6 +35,7 @@ import com.e2d.odin.domain.identity.User;
 import com.e2d.odin.domain.shared.AccessKeyId;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.ForbiddenException;
+import com.e2d.odin.domain.shared.NotFoundException;
 import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.UserId;
 import java.util.List;
@@ -190,12 +191,52 @@ class IdentityAuditTest {
         User carlos = People.member(users, memberships, new UserId(UUID.randomUUID()), "Carlos",
                 Optional.of("c@demo.test"), Role.COMPANY_ADMIN, company, true, Optional.of("pw:vieja-clave-123"));
 
+        sessions.open(carlos.id());
+        sessions.open(carlos.id());
         new ChangePassword(users, memberships, passwords, sessions, audit).execute(group, carlos.id(), Optional.empty(),
                 "clave-nueva-12345");
 
         AuditEntry e = only(AuditAction.PASSWORD_CHANGED);
         assertThat(e.target()).contains(user(carlos));
-        assertThat(e.details()).isEqualTo(Map.of("own", false));
+        assertThat(e.details()).isEqualTo(Map.of("own", false, "sessionsClosed", 2));
+    }
+
+    @Test
+    void closingAnOwnSessionRecordsSessionClosedWithoutClientData() {
+        sessions.open(group.userId(), panel.current());
+        UUID id = sessions.ofUser(group.userId()).get(0).id();
+
+        new OwnAdminSessions(sessions, new SessionSettings(), audit).close(group, id);
+
+        AuditEntry e = only(AuditAction.SESSION_CLOSED);
+        assertThat(e.target()).contains(new AuditEntry.Target("SESSION", id.toString(), null));
+        assertThat(e.details()).isEmpty();
+    }
+
+    @Test
+    void closingAForeignOrUnknownSessionIs404AndLeavesNoEntryNorChange() {
+        sessions.open(admin.userId());
+        UUID foreign = sessions.ofUser(admin.userId()).get(0).id();
+        OwnAdminSessions own = new OwnAdminSessions(sessions, new SessionSettings(), audit);
+
+        assertThatThrownBy(() -> own.close(group, foreign)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> own.close(group, UUID.randomUUID())).isInstanceOf(NotFoundException.class);
+
+        assertThat(sessions.ofUser(admin.userId())).hasSize(1);
+        assertThat(audit.entries).isEmpty();
+    }
+
+    @Test
+    void listMarksTheCurrentSessionAndShowsOnlyOwn() {
+        String mine = sessions.open(group.userId(), panel.current());
+        sessions.open(group.userId());
+        sessions.open(admin.userId());
+
+        var listed = new OwnAdminSessions(sessions, new SessionSettings(), audit).list(group, mine);
+
+        assertThat(listed).hasSize(2);
+        assertThat(listed).filteredOn(OwnAdminSessions.Listed::current).singleElement()
+                .satisfies(l -> assertThat(l.session().ip()).contains("10.0.0.7"));
     }
 
     @Test
@@ -246,6 +287,10 @@ class IdentityAuditTest {
         assertThat(e.actorRole()).contains("GROUP_ADMIN");
         assertThat(e.company()).isEmpty();
         assertThat(e.details()).isEqualTo(Map.of("ip", "10.0.0.7", "userAgent", "Firefox"));
+        assertThat(sessions.ofUser(gema.id())).singleElement().satisfies(stored -> {
+            assertThat(stored.ip()).contains("10.0.0.7");
+            assertThat(stored.userAgent()).contains("Firefox");
+        });
     }
 
     @Test

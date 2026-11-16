@@ -173,7 +173,7 @@ class RemoveMemberTest {
         memberships.save(new Membership(personId, other, Set.of(Role.WORKER), true));
         keyOf(personId, company, "abcdefgh", "uno");
         keyOf(personId, other, "ijklmnop", "dos");
-        ResolveActor resolve = new ResolveActor(keys, users, memberships, sessions, secrets);
+        ResolveActor resolve = new ResolveActor(keys, users, memberships, sessions, secrets, null);
 
         remove.execute(Actors.companyAdmin(company), company, personId);
         new AddMember(users, memberships, organizations, projectMembers,

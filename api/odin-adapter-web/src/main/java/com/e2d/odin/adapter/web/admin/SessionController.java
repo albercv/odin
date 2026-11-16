@@ -10,6 +10,7 @@ import com.e2d.odin.application.identity.DescribeAdmin;
 import com.e2d.odin.application.identity.LogInAdmin;
 import com.e2d.odin.application.identity.LogOutAdmin;
 import com.e2d.odin.application.identity.NewSession;
+import com.e2d.odin.application.identity.OwnAdminSessions;
 import com.e2d.odin.application.organization.ListCompanies;
 import com.e2d.odin.application.shared.InstallationSettings;
 import com.e2d.odin.domain.identity.Actor;
@@ -17,13 +18,16 @@ import com.e2d.odin.domain.shared.UnauthorizedException;
 import com.e2d.odin.domain.shared.ValidationException;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -41,10 +45,12 @@ public class SessionController {
     private final DescribeAdmin describeAdmin;
     private final InstallationSettings installation;
     private final ClientAddress addresses;
+    private final OwnAdminSessions ownSessions;
 
     public SessionController(LogInAdmin logIn, LogOutAdmin logOut, LoginRateLimiter limiter,
             ListCompanies listCompanies, DescribeAdmin describeAdmin, InstallationSettings installation,
-            ClientAddress addresses) {
+            ClientAddress addresses, OwnAdminSessions ownSessions) {
+        this.ownSessions = ownSessions;
         this.logIn = logIn;
         this.logOut = logOut;
         this.limiter = limiter;
@@ -86,9 +92,24 @@ public class SessionController {
     }
 
     @GetMapping("/me")
-    public Responses.AdminMe me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor) {
+    public Responses.AdminMe me(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @CookieValue(name = ActorResolutionFilter.SESSION_COOKIE, required = false) String token) {
         return Responses.AdminMe.from(actor, describeAdmin.execute(actor), listCompanies.execute(actor),
-                installation.scannedDocumentsSupported());
+                installation.scannedDocumentsSupported(), ownSessions.expiry(token).orElse(null));
+    }
+
+    @GetMapping("/sessions")
+    public List<Responses.AdminSessionView> sessions(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @CookieValue(name = ActorResolutionFilter.SESSION_COOKIE, required = false) String token) {
+        return ownSessions.list(actor, token).stream().map(Responses.AdminSessionView::from).toList();
+    }
+
+    @DeleteMapping("/sessions/{id}")
+    @ApiResponse(responseCode = "204", description = "Sesión cerrada")
+    public ResponseEntity<Void> closeSession(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID id) {
+        ownSessions.close(actor, id);
+        return ResponseEntity.noContent().build();
     }
 
     private static ResponseCookie cookie(String value, boolean expire) {

@@ -1,6 +1,6 @@
 export const ACTIONS: Record<string, string> = {
   AUDIT_ENABLED: 'Registro encendido', AUDIT_DISABLED: 'Registro apagado', AUDIT_SETTINGS_UPDATED: 'Ajustes del registro cambiados',
-  REAUTHENTICATION_FAILED: 'Contraseña mala al volver a identificarse', LOGIN_SUCCEEDED: 'Entrada al panel', LOGIN_FAILED: 'Entrada fallida al panel', LOGOUT: 'Salida del panel',
+  REAUTHENTICATION_FAILED: 'Contraseña mala al volver a identificarse', LOGIN_SUCCEEDED: 'Entrada al panel', LOGIN_FAILED: 'Entrada fallida al panel', LOGOUT: 'Salida del panel', SESSION_EXPIRED: 'Sesión caducada', SESSION_CLOSED: 'Sesión cerrada desde la lista',
   INSTALLATION_SET_UP: 'Instalación configurada', ADMIN_PASSWORD_RECOVERED: 'Contraseña de administrador recuperada',
   COMPANY_CREATED: 'Empresa creada', COMPANY_UPDATED: 'Empresa cambiada', COMPANY_CAPABILITIES_CHANGED: 'Capacidades de la empresa cambiadas',
   GROUP_ADMIN_ADDED: 'Administrador de grupo añadido', GROUP_ADMIN_REVOKED: 'Administración de grupo quitada',

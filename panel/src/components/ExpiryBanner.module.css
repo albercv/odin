@@ -1,0 +1,2 @@
+.banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 22px; background: var(--accent-tint); border-bottom: 1px solid var(--accent); }
+.banner p { margin: 0; font-weight: 500; }

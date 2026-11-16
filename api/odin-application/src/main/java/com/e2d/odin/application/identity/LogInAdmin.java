@@ -44,7 +44,7 @@ public class LogInAdmin {
             audit.recordDenied(AuditSupport.withClient(failedEntry(found), context.current()));
             throw new UnauthorizedException(ResolveActor.INVALID_CREDENTIALS);
         }
-        NewSession session = new NewSession(sessions.open(user.id()), user.id());
+        NewSession session = new NewSession(sessions.open(user.id(), context.current()), user.id());
         audit.record(AuditSupport.withClient(AuditEntry.by(actorOf(user), AuditAction.LOGIN_SUCCEEDED),
                 context.current()));
         return session;

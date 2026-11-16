@@ -11,9 +11,11 @@ import { Gaps } from '../pages/Gaps';
 import { GroupAdmins } from '../pages/GroupAdmins';
 import { Intake } from '../pages/Intake';
 import { Review } from '../pages/Review';
+import { Sessions } from '../pages/Sessions';
 import { Topics } from '../pages/Topics';
 import { Usage } from '../pages/Usage';
 import { EmptyState } from '../ui/EmptyState';
+import { ExpiryBanner } from '../components/ExpiryBanner';
 import { Notice } from '../components/Notice';
 import { ProjectTermsContext, projectTerms } from '../components/projectTerms';
 import { withViewTransition } from '../ui/viewTransition';
@@ -60,7 +62,7 @@ function useGroupCompanies(isGroup: boolean) {
   return useLoad(() => (isGroup ? api.companies() : Promise.resolve<S['CompanyView'][]>([])), [isGroup]);
 }
 
-const needsCompany = (page: Page) => page !== 'companies' && page !== 'account' && page !== 'groupAdmins' && page !== 'activity';
+const needsCompany = (page: Page) => page !== 'companies' && page !== 'account' && page !== 'sessions' && page !== 'groupAdmins' && page !== 'activity';
 
 /** The chosen company's name and its word for «project»; recomputed only when the list or the choice changes. */
 function useCurrentCompany(companies: S['CompanyRef'][], companyId: string) {
@@ -90,6 +92,7 @@ function CompanyPage({ page, companyId, me, onPendingChanged }: CompanyPageProps
 function AdminPages({ page, me, companies }: { page: Page; me: S['AdminMe']; companies: S['CompanyRef'][] }) {
   return (
     <>
+      {page === 'sessions' && <Sessions />}
       {page === 'activity' && <Activity me={me} companies={companies} />}
       {page === 'groupAdmins' && me.role === 'GROUP_ADMIN' && <GroupAdmins me={me} />}
     </>
@@ -121,7 +124,7 @@ export function AppShell({ me, onLogout, onPasswordChanged, onProfileChanged }: 
         <Sidebar isGroup={isGroup} name={me.displayName} companyName={companyId ? companyName : undefined} page={page}
           switcher={{ companies, currentId: companyId, onChange: change }}
           pending={pending} setPage={setPage} onLogout={onLogout} />
-        <main className={styles.main}>
+        <main className={styles.main}><ExpiryBanner me={me} onRefresh={onProfileChanged} />
           {!route.caseId && page === 'account' && <Account me={me} onPasswordChanged={onPasswordChanged} onProfileChanged={onProfileChanged} />}
           {!route.caseId && <AdminPages page={page} me={me} companies={companies} />}
           {!route.caseId && page === 'companies' && <Companies onOpen={open} onChanged={groupCompanies.reload} />}

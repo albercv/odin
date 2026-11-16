@@ -14,6 +14,13 @@ export const setUnauthorizedHandler = (fn: () => void) => {
   onUnauthorized = fn;
 };
 
+let successListeners: (() => void)[] = [];
+/** Tells the caller after every successful API call; returns the way to stop listening. */
+export const onApiSuccess = (fn: () => void) => {
+  successListeners.push(fn);
+  return () => { successListeners = successListeners.filter((l) => l !== fn); };
+};
+
 async function request<T>(method: string, path: string, body?: unknown, quiet401 = false): Promise<T> {
   const isForm = body instanceof FormData;
   const res = await fetch(path, {
@@ -27,6 +34,7 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
     const problem = (await res.json().catch(() => ({}))) as { detail?: string };
     throw new ApiError(res.status, problem.detail ?? 'Algo ha fallado. Inténtalo de nuevo.');
   }
+  successListeners.forEach((l) => l());
   return (res.status === 204 ? undefined : await res.json().catch(() => undefined)) as T;
 }
 
@@ -116,6 +124,8 @@ export const api = {
   me: () => request<S['AdminMe']>('GET', `${a}/me`, undefined, true),
   login: (b: S['Login']) => request<S['UserRef']>('POST', `${a}/session`, b, true),
   logout: () => request<void>('DELETE', `${a}/session`, undefined, true),
+  mySessions: () => request<S['AdminSessionView'][]>('GET', `${a}/sessions`),
+  closeSession: (id: string) => request<void>('DELETE', `${a}/sessions/${id}`),
   companies: () => request<S['CompanyView'][]>('GET', `${a}/companies`),
   createCompany: (name: string, code: string) => request<S['CompanyView']>('POST', `${a}/companies`, { name, code }),
   updateCompany: (id: string, changes: S['UpdateCompany']) => request<S['CompanyView']>('PATCH', co(id), changes),
