@@ -4,7 +4,7 @@ La lanza el administrador de la empresa en el servidor de la oficina: make prime
 Pide su correo y su contraseña (getpass); la contraseña no se guarda ni se muestra. Nada sale del equipo.
 Variables: INSTALACION_ENV (por defecto deploy/.env) y PRIMERA_CARGA_API_URL (por defecto el puerto de ODIN_API_PORT en ese fichero).
 D-099: INSTALACION_PROYECTO distinto de odin no va a los puertos del propietario, y --si hacia ellos pide
-CONFIRMAR_INSTALACION=PROPIETARIO."""
+CONFIRMAR_INSTALACION=ESCRIBIR."""
 import argparse
 import getpass
 import hashlib
@@ -94,15 +94,17 @@ def empresa_de(api, codigo):
 
 
 def abrir_lote(api, base):
-    """Reutiliza el lote abierto; si hay una primera carga ya en lectura o en revisión, no abre otra."""
+    """Reutiliza el lote abierto. Solo se niega si hay uno leyéndose; uno en revisión (o cerrado con pendientes) no
+    bloquea. Devuelve el lote, si se reutiliza y si hay otra primera carga pendiente de revisar."""
     lotes = api.admin("GET", base)["batches"]
-    if any(lote["state"] != "OPEN" for lote in lotes):
-        raise SystemExit("Ya hay una primera carga en curso (leyéndose o esperando tu revisión). "
-                         "Termínala en el panel, en «Primera carga». No se ha subido nada.")
+    if any(lote["state"] == "READING" for lote in lotes):
+        raise SystemExit("Ya hay una primera carga leyéndose. Espera a que termine la lectura y vuelve a lanzar la "
+                         "orden. No se ha subido nada.")
+    otra_pendiente = any(lote["state"] in ("IN_REVIEW", "CLOSED") for lote in lotes)
     abiertos = [lote for lote in lotes if lote["state"] == "OPEN"]
     if abiertos:
-        return abiertos[0]["id"], True
-    return api.admin("POST", base, {"channel": "COMMAND"})["id"], False
+        return abiertos[0]["id"], True, otra_pendiente
+    return api.admin("POST", base, {"channel": "COMMAND"})["id"], False, otra_pendiente
 
 
 def avisos_de_partida(api, empresa, lote, tamano, libre):
@@ -121,11 +123,13 @@ def pedir_sesion(api, correo=None):
         raise SystemExit("El correo o la contraseña no son válidos. No se ha subido nada.")
 
 
-def resumen(empresa, ficheros, saltados, avisos, reutiliza):
+def resumen(empresa, ficheros, saltados, avisos, reutiliza, otra_pendiente=False):
     lineas = [f"Empresa: {empresa['name']}",
               f"Ficheros: {len(ficheros)} ({sum(f.stat().st_size for f, _ in ficheros) // 2**20} MB)"]
     if reutiliza:
         lineas.append("Hay una primera carga abierta sin cerrar: se sigue con ella.")
+    if otra_pendiente:
+        lineas.append("Hay otra primera carga pendiente de revisar en el panel; esta se revisa aparte.")
     lineas += [f"Se salta: {mostrar(ruta)}: {motivo}" for ruta, motivo in saltados]
     return lineas + [f"AVISO: {a}" for a in avisos]
 
@@ -165,11 +169,11 @@ def presentar(api, a, libre, limite):
     pedir_sesion(api, a.correo)
     empresa = empresa_de(api, a.empresa)
     base = f"/v1/admin/companies/{empresa['id']}/intake-batches"
-    lote, reutiliza = abrir_lote(api, base)
+    lote, reutiliza, otra_pendiente = abrir_lote(api, base)
     tamano = sum(f.stat().st_size for f, _ in ficheros)
     libre = shutil.disk_usage(a.carpeta).free if libre is None else libre
     avisos = avisos_de_partida(api, empresa["id"], lote, tamano, libre)
-    print("\n".join(resumen(empresa, ficheros, saltados, avisos, reutiliza)))
+    print("\n".join(resumen(empresa, ficheros, saltados, avisos, reutiliza, otra_pendiente)))
     return ficheros, saltados, f"{base}/{lote}"
 
 
@@ -200,7 +204,7 @@ def ejecutar(api, argv, libre=None, limite=LIMITE):
 def proteger(url, si):
     """D-099 con proteger_propietario de datos_prueba.py sobre el puerto de destino: una pila de ensayo nunca va a los
     puertos del propietario, y sin la pregunta «¿Seguir?» (--si) escribir en su instalación pide
-    CONFIRMAR_INSTALACION=PROPIETARIO. El camino interactivo no cambia."""
+    CONFIRMAR_INSTALACION=ESCRIBIR. El camino interactivo no cambia."""
     puerto = str(urllib.parse.urlsplit(url).port)
     if puerto in dp.PUERTOS_PROPIETARIO:
         dp.proteger_propietario({"ODIN_API_PORT": puerto}, os.environ.get("INSTALACION_PROYECTO", "odin"), escribe=si)

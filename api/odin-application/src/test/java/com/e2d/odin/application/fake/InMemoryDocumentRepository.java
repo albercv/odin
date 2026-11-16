@@ -321,6 +321,34 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public void clearScanOf(CompanyId companyId, DocumentId scanId) {
+        Document d = documents.get(scanId);
+        if (d == null || !d.companyId().equals(companyId)) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+        documents.put(scanId, d.withoutScanOf());
+    }
+
+    @Override
+    public Map<DocumentId, List<DocumentRef>> scanCopiesOf(CompanyScope scope, ProjectVisibility visibility,
+            Optional<DocumentStatus> status, java.util.Collection<DocumentId> originals) {
+        return documents.values().stream().filter(d -> d.scanOf().filter(originals::contains).isPresent())
+                .filter(d -> findById(scope, visibility, d.id()).isPresent())
+                .filter(d -> status.map(s -> s == d.status()).orElse(true))
+                .sorted(java.util.Comparator.comparing(Document::title).thenComparing(d -> d.id().value()))
+                .collect(java.util.stream.Collectors.groupingBy(d -> d.scanOf().get(), java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.mapping(DocumentRef::of, java.util.stream.Collectors.toList())));
+    }
+
+    @Override
+    public Map<DocumentId, DocumentRef> refsOf(CompanyScope scope, ProjectVisibility visibility,
+            java.util.Collection<DocumentId> ids) {
+        Map<DocumentId, DocumentRef> found = new java.util.HashMap<>();
+        ids.forEach(id -> findById(scope, visibility, id).ifPresent(d -> found.put(id, DocumentRef.of(d))));
+        return found;
+    }
+
+    @Override
     public boolean readerQueueBusy(CompanyId companyId) {
         return documents.values().stream().anyMatch(d -> d.companyId().equals(companyId) && !d.withdrawn()
                 && (d.status() == DocumentStatus.PENDING_READER || d.status() == DocumentStatus.READER_PROCESSING));

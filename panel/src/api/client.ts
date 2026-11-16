@@ -86,6 +86,7 @@ export const intake = {
     return request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/import`, form);
   },
   discover: (c: string, b: string) => request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/discover`),
+  close: (c: string, b: string) => request<S['IntakeBatchView']>('POST', `${ib(c, b)}/close`),
   closeList: (c: string, b: string) => request<S['IntakeBatchView']>('POST', `${ib(c, b)}/project-list/close`),
   confirmCandidates: (c: string, b: string, decisions: S['ProjectDecisionRequest'][]) =>
     request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/confirm`, { decisions }),
@@ -137,6 +138,8 @@ export const api = {
     request<S['IssuedKeyView']>('POST', `${co(id)}/members/${userId}/keys`, { label }),
   revokeKey: (keyId: string) => request<void>('DELETE', `${a}/keys/${keyId}`),
   documents: allDocuments,
+  document: (documentId: string) => request<S['DocumentView']>('GET', `${a}/documents/${documentId}`),
+  unlinkScanCopy: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/scan-of`),
   documentPage,
   withdraw: (documentId: string) => request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/withdrawal`),
   restore: (documentId: string) => request<S['DocumentView']>('DELETE', `${a}/documents/${documentId}/withdrawal`),

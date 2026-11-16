@@ -158,6 +158,18 @@ class ClassifyIntakeTest {
     }
 
     @Test
+    void classifyingSavesTheDocumentTypeAndLeavesUnrecognisedOnesWithout() {
+        confirmed(OLMO, olmoId);
+        Document acta = pending("a/uno.pdf", "Acta de la junta de marzo\nComunidad de Propietarios Calle Olmo 24");
+        Document other = pending("a/dos.pdf", "Hola, esto es una carta");
+
+        classify(false).execute();
+
+        assertThat(intake.intakeTypes(company, batch.id())).containsOnlyKeys(acta.id()).containsEntry(acta.id(), "acta")
+                .doesNotContainKey(other.id());
+    }
+
+    @Test
     void rulesGiveAHighProjectWithTheLiteralReasonAndTheModelIsNotAsked() {
         confirmed(OLMO, olmoId);
         confirmed(HAYA, hayaId);

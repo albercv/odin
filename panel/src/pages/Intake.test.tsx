@@ -17,7 +17,7 @@ const batch = (changes = {}) => ({
 const obra = { id: 'p1', companyId: 'c1', name: 'Calle Olmo 24', restricted: true, memberCount: 0 };
 const otra = { id: 'p2', companyId: 'c1', name: 'Residencial Sur', restricted: true, memberCount: 0 };
 const item = (id: string, title: string, reason: string, extra = {}) => ({ id, documentId: `d-${id}`, title, source: 'RULES', reason, ...extra });
-const projectGroup = { kind: 'PROJECT', confidence: 'HIGH', projectId: 'p1', proposals: [item('a', 'Factura 12', 'Calle Olmo 24, cabecera'), item('b', 'Acta 3', 'obra Calle Olmo 24')] };
+const projectGroup = { kind: 'PROJECT', confidence: 'HIGH', projectId: 'p1', proposals: [item('a', 'Factura 12', 'Calle Olmo 24, cabecera', { documentType: 'poliza' }), item('b', 'Acta 3', 'obra Calle Olmo 24')] };
 const pairGroup = { kind: 'SUPERSEDES', confidence: 'HIGH', projectId: 'p1', proposals: [item('c', 'Póliza 2026', 'sustituye a la póliza nº 8', { targetDocumentId: 'd-old', targetTitle: 'Póliza 2025' })] };
 const openBatches = { batches: [{ id: 'b1', state: 'IN_REVIEW', channel: 'COMMAND', createdAt: '2026-11-13T10:00:00Z' }, { id: 'b0', state: 'IN_REVIEW', channel: 'COMMAND', createdAt: '2026-11-01T10:00:00Z' }] };
 const candidates = { candidates: [{ name: 'Calle Olmo 24', origin: 'IMPORTED', documentCount: 9, state: 'PROPOSED' }] };
@@ -246,8 +246,16 @@ test('decidesOneByOneReject', () => decide('Rechazar Factura 12', { decision: 'R
 test('decidesOneByOneCorrectProject', () => decide('Corregir proyecto de Factura 12', { decision: 'CORRECT_PROJECT', projectId: 'p2' },
   () => userEvent.selectOptions(screen.getByLabelText('Proyecto correcto de Factura 12'), 'Residencial Sur')));
 
+test('proposalRowsShowTheDocumentType', async () => {
+  show({});
+  await step('2. Proyectos');
+  await userEvent.click(await screen.findByRole('button', { name: 'Ver documentos de Calle Olmo 24' }));
+  expect(screen.getByText('Póliza')).toBeInTheDocument();
+  expect(screen.getAllByText('Tipo sin identificar').length).toBeGreaterThan(0);
+});
+
 test('unplacedDocumentsCanBePlacedOrDiscarded', async () => {
-  const docs = { documents: [{ id: 'u1', title: 'Escaneo suelto', path: 'cliente/varios', status: 'READY' }] };
+  const docs = { documents: [{ id: 'u1', title: 'Escaneo suelto', path: 'cliente/varios', status: 'READY', documentType: null }] };
   const calls = show({
     [`GET ${base}/b1/documents?unplaced=true`]: () => docs,
     [`POST ${base}/b1/documents/u1/place`]: () => ({ status: 204 }), [`POST ${base}/b1/documents/u1/withdraw`]: () => ({}),
@@ -255,6 +263,7 @@ test('unplacedDocumentsCanBePlacedOrDiscarded', async () => {
   await step('2. Proyectos');
   const section = await screen.findByRole('region', { name: 'Sin ubicar' });
   expect(within(section).getByText('cliente/varios')).toBeInTheDocument();
+  expect(within(section).getByText('Tipo sin identificar')).toBeInTheDocument();
   await userEvent.click(within(section).getByRole('button', { name: 'De toda la empresa Escaneo suelto' }));
   await waitFor(() => expect(calls.find((c) => c.key === `POST ${base}/b1/documents/u1/place`)?.body).toEqual({ companyWide: true }));
   await userEvent.selectOptions(within(section).getByLabelText('Proyecto de Escaneo suelto'), 'Calle Olmo 24');
@@ -320,4 +329,60 @@ test('showsTheApiMessageWhenOrderIsWrong', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Confirmar grupo Versiones (Calle Olmo 24)' }));
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Confirma antes los proyectos de estos documentos');
+});
+
+const closeBatch = `POST ${base}/b1/close`;
+const closeAsk = 'Cerrar la carga. Lo que está en "No lo sé" pasa a "Sin ubicar" y la carga deja de estar en revisión. Lo que quede sin ubicar seguirá oculto hasta que lo coloques o lo descartes.';
+
+test('closeTheLoadAsksAndThenClosesTheBatch', async () => {
+  const calls = show({ [batchRoute]: () => batch({ toDecide: 0 }), [closeBatch]: () => batch({ state: 'CLOSED', toDecide: 0 }) });
+  const button = await screen.findByRole('button', { name: 'Cerrar la carga' });
+  expect(button).toBeEnabled();
+  await userEvent.click(button);
+  const dialog = screen.getByRole('dialog', { name: closeAsk });
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+  expect(called(calls, closeBatch)).toBe(false);
+  await userEvent.click(screen.getByRole('button', { name: 'Cerrar la carga' }));
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar la carga' }));
+  await waitFor(() => expect(called(calls, closeBatch)).toBe(true));
+});
+
+test('closeTheLoadIsDisabledWhileProposalsAreUndecided', async () => {
+  show({ [batchRoute]: () => batch({ toDecide: 3 }) });
+  expect(await screen.findByRole('button', { name: 'Cerrar la carga' })).toBeDisabled();
+  expect(screen.getByText('Quedan 3 propuestas por decidir')).toBeInTheDocument();
+});
+
+test('closeTheLoadShowsTheApiRefusal', async () => {
+  show({ [batchRoute]: () => batch({ toDecide: 0 }), [closeBatch]: () => ({ status: 409, body: { detail: 'Queda 1 propuesta por decidir. Decídelas antes de cerrar la carga.' } }) });
+  await userEvent.click(await screen.findByRole('button', { name: 'Cerrar la carga' }));
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar la carga' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Queda 1 propuesta por decidir');
+});
+
+test('aClosedBatchShowsOnlyTheUnplacedStepAndNoCloseButton', async () => {
+  show({
+    [batchRoute]: () => batch({ state: 'CLOSED', toDecide: 0, unplaced: 1 }),
+    [`GET ${base}`]: () => ({ batches: [{ id: 'b1', state: 'CLOSED', channel: 'COMMAND', createdAt: '2026-11-13T10:00:00Z' }] }),
+    [`GET ${base}/b1/documents?unplaced=true`]: () => ({ documents: [{ id: 'd1', title: 'Dudoso', status: 'READY' }] }),
+  });
+  expect(await screen.findByRole('heading', { name: 'Sin ubicar' })).toBeInTheDocument();
+  expect(await screen.findByText('Dudoso')).toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'Pasos de la primera carga' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Cerrar la carga' })).toBeNull();
+});
+
+test('withSeveralBatchesTheAdminPicksWhichOneToReview', async () => {
+  const calls = show({ [`GET ${base}/b0`]: () => batch({ id: 'b0', uploaded: 99 }) });
+  const picker = await screen.findByLabelText('Carga a revisar');
+  expect(within(picker).getAllByRole('option')).toHaveLength(2);
+  await userEvent.selectOptions(picker, within(picker).getAllByRole('option')[1]!);
+  expect(await screen.findByText('99')).toBeInTheDocument();
+  expect(called(calls, `GET ${base}/b0`)).toBe(true);
+});
+
+test('withASingleBatchThereIsNoPicker', async () => {
+  show({ [`GET ${base}`]: () => ({ batches: [openBatches.batches[0]] }) });
+  await screen.findByText('Subidos');
+  expect(screen.queryByLabelText('Carga a revisar')).toBeNull();
 });

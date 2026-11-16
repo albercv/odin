@@ -9,6 +9,7 @@ import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.MarkCaseDocuments;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.document.UnlinkScanCopy;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadOutcome;
@@ -68,11 +69,12 @@ public class AdminDocumentController {
     private final WithdrawDocument withdraw;
     private final RestoreDocument restore;
     private final UserNames userNames;
+    private final UnlinkScanCopy unlinkScanCopy;
 
     public AdminDocumentController(UploadDocument upload, ListCompanyDocuments list, GetDocument get,
             RetryDocument retry, SupersedeDocument supersede, UpdateDocument update, MarkCaseDocuments markCases,
             AddToCaseFiles addToCaseFiles, UploadToCaseFile uploadToCaseFile, OpenOriginal openOriginal,
-            WithdrawDocument withdraw, RestoreDocument restore, UserNames userNames) {
+            WithdrawDocument withdraw, RestoreDocument restore, UserNames userNames, UnlinkScanCopy unlinkScanCopy) {
         this.upload = upload;
         this.list = list;
         this.get = get;
@@ -86,6 +88,7 @@ public class AdminDocumentController {
         this.withdraw = withdraw;
         this.restore = restore;
         this.userNames = userNames;
+        this.unlinkScanCopy = unlinkScanCopy;
     }
 
     @GetMapping("/v1/admin/companies/{companyId}/documents")
@@ -130,7 +133,7 @@ public class AdminDocumentController {
     @GetMapping("/v1/admin/documents/{documentId}")
     public Responses.DocumentView get(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
             @PathVariable UUID documentId) {
-        return Responses.DocumentView.from(get.execute(actor, new DocumentId(documentId)));
+        return Responses.DocumentView.from(get.detail(actor, new DocumentId(documentId)));
     }
 
     @GetMapping("/v1/admin/documents/{documentId}/original")
@@ -182,6 +185,12 @@ public class AdminDocumentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unsupersede(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID documentId) {
         supersede.unmark(actor, new DocumentId(documentId));
+    }
+
+    @DeleteMapping("/v1/admin/documents/{documentId}/scan-of")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unlinkScanCopy(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor, @PathVariable UUID documentId) {
+        unlinkScanCopy.execute(actor, new DocumentId(documentId));
     }
 
     @PutMapping("/v1/admin/documents/{documentId}/withdrawal")

@@ -1642,6 +1642,41 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "closeBatch",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntakeBatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/close-upload" : {
       "post" : {
         "tags" : [ "intake-controller" ],
@@ -3310,6 +3345,26 @@
         }
       }
     },
+    "/v1/admin/documents/{documentId}/scan-of" : {
+      "delete" : {
+        "tags" : [ "admin-document-controller" ],
+        "operationId" : "unlinkScanCopy",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/cases/{caseId}/file/documents/{documentId}" : {
       "delete" : {
         "tags" : [ "admin-case-file-controller" ],
@@ -3447,9 +3502,33 @@
           "uploadedByName" : {
             "type" : "string",
             "description" : "Nombre de quien lo subió. Solo en el listado; nulo en el resto de respuestas, o si la persona ya no existe."
+          },
+          "scanOf" : {
+            "$ref" : "#/components/schemas/ScanLink",
+            "description" : "De quién es copia escaneada este documento. Solo en el listado y la ficha."
+          },
+          "scanCopies" : {
+            "type" : "array",
+            "description" : "Escaneos enlazados a este documento. Solo en el listado y la ficha; vacío en el resto.",
+            "items" : {
+              "$ref" : "#/components/schemas/ScanLink"
+            }
           }
         },
-        "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "status", "title", "topics", "uploadedAt" ]
+        "required" : [ "attemptCount", "caseDocument", "companyId", "filename", "format", "id", "pagesWithoutText", "paginated", "scanCopies", "status", "title", "topics", "uploadedAt" ]
+      },
+      "ScanLink" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "documentId", "title" ]
       },
       "TopicLabelView" : {
         "type" : "object",
@@ -4280,12 +4359,16 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "toDecide" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "projectListClosedAt" : {
             "type" : "string",
             "format" : "date-time"
           }
         },
-        "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "proposed", "reading", "state", "unplaced", "uploaded", "warnings" ]
+        "required" : [ "alreadyThere", "channel", "companyId", "createdAt", "discarded", "id", "pending", "proposed", "reading", "state", "toDecide", "unplaced", "uploaded", "warnings" ]
       },
       "IntakeWarningView" : {
         "type" : "object",
@@ -4897,9 +4980,15 @@
           },
           "caseDocument" : {
             "type" : "boolean"
+          },
+          "scanCopies" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ScanLink"
+            }
           }
         },
-        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "superseded", "title", "topics", "uploadedAt" ]
+        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "scanCopies", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -4990,9 +5079,18 @@
           },
           "addedByName" : {
             "type" : "string"
+          },
+          "scanOf" : {
+            "$ref" : "#/components/schemas/ScanLink"
+          },
+          "scanCopies" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ScanLink"
+            }
           }
         },
-        "required" : [ "filename", "format", "id", "pageCount", "paginated", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
+        "required" : [ "filename", "format", "id", "pageCount", "paginated", "scanCopies", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
       },
       "CaseFileResponse" : {
         "type" : "object",
@@ -5423,7 +5521,7 @@
       },
       "IntakeBatchSummary" : {
         "type" : "object",
-        "description" : "Un lote sin cerrar. state: OPEN, READING o IN_REVIEW; channel: COMMAND o PANEL.",
+        "description" : "Un lote sin cerrar o cerrado con documentos sin ubicar. state: OPEN, READING, IN_REVIEW o CLOSED; channel: COMMAND o PANEL.",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -5444,7 +5542,7 @@
       },
       "OpenIntakeBatches" : {
         "type" : "object",
-        "description" : "Los lotes de la empresa que no están cerrados, el más reciente primero.",
+        "description" : "Los lotes de la empresa que no están cerrados y los cerrados con documentos sin ubicar, el más reciente primero.",
         "properties" : {
           "batches" : {
             "type" : "array",
@@ -5492,7 +5590,7 @@
       },
       "IntakeProposalItem" : {
         "type" : "object",
-        "description" : "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL.",
+        "description" : "Una propuesta por decidir, con el título de su documento y la cita literal que la motiva. targetDocumentId: el otro documento de una pareja o la ficha de un enlace, y targetTitle su título (de la misma empresa). caseNumber: el número de caso. source: RULES, FOLDER o MODEL. documentType: el tipo del documento de la fila (no el del destino), o null si no se reconoció.",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -5520,6 +5618,9 @@
           },
           "reason" : {
             "type" : "string"
+          },
+          "documentType" : {
+            "type" : "string"
           }
         },
         "required" : [ "documentId", "id", "reason", "source", "title" ]
@@ -5538,7 +5639,7 @@
       },
       "IntakeDocumentView" : {
         "type" : "object",
-        "description" : "Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo.",
+        "description" : "Un documento pendiente del lote. status: el estado de su lectura (FAILED si no se pudo leer). path: la ruta de su carpeta al subirlo. documentType: el tipo que le calculó la clasificación (acta, contrato, poliza…), o null si no se reconoció.",
         "properties" : {
           "id" : {
             "type" : "string",
@@ -5551,6 +5652,9 @@
             "type" : "string"
           },
           "status" : {
+            "type" : "string"
+          },
+          "documentType" : {
             "type" : "string"
           }
         },

@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { Section } from '../ui/Section';
 import type { Step } from './IntakeCandidates';
+import { documentTypeLabel } from './documentType';
 import { Notice } from './Notice';
 import { useProjectTerms } from './projectTerms';
 import { useAction, useLoad } from './useLoad';
@@ -22,6 +23,7 @@ function UnplacedRow({ doc, original, projects, place, discard }: RowProps) {
   return (
     <li className={styles.row}>
       <p><strong>{title}</strong> <a href={original} target="_blank" rel="noreferrer" aria-label={`Ver el original de ${title}`}>Ver el original</a></p>
+      <p className={styles.reason}>{documentTypeLabel(doc.documentType)}</p>
       {doc.path && <p className={styles.reason}>{doc.path}</p>}
       {STATUS[doc.status] && <p className={styles.reason}>{STATUS[doc.status]}</p>}
       <div className={styles.tools}>

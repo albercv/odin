@@ -5,6 +5,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
+import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.application.port.IntakeDocument;
 import com.e2d.odin.domain.intake.IntakeBatchId;
@@ -332,6 +333,53 @@ public class PostgresDocumentRepository implements DocumentRepository {
         if (updated == 0) {
             throw new NotFoundException("Documento no encontrado");
         }
+    }
+
+    @Override
+    public void clearScanOf(CompanyId companyId, DocumentId scanId) {
+        int updated = tx.inScope(CompanyScope.of(companyId), ProjectVisibility.all(), jdbc -> jdbc.sql("""
+                UPDATE document SET scan_of = NULL WHERE id = :id AND company_id = :company""")
+                .param("id", scanId.value()).param("company", companyId.value()).update());
+        if (updated == 0) {
+            throw new NotFoundException("Documento no encontrado");
+        }
+    }
+
+    @Override
+    public Map<DocumentId, List<DocumentRef>> scanCopiesOf(CompanyScope scope, ProjectVisibility visibility,
+            Optional<DocumentStatus> status, java.util.Collection<DocumentId> originals) {
+        if (originals.isEmpty()) {
+            return Map.of();
+        }
+        String sql = "SELECT d.scan_of, d.id, d.title FROM document d WHERE d.scan_of = ANY (CAST(string_to_array(:ids, ',') AS uuid[]))"
+                + " AND (CAST(:status AS text) IS NULL OR d.status = :status) AND " + Sql.inScope("d.company_id")
+                + " AND " + Sql.inVisibleProjects("d.project_id") + " AND " + Sql.visibleDocument("d")
+                + " ORDER BY d.title, d.id";
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("ids", idList(originals)).param("status", status.map(DocumentStatus::name).orElse(null))
+                .query((rs, n) -> Map.entry(new DocumentId(Sql.uuid(rs, "scan_of")),
+                        new DocumentRef(new DocumentId(Sql.uuid(rs, "id")), rs.getString("title")))).list()
+                .stream().collect(Collectors.groupingBy(Map.Entry::getKey, java.util.LinkedHashMap::new,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList()))));
+    }
+
+    @Override
+    public Map<DocumentId, DocumentRef> refsOf(CompanyScope scope, ProjectVisibility visibility,
+            java.util.Collection<DocumentId> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        String sql = "SELECT d.id, d.title FROM document d WHERE d.id = ANY (CAST(string_to_array(:ids, ',') AS uuid[])) AND "
+                + Sql.inScope("d.company_id") + " AND " + Sql.inVisibleProjects("d.project_id") + " AND "
+                + Sql.visibleDocument("d");
+        return tx.inScope(scope, visibility, jdbc -> Sql.visible(Sql.scoped(jdbc.sql(sql), scope), visibility)
+                .param("ids", idList(ids))
+                .query((rs, n) -> new DocumentRef(new DocumentId(Sql.uuid(rs, "id")), rs.getString("title"))).list()
+                .stream().collect(Collectors.toMap(DocumentRef::id, r -> r)));
+    }
+
+    private static String idList(java.util.Collection<DocumentId> ids) {
+        return ids.stream().map(d -> d.value().toString()).collect(Collectors.joining(","));
     }
 
     @Override

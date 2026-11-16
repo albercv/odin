@@ -5,7 +5,9 @@ import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeProposal;
 import com.e2d.odin.domain.intake.ProjectCandidate;
 import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.DocumentId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** Lotes de primera carga con sus candidatos y propuestas. Todo es de la bandeja del administrador. */
@@ -21,6 +23,9 @@ public interface IntakeRepository {
 
     /** Los lotes de la empresa que no están cerrados, el más reciente primero. */
     List<IntakeBatch> findOpen(CompanyId companyId);
+
+    /** Los lotes cerrados de la empresa, el más reciente primero. */
+    List<IntakeBatch> findClosed(CompanyId companyId);
 
     /** Los lotes en lectura o en revisión de todas las empresas: es lo que recorre la tarea programada. */
     List<IntakeBatch> findReadingOrInReview();
@@ -41,4 +46,14 @@ public interface IntakeRepository {
     void addProposals(List<IntakeProposal> proposals);
 
     List<IntakeProposal> proposals(CompanyId companyId, IntakeBatchId batchId);
+
+    /**
+     * Guarda de una vez, en una sola transacción, el tipo calculado de los documentos que lo tienen (el resto queda sin tipo) y las
+     * propuestas nuevas de la pasada (como addProposals, una por tanda).
+     */
+    void saveClassification(CompanyId companyId, IntakeBatchId batchId, Map<DocumentId, String> types,
+            List<List<IntakeProposal>> proposalGroups);
+
+    /** El tipo de documento de cada documento del lote que lo tiene; solo para la bandeja del administrador. */
+    Map<DocumentId, String> intakeTypes(CompanyId companyId, IntakeBatchId batchId);
 }

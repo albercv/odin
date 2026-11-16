@@ -45,8 +45,11 @@ final class IntakeBatches {
         return installation.scannedDocumentsSupported() ? counts : counts.withoutReader();
     }
 
-    /** Sin documentos pendientes ni propuestas por decidir, el lote en revisión se cierra. */
+    /** Sin documentos pendientes ni propuestas por decidir, el lote en revisión se cierra. Uno ya cerrado se deja como está. */
     static void closeIfDone(IntakeRepository intake, DocumentRepository documents, IntakeBatch batch, Instant now) {
+        if (batch.state() != IntakeState.IN_REVIEW) {
+            return;
+        }
         boolean pending = documents.intakeCounts(batch.companyId(), batch.id()).pending() > 0;
         if (!pending && intake.proposals(batch.companyId(), batch.id()).stream()
                 .noneMatch(IntakeProposal::open)) {

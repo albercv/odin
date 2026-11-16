@@ -51,6 +51,7 @@ public class ListDocuments {
         });
         var entries = documents.list(actor.scope(), access.content(), projectId, topicId, caseDocument,
                 Optional.of(DocumentStatus.READY), Math.max(0, offset), WorkerAccess.cap(limit, 100, 500));
-        return TaggedDocuments.of(entries, actor.scope(), access.content(), companyTopics, tagging);
+        return TaggedDocuments.of(entries, actor.scope(), access.content(), companyTopics, tagging, documents,
+                Optional.of(DocumentStatus.READY));
     }
 }

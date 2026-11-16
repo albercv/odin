@@ -11,12 +11,12 @@ import java.util.Optional;
  * por terminada una vez, en lectura, con quién y cuándo: solo entonces se clasifica (spec 4.4).
  */
 public record IntakeBatch(IntakeBatchId id, CompanyId companyId, UserId startedBy, IntakeChannel channel,
-        IntakeState state, Instant createdAt, Optional<Instant> closedAt, int alreadyThere, int discarded,
+        IntakeState state, Instant createdAt, Optional<Instant> closedAt, Optional<UserId> closedBy, int alreadyThere, int discarded,
         Optional<UserId> projectListClosedBy, Optional<Instant> projectListClosedAt) {
 
     public static IntakeBatch open(IntakeBatchId id, CompanyId companyId, UserId startedBy, IntakeChannel channel,
             Instant now) {
-        return new IntakeBatch(id, companyId, startedBy, channel, IntakeState.OPEN, now, Optional.empty(), 0, 0,
+        return new IntakeBatch(id, companyId, startedBy, channel, IntakeState.OPEN, now, Optional.empty(), Optional.empty(), 0, 0,
                 Optional.empty(), Optional.empty());
     }
 
@@ -26,16 +26,22 @@ public record IntakeBatch(IntakeBatchId id, CompanyId companyId, UserId startedB
 
     /** Termina la subida: empieza la lectura. */
     public IntakeBatch startReading() {
-        return moveTo(IntakeState.OPEN, IntakeState.READING, Optional.empty());
+        return moveTo(IntakeState.OPEN, IntakeState.READING, Optional.empty(), Optional.empty());
     }
 
     /** Termina la lectura y la clasificación: queda a la espera de la persona. */
     public IntakeBatch finishReading() {
-        return moveTo(IntakeState.READING, IntakeState.IN_REVIEW, Optional.empty());
+        return moveTo(IntakeState.READING, IntakeState.IN_REVIEW, Optional.empty(), Optional.empty());
     }
 
+    /** Cierre automático: sin documentos pendientes ni propuestas por decidir. No lo hace nadie, así que no hay closedBy. */
     public IntakeBatch close(Instant now) {
-        return moveTo(IntakeState.IN_REVIEW, IntakeState.CLOSED, Optional.of(now));
+        return moveTo(IntakeState.IN_REVIEW, IntakeState.CLOSED, Optional.of(now), Optional.empty());
+    }
+
+    /** Cierre del administrador. */
+    public IntakeBatch close(UserId by, Instant now) {
+        return moveTo(IntakeState.IN_REVIEW, IntakeState.CLOSED, Optional.of(now), Optional.of(by));
     }
 
     /** «Lista terminada»: el administrador ya no cambia la lista de proyectos y el lote se puede clasificar. */
@@ -43,15 +49,16 @@ public record IntakeBatch(IntakeBatchId id, CompanyId companyId, UserId startedB
         if (state != IntakeState.READING || projectListClosed()) {
             throw new ConflictException("La lista de proyectos ya está terminada o el lote no está en lectura");
         }
-        return new IntakeBatch(id, companyId, startedBy, channel, state, createdAt, closedAt, alreadyThere, discarded,
+        return new IntakeBatch(id, companyId, startedBy, channel, state, createdAt, closedAt, closedBy, alreadyThere, discarded,
                 Optional.of(by), Optional.of(now));
     }
 
-    private IntakeBatch moveTo(IntakeState from, IntakeState to, Optional<Instant> closed) {
+    private IntakeBatch moveTo(IntakeState from, IntakeState to, Optional<Instant> closed,
+            Optional<UserId> by) {
         if (state != from) {
             throw new ConflictException("El lote está en " + state + " y no puede pasar a " + to);
         }
-        return new IntakeBatch(id, companyId, startedBy, channel, to, createdAt, closed, alreadyThere, discarded,
+        return new IntakeBatch(id, companyId, startedBy, channel, to, createdAt, closed, by, alreadyThere, discarded,
                 projectListClosedBy, projectListClosedAt);
     }
 }
