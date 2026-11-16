@@ -60,12 +60,17 @@ Rama: `task/riesgos-arquitectura/transacciones`. Parte del inventario de `…/sc
 - `api/odin-bootstrap/.../AtomicUseCases.java` (nuevo): el `BeanPostProcessor` de la spec, con `ProxyFactory` (`proxyTargetClass`) y `TransactionInterceptor` sobre el `PlatformTransactionManager`.
 - `UseCaseConfiguration` y las demás configuraciones de bootstrap: se borran las subclases anónimas que solo envuelven, y su clase pasa a llevar `@Atomic`.
 - Los casos de uso con varias escrituras sin envolver que señale el inventario: `@Atomic`, o `@NonAtomic("motivo")` en las colas.
-- `ScopedTransactions.inTransaction`: sin visibilidad, fija las variables de proyecto en su valor restrictivo.
+- `ScopedTransactions`: su `TransactionTemplate` pasa a `PROPAGATION_NESTED`, y `inTransaction` sin visibilidad fija las variables de proyecto en su valor restrictivo.
+- Las anotaciones de los 9 casos y las 4 colas, como dice la spec (apartado 2, «Inventario»).
 - `api/odin-architecture-tests/.../TransactionRulesTest.java` (nuevo): la regla de `@Atomic`/`@NonAtomic` y «bootstrap no usa `TransactionTemplate` fuera de `AtomicUseCases`».
 
 **Tests:**
 - Las pruebas de atomicidad que ya hay (`MemberAtomicityIT`, `SetUpAtomicityIT`, `ProjectListAtomicityIT`, `LastGroupAdminIT`) siguen en verde sin cambios: prueban que la migración desde las subclases anónimas conserva el comportamiento.
-- Por cada caso del inventario marcado como riesgo para el propietario, un IT en `odin-bootstrap`: un fallo forzado en la segunda escritura deja la base como estaba.
+- Un IT en `odin-bootstrap` por cada caso, con un fallo forzado en la segunda escritura (el registro de actividad o el contador):
+  - `LogOutAdmin`: la sesión sigue igual y no hay evento;
+  - `UploadDocument` y `UploadByLink`: no queda documento y la plaza del enlace no se gasta;
+  - `AddFileToIntake`: no queda documento sin contar.
+- Las pruebas de subida duplicada que ya hay siguen en verde con los casos envueltos (punto de guardado).
 - Un test de bootstrap: toda bean de una clase `@Atomic` del contexto es un proxy de AOP (`AopUtils.isAopProxy`), y ninguna `@NonAtomic` lo es.
 - `ScopedTransactions`: en una transacción externa, una llamada con «todos los proyectos» seguida de otra sin visibilidad no deja ver documentos de proyecto a la segunda (Review Focus 5).
 - La regla ArchUnit falla con un caso de uso de prueba sin anotar y con dos escrituras. Basta un test que la aplique a una clase de ejemplo del propio módulo de pruebas.

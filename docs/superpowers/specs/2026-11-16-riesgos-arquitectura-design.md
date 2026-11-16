@@ -60,6 +60,16 @@ En todas, el aislamiento depende solo de la consulta y del caso de uso. Además,
   - Su reclamo tiene que confirmarse antes de una lectura de hasta 30 minutos.
   - Una transacción larga retendría la conexión y los bloqueos, y escondería el estado «en lectura».
 - **`inScope` fija siempre todas las variables:** sin visibilidad, deja las de proyecto en su valor restrictivo (`app.project_ids` vacío y `app.all_projects` a `off`), que es lo que ya ve una transacción nueva. Así una llamada no hereda el ámbito de la anterior.
+- **Punto de guardado en cada `inScope`:**
+  - Dentro de una transacción externa, `ScopedTransactions` abre un punto de guardado (`PROPAGATION_NESTED`). Sin transacción externa, sigue abriendo una transacción como hoy.
+  - Así, un `ConflictException` que el caso de uso captura deshace solo esa llamada y no aborta toda la transacción.
+  - Lo necesitan las subidas (`UploadDocument`, `UploadByLink`, `UploadToCaseFile`, `AddFileToIntake`): resuelven la carrera del hash duplicado capturando ese error, y por eso hoy no están envueltas.
+- **Inventario (2026-11-16, lectura del código):**
+  - 48 casos de uso envueltos a mano. Todas las envolturas solo delegan, así que pasan a `@Atomic`.
+  - 4 colas en segundo plano, que pasan a `@NonAtomic`: `ProcessDocumentsWithReader`, `ProcessPendingDocuments`, `TagPendingDocuments` y `ClassifyIntake`.
+  - 9 casos con varias escrituras sin envolver:
+    - pasan a `@Atomic`: `LogInAdmin`, `LogOutAdmin` (hoy puede registrar la salida y dejar la sesión válida), `UploadDocument`, `UploadToCaseFile`, `UploadByLink`, `AddFileToIntake` y `UnlinkScanCopy`;
+    - quedan `@NonAtomic`, con su motivo: `CloseProjectList` y `ListProjectCandidates`. Los candidatos que se descubren tienen que quedar guardados aunque la lista no se cierre.
 - **Orden de trabajo:**
   - Primero los casos con varias escrituras sin envolver que usa la instalación del propietario, según el inventario de la tarea.
   - Cada uno lleva una prueba de integración: un fallo forzado en la segunda escritura deja la base como estaba.
