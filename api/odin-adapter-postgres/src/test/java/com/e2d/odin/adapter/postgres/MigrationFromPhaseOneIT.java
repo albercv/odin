@@ -261,7 +261,7 @@ class MigrationFromPhaseOneIT {
         FakeSecretHasher secrets = new FakeSecretHasher();
         StoredAdminSessions sessions = new StoredAdminSessions(new InMemoryAdminSessionRepository(), secrets,
                 new SequenceTokenGenerator(), new SessionSettings(), new MutableClock());
-        ResolveActor resolve = new ResolveActor(keys, users, memberships, sessions, secrets);
+        ResolveActor resolve = new ResolveActor(keys, users, memberships, sessions, secrets, new InMemoryAuditLog());
         UserId worker = new UserId(INACTIVE_WORKER);
         keys.save(new AccessKey(new AccessKeyId(UUID.randomUUID()), worker, new CompanyId(COMPANY), "otra", "inact123",
                 secrets.hash("clave"), Instant.now(), Optional.empty()));

@@ -192,11 +192,29 @@ class PostgresIdentityRepositoriesIT extends AbstractPostgresIT {
         AdminSession s = new AdminSession("tok", owner, NOW, NOW);
         sessions.save(s);
         assertThat(sessions.findByTokenHash("tok")).contains(s);
-        AdminSession seen = new AdminSession("tok", owner, NOW, NOW.plusSeconds(60));
+        AdminSession seen = s.seenAt(NOW.plusSeconds(60));
         sessions.save(seen);
         assertThat(sessions.findByTokenHash("tok")).contains(seen);
         sessions.delete("tok");
         assertThat(sessions.findByTokenHash("tok")).isEmpty();
+    }
+
+    @Test
+    void clientDataRoundTripsAndOwnSessionsAreListedAndClosedByIdOnlyForTheirOwner() {
+        UserId owner = newUser(newCompany());
+        UserId other = newUser(newCompany());
+        AdminSession mine = new AdminSession(UUID.randomUUID(), "m", owner, NOW, NOW, Optional.of("Firefox"),
+                Optional.of("10.0.0.7"), NOW);
+        sessions.save(mine);
+        sessions.save(new AdminSession("o", other, NOW, NOW));
+
+        assertThat(sessions.findByTokenHash("m")).contains(mine);
+        assertThat(sessions.findByUser(owner)).containsExactly(mine);
+        UUID foreign = sessions.findByUser(other).get(0).id();
+        assertThat(sessions.deleteByIdAndUser(foreign, owner)).isZero();
+        assertThat(sessions.findByTokenHash("o")).isPresent();
+        assertThat(sessions.deleteByIdAndUser(mine.id(), owner)).isEqualTo(1);
+        assertThat(sessions.deleteByUser(other)).isEqualTo(1);
     }
 
     @Test
