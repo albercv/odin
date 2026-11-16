@@ -16,7 +16,7 @@ INTERVAL = 60
 KILL_WAIT = 10
 
 
-class Stop(Exception):
+class Stop(BaseException):  # no Exception: probe() la tragaría
     pass
 
 
