@@ -5,6 +5,7 @@ import com.e2d.odin.application.port.DocumentTooLargeForReaderException;
 import com.e2d.odin.application.port.OriginalFileStore;
 import com.e2d.odin.application.port.ReadResult;
 import com.e2d.odin.application.port.ReaderService;
+import com.e2d.odin.application.port.ReaderTimedOutException;
 import com.e2d.odin.application.port.ReaderUnavailableException;
 import com.e2d.odin.application.port.UnreadableDocumentException;
 import com.e2d.odin.application.shared.ReaderSettings;
@@ -19,6 +20,8 @@ import java.util.Optional;
 public class ProcessDocumentsWithReader {
 
     public static final String READER_FAILED = "El lector OCR no pudo leer el documento. Reinténtalo.";
+    public static final String READER_TIMED_OUT = "El lector OCR no terminó de leer el documento en el tiempo máximo, "
+            + "tampoco al reintentarlo: divídelo en partes más pequeñas o reinténtalo.";
     public static final String NO_TEXT_FOUND = "El lector OCR no encontró texto en el documento.";
     public static final String TOO_LARGE_FOR_READER =
             "El documento es demasiado grande para el lector OCR: divídelo en partes más pequeñas.";
@@ -43,7 +46,8 @@ public class ProcessDocumentsWithReader {
         if (!reader.isAvailable()) {
             return false;
         }
-        Optional<Document> claimed = documents.claimNextForReader(clock.instant(), settings.staleAfter());
+        Optional<Document> claimed = documents.claimNextForReader(clock.instant(), settings.staleAfter(),
+                settings.retryPause());
         claimed.ifPresent(this::process);
         return claimed.isPresent();
     }
@@ -61,11 +65,15 @@ public class ProcessDocumentsWithReader {
             documents.save(document.markFailed(ProcessPendingDocuments.UNREADABLE));
         } catch (DocumentTooLargeForReaderException e) {
             documents.save(document.markFailed(TOO_LARGE_FOR_READER));
+        } catch (ReaderTimedOutException e) {
+            LOG.log(System.Logger.Level.WARNING, "El lector agotó el tiempo con el documento " + document.id().value(), e);
+            documents.save(document.attemptCount() >= 2 ? document.markFailed(READER_TIMED_OUT)
+                    : document.retryReadingAfter(clock.instant()));
         } catch (RuntimeException e) {
             // el detalle va solo al log del servidor; el documento guarda un motivo genérico
             LOG.log(System.Logger.Level.WARNING, "El lector no pudo leer el documento " + document.id().value(), e);
             documents.save(document.attemptCount() >= settings.maxAttempts() ? document.markFailed(READER_FAILED)
-                    : document.returnToReaderQueue(true));
+                    : document.retryReadingAfter(clock.instant()));
         }
     }
 

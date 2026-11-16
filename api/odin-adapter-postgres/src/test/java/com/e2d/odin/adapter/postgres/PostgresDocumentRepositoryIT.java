@@ -3,6 +3,7 @@ package com.e2d.odin.adapter.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.e2d.odin.application.shared.RetryPause;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentFormat;
@@ -32,6 +33,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
 
     private static final Duration STALE = Duration.ofMinutes(15);
+    private static final RetryPause PAUSE_NONE = RetryPause.NONE;
+    private static final RetryPause PAUSE = new RetryPause(Duration.ofMinutes(10), Duration.ofHours(1));
 
     @Test
     void savesFindsAndUpdatesWithinScope() {
@@ -224,7 +227,7 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         docs.markWithdrawal(reading.withWithdrawal(Optional.of(NOW), Optional.of(admin)));
 
         assertThat(docs.claimNextForProcessing(NOW, STALE)).isEmpty();
-        assertThat(docs.claimNextForReader(NOW, STALE)).isEmpty();
+        assertThat(docs.claimNextForReader(NOW, STALE, PAUSE_NONE)).isEmpty();
 
         Document inFlight = newDocument(a, admin, "En curso", DocumentStatus.RECEIVED).startProcessing(NOW);
         docs.save(inFlight);
@@ -277,8 +280,8 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         IntakeBatch batch = newIntakeBatch(a, ua);
         Document intake = newIntakeDocument(batch, ua, "Primera carga", DocumentStatus.PENDING_READER);
         Document manual = newDocument(a, ua, "A mano", DocumentStatus.PENDING_READER);
-        assertThat(docs.claimNextForReader(NOW, STALE).orElseThrow().id()).isEqualTo(manual.id());
-        assertThat(docs.claimNextForReader(NOW, STALE).orElseThrow().id()).isEqualTo(intake.id());
+        assertThat(docs.claimNextForReader(NOW, STALE, PAUSE_NONE).orElseThrow().id()).isEqualTo(manual.id());
+        assertThat(docs.claimNextForReader(NOW, STALE, PAUSE_NONE).orElseThrow().id()).isEqualTo(intake.id());
     }
 
     @Test
@@ -301,10 +304,81 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
         newDocument(a, ua, "Listo", DocumentStatus.READY);
         newDocument(a, ua, "Fallido", DocumentStatus.FAILED);
         Document waiting = newDocument(a, ua, "Escaneo", DocumentStatus.PENDING_READER);
-        Document claimed = docs.claimNextForReader(NOW, STALE).orElseThrow();
+        Document claimed = docs.claimNextForReader(NOW, STALE, PAUSE_NONE).orElseThrow();
         assertThat(claimed).isEqualTo(waiting.startReading(NOW));
         assertThat(reread(waiting)).isEqualTo(claimed);
-        assertThat(docs.claimNextForReader(NOW, STALE)).isEmpty();
+        assertThat(docs.claimNextForReader(NOW, STALE, PAUSE_NONE)).isEmpty();
+    }
+
+    private Document returnedToQueue(Document d, int attempts, Instant failedAt) {
+        Document spent = d;
+        for (int i = 0; i < attempts; i++) {
+            spent = spent.startReading(NOW).returnToReaderQueue(true);
+        }
+        Document returned = spent.retryReadingAfter(failedAt);
+        docs.save(returned);
+        return returned;
+    }
+
+    private boolean claimable(Document d, Instant now) {
+        return docs.claimNextForReader(now, STALE, PAUSE).map(c -> c.id().equals(d.id())).orElse(false);
+    }
+
+    @Test
+    void retryPauseGrowsWithAttemptsUpToTheCap() {
+        CompanyId a = newCompany();
+        Document base = newDocument(a, newUser(a), "Uno", DocumentStatus.PENDING_READER);
+        Document one = returnedToQueue(base, 1, NOW);
+        assertThat(claimable(one, NOW.plus(Duration.ofMinutes(5)))).isFalse();
+        assertThat(claimable(one, NOW.plus(Duration.ofMinutes(11)))).isTrue();
+        Document two = returnedToQueue(base, 2, NOW);
+        assertThat(claimable(two, NOW.plus(Duration.ofMinutes(15)))).isFalse();
+        assertThat(claimable(two, NOW.plus(Duration.ofMinutes(21)))).isTrue();
+        Document ten = returnedToQueue(base, 10, NOW);
+        assertThat(claimable(ten, NOW.plus(Duration.ofMinutes(59)))).isFalse();
+        assertThat(claimable(ten, NOW.plus(Duration.ofMinutes(61)))).isTrue();
+    }
+
+    @Test
+    void retriedDocumentGoesBehindUntriedOneOfItsClassEvenWithLowerSeq() {
+        CompanyId a = newCompany();
+        UserId u = newUser(a);
+        Document retried = returnedToQueue(newDocument(a, u, "Reintento", DocumentStatus.PENDING_READER), 1, NOW);
+        Document fresh = newDocument(a, u, "Nuevo", DocumentStatus.PENDING_READER);
+        Instant later = NOW.plus(Duration.ofHours(1));
+        assertThat(docs.claimNextForReader(later, STALE, PAUSE).orElseThrow().id()).isEqualTo(fresh.id());
+        assertThat(docs.claimNextForReader(later, STALE, PAUSE).orElseThrow().id()).isEqualTo(retried.id());
+    }
+
+    @Test
+    void retriedHandUploadedGoesBeforeUntriedIntake() {
+        CompanyId a = newCompany();
+        UserId u = newUser(a);
+        IntakeBatch batch = newIntakeBatch(a, u);
+        Document intake = newIntakeDocument(batch, u, "Primera carga", DocumentStatus.PENDING_READER);
+        Document manual = returnedToQueue(newDocument(a, u, "A mano", DocumentStatus.PENDING_READER), 1, NOW);
+        Instant later = NOW.plus(Duration.ofHours(1));
+        assertThat(docs.claimNextForReader(later, STALE, PAUSE).orElseThrow().id()).isEqualTo(manual.id());
+        assertThat(docs.claimNextForReader(later, STALE, PAUSE).orElseThrow().id()).isEqualTo(intake.id());
+    }
+
+    @Test
+    void localClaimIgnoresThePauseOfRetriedReceivedDocuments() {
+        CompanyId a = newCompany();
+        UserId u = newUser(a);
+        Document d = newDocument(a, u, "Local", DocumentStatus.RECEIVED);
+        JdbcClient.create(Db.owner()).sql("UPDATE document SET processing_started_at = :t, attempt_count = 2 WHERE id = :id")
+                .param("t", java.sql.Timestamp.from(NOW)).param("id", d.id().value()).update();
+        assertThat(docs.claimNextForProcessing(NOW, STALE).orElseThrow().id()).isEqualTo(d.id());
+    }
+
+    @Test
+    void untriedDocumentNeverWaitsEvenWithRecentStart() {
+        CompanyId a = newCompany();
+        UserId u = newUser(a);
+        Document d = newDocument(a, u, "Sin intentos", DocumentStatus.PENDING_READER);
+        docs.save(d.retryReadingAfter(NOW));
+        assertThat(docs.claimNextForReader(NOW, STALE, PAUSE).orElseThrow().id()).isEqualTo(d.id());
     }
 
     @Test
@@ -319,8 +393,8 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
                 lock.setObject(1, first.id().value());
                 lock.executeQuery();
             }
-            assertThat(docs.claimNextForReader(NOW, STALE).orElseThrow().id()).isEqualTo(second.id());
-            assertThat(docs.claimNextForReader(NOW, STALE)).isEmpty();
+            assertThat(docs.claimNextForReader(NOW, STALE, PAUSE_NONE).orElseThrow().id()).isEqualTo(second.id());
+            assertThat(docs.claimNextForReader(NOW, STALE, PAUSE_NONE)).isEmpty();
             c.rollback();
         }
     }
@@ -329,9 +403,9 @@ class PostgresDocumentRepositoryIT extends AbstractPostgresIT {
     void claimNextForReaderRetakesStaleReaderProcessing() {
         CompanyId a = newCompany();
         Document d = newDocument(a, newUser(a), "Colgado", DocumentStatus.PENDING_READER);
-        docs.claimNextForReader(NOW, STALE);
-        assertThat(docs.claimNextForReader(NOW.plus(STALE).minusSeconds(1), STALE)).isEmpty();
-        Document again = docs.claimNextForReader(NOW.plus(STALE), STALE).orElseThrow();
+        docs.claimNextForReader(NOW, STALE, PAUSE_NONE);
+        assertThat(docs.claimNextForReader(NOW.plus(STALE).minusSeconds(1), STALE, PAUSE_NONE)).isEmpty();
+        Document again = docs.claimNextForReader(NOW.plus(STALE), STALE, PAUSE_NONE).orElseThrow();
         assertThat(again.id()).isEqualTo(d.id());
         assertThat(again.status()).isEqualTo(DocumentStatus.READER_PROCESSING);
         assertThat(again.attemptCount()).isEqualTo(2);

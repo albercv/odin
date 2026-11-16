@@ -34,8 +34,9 @@ public class ReaderLaneConfiguration {
 
     @Bean
     ReaderSettings readerSettings(@Value("${odin.reader.timeout:PT30M}") Duration timeout,
-            ProcessingSettings processing) {
-        return new ReaderSettings(timeout, processing.maxAttempts());
+            @Value("${odin.reader.retry-delay:PT10M}") Duration retryDelay,
+            @Value("${odin.reader.max-retry-delay:PT1H}") Duration maxRetryDelay, ProcessingSettings processing) {
+        return new ReaderSettings(timeout, processing.maxAttempts(), retryDelay, maxRetryDelay);
     }
 
     @Bean

@@ -1,5 +1,6 @@
 package com.e2d.odin.application.port;
 
+import com.e2d.odin.application.shared.RetryPause;
 import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
@@ -144,6 +145,6 @@ public interface DocumentRepository {
 
     Optional<Document> claimNextForProcessing(Instant now, Duration staleAfter);
 
-    /** Toma el siguiente documento del carril del lector (en espera o con la lectura caducada) y lo pasa a lectura. */
-    Optional<Document> claimNextForReader(Instant now, Duration staleAfter);
+    /** Toma el siguiente documento del carril del lector (en espera, respetando la pausa, o con la lectura caducada) y lo pasa a lectura. */
+    Optional<Document> claimNextForReader(Instant now, Duration staleAfter, RetryPause pause);
 }

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e2d.odin.application.port.DocumentTooLargeForReaderException;
 import com.e2d.odin.application.port.ReadResult;
 import com.e2d.odin.application.port.ReaderFailedException;
+import com.e2d.odin.application.port.ReaderTimedOutException;
 import com.e2d.odin.application.port.ReaderUnavailableException;
 import com.e2d.odin.application.port.UnreadableDocumentException;
 import com.e2d.odin.domain.document.DocumentFormat;
@@ -195,11 +196,12 @@ class HttpReaderServiceTest {
     }
 
     @Test
-    void timeoutIsReaderFailure() throws IOException {
+    void readTimeoutIsTimedOutFailure() throws IOException {
         respond(200, example("read-200.json"));
         delayMillis = 1500;
         HttpReaderService slow = service(Optional.empty(), Duration.ofMillis(200), Duration.ofSeconds(5));
-        assertThatThrownBy(() -> slow.read(CONTENT, DocumentFormat.IMAGE)).isInstanceOf(ReaderFailedException.class);
+        assertThatThrownBy(() -> slow.read(CONTENT, DocumentFormat.IMAGE))
+                .isInstanceOf(ReaderTimedOutException.class);
     }
 
     @Test
