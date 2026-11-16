@@ -1318,6 +1318,96 @@
         }
       }
     },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/rename" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "renameProjectCandidate",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RenameProjectCandidateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/merge" : {
+      "post" : {
+        "tags" : [ "intake-controller" ],
+        "operationId" : "mergeProjectCandidates",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "batchId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MergeProjectCandidatesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/companies/{companyId}/intake-batches/{batchId}/project-candidates/import" : {
       "post" : {
         "tags" : [ "intake-controller" ],
@@ -4444,6 +4534,20 @@
         },
         "required" : [ "confirmed" ]
       },
+      "RenameProjectCandidateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Nombre del candidato PROPOSED, tal como sale en la lista."
+          },
+          "newName" : {
+            "type" : "string",
+            "description" : "El nombre nuevo. Si coincide con otro candidato PROPOSED, los junta."
+          }
+        },
+        "required" : [ "name", "newName" ]
+      },
       "ProjectCandidateView" : {
         "type" : "object",
         "description" : "origin: IMPORTED (de la lista del cliente) o DISCOVERED (de los textos). state: PROPOSED, CONFIRMED o REJECTED. projectId: el proyecto creado o al que se unió, si está confirmado.",
@@ -4479,6 +4583,23 @@
           }
         },
         "required" : [ "candidates" ]
+      },
+      "MergeProjectCandidatesRequest" : {
+        "type" : "object",
+        "properties" : {
+          "names" : {
+            "type" : "array",
+            "description" : "Los candidatos PROPOSED que se juntan y desaparecen.",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "into" : {
+            "type" : "string",
+            "description" : "El candidato PROPOSED que se queda, con sus nombres y los de los demás como alias."
+          }
+        },
+        "required" : [ "into", "names" ]
       },
       "ConfirmProjectCandidatesRequest" : {
         "type" : "object",

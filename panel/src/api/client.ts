@@ -90,6 +90,10 @@ export const intake = {
   closeList: (c: string, b: string) => request<S['IntakeBatchView']>('POST', `${ib(c, b)}/project-list/close`),
   confirmCandidates: (c: string, b: string, decisions: S['ProjectDecisionRequest'][]) =>
     request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/confirm`, { decisions }),
+  renameCandidate: (c: string, b: string, name: string, newName: string) =>
+    request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/rename`, { name, newName }),
+  mergeCandidates: (c: string, b: string, names: string[], into: string) =>
+    request<S['ProjectCandidates']>('POST', `${ib(c, b)}/project-candidates/merge`, { names, into }),
   proposals: (c: string, b: string) => request<S['IntakeProposalGroups']>('GET', `${ib(c, b)}/proposals`),
   confirmProposals: (c: string, b: string, proposalIds: string[]) =>
     request<S['ConfirmedProposals']>('POST', `${ib(c, b)}/proposals/confirm`, { proposalIds }),

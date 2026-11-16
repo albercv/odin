@@ -66,6 +66,20 @@ public final class Requests {
             @Schema(description = "Solo con MERGE: el proyecto de la empresa al que se une.") UUID projectId) {
     }
 
+    public record RenameProjectCandidateRequest(
+            @Schema(description = "Nombre del candidato PROPOSED, tal como sale en la lista.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) String name,
+            @Schema(description = "El nombre nuevo. Si coincide con otro candidato PROPOSED, los junta.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) String newName) {
+    }
+
+    public record MergeProjectCandidatesRequest(
+            @Schema(description = "Los candidatos PROPOSED que se juntan y desaparecen.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) List<String> names,
+            @Schema(description = "El candidato PROPOSED que se queda, con sus nombres y los de los demás como alias.",
+                    requiredMode = Schema.RequiredMode.REQUIRED) String into) {
+    }
+
     public record ConfirmProjectCandidatesRequest(
             @Schema(description = "De 1 a 500 decisiones, todo o nada.", requiredMode = Schema.RequiredMode.REQUIRED)
             List<ProjectDecisionRequest> decisions) {

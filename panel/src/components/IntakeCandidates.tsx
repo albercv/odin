@@ -11,15 +11,34 @@ import styles from './Intake.module.css';
 
 export type Step = { companyId: string; batchId: string; projects: S['ProjectView'][]; onChanged: () => void; batch?: S['IntakeBatchView'] };
 type Decide = (decision: S['ProjectDecisionRequest']) => void;
+type Edit = { rename: (name: string, newName: string) => void; join: (name: string, into: string) => void };
 
 const ORIGIN: Record<string, string> = { IMPORTED: 'De la lista del cliente', DISCOVERED: 'De los textos' };
 const STATE: Record<string, string> = { PROPOSED: 'Por decidir', CONFIRMED: 'Confirmado', REJECTED: 'Rechazado' };
 
-function CandidateActions({ candidate, projects, decide }: { candidate: S['ProjectCandidateView']; projects: S['ProjectView'][]; decide: Decide }) {
+/** «Renombrar» changes the name (the old one is kept as an alias); «Es el mismo que…» joins this candidate into another one. */
+function EditCandidate({ name, others, edit }: { name: string; others: string[]; edit: Edit }) {
+  const [newName, setNewName] = useState(name);
+  const [into, setInto] = useState('');
+  return (
+    <div className={styles.tools}>
+      <input aria-label={`Nuevo nombre de ${name}`} value={newName} onChange={(e) => setNewName(e.target.value)} />
+      <Button aria-label={`Renombrar ${name}`} disabled={!newName.trim() || newName.trim() === name} onClick={() => edit.rename(name, newName.trim())}>Renombrar</Button>
+      <select aria-label={`${name} es el mismo que`} value={into} onChange={(e) => setInto(e.target.value)}>
+        <option value="">Es el mismo que…</option>
+        {others.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <Button aria-label={`Juntar ${name}`} disabled={!into} onClick={() => edit.join(name, into)}>Juntar</Button>
+    </div>
+  );
+}
+
+function CandidateActions({ candidate, projects, decide, others, edit }: { candidate: S['ProjectCandidateView']; projects: S['ProjectView'][]; decide: Decide; others: string[]; edit: Edit }) {
   const [projectId, setProjectId] = useState('');
   const t = useProjectTerms();
   const { name } = candidate;
   return (
+    <>
     <div className={styles.tools}>
       <Button variant="primary" aria-label={`Crear ${name}`} onClick={() => decide({ name, decision: 'CREATE' })}>Crear</Button>
       <select aria-label={`Unir ${name} a`} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
@@ -29,10 +48,12 @@ function CandidateActions({ candidate, projects, decide }: { candidate: S['Proje
       <Button aria-label={`Unir ${name}`} disabled={!projectId} onClick={() => decide({ name, decision: 'MERGE', projectId })}>Unir</Button>
       <Button variant="ghost" aria-label={`Rechazar ${name}`} onClick={() => decide({ name, decision: 'REJECT' })}>Rechazar</Button>
     </div>
+    <EditCandidate name={name} others={others} edit={edit} />
+    </>
   );
 }
 
-function CandidateTable({ candidates, projects, decide }: { candidates: S['ProjectCandidateView'][]; projects: S['ProjectView'][]; decide?: Decide }) {
+function CandidateTable({ candidates, projects, decide, edit }: { candidates: S['ProjectCandidateView'][]; projects: S['ProjectView'][]; decide?: Decide; edit: Edit }) {
   const t = useProjectTerms();
   return (
     <Table columns={[t.One, 'Origen', 'Documentos', 'Estado']}>
@@ -40,7 +61,8 @@ function CandidateTable({ candidates, projects, decide }: { candidates: S['Proje
         <Tr key={c.name}>
           <Td label={t.One}>{c.name}</Td><Td label="Origen">{ORIGIN[c.origin] ?? c.origin}</Td>
           <Td label="Documentos">{c.documentCount}</Td><Td label="Estado">{STATE[c.state] ?? c.state}</Td>
-          <Td>{c.state === 'PROPOSED' && decide && <CandidateActions candidate={c} projects={projects} decide={decide} />}</Td>
+          <Td>{c.state === 'PROPOSED' && decide && <CandidateActions candidate={c} projects={projects} decide={decide} edit={edit}
+            others={candidates.filter((o) => o.state === 'PROPOSED' && o.name !== c.name).map((o) => o.name)} />}</Td>
         </Tr>
       ))}
     </Table>
@@ -68,6 +90,10 @@ export function IntakeCandidates({ companyId, batchId, projects, onChanged, batc
   const { error, act } = useAction();
   const run = async (fn: () => Promise<unknown>) => { if (await act(fn)) { list.reload(); onChanged(); } };
   const decide: Decide = (d) => run(() => intake.confirmCandidates(companyId, batchId, [d]));
+  const edit: Edit = {
+    rename: (name, newName) => run(() => intake.renameCandidate(companyId, batchId, name, newName)),
+    join: (name, into) => run(() => intake.mergeCandidates(companyId, batchId, [name], into)),
+  };
   // a 409 may come with candidates just found in the texts: reload the list either way
   const finish = async () => { await act(() => intake.closeList(companyId, batchId)); list.reload(); onChanged(); };
   const candidates = list.data?.candidates ?? [];
@@ -84,7 +110,7 @@ export function IntakeCandidates({ companyId, batchId, projects, onChanged, batc
         <Notice message={list.error ?? error} />
       </div>
       {candidates.length === 0 && !list.error && <EmptyState title="Todavía no hay candidatos" />}
-      {candidates.length > 0 && <CandidateTable candidates={candidates} projects={projects} decide={closed ? undefined : decide} />}
+      {candidates.length > 0 && <CandidateTable candidates={candidates} projects={projects} decide={closed ? undefined : decide} edit={edit} />}
     </Section>
   );
 }

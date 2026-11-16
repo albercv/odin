@@ -74,6 +74,11 @@ public class InMemoryIntakeRepository implements IntakeRepository {
     }
 
     @Override
+    public synchronized void deleteCandidate(CompanyId companyId, IntakeBatchId batchId, String name) {
+        candidates.remove(batchId.value() + "/" + name);
+    }
+
+    @Override
     public synchronized List<ProjectCandidate> candidates(CompanyId companyId, IntakeBatchId batchId) {
         return candidates.values().stream()
                 .filter(c -> c.companyId().equals(companyId) && c.batchId().equals(batchId)).toList();

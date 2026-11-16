@@ -189,6 +189,22 @@ class ClassifyIntakeTest {
     }
 
     @Test
+    void aDocumentThatOnlyNamesTheAliasIsProposedWithHighToTheProjectOfItsCandidate() {
+        intake.save(new ProjectCandidate(company, batch.id(), OLMO, CandidateOrigin.IMPORTED, 0, DecisionState.CONFIRMED,
+                Optional.of(olmoId), List.of("residencial olmos")));
+        listClosed();
+        Document onlyAlias = pending("a/uno.pdf", "ACTA\nResidencial Olmos, junta del lunes");
+        Document both = pending("a/dos.pdf", "ACTA\nCalle Olmo 24 y Residencial Olmos, junta");
+
+        classify(false).execute();
+
+        assertThat(proposals(ProposalKind.PROJECT)).extracting(IntakeProposal::documentId,
+                IntakeProposal::targetProjectId, IntakeProposal::confidence).containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(onlyAlias.id(), Optional.of(olmoId), ProposalConfidence.HIGH),
+                        org.assertj.core.groups.Tuple.tuple(both.id(), Optional.of(olmoId), ProposalConfidence.HIGH));
+    }
+
+    @Test
     void theFolderHintsTheProjectAndItsReasonIsTheFolder() {
         confirmed(OLMO, olmoId);
         pending("Calle Olmo 24/uno.pdf", "Un papel sin nombre de proyecto");

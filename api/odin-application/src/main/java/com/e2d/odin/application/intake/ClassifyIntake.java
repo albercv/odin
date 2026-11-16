@@ -82,6 +82,7 @@ public class ClassifyIntake {
     private static final class Run {
         final IntakeBatch batch;
         final Map<String, ProjectId> confirmed = new LinkedHashMap<>();
+        final Map<String, String> aliases = new HashMap<>(); // grafía normalizada → nombre del candidato
         final Map<DocumentId, String> projectOf = new HashMap<>();
         final List<IntakeProposal> made = new ArrayList<>();
         boolean modelAllowed;
@@ -112,7 +113,10 @@ public class ClassifyIntake {
             return;
         }
         intake.candidates(run.company(), batch.id()).stream().filter(c -> c.state() == DecisionState.CONFIRMED)
-                .forEach(c -> run.confirmed.put(c.name(), c.projectId().orElseThrow()));
+                .forEach(c -> {
+                    run.confirmed.put(c.name(), c.projectId().orElseThrow());
+                    c.aliases().forEach(a -> run.aliases.put(a, c.name()));
+                });
         List<IntakeProposal> existing = intake.proposals(run.company(), batch.id());
         rememberUnambiguous(run, existing.stream().filter(p -> p.kind() == ProposalKind.PROJECT).toList());
         Set<DocumentId> done = existing.stream().map(IntakeProposal::documentId).collect(Collectors.toSet());
@@ -172,7 +176,7 @@ public class ClassifyIntake {
         if (names.isEmpty()) {
             return List.of();
         }
-        ProjectMatch match = ProjectRules.match(d.text(), names, folderOf(d));
+        ProjectMatch match = ProjectRules.match(d.text(), names, run.aliases, folderOf(d));
         boolean usable = match.project().isPresent() && !match.reason().isBlank();
         if (usable && match.confidence() == ProposalConfidence.HIGH) {
             return List.of(project(run, d, match.project().get(), ProposalConfidence.HIGH, match.source(),
@@ -194,7 +198,9 @@ public class ClassifyIntake {
 
     /** La cita propia de un candidato: la de las reglas con ese nombre como única lista. */
     private Optional<IntakeProposal> candidateProposal(Run run, IntakeDocument d, String name) {
-        String reason = ProjectRules.match(d.text(), List.of(name), Optional.empty()).reason();
+        Map<String, String> own = run.aliases.entrySet().stream().filter(e -> e.getValue().equals(name))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        String reason = ProjectRules.match(d.text(), List.of(name), own, Optional.empty()).reason();
         return reason.isBlank() ? Optional.empty()
                 : Optional.of(project(run, d, name, ProposalConfidence.LOW, ProposalSource.RULES, reason));
     }

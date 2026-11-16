@@ -105,19 +105,28 @@ public class PostgresIntakeRepository implements IntakeRepository {
     @Override
     public void save(ProjectCandidate c) {
         tx.runInScope(CompanyScope.of(c.companyId()), ALL, jdbc -> jdbc.sql("""
-                INSERT INTO intake_project_candidate (company_id, batch_id, name, origin, document_count, state, project_id)
-                VALUES (:company, :batch, :name, :origin, :count, :state, :project)
+                INSERT INTO intake_project_candidate (company_id, batch_id, name, origin, document_count, state, project_id,
+                    aliases)
+                VALUES (:company, :batch, :name, :origin, :count, :state, :project, :aliases)
                 ON CONFLICT (batch_id, name) DO UPDATE SET origin = EXCLUDED.origin, document_count = EXCLUDED.document_count,
-                    state = EXCLUDED.state, project_id = EXCLUDED.project_id""")
+                    state = EXCLUDED.state, project_id = EXCLUDED.project_id, aliases = EXCLUDED.aliases""")
                 .param("company", c.companyId().value()).param("batch", c.batchId().value()).param("name", c.name())
                 .param("origin", c.origin().name()).param("count", c.documentCount()).param("state", c.state().name())
-                .param("project", c.projectId().map(ProjectId::value).orElse(null)).update());
+                .param("project", c.projectId().map(ProjectId::value).orElse(null))
+                .param("aliases", c.aliases().toArray(String[]::new)).update());
+    }
+
+    @Override
+    public void deleteCandidate(CompanyId companyId, IntakeBatchId batchId, String name) {
+        tx.runInScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("""
+                DELETE FROM intake_project_candidate WHERE company_id = :company AND batch_id = :batch AND name = :name""")
+                .param("company", companyId.value()).param("batch", batchId.value()).param("name", name).update());
     }
 
     @Override
     public List<ProjectCandidate> candidates(CompanyId companyId, IntakeBatchId batchId) {
         return tx.inScope(CompanyScope.of(companyId), ALL, jdbc -> jdbc.sql("""
-                SELECT company_id, batch_id, name, origin, document_count, state, project_id
+                SELECT company_id, batch_id, name, origin, document_count, state, project_id, aliases
                 FROM intake_project_candidate WHERE company_id = :company AND batch_id = :batch ORDER BY name""")
                 .param("company", companyId.value()).param("batch", batchId.value())
                 .query((rs, n) -> candidate(rs)).list());
@@ -209,7 +218,8 @@ public class PostgresIntakeRepository implements IntakeRepository {
         return new ProjectCandidate(new CompanyId(Sql.uuid(rs, "company_id")),
                 new IntakeBatchId(Sql.uuid(rs, "batch_id")), rs.getString("name"),
                 CandidateOrigin.valueOf(rs.getString("origin")), rs.getInt("document_count"),
-                DecisionState.valueOf(rs.getString("state")), optional(rs, "project_id", ProjectId::new));
+                DecisionState.valueOf(rs.getString("state")), optional(rs, "project_id", ProjectId::new),
+                List.of((String[]) rs.getArray("aliases").getArray()));
     }
 
     private static IntakeProposal proposal(ResultSet rs) throws SQLException {

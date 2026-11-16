@@ -19,6 +19,7 @@ import com.e2d.odin.application.intake.OpenIntakeOriginal;
 import com.e2d.odin.application.intake.PlaceIntakeDocument;
 import com.e2d.odin.application.intake.ProposalFilter;
 import com.e2d.odin.application.intake.ConfirmProjectCandidates;
+import com.e2d.odin.application.intake.EditProjectCandidates;
 import com.e2d.odin.application.intake.GetIntakeBatch;
 import com.e2d.odin.application.intake.ImportProjectList;
 import com.e2d.odin.application.intake.IntakeFileResult;
@@ -78,13 +79,16 @@ public class IntakeController {
     private final PlaceIntakeDocument placeDocument;
     private final CloseProjectList closeProjectList;
     private final OpenIntakeOriginal openOriginal;
+    private final EditProjectCandidates editCandidates;
 
     public IntakeController(StartIntake start, ListOpenIntakeBatches openBatches, AddFileToIntake addFile, CloseIntakeUpload closeUpload,
             GetIntakeBatch get, ImportProjectList importList, ListProjectCandidates candidates,
             ConfirmProjectCandidates confirmCandidates, ListIntakeProposals proposals,
             ConfirmIntakeProposals confirmProposals, DecideIntakeProposal decideProposal,
             DiscardIntakeDocument discardDocument, ListUnplacedDocuments unplaced, PlaceIntakeDocument placeDocument,
-            CloseProjectList closeProjectList, OpenIntakeOriginal openOriginal, CloseIntakeBatch closeBatch) {
+            CloseProjectList closeProjectList, OpenIntakeOriginal openOriginal, CloseIntakeBatch closeBatch,
+            EditProjectCandidates editCandidates) {
+        this.editCandidates = editCandidates;
         this.closeBatch = closeBatch;
         this.start = start;
         this.openBatches = openBatches;
@@ -191,6 +195,22 @@ public class IntakeController {
         }
         return Responses.ProjectCandidates.from(confirmCandidates.execute(actor, new CompanyId(companyId),
                 new IntakeBatchId(batchId), given.stream().map(IntakeController::decision).toList()));
+    }
+
+    @PostMapping(BATCHES + "/{batchId}/project-candidates/rename")
+    public Responses.ProjectCandidates renameProjectCandidate(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId,
+            @RequestBody Requests.RenameProjectCandidateRequest request) {
+        return Responses.ProjectCandidates.from(editCandidates.rename(actor, new CompanyId(companyId),
+                new IntakeBatchId(batchId), request.name(), request.newName()));
+    }
+
+    @PostMapping(BATCHES + "/{batchId}/project-candidates/merge")
+    public Responses.ProjectCandidates mergeProjectCandidates(@RequestAttribute(CurrentActor.ATTRIBUTE) Actor actor,
+            @PathVariable UUID companyId, @PathVariable UUID batchId,
+            @RequestBody Requests.MergeProjectCandidatesRequest request) {
+        return Responses.ProjectCandidates.from(editCandidates.merge(actor, new CompanyId(companyId),
+                new IntakeBatchId(batchId), request.names(), request.into()));
     }
 
     /** «Lista terminada»: 409 con lo que falta (documentos por leer o candidatos por decidir). */
