@@ -26,6 +26,8 @@ class Config:
     log: Path
     uid: int
     confirmar: str = ""
+    python: str = sys.executable
+    vigia: Path = None
 
     @property
     def plist(self):
@@ -62,7 +64,7 @@ def build_plist(cfg, hf_home):
     return plistlib.dumps({
         "Label": LABEL,
         "WorkingDirectory": str(cfg.lector),
-        "ProgramArguments": [cfg.uv, "run", "python", "serve.py", "--quant", "8"],
+        "ProgramArguments": [cfg.python, str(cfg.vigia), "--", cfg.uv, "run", "python", "serve.py", "--quant", "8"],
         "EnvironmentVariables": {
             "HF_HOME": str(hf_home), "HF_HUB_OFFLINE": "1", "UV_OFFLINE": "1",
             "PATH": f"{Path(cfg.uv).parent}:/usr/bin:/bin:/usr/sbin:/sbin"},
@@ -78,6 +80,9 @@ def validate(cfg):
     if not (cfg.lector / "serve.py").is_file():
         sys.exit(f"No encuentro {cfg.lector}/serve.py. Indica la carpeta del puente: "
                  "make lector-arranque-instalar CONFIRMAR=ARRANQUE LECTOR_DIR=/ruta/OCR/.worktrees/puente-odin")
+    if not cfg.vigia.is_file():
+        sys.exit(f"No encuentro el vigía {cfg.vigia}. Falta vigia_lector.py en la copia principal de Odín: "
+                 "fusiona la rama del vigía allí y repite.")
     if not cfg.uv:
         sys.exit("No encuentro uv en el PATH. Instálalo (brew install uv) y repite.")
     hf_home = find_hf_home(cfg.lector)
@@ -168,7 +173,8 @@ def config_from_env():
         lector=Path(os.environ.get("LECTOR_DIR") or odin.parent / "OCR" / ".worktrees" / "puente-odin"),
         uv=shutil.which("uv"),
         agents=Path(os.environ.get("ODIN_LAUNCH_AGENTS_DIR") or Path.home() / "Library" / "LaunchAgents"),
-        log=odin / "data" / "puente-ocr.log", uid=os.getuid(), confirmar=os.environ.get("CONFIRMAR", ""))
+        log=odin / "data" / "puente-ocr.log", uid=os.getuid(), confirmar=os.environ.get("CONFIRMAR", ""),
+        vigia=odin / "deploy" / "instalacion" / "vigia_lector.py")
 
 
 def main(argv):
