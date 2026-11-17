@@ -40,12 +40,14 @@ Este fichero es configuración del proyecto. No guardar aquí requisitos, planes
 
 superpowers: diseño aprobado (spec) → plan (`superpowers:writing-plans`) → ejecución con subagentes (Sonnet para lo complejo, Haiku para lo mecánico) → `superpowers:verification-before-completion`.
 
-## Git (gitflow, D-114)
+## Git (gitflow por PR, D-122)
 
 - Ramas: `main` (cierres de sprint), `develop` (integración), `feature/<nombre>` (sale de `develop`), `task/<feature>/<tarea>` (sale de su feature).
-- Cada tarea en su propia rama `task/…`; al terminar, merge `--no-ff` a su feature.
-- Una feature se pone al día con `develop` (y ensaya su migración sobre una copia, si la trae) antes de pedir el visto bueno. Con el visto bueno del propietario entra en `develop` con `--no-ff`, y la instalación del propietario se actualiza desde `develop` (`make instalacion-actualizar`).
-- `develop` pasa a `main` al cierre de sprint por `release/<versión>`, con etiqueta. Las instalaciones de clientes salen solo de `main`. Arreglos urgentes: `hotfix/<nombre>` desde `main`, de vuelta a `main` y a `develop`.
-- Sin ramas de integración aparte: las `integracion/…` están retiradas.
-- Remoto privado en GitHub (`albercv/odin`): solo se suben `develop`, `main` y sus etiquetas, y solo lo hace el CEO con el sí del propietario, con la copia filtrada sin `experimentos/` y tras revisar que no haya claves.
+- GitHub (`albercv/odin`, privado) es el remoto `origin` y la referencia. No se mergea en local: toda unión se hace por PR, con merge commit (`gh pr merge --merge`).
+- Cada tarea en su propia rama `task/…`, subida a `origin`. Al terminar, PR a su feature, que mergea quien trabaja la tarea.
+- Una feature se pone al día con `develop` (y ensaya su migración sobre una copia, si la trae) y abre su PR a `develop`. Ese PR se mergea solo con el visto bueno del propietario; después se trae `develop` (`git pull`) y la instalación del propietario se actualiza desde `develop` (`make instalacion-actualizar`).
+- `develop` pasa a `main` al cierre de sprint por PR desde `release/<versión>`, con etiqueta en `main`. Las instalaciones de clientes salen solo de `main`. Arreglos urgentes: `hotfix/<nombre>` desde `main`, por PR a `main` y a `develop`.
+- Sube tu rama a `origin` al menos al acabar cada sesión de trabajo. Antes de cada push, revisa que no haya claves.
+- `experimentos/` está fuera de git (`.gitignore`). Su historial anterior está en `data/copias/odin-git-antes-github-2026-11-17.git`.
+- Sin ramas de integración aparte.
 - Ningún commit ni PR lleva atribución a Claude: sin `Co-Authored-By` ni firmas de Claude Code.

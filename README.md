@@ -13,13 +13,13 @@ Diseño: `docs/superpowers/specs/2026-11-09-api-central-design.md`.
 ## Repositorio
 
 - Privado en GitHub (`albercv/odin`). Solo entra quien invite el propietario.
-- Ramas (gitflow, D-114):
-  - `feature/<nombre>` sale de `develop`, y cada tarea va en `task/<feature>/<tarea>`, que se mezcla con `--no-ff` en su feature.
+- Ramas (gitflow por PR, D-122):
+  - `feature/<nombre>` sale de `develop`, y cada tarea va en `task/<feature>/<tarea>`, que se une a su feature por PR.
   - Antes de pedir el visto bueno, la feature se pone al día con `develop` y, si trae migración, se ensaya la actualización sobre una copia de la base.
-  - Con el visto bueno del propietario, la feature entra en `develop` con `--no-ff` y la instalación del propietario se actualiza desde `develop`.
-  - `main` recibe los cierres de sprint por una rama `release/<versión>` y lleva su etiqueta. Las instalaciones de clientes salen solo de `main`. Un arreglo urgente sale de `main` en `hotfix/<nombre>` y vuelve a `main` y a `develop`.
-  - No hay ramas de integración aparte: las `integracion/…` quedan retiradas.
-- Se suben `develop`, `main` y sus etiquetas cada vez que cambian. Lo que está en construcción vive en sus ramas `feature/…` y no se sube.
+  - La feature entra en `develop` por PR, con el visto bueno del propietario, y la instalación del propietario se actualiza desde `develop`.
+  - `main` recibe los cierres de sprint por PR desde una rama `release/<versión>` y lleva su etiqueta. Las instalaciones de clientes salen solo de `main`. Un arreglo urgente sale de `main` en `hotfix/<nombre>` y vuelve por PR a `main` y a `develop`.
+  - No se mergea en local: toda unión se hace por PR en GitHub. No hay ramas de integración aparte.
+- Todas las ramas de trabajo se suben a GitHub, para no perder trabajo.
 - Nunca se suben `deploy/.env`, `data/` ni documentos reales: los excluye `.gitignore`, y antes de cada subida se revisa el historial en busca de claves.
 
 ## Requisitos
