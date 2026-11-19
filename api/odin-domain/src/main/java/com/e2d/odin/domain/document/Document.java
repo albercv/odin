@@ -178,6 +178,11 @@ public record Document(
                 countAttempt ? attemptCount : attemptCount - 1);
     }
 
+    /** Vuelve a la cola tras un fallo que se reintenta: la pausa se cuenta desde failedAt. */
+    public Document retryReadingAfter(Instant failedAt) {
+        return copy(DocumentStatus.PENDING_READER, Optional.empty(), paginated, Optional.of(failedAt), attemptCount);
+    }
+
     public Document requeue() {
         return copy(DocumentStatus.RECEIVED, Optional.empty(), paginated, Optional.empty(), attemptCount);
     }

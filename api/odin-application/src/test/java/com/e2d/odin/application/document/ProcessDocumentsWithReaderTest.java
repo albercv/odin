@@ -14,6 +14,7 @@ import com.e2d.odin.application.fake.SequenceIdGenerator;
 import com.e2d.odin.application.fake.StubFormatDetector;
 import com.e2d.odin.application.port.DocumentTooLargeForReaderException;
 import com.e2d.odin.application.port.ReaderFailedException;
+import com.e2d.odin.application.port.ReaderTimedOutException;
 import com.e2d.odin.application.port.ReaderUnavailableException;
 import com.e2d.odin.application.port.UnreadableDocumentException;
 import com.e2d.odin.application.shared.ReaderSettings;
@@ -28,7 +29,8 @@ import org.junit.jupiter.api.Test;
 
 class ProcessDocumentsWithReaderTest {
 
-    private static final ReaderSettings SETTINGS = new ReaderSettings(Duration.ofMinutes(30), 3);
+    private static final ReaderSettings SETTINGS = new ReaderSettings(Duration.ofMinutes(30), 3, Duration.ofMinutes(10),
+            Duration.ofHours(1));
 
     private final InMemoryOrganizationRepository orgs = new InMemoryOrganizationRepository();
     private final InMemoryDocumentRepository docs = new InMemoryDocumentRepository();
@@ -214,5 +216,45 @@ class ProcessDocumentsWithReaderTest {
 
         assertThat(after(d).status()).isEqualTo(DocumentStatus.READY);
         assertThat(after(d).attemptCount()).isEqualTo(2);
+    }
+
+    @Test
+    void firstTimeoutReturnsToQueueStampedWithTheFailureTime() {
+        Document d = pendingReader();
+        reader.fails(new ReaderTimedOutException("tiempo", null));
+
+        processor.processNext();
+
+        assertThat(after(d).status()).isEqualTo(DocumentStatus.PENDING_READER);
+        assertThat(after(d).attemptCount()).isEqualTo(1);
+        assertThat(after(d).processingStartedAt()).contains(clock.instant());
+    }
+
+    @Test
+    void secondTimeoutFailsWithTimedOutReason() {
+        Document d = pendingReader();
+        reader.fails(new ReaderTimedOutException("tiempo", null));
+
+        processor.processNext();
+        processor.processNext();
+
+        assertThat(after(d).status()).isEqualTo(DocumentStatus.FAILED);
+        assertThat(after(d).failureReason()).contains(ProcessDocumentsWithReader.READER_TIMED_OUT);
+        assertThat(after(d).attemptCount()).isEqualTo(2);
+    }
+
+    @Test
+    void otherFailureOnSecondAttemptRetriesLaterAndFailsOnThird() {
+        Document d = pendingReader();
+        reader.fails(new ReaderFailedException("500"));
+
+        processor.processNext();
+        processor.processNext();
+        assertThat(after(d).status()).isEqualTo(DocumentStatus.PENDING_READER);
+        assertThat(after(d).processingStartedAt()).contains(clock.instant());
+
+        processor.processNext();
+        assertThat(after(d).status()).isEqualTo(DocumentStatus.FAILED);
+        assertThat(after(d).failureReason()).contains(ProcessDocumentsWithReader.READER_FAILED);
     }
 }

@@ -1,4 +1,4 @@
-.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento primera-carga instalacion-reiniciar instalacion-restaurar mcp-claude-desktop
+.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento primera-carga instalacion-reiniciar instalacion-restaurar mcp-claude-desktop lector-arranque-instalar lector-arranque-quitar lector-arranque-estado
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -77,3 +77,13 @@ primera-carga:
 # Añade un proyecto nuevo sin vaciar (encargo 14): make instalacion-anadir-proyecto DATOS_PROYECTO=<carpeta> CONFIRMAR=ANADIR
 instalacion-anadir-proyecto:
 	@DATOS_PROYECTO="$(DATOS_PROYECTO)" CONFIRMAR="$(CONFIRMAR)" MIEMBROS="$(or $(MIEMBROS),marta)" deploy/instalacion/cerrojo.sh deploy/instalacion/anadir-proyecto.sh
+
+# Arranque automático del puente del lector (agente de launchd del usuario): make lector-arranque-instalar CONFIRMAR=ARRANQUE [LECTOR_DIR=…]
+lector-arranque-instalar:
+	@CONFIRMAR="$(CONFIRMAR)" LECTOR_DIR="$(LECTOR_DIR)" python3 deploy/instalacion/arranque_lector.py instalar
+
+lector-arranque-quitar:
+	@python3 deploy/instalacion/arranque_lector.py quitar
+
+lector-arranque-estado:
+	@python3 deploy/instalacion/arranque_lector.py estado

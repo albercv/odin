@@ -18,6 +18,7 @@ import com.e2d.odin.domain.shared.ProjectId;
 import com.e2d.odin.domain.shared.ProjectVisibility;
 import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.domain.topic.TopicId;
+import com.e2d.odin.application.shared.RetryPause;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -399,7 +400,7 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     }
 
     @Override
-    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter) {
+    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter, RetryPause pause) {
         for (Document d : new ArrayList<>(documents.values())) {
             boolean stale = d.status() == DocumentStatus.READER_PROCESSING
                     && d.processingStartedAt().map(t -> !t.plus(staleAfter).isAfter(now)).orElse(true);

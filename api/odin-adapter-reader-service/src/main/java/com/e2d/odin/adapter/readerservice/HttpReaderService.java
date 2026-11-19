@@ -4,6 +4,7 @@ import com.e2d.odin.application.port.DocumentTooLargeForReaderException;
 import com.e2d.odin.application.port.ReadResult;
 import com.e2d.odin.application.port.ReaderFailedException;
 import com.e2d.odin.application.port.ReaderService;
+import com.e2d.odin.application.port.ReaderTimedOutException;
 import com.e2d.odin.application.port.ReaderUnavailableException;
 import com.e2d.odin.application.port.UnreadableDocumentException;
 import com.e2d.odin.domain.document.DocumentFormat;
@@ -108,7 +109,7 @@ public class HttpReaderService implements ReaderService {
         } catch (HttpConnectTimeoutException | ConnectException e) {
             throw new ReaderUnavailableException("No se puede conectar con el servicio lector", e);
         } catch (HttpTimeoutException e) {
-            throw new ReaderFailedException("El servicio lector no respondió a tiempo", e);
+            throw new ReaderTimedOutException("El servicio lector no respondió a tiempo", e);
         } catch (IOException e) {
             throw new ReaderFailedException("Fallo de comunicación con el servicio lector", e);
         } catch (InterruptedException e) {

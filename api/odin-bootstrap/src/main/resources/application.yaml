@@ -36,6 +36,8 @@ odin:
     url: ${ODIN_READER_URL:}
     timeout: ${ODIN_READER_TIMEOUT:PT30M}
     connect-timeout: ${ODIN_READER_CONNECT_TIMEOUT:PT5S}
+    retry-delay: ${ODIN_READER_RETRY_DELAY:PT10M}
+    max-retry-delay: ${ODIN_READER_MAX_RETRY_DELAY:PT1H}
     token: ${ODIN_READER_TOKEN:}
   tagger:
     url: ${ODIN_TAGGER_URL:}

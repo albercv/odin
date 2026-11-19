@@ -10,6 +10,7 @@ import com.e2d.odin.domain.document.Document;
 import com.e2d.odin.domain.document.DocumentFormat;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentStatus;
+import com.e2d.odin.domain.intake.IntakeBatch;
 import com.e2d.odin.domain.shared.CompanyId;
 import com.e2d.odin.domain.shared.CompanyScope;
 import com.e2d.odin.domain.shared.DocumentId;
@@ -87,6 +88,27 @@ class PostgresTaggingRepositoryIT extends AbstractPostgresIT {
     private void tagDone(Document d, Instant now, TopicId... ids) {
         assertThat(claim(now).document().id()).isEqualTo(d.id());
         tagging.saveResult(d.id(), Set.of(ids), V1, now);
+    }
+
+    @Test
+    void claimsHandUploadedBeforeIntakeAndIntakeInSeqOrder() {
+        CompanyId company = newCompany();
+        topic(company, "Agua");
+        IntakeBatch batch = newIntakeBatch(company, newUser(company));
+        Document intake1 = readyIntakeDocument(batch, "Carga 1");
+        Document intake2 = readyIntakeDocument(batch, "Carga 2");
+        Document manual = readyDocument(company, "A mano");
+
+        assertThat(claim(NOW).document().id()).isEqualTo(manual.id());
+        assertThat(claim(NOW).document().id()).isEqualTo(intake1.id());
+        assertThat(claim(NOW).document().id()).isEqualTo(intake2.id());
+    }
+
+    private Document readyIntakeDocument(IntakeBatch batch, String title) {
+        Document d = newIntakeDocument(batch, newUser(batch.companyId()), title, DocumentStatus.READY);
+        docs.replacePages(d.id(), List.of(new DocumentPage(d.id(), 1, "Texto de " + title, "lector", "1")));
+        docs.confirmIntake(batch.companyId(), d.id(), Optional.empty(), d.uploadedBy(), NOW);
+        return d;
     }
 
     @Test

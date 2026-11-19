@@ -8,6 +8,7 @@ import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.document.DocumentRef;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.application.port.IntakeDocument;
+import com.e2d.odin.application.shared.RetryPause;
 import com.e2d.odin.domain.intake.IntakeBatchId;
 import com.e2d.odin.domain.intake.IntakeCounts;
 import com.e2d.odin.domain.shared.CompanyId;
@@ -447,23 +448,29 @@ public class PostgresDocumentRepository implements DocumentRepository {
 
     @Override
     public Optional<Document> claimNextForProcessing(Instant now, Duration staleAfter) {
-        return claim("RECEIVED", "PROCESSING", now, staleAfter, d -> d.startProcessing(now));
+        return claim("RECEIVED", "PROCESSING", now, staleAfter, RetryPause.NONE, d -> d.startProcessing(now));
     }
 
     @Override
-    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter) {
-        return claim("PENDING_READER", "READER_PROCESSING", now, staleAfter, d -> d.startReading(now));
+    public Optional<Document> claimNextForReader(Instant now, Duration staleAfter, RetryPause pause) {
+        return claim("PENDING_READER", "READER_PROCESSING", now, staleAfter, pause, d -> d.startReading(now));
     }
 
-    /** Toma el primer documento en espera o con el trabajo caducado, bloqueado sin esperar a los que otro ya tiene. */
+    /** Toma el primer documento en espera (cumplida su pausa; lo subido a mano antes que la primera carga y lo ya intentado detrás) o con el trabajo caducado, bloqueado sin esperar a los que otro ya tiene. */
     private Optional<Document> claim(String waiting, String running, Instant now, Duration staleAfter,
-            UnaryOperator<Document> start) {
+            RetryPause pause, UnaryOperator<Document> start) {
         String sql = "SELECT " + COLUMNS + """
-                 FROM document d WHERE d.withdrawn_at IS NULL AND (d.status = '%s' OR (d.status = '%s'
+                 FROM document d WHERE d.withdrawn_at IS NULL AND ((d.status = '%s'
+                    AND (d.attempt_count = 0 OR d.processing_started_at IS NULL OR d.processing_started_at
+                        + make_interval(secs => LEAST(:baseSeconds * power(2, d.attempt_count - 1), :capSeconds)) <= :now))
+                    OR (d.status = '%s'
                     AND (d.processing_started_at IS NULL OR d.processing_started_at <= :threshold)))
-                ORDER BY d.seq LIMIT 1 FOR UPDATE SKIP LOCKED""".formatted(waiting, running);
+                ORDER BY (d.intake_batch_id IS NOT NULL), (d.attempt_count > 0), d.seq
+                LIMIT 1 FOR UPDATE SKIP LOCKED""".formatted(waiting, running);
         return pipeline.inScope(CompanyScope.all(), ProjectVisibility.all(), jdbc -> jdbc.sql(sql)
-                .param("threshold", Sql.ts(now.minus(staleAfter))).query((rs, n) -> document(rs)).optional()
+                .param("threshold", Sql.ts(now.minus(staleAfter))).param("now", Sql.ts(now))
+                .param("baseSeconds", pause.base().toSeconds()).param("capSeconds", pause.cap().toSeconds())
+                .query((rs, n) -> document(rs)).optional()
                 .map(start).map(claimed -> {
                     upsert(jdbc, claimed);
                     return claimed;
