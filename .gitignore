@@ -22,3 +22,6 @@ api/odin-adapter-web/.m2/
 __pycache__/
 # casos de prueba y resultados de medición: fuera de git (D-122)
 experimentos/
+
+# listas de contactos comerciales: fuera de git (datos personales)
+docs/marketing/
