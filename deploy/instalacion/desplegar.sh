@@ -88,6 +88,7 @@ if [ "$PROYECTO" = odin ]; then
   [ "$CONSTRUIR" = si ] || { echo "CONSTRUIR=no no vale en la instalación «odin»: serían imágenes sin validar. No se ha cambiado nada." >&2; exit 1; }
   APROBADO=$(python3 "$AQUI/puerta.py") || exit 1
 fi
+asegurar_archivo_ficticio || exit 1 # antes de cualquier cambio: lo necesitan la carga y el recuento
 en_marcha || { echo "La instalación «$PROYECTO» no está en marcha (make up). No se ha cambiado nada." >&2; exit 1; }
 mkdir -p "$DATOS/copias"
 curl -s -m 3 http://127.0.0.1:8077/health > /dev/null || echo "Aviso: el puente OCR no responde; los escaneos esperarán al lector. Para que arranque solo: make lector-arranque-instalar CONFIRMAR=ARRANQUE"

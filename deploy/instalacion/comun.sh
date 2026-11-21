@@ -4,6 +4,7 @@
 # desde una worktree. INSTALACION_PROYECTO (por defecto odin) e INSTALACION_ENV (por defecto deploy/.env) eligen la pila.
 # Las funciones devuelven error en cada paso con «|| return 1»: set -e no actúa dentro de un if ni de un trap.
 
+RAIZ_SCRIPTS=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd) # la copia donde viven los guiones; datos_prueba.py y recuento.sh leen el archivo ficticio de ella
 PRINCIPAL=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --path-format=absolute --git-common-dir 2> /dev/null || true)
 [ -n "$PRINCIPAL" ] && cd "${PRINCIPAL%/.git}"
 PROYECTO="${INSTALACION_PROYECTO:-odin}"
@@ -29,6 +30,14 @@ if [ "$PROYECTO" != odin ]; then
     esac
   done
 fi
+
+# asegurar_archivo_ficticio: el archivo ficticio no está en git; lo genera (determinista, ~1 s) solo si falta.
+asegurar_archivo_ficticio() {
+  local base="$RAIZ_SCRIPTS/datos-prueba/archivo-ficticio"
+  { [ -f "$base/datos/manifiesto.json" ] && [ -f "$base/datos/claves.json" ]; } && return 0
+  echo "Falta el archivo ficticio: lo genero (make archivo-ficticio)." >&2
+  python3 "$base/generar/generar.py" >&2 || { echo "No se ha podido generar el archivo ficticio. No se ha cambiado nada." >&2; return 1; }
+}
 
 compose() { docker compose -p "$PROYECTO" -f deploy/compose.yaml --env-file "$ENV_FILE" "$@"; }
 
