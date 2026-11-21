@@ -11,7 +11,7 @@
   - forma A: 13 minutos en frío y 9 con caché;
   - forma B: 13 en frío y 11 con caché;
   - el lector: 1 minuto por ejecución.
-- **La primera actualización tras el merge** solo pasa por la puerta si antes se trae `develop` a la copia principal: el `desplegar.sh` instalado hoy no la tiene.
+- **La primera actualización tras el merge** pasa por la puerta si se lanza desde la copia donde vive `develop` (en la instalación del propietario, la worktree de `develop`) después de `git pull --ff-only`: la orden usa el `desplegar.sh` y el `puerta.py` de esa copia. Lanzada desde una copia anterior, no tendría la puerta. No se hace `git checkout develop` en la copia principal: esa rama ya está en otra worktree.
 - Regla (D-123): se instala solo lo que ha pasado la validación en el repositorio. GitHub no deja proteger ramas en el repositorio privado sin plan de pago, así que la regla la impone la instalación.
 
 ## 0. Lo comprobado antes de diseñar (21 nov.)
