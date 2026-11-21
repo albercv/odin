@@ -1,0 +1,441 @@
+[
+ {
+  "id": "V1",
+  "categoria": "vocabulario_tecnico",
+  "pregunta": "¿Ha habido algún problema de agua en el patio de luces de Calle Olmo 14? ¿Lo pagó el seguro?",
+  "citas": [
+   [
+    "c1-olmo14/caso-2025-014-bajante-patio.txt",
+    "El perito de Seguros Atalaya rechazó el siniestro por tratarse de un deterioro gradual de la junta."
+   ],
+   [
+    "c1-olmo14/caso-2025-014-bajante-patio.txt",
+    "pérdida de estanqueidad en la junta de la bajante comunitaria del patio de luces"
+   ]
+  ],
+  "claves": [
+   [
+    "870"
+   ],
+   [
+    "rechaz",
+    "no lo pag",
+    "no lo cubr",
+    "no cubri",
+    "deterioro gradual"
+   ]
+  ],
+  "citas_resueltas": [
+   {
+    "doc": "c1-olmo14/caso-2025-014-bajante-patio.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "El perito de Seguros Atalaya rechazó el siniestro por tratarse de un deterioro gradual de la junta."
+   },
+   {
+    "doc": "c1-olmo14/caso-2025-014-bajante-patio.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "pérdida de estanqueidad en la junta de la bajante comunitaria del patio de luces"
+   }
+  ]
+ },
+ {
+  "id": "V2",
+  "categoria": "vocabulario_tecnico",
+  "pregunta": "La piscina de Los Almendros perdía agua en julio de 2025. ¿Qué se encontró y quién lo arregló?",
+  "citas": [
+   [
+    "c2-almendros/caso-2025-019-vaso-piscina.txt",
+    "localizó una microfisura en el pasamuros de una boquilla de impulsión"
+   ],
+   [
+    "c2-almendros/caso-2025-019-vaso-piscina.txt",
+    "descenso del nivel del vaso de la piscina de unos tres centímetros diarios"
+   ]
+  ],
+  "claves": [
+   [
+    "microfisura"
+   ],
+   [
+    "Aquaservicios"
+   ]
+  ],
+  "citas_resueltas": [
+   {
+    "doc": "c2-almendros/caso-2025-019-vaso-piscina.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "localizó una microfisura en el pasamuros de una boquilla de impulsión"
+   },
+   {
+    "doc": "c2-almendros/caso-2025-019-vaso-piscina.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "descenso del nivel del vaso de la piscina de unos tres centímetros diarios"
+   }
+  ]
+ },
+ {
+  "id": "V3",
+  "categoria": "vocabulario_tecnico",
+  "pregunta": "En Avenida del Puerto 3 hay una pared de la zona común que suelta un polvillo blanco y se le cae la pintura. ¿Sabemos por qué pasa y cuánto costaría arreglarlo?",
+  "citas": [
+   [
+    "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "capilaridad ascendente desde la cimentación"
+   ],
+   [
+    "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "con un presupuesto de 2.300 euros"
+   ],
+   [
+    "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "eflorescencias salinas y desconchados de pintura"
+   ]
+  ],
+  "claves": [
+   [
+    "capilaridad"
+   ],
+   [
+    "2.300",
+    "2300"
+   ]
+  ],
+  "citas_resueltas": [
+   {
+    "doc": "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "capilaridad ascendente desde la cimentación"
+   },
+   {
+    "doc": "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "con un presupuesto de 2.300 euros"
+   },
+   {
+    "doc": "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "eflorescencias salinas y desconchados de pintura"
+   }
+  ]
+ },
+ {
+  "id": "V4",
+  "categoria": "vocabulario_tecnico",
+  "pregunta": "Una vecina de Calle Olmo 14 tiene moho negro en la pared del dormitorio. ¿Consta algún caso parecido y qué concluyó el técnico?",
+  "citas": [
+   [
+    "c1-olmo14/caso-2025-027-condensaciones-4a.txt",
+    "condensaciones superficiales por ventilación insuficiente de la vivienda"
+   ],
+   [
+    "c1-olmo14/caso-2025-027-condensaciones-4a.txt",
+    "proliferación de colonias fúngicas en el paramento de la fachada norte"
+   ]
+  ],
+  "claves": [
+   [
+    "condensaci"
+   ],
+   [
+    "ventila"
+   ]
+  ],
+  "citas_resueltas": [
+   {
+    "doc": "c1-olmo14/caso-2025-027-condensaciones-4a.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "condensaciones superficiales por ventilación insuficiente de la vivienda"
+   },
+   {
+    "doc": "c1-olmo14/caso-2025-027-condensaciones-4a.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "proliferación de colonias fúngicas en el paramento de la fachada norte"
+   }
+  ]
+ },
+ {
+  "id": "V5",
+  "categoria": "vocabulario_tecnico",
+  "pregunta": "¿Se ha atascado alguna vez el desagüe del garaje de Los Almendros? ¿Por qué pasó y cuánto costó?",
+  "citas": [
+   [
+    "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "obstrucción del colector por intrusión de raíces de los cipreses del jardín"
+   ],
+   [
+    "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "la Comunidad abonó 1.640 euros con cargo al fondo de reserva"
+   ],
+   [
+    "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "rebose de la arqueta sifónica situada al pie de la rampa del garaje común"
+   ]
+  ],
+  "claves": [
+   [
+    "raíces",
+    "raices"
+   ],
+   [
+    "1.640",
+    "1640"
+   ]
+  ],
+  "citas_resueltas": [
+   {
+    "doc": "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "obstrucción del colector por intrusión de raíces de los cipreses del jardín"
+   },
+   {
+    "doc": "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "la Comunidad abonó 1.640 euros con cargo al fondo de reserva"
+   },
+   {
+    "doc": "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "rebose de la arqueta sifónica situada al pie de la rampa del garaje común"
+   }
+  ]
+ },
+ {
+  "id": "V6",
+  "categoria": "vocabulario_sin_respuesta",
+  "abstener": true,
+  "pregunta": "¿Ha entrado agua alguna vez en el foso o en la cabina del ascensor de Calle Olmo 14?",
+  "citas_resueltas": []
+ },
+ {
+  "id": "V7",
+  "categoria": "vocabulario_sin_respuesta",
+  "abstener": true,
+  "pregunta": "¿Se ha inundado alguna vez alguno de los locales comerciales de Avenida del Puerto 3?",
+  "citas_resueltas": []
+ },
+ {
+  "id": "G1",
+  "categoria": "agregada_exhaustiva",
+  "pregunta": "Haz una lista de todos los casos e incidencias relacionados con el agua o la humedad, de cualquier tipo, que constan en todas las comunidades, con su número de caso.",
+  "citas": [
+   [
+    "c1-olmo14/caso-2024-017-filtracion-azotea.txt",
+    "Caso 2024-017"
+   ],
+   [
+    "c2-almendros/caso-2025-011-fuga-riego.txt",
+    "Caso 2025-011"
+   ],
+   [
+    "c3-puerto3/caso-2025-004-filtracion-cubierta.txt",
+    "Caso 2025-004"
+   ],
+   [
+    "c1-olmo14/caso-2025-014-bajante-patio.txt",
+    "Caso 2025-014"
+   ],
+   [
+    "c2-almendros/caso-2025-019-vaso-piscina.txt",
+    "Caso 2025-019"
+   ],
+   [
+    "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "Caso 2025-022"
+   ],
+   [
+    "c1-olmo14/caso-2025-027-condensaciones-4a.txt",
+    "Caso 2025-027"
+   ],
+   [
+    "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "Caso 2024-031"
+   ]
+  ],
+  "claves": [
+   [
+    "2024-017"
+   ],
+   [
+    "2025-011"
+   ],
+   [
+    "2025-004"
+   ],
+   [
+    "2025-014"
+   ],
+   [
+    "2025-019"
+   ],
+   [
+    "2025-022"
+   ],
+   [
+    "2025-027"
+   ],
+   [
+    "2024-031"
+   ]
+  ],
+  "prohibidas": [
+   "2025-006",
+   "2024-022",
+   "2025-009"
+  ],
+  "citas_resueltas": [
+   {
+    "doc": "c1-olmo14/caso-2024-017-filtracion-azotea.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2024-017"
+   },
+   {
+    "doc": "c2-almendros/caso-2025-011-fuga-riego.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2025-011"
+   },
+   {
+    "doc": "c3-puerto3/caso-2025-004-filtracion-cubierta.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2025-004"
+   },
+   {
+    "doc": "c1-olmo14/caso-2025-014-bajante-patio.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2025-014"
+   },
+   {
+    "doc": "c2-almendros/caso-2025-019-vaso-piscina.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2025-019"
+   },
+   {
+    "doc": "c3-puerto3/caso-2025-022-capilaridad-contadores.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2025-022"
+   },
+   {
+    "doc": "c1-olmo14/caso-2025-027-condensaciones-4a.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2025-027"
+   },
+   {
+    "doc": "c2-almendros/caso-2024-031-colector-garaje.txt",
+    "paginas": [
+     1
+    ],
+    "ancla": "Caso 2024-031"
+   }
+  ],
+  "docs_prohibidos": [
+   "c1-olmo14/caso-2025-006-ruido-ascensor.txt",
+   "c2-almendros/caso-2024-022-ruido-piscina.txt",
+   "c3-puerto3/caso-2025-009-humos-local.txt"
+  ]
+ },
+ {
+  "id": "G2",
+  "categoria": "agregada_exhaustiva",
+  "pregunta": "Dime en qué comunidades hemos tenido algún problema de aguas anteriormente y ordena sus condiciones de seguro, datos del seguro y franquicias de mayor a menor.",
+  "citas": [
+   [
+    "c1-olmo14/poliza-seguro-2023.txt",
+    "franquicia de 300 euros por siniestro"
+   ],
+   [
+    "c3-puerto3/poliza-seguro-2024.txt",
+    "franquicia de 250 euros por siniestro"
+   ],
+   [
+    "c2-almendros/poliza-seguro-2024.txt",
+    "franquicia de 150 euros por siniestro"
+   ]
+  ],
+  "claves": [
+   [
+    "Olmo"
+   ],
+   [
+    "Almendros"
+   ],
+   [
+    "Puerto"
+   ],
+   [
+    "300"
+   ],
+   [
+    "250"
+   ],
+   [
+    "150"
+   ]
+  ],
+  "orden": [
+   "300",
+   "250",
+   "150"
+  ],
+  "todas_las_citas": true,
+  "citas_resueltas": [
+   {
+    "doc": "c1-olmo14/poliza-seguro-2023.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "franquicia de 300 euros por siniestro"
+   },
+   {
+    "doc": "c3-puerto3/poliza-seguro-2024.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "franquicia de 250 euros por siniestro"
+   },
+   {
+    "doc": "c2-almendros/poliza-seguro-2024.txt",
+    "paginas": [
+     2
+    ],
+    "ancla": "franquicia de 150 euros por siniestro"
+   }
+  ]
+ }
+]

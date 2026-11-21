@@ -5,11 +5,15 @@
 # MODO=actualizar (make instalacion-actualizar CONFIRMAR=ACTUALIZAR) solo cambia el código: conserva la base y los
 # originales, reintenta los documentos fallidos y refresca el MCP sin cambiar el trabajador registrado.
 # En una pila de ensayo (INSTALACION_PROYECTO distinto de odin) no cambia la copia principal ni su deploy/.env.
-# CONSTRUIR=no arranca con las imágenes que ya hay (ensayos con imágenes hechas desde otra worktree).
+# CONSTRUIR=no arranca con las imágenes que ya hay (ensayos con imágenes hechas desde otra worktree); en «odin» se niega.
+# En «odin», la puerta (puerta.py, encargo 27) decide qué commit se instala: el de origin/<rama> con validación en verde.
+# La rama sale de RAMA o de ODIN_RAMA_INSTALACION (deploy/.env). No hay forma de saltarse la puerta.
 set -euo pipefail
 AQUI=$(cd "$(dirname "$0")" && pwd)
 . "$AQUI/comun.sh"
-RAMA="${RAMA:-develop}"
+[ "$PROYECTO" = odin ] || RAMA="${RAMA:-develop}"
+RAMA="${RAMA:-${ODIN_RAMA_INSTALACION:-}}"
+export RAMA
 TRABAJADOR="${TRABAJADOR:-marta}"
 CONSTRUIR="${CONSTRUIR:-si}"
 MODO="${MODO:-cargar}"
@@ -19,9 +23,18 @@ REGISTRO="$DATOS/despliegue-$(date +%Y-%m-%d-%H%M%S).log"
 
 explicar() {
   echo "No se ha cambiado nada. Con CONFIRMAR=$PALABRA, esta orden haría en la instalación «$PROYECTO»:"
+  if [ "$PROYECTO" = odin ]; then
+    python3 "$AQUI/puerta.py" --explicar
+    [ "$CONSTRUIR" = si ] || echo "CONSTRUIR=no no vale en esta instalación: serían imágenes sin validar."
+  fi
   echo "  1. copia de la base, de los originales, de $ENV_FILE y de la configuración de Claude Desktop;"
-  echo "  2. poner la copia principal en $RAMA ($(git rev-parse --short "$RAMA")) y añadir a $ENV_FILE lo que falte:"
-  echo "     ODIN_PUBLIC_URL, ODIN_READER_URL (puente OCR en el Mac) y ODIN_TAGGER_URL (Ollama);"
+  if [ "$PROYECTO" = odin ]; then
+    echo "  2. poner la copia principal en ese commit exacto (solo si la puerta lo deja) y añadir $ENV_FILE lo que falte:"
+    echo "     ODIN_PUBLIC_URL, ODIN_READER_URL (puente OCR en el Mac) y ODIN_TAGGER_URL (Ollama);"
+  else
+    echo "  2. poner la copia principal en $RAMA ($(git rev-parse --short "$RAMA")) y añadir a $ENV_FILE lo que falte:"
+    echo "     ODIN_PUBLIC_URL, ODIN_READER_URL (puente OCR en el Mac) y ODIN_TAGGER_URL (Ollama);"
+  fi
   if [ "$MODO" = actualizar ]; then
     echo "  3. reconstruir y arrancar (make up) conservando la base y los originales, y reintentar los documentos fallidos;"
     echo "  4. recuento en la base, MCP de Claude Desktop renovado (mismo trabajador) y comprobaciones."
@@ -30,6 +43,7 @@ explicar() {
     echo "  4. recuento en la base, conector de Claude Desktop con «$TRABAJADOR» y comprobaciones."
   fi
   if en_marcha; then echo "Hoy tiene: $(recuento)."; fi
+  [ -n "$RAMA" ] || return 0
   git merge-base --is-ancestor feature/casos-expediente "$RAMA" 2> /dev/null \
     && echo "El expediente (encargo 13) está en $RAMA." || echo "AVISO: el expediente (encargo 13) NO está en $RAMA."
 }
@@ -41,7 +55,7 @@ anadir_si_falta() {  # anadir_si_falta CLAVE VALOR: añade la variable a deploy/
 preparar_codigo() {
   [ "$PROYECTO" = odin ] || return 0
   [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "La copia principal tiene cambios sin commit." >&2; return 1; }
-  git checkout -q --detach "$RAMA" || return 1
+  git checkout -q --detach "$APROBADO" || return 1
   anadir_si_falta ODIN_PUBLIC_URL "${ODIN_PANEL_ORIGIN:-http://127.0.0.1:8088}" || return 1
   anadir_si_falta ODIN_READER_URL http://host.docker.internal:8077 || return 1
   anadir_si_falta ODIN_TAGGER_URL http://host.docker.internal:11434 || return 1
@@ -70,6 +84,11 @@ comprobar() {
 
 [ "${CONFIRMAR:-}" = "$PALABRA" ] || { explicar; exit 0; }
 export CONFIRMAR_INSTALACION=ESCRIBIR # D-099: confirmada con CONFIRMAR=$PALABRA
+if [ "$PROYECTO" = odin ]; then
+  [ "$CONSTRUIR" = si ] || { echo "CONSTRUIR=no no vale en la instalación «odin»: serían imágenes sin validar. No se ha cambiado nada." >&2; exit 1; }
+  APROBADO=$(python3 "$AQUI/puerta.py") || exit 1
+fi
+asegurar_archivo_ficticio || exit 1 # antes de cualquier cambio: lo necesitan la carga y el recuento
 en_marcha || { echo "La instalación «$PROYECTO» no está en marcha (make up). No se ha cambiado nada." >&2; exit 1; }
 mkdir -p "$DATOS/copias"
 curl -s -m 3 http://127.0.0.1:8077/health > /dev/null || echo "Aviso: el puente OCR no responde; los escaneos esperarán al lector. Para que arranque solo: make lector-arranque-instalar CONFIRMAR=ARRANQUE"

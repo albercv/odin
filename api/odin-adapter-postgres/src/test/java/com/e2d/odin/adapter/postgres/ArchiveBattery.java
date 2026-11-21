@@ -27,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 final class ArchiveBattery {
 
     static final Path DIR = Path.of(System.getProperty("odin.archive.dir",
-            "../../experimentos/2026-11-12-archivo-ficticio/datos"));
+            "../../datos-prueba/archivo-ficticio/datos"));
     static final Path THRESHOLD = Path.of("src/test/resources/archive-battery/threshold.txt");
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final int LIMIT = 10;

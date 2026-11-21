@@ -15,6 +15,19 @@ def seleccion():
     return dp.seleccionar(dp.leer_json(dp.ARCHIVO / "manifiesto.json"), dp.leer_json(dp.ARCHIVO / "claves.json"))
 
 
+class ModulosDelDespliegueTest(unittest.TestCase):
+
+    def test_cargarExpedientesYSustitucionesSeEncuentranEnLaMismaCarpeta(self):
+        # Sin esto la carga completa se salta los expedientes sin avisar (find_spec devuelve None).
+        import importlib.util
+        carpeta = Path(dp.__file__).resolve().parent
+        for modulo in ("cargar_expedientes", "sustituciones"):
+            spec = importlib.util.find_spec(modulo)
+            self.assertIsNotNone(spec, modulo)
+            self.assertEqual(carpeta, Path(spec.origin).resolve().parent)
+        self.assertTrue((dp.ARCHIVO / "expedientes.json").exists())
+
+
 class SeleccionTest(unittest.TestCase):
 
     def test_tenComunidadesEnDosEmpresasYElProyectoAbierto(self):

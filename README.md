@@ -22,6 +22,23 @@ Diseño: `docs/superpowers/specs/2026-11-09-api-central-design.md`.
 - Todas las ramas de trabajo se suben a GitHub, para no perder trabajo.
 - Nunca se suben `deploy/.env`, `data/` ni documentos reales: los excluye `.gitignore`, y antes de cada subida se revisa el historial en busca de claves.
 
+## Validación y puerta de la instalación
+
+Cada PR a `develop` o `main`, cada push a esas ramas y cada ejecución manual lanzan `.github/workflows/validacion.yml` en GitHub Actions. Es un solo job que ejecuta siempre los mismos objetivos que `make check` (`check-api`, `check-mcp`, `check-panel` y `check-instalacion`), uno tras otro, y muestra todos los fallos a la vez, solo con datos ficticios y sin secretos.
+
+- No se mergea ningún PR con la validación en rojo o sin terminar. GitHub no puede imponerlo en este repositorio privado, que no tiene protección de ramas en el plan gratuito: lo impone quien hace el merge.
+- La instalación del propietario (pila `odin`) solo instala lo validado. `make instalacion-actualizar` y `make instalacion-desplegar` instalan un commit que está en `origin/<rama>` y cuya ejecución de `validacion.yml` por push ha terminado en verde, y instalan ese commit exacto.
+- La rama sale de `RAMA=develop|main` en la orden o de `ODIN_RAMA_INSTALACION` en `deploy/.env`. Sin una ni otra, la orden se niega y explica cómo fijarla.
+- La puerta se niega con «No se ha cambiado nada.» si falta `gh` o no tiene sesión, si no hay red, o si la validación está pendiente o en rojo. `CONSTRUIR=no` se niega en la instalación del propietario.
+- No hay forma de saltarse la puerta. `make instalacion-restaurar` (volver a una copia) no pasa por ella.
+
+Flujo habitual:
+
+1. Se mergea el PR en GitHub.
+2. Se trae la rama con `git pull`.
+3. Se espera a que la validación de ese commit esté en verde en la pestaña Actions del repositorio.
+4. Se actualiza la instalación: `make instalacion-actualizar CONFIRMAR=ACTUALIZAR`.
+
 ## Requisitos
 
 - Para usarlo: Docker con Docker Compose.
@@ -35,6 +52,8 @@ cp deploy/.env.example deploy/.env
 
 Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplos falsos. Los puertos se publican solo en `127.0.0.1`.
 
+En `deploy/.env` fija también `ODIN_RAMA_INSTALACION=develop` (o `main`): es la rama de la que la instalación acepta código. Sin ese valor, `make instalacion-actualizar` y `make instalacion-desplegar` se niegan si no se pasa `RAMA=` en la orden. Ver «Validación y puerta de la instalación».
+
 ## Uso
 
 | Orden | Qué hace |
@@ -42,7 +61,8 @@ Cambia en `deploy/.env` las claves y el token; los de `.env.example` son ejemplo
 | `make setup` | Instala las dependencias locales de la API, el MCP y el panel |
 | `make up` | Construye y arranca la instalación con Docker Compose |
 | `make down` | La para |
-| `make check` | Pruebas, Checkstyle, ArchUnit, ESLint y tipos de los tres proyectos |
+| `make check` | Lo mismo que ejecuta GitHub Actions en cada PR y push a `develop` y `main` (ver «Validación y puerta de la instalación»): `check-api`, `check-mcp`, `check-panel` y `check-instalacion`. Pruebas, Checkstyle, ArchUnit, ESLint y tipos de los tres proyectos |
+| `make archivo-ficticio` | Genera el archivo ficticio en `datos-prueba/archivo-ficticio/datos/` (determinista, semilla 7, sin red ni IA; unos 8,6 MB, ~1 s). Es git-ignored; `check-api`, `check-instalacion` y las órdenes de datos de prueba lo generan si falta |
 | `make demo` | Demostración de cierre y prueba de extremo a extremo de la administración del panel, en una pila desechable aparte |
 | `make answer-battery MODELO=haiku\|sonnet [MUESTRA=N]` | Mide si Odín da datos correctos con el archivo ficticio: levanta una pila desechable (`odin-medicion`), carga, deja responder a `claude -p`, puntúa en `experimentos/2026-11-12-archivo-ficticio/resultados/` y baja la pila. Gasta cuota de Claude; no entra en `make check` |
 | `make instalacion-reiniciar`, `make datos-prueba-cargar`, `make mcp-claude-desktop` y `make instalacion-restaurar` | Vaciar la instalación con copia, cargar datos de prueba, registrar el conector de Claude Desktop y volver a una copia: apartado «Datos de prueba y conector» |
@@ -141,7 +161,7 @@ Para probar Odín desde Claude Desktop con datos ficticios. Las órdenes actúan
 | `make datos-prueba-cargar` | Hace el primer arranque y carga los datos de prueba por la API. Solo en una instalación vacía: si ya tiene datos, para sin tocarlos. Si falla a medias, la vuelve a dejar vacía |
 | `make mcp-claude-desktop [TRABAJADOR=marta\|javier\|ignacio]` | Compila `mcp/` de la copia desde la que se lanza y lo copia en `data/mcp-claude-desktop/`. Añade o actualiza solo la entrada `odin` de `~/Library/Application Support/Claude/claude_desktop_config.json`, con copia previa en `data/copias/`, apuntando a esa copia del MCP: recompilar o cambiar de rama no cambia el MCP de Claude Desktop. Usa la clave de ese trabajador sin mostrarla (por defecto, `marta`). Después hay que reiniciar Claude Desktop |
 | `make instalacion-restaurar COPIA=data/copias/odin-….sql CONFIRMAR=BORRAR` | Vuelve a una copia, con sus originales. Antes copia lo que hay |
-| `make instalacion-actualizar CONFIRMAR=ACTUALIZAR` | Actualiza solo el código de la instalación a `develop` y **conserva la base y los originales**. Antes copia la base, los originales, `deploy/.env` y la configuración de Claude Desktop. Reintenta los documentos fallidos y renueva el MCP de Claude Desktop sin cambiar su trabajador. Si algo falla, vuelve a la copia. Es la orden para actualizar una instalación en uso |
+| `make instalacion-actualizar CONFIRMAR=ACTUALIZAR` | Actualiza solo el código de la instalación al commit validado de la rama de `ODIN_RAMA_INSTALACION` (o de `RAMA=`), a través de la puerta de validación, y **conserva la base y los originales**. Antes copia la base, los originales, `deploy/.env` y la configuración de Claude Desktop. Reintenta los documentos fallidos y renueva el MCP de Claude Desktop sin cambiar su trabajador. Si algo falla, vuelve a la copia. Es la orden para actualizar una instalación en uso |
 | `make instalacion-anadir-proyecto DATOS_PROYECTO=<carpeta> CONFIRMAR=ANADIR` | Añade un proyecto nuevo, con sus documentos, sustituciones, fichas y expedientes, a una instalación en uso, **sin vaciarla ni tocar lo que ya tiene**. La carpeta tiene el formato del archivo ficticio (`manifiesto.json` con un solo proyecto de una empresa que ya existe, `corpus/` y, si hay, `expedientes.json` y `expedientes/`). Lo ven los trabajadores de prueba de `MIEMBROS` (por defecto `marta`), que escriben sus fichas. Antes copia la base y los originales, comprueba el aislamiento por la API y saca el recuento; si algo falla, vuelve a la copia. Sin `CONFIRMAR` solo revisa los datos y explica qué haría |
 | `make instalacion-desplegar CONFIRMAR=DESPLEGAR [TRABAJADOR=marta]` | Como la anterior, pero **vacía la instalación** y carga el archivo ficticio completo. Borra lo que se haya hecho en ella (queda en la copia): solo con autorización expresa del propietario en cada ocasión |
 
@@ -153,7 +173,7 @@ Para probar Odín desde Claude Desktop con datos ficticios. Las órdenes actúan
 
 Orden habitual: reiniciar, cargar y registrar. Para probar el aislamiento, vuelve a registrar con otro trabajador y reinicia Claude Desktop.
 
-**Qué se carga** (sale del archivo ficticio de `experimentos/2026-11-12-archivo-ficticio/`):
+**Qué se carga** (sale del archivo ficticio generado en `datos-prueba/archivo-ficticio/datos/` por `make archivo-ficticio`):
 
 - 2 empresas: Administraciones Ribera (`RIB`) y Gestión Albar (`ALB`).
 - 10 comunidades, 8 de Ribera y 2 de Albar, todas cerradas. Además, en Ribera, el proyecto abierto «Procedimientos generales».
