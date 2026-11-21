@@ -64,10 +64,10 @@ mcp-claude-desktop:
 	@TRABAJADOR="$(TRABAJADOR)" deploy/instalacion/cerrojo.sh deploy/instalacion/mcp-claude-desktop.sh
 
 instalacion-desplegar:
-	@CONFIRMAR="$(CONFIRMAR)" TRABAJADOR="$(TRABAJADOR)" CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
+	@CONFIRMAR="$(CONFIRMAR)" RAMA="$(RAMA)" TRABAJADOR="$(TRABAJADOR)" CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
 
 instalacion-actualizar:
-	@CONFIRMAR="$(CONFIRMAR)" MODO=actualizar CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
+	@CONFIRMAR="$(CONFIRMAR)" RAMA="$(RAMA)" MODO=actualizar CONSTRUIR="$(CONSTRUIR)" deploy/instalacion/cerrojo.sh deploy/instalacion/desplegar.sh
 
 # Primera carga del archivo de una empresa (la lanza su administrador): make primera-carga CARPETA=/ruta [ARGS=--si]
 primera-carga:
