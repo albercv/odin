@@ -24,6 +24,7 @@ beforeEach(() => {
   frameCost = 1;
   reduced = false;
   const ctx = new Proxy({}, { get: (_t, name) => (name === 'fill' ? () => { fills++; } : () => undefined), set: () => true });
+  vi.spyOn(navigator, 'hardwareConcurrency', 'get').mockReturnValue(8); // el runner de CI tiene 2 núcleos y entonces el lienzo se queda quieto
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 400, height: 300 } as DOMRect);
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { callbacks.set(nextId, cb); return nextId++; });
