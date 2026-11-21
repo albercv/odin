@@ -5,6 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 RAIZ=$PWD # comun.sh pasa a la copia principal; el archivo ficticio se lee de esta copia
 . deploy/instalacion/comun.sh
+asegurar_archivo_ficticio || exit 1
 
 # tabla "Título" "Col1 | Col2" "SELECT ... (columnas separadas por ' | ' al imprimir)"
 tabla() {

@@ -22,6 +22,10 @@ class DesplegarPuertaTest(unittest.TestCase):
         self.bin.mkdir()
         for f in FICHEROS:
             shutil.copy(AQUI / f, self.repo / "deploy/instalacion" / f)
+        generador = self.repo / "datos-prueba/archivo-ficticio/generar/generar.py"  # el archivo ficticio no está en git: lo genera desplegar.sh
+        generador.parent.mkdir(parents=True)
+        generador.write_text("from pathlib import Path\nd = Path(__file__).resolve().parents[1] / 'datos'\nd.mkdir()\n"
+                             "(d / 'manifiesto.json').write_text('{}')\n(d / 'claves.json').write_text('[]')\n")
         for c in (["init", "-q", "-b", "develop"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "a"]):
             subprocess.run(["git", *c], cwd=self.repo, check=True, capture_output=True)
         self.env_file = raiz / "env-prueba"
