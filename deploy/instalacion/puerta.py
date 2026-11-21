@@ -25,7 +25,7 @@ def ejecutar(orden, que):
     except (OSError, subprocess.TimeoutExpired) as e:
         raise Negada(f"No se ha podido ejecutar {orden[0]} ({e}); {que}.{FIN}")
     if r.returncode != 0:
-        raise Negada(f"Ha fallado {' '.join(orden[:3])}: {r.stderr.strip() or 'sin detalle'}.{FIN}")
+        raise Negada(f"Ha fallado {' '.join(orden[:4])}: {r.stderr.strip() or 'sin detalle'}.{FIN}")
     return r.stdout.strip()
 
 
