@@ -25,3 +25,7 @@ experimentos/
 
 # listas de contactos comerciales: fuera de git (datos personales)
 docs/marketing/
+
+# archivo ficticio generado (se regenera con make archivo-ficticio)
+datos-prueba/archivo-ficticio/datos/
+datos-prueba/archivo-ficticio/generar/_info.json
