@@ -1,4 +1,4 @@
-.PHONY: instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento primera-carga instalacion-reiniciar instalacion-restaurar mcp-claude-desktop lector-arranque-instalar lector-arranque-quitar lector-arranque-estado
+.PHONY: check-api check-mcp check-panel check-instalacion archivo-ficticio instalacion-desplegar instalacion-actualizar instalacion-anadir-proyecto setup test check up down demo answer-battery tagger-model tagging-battery project-proposer-battery datos-prueba-cargar datos-prueba-recuento primera-carga instalacion-reiniciar instalacion-restaurar mcp-claude-desktop lector-arranque-instalar lector-arranque-quitar lector-arranque-estado
 
 setup:
 	cd api && mvn -q dependency:go-offline
@@ -10,12 +10,24 @@ test:
 	cd mcp && npm ci --silent && npm test
 	cd panel && npm ci --silent && npm test
 
-check:
+check: check-api check-mcp check-panel check-instalacion
+
+check-api: archivo-ficticio
 	cd api && mvn -q verify
+
+check-mcp:
 	cd mcp && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm run build && npm test
+
+check-panel:
 	cd panel && npm ci --silent && npm run check:types && npm run lint && npm run typecheck && npm test && npm run build
+
+check-instalacion: archivo-ficticio
 	python3 -m unittest discover -s deploy/instalacion -p 'test_*.py'
-	python3 -m unittest discover -s experimentos/2026-11-13-primera-carga/parte_c -p 'test_*.py'
+	python3 -m unittest discover -s datos-prueba/archivo-ficticio -p 'test_*.py'
+
+# Genera el archivo ficticio (determinista, 1 s) si no existe. Lo usan check-api y el despliegue de datos de prueba.
+archivo-ficticio:
+	@test -f datos-prueba/archivo-ficticio/datos/manifiesto.json || python3 datos-prueba/archivo-ficticio/generar/generar.py
 
 COMPOSE = docker compose -f deploy/compose.yaml --env-file deploy/.env
 
@@ -47,11 +59,11 @@ project-proposer-battery:
 
 # Instalación del propietario (D-056): datos de prueba, vaciarla, volver a una copia y conector de Claude Desktop.
 # Van con cerrojo (data/instalacion.lock). INSTALACION_PROYECTO e INSTALACION_ENV eligen otra pila.
-datos-prueba-cargar:
+datos-prueba-cargar: archivo-ficticio
 	@ARCHIVO="$(ARCHIVO)" deploy/instalacion/cerrojo.sh python3 deploy/instalacion/datos_prueba.py
 
 # Recuento contado en la base, en tablas Markdown. La carga completa es: make datos-prueba-cargar ARCHIVO=completo
-datos-prueba-recuento:
+datos-prueba-recuento: archivo-ficticio
 	@deploy/instalacion/cerrojo.sh deploy/instalacion/recuento.sh
 
 instalacion-reiniciar:

@@ -55,7 +55,7 @@ echo "No están en la base: se cuentan de claves.json del archivo ficticio."; ec
 echo "| Tipo | Contradicciones |"; echo "| --- | --- |"
 python3 - << PY
 import json, collections
-claves = json.load(open("$RAIZ/experimentos/2026-11-12-archivo-ficticio/datos/claves.json", encoding="utf-8"))
+claves = json.load(open("$RAIZ/datos-prueba/archivo-ficticio/datos/claves.json", encoding="utf-8"))
 for tipo, n in sorted(collections.Counter(c["tipo"] for c in claves).items()):
     print(f"| {tipo} | {n} |")
 print(f"| total | {len(claves)} |")

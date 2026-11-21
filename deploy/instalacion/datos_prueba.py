@@ -20,8 +20,7 @@ from collections import namedtuple
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
-EXP = RAIZ / "experimentos" / "2026-11-12-archivo-ficticio"
-ARCHIVO = EXP / "datos"
+ARCHIVO = RAIZ / "datos-prueba" / "archivo-ficticio" / "datos"  # lo genera `make archivo-ficticio`
 TEMAS = RAIZ / "api/odin-adapter-tagger-ollama/src/test/resources/tagging-battery/temas.json"
 ESCANEO = RAIZ / "deploy" / "demo" / "escaneo-ficticio.png"
 
@@ -47,7 +46,7 @@ def datos_de(principal, proyecto):
 
 CREDENCIALES = datos_de(PRINCIPAL, os.environ.get("INSTALACION_PROYECTO", "odin")) / "datos-prueba"
 ESCANEOS = PRINCIPAL / "data" / "datos-prueba" / "escaneos"  # caché compartida de PDF ficticios
-sys.path.insert(0, str(EXP / "pila"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # sustituciones y cargar_expedientes viven aquí
 import sustituciones  # noqa: E402
 import escaneos  # noqa: E402
 
@@ -551,6 +550,8 @@ def elegir_seleccion():
     modo = os.environ.get("ARCHIVO", "")
     if modo not in ("", "completo"):
         raise SystemExit(f"ARCHIVO={modo} no vale: usa ARCHIVO=completo o déjalo vacío.")
+    if not (ARCHIVO / "manifiesto.json").exists():
+        raise SystemExit(f"Falta el archivo ficticio ({ARCHIVO}). Genéralo con: make archivo-ficticio. No se ha cambiado nada.")
     manifiesto, claves = leer_json(ARCHIVO / "manifiesto.json"), leer_json(ARCHIVO / "claves.json")
     return (seleccionar_completo if modo else seleccionar)(manifiesto, claves)
 
