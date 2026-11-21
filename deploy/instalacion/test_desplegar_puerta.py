@@ -76,6 +76,16 @@ class DesplegarPuertaTest(unittest.TestCase):
         r = self.lanzar({"RAMA": "develop"})
         self.assertIn("no está en marcha", r.stderr)
 
+    def test_rama_del_fichero_llega_a_la_puerta_sin_rama_en_el_entorno(self):
+        self.env_file.write_text("ODIN_DB_OWNER_USER=x\nODIN_RAMA_INSTALACION=develop\n")
+        puerta = self.repo / "deploy/instalacion/puerta.py"
+        visto = Path(self.tmp.name) / "rama-vista"
+        puerta.write_text(f"import os\nfrom pathlib import Path\n"
+                          f"Path('{visto}').write_text(os.environ.get('RAMA', ''))\n"
+                          "print('a' * 40)\n")
+        self.lanzar()
+        self.assertEqual(visto.read_text(), "develop")
+
 
 if __name__ == "__main__":
     unittest.main()

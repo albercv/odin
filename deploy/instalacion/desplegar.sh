@@ -13,6 +13,7 @@ AQUI=$(cd "$(dirname "$0")" && pwd)
 . "$AQUI/comun.sh"
 [ "$PROYECTO" = odin ] || RAMA="${RAMA:-develop}"
 RAMA="${RAMA:-${ODIN_RAMA_INSTALACION:-}}"
+export RAMA
 TRABAJADOR="${TRABAJADOR:-marta}"
 CONSTRUIR="${CONSTRUIR:-si}"
 MODO="${MODO:-cargar}"
