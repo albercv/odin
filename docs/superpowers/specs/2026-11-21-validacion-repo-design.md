@@ -1,6 +1,17 @@
 # Validación en el repositorio antes de instalar (encargo 27, D-123): diseño y plan
 
-- Fecha: 2026-11-21. Autor: CTO 3. Estado: **por validar** por el CEO. No se construye nada hasta su visto bueno.
+- Fecha: 2026-11-21. Autor: CTO 3. Estado: **aprobado por el propietario el 21 nov. y construido** (albercv/odin#6 a #12, albercv/ocr#9).
+- **Decisiones del propietario (21 nov.):**
+  - el clon limpio con la opción (a): el generador en `datos-prueba/archivo-ficticio/`, y `sustituciones.py` y `cargar_expedientes.py` en `deploy/instalacion/`;
+  - la rama de la instalación es un parámetro, `ODIN_RAMA_INSTALACION` o `RAMA=`, sin valor fijo;
+  - sin vía de emergencia;
+  - el lector en Linux con el backend de CPU solo en el runner, con la versión de `uv.lock` y solo la prueba de Metal fuera;
+  - la forma A: un trabajo cuyos cuatro pasos se ejecutan siempre.
+- **Medido** (suma de cada trabajo redondeada al minuto; no es la factura):
+  - forma A: 13 minutos en frío y 9 con caché;
+  - forma B: 13 en frío y 11 con caché;
+  - el lector: 1 minuto por ejecución.
+- **La primera actualización tras el merge** solo pasa por la puerta si antes se trae `develop` a la copia principal: el `desplegar.sh` instalado hoy no la tiene.
 - Regla (D-123): se instala solo lo que ha pasado la validación en el repositorio. GitHub no deja proteger ramas en el repositorio privado sin plan de pago, así que la regla la impone la instalación.
 
 ## 0. Lo comprobado antes de diseñar (21 nov.)

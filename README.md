@@ -31,11 +31,13 @@ Cada PR a `develop` o `main`, cada push a esas ramas y cada ejecución manual la
 - La rama sale de `RAMA=develop|main` en la orden o de `ODIN_RAMA_INSTALACION` en `deploy/.env`. Sin una ni otra, la orden se niega y explica cómo fijarla.
 - La puerta se niega con «No se ha cambiado nada.» si falta `gh` o no tiene sesión, si no hay red, o si la validación está pendiente o en rojo. `CONSTRUIR=no` se niega en la instalación del propietario.
 - No hay forma de saltarse la puerta. `make instalacion-restaurar` (volver a una copia) no pasa por ella.
+- Si la validación de un push falla por algo ajeno al código, se repite esa misma ejecución desde la pestaña Actions. Una ejecución manual (`workflow_dispatch`) no sirve para la puerta: solo cuenta la del push.
+- **La primera vez:** la puerta está en el `desplegar.sh` nuevo. Antes de la primera `make instalacion-actualizar` tras unir este cambio, trae la rama a la copia principal (`git checkout develop && git pull`) para que la orden use ya el guion con la puerta. Si se lanza desde la copia anterior, esa actualización no pasa por la puerta: comprueba antes a mano que la validación del push de ese commit está en verde.
 
 Flujo habitual:
 
 1. Se mergea el PR en GitHub.
-2. Se trae la rama con `git pull`.
+2. Se trae la rama a la copia principal: `git checkout <rama> && git pull`.
 3. Se espera a que la validación de ese commit esté en verde en la pestaña Actions del repositorio.
 4. Se actualiza la instalación: `make instalacion-actualizar CONFIRMAR=ACTUALIZAR`.
 
