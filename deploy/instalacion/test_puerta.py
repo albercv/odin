@@ -10,6 +10,7 @@ from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
 PUERTA = AQUI / "puerta.py"
+# Respuesta real de GitHub (gh api .../workflows/validacion.yml/runs) de una ejecución en verde; cada caso reescribe sha, rama y estado.
 BASE = json.loads((AQUI / "datos_prueba_puerta" / "ejecuciones.json").read_text())["workflow_runs"][0]
 FIN = "No se ha cambiado nada."
 
@@ -115,7 +116,7 @@ class PuertaTest(unittest.TestCase):
 
     def test_en_rojo_con_enlace(self):
         self.e.gh([self.e.ejecucion(conclusion="failure")])
-        self.negada(self.e.run(), "en rojo (https://github.com/dueno/odin/actions/runs/1001)")
+        self.negada(self.e.run(), f"en rojo ({BASE['html_url']})")
 
     def test_verde_de_otro_sha(self):
         self.e.gh([self.e.ejecucion(head_sha="0" * 40)])
@@ -130,12 +131,13 @@ class PuertaTest(unittest.TestCase):
         self.negada(self.e.run(), "sin validar")
 
     def test_la_mas_reciente_en_rojo_con_una_anterior_en_verde(self):
-        self.e.gh([self.e.ejecucion(), self.e.ejecucion(conclusion="failure", id=1002, run_number=8,
-                                                          created_at="2026-11-21T11:00:00Z")])
+        self.e.gh([self.e.ejecucion(), self.e.ejecucion(conclusion="failure", id=1002, run_number=BASE["run_number"] + 1,
+                                                          created_at="2099-01-01T00:00:00Z")])
         self.negada(self.e.run(), "en rojo")
 
     def test_la_mas_reciente_en_verde_con_una_anterior_en_rojo(self):
-        self.e.gh([self.e.ejecucion(conclusion="failure", id=1002, run_number=6, created_at="2026-11-21T09:00:00Z"),
+        self.e.gh([self.e.ejecucion(conclusion="failure", id=1002, run_number=BASE["run_number"] - 1,
+                                      created_at="2000-01-01T00:00:00Z"),
                    self.e.ejecucion()])
         self.assertEqual(self.e.run().stdout.strip(), self.e.sha)
 
@@ -151,7 +153,7 @@ class PuertaTest(unittest.TestCase):
         r = self.e.run(None, None, "--explicar")
         self.assertEqual(r.returncode, 0)
         self.assertEqual(r.stdout.strip(), f"La puerta dejaría instalar {self.e.sha[:7]} de develop: "
-                         "validación en verde (https://github.com/dueno/odin/actions/runs/1001)")
+                         f"validación en verde ({BASE['html_url']})")
 
     def test_explicar_en_rojo_sale_con_cero(self):
         self.e.gh([self.e.ejecucion(conclusion="failure")])

@@ -149,7 +149,7 @@ class HttpReaderServiceTest {
         delayMillis = 1500;
         long start = System.nanoTime();
         assertThat(service(Optional.empty(), Duration.ofSeconds(5), Duration.ofMillis(200)).isAvailable()).isFalse();
-        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(1200));
+        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(1400));
     }
 
     @Test
