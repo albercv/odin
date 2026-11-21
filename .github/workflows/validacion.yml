@@ -15,48 +15,40 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  api:
+  validacion:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+      - name: Preparar Java 21
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Caché de Maven
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: api/.m2/repository
           key: maven-${{ runner.os }}-${{ hashFiles('api/**/pom.xml') }}
           restore-keys: maven-${{ runner.os }}-
-      - run: make check-api
-  mcp:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - name: Preparar Node 24 y caché de npm
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: |
             mcp/package-lock.json
-      - run: make check-mcp
-  panel:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: |
             panel/package-lock.json
-      - run: make check-panel
-  instalacion:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: make check-instalacion
+      # if: !cancelled() hace que un fallo no oculte las demás partes; el job acaba en rojo si falla alguna
+      - name: Validar API
+        if: ${{ !cancelled() }}
+        run: make check-api
+      - name: Validar MCP
+        if: ${{ !cancelled() }}
+        run: make check-mcp
+      - name: Validar panel
+        if: ${{ !cancelled() }}
+        run: make check-panel
+      - name: Validar instalación
+        if: ${{ !cancelled() }}
+        run: make check-instalacion

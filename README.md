@@ -24,7 +24,7 @@ Diseño: `docs/superpowers/specs/2026-11-09-api-central-design.md`.
 
 ## Validación y puerta de la instalación
 
-Cada PR a `develop` o `main`, cada push a esas ramas y cada ejecución manual lanzan `.github/workflows/validacion.yml` en GitHub Actions. Ejecuta los mismos objetivos que `make check` (`check-api`, `check-mcp`, `check-panel` y `check-instalacion`), solo con datos ficticios y sin secretos.
+Cada PR a `develop` o `main`, cada push a esas ramas y cada ejecución manual lanzan `.github/workflows/validacion.yml` en GitHub Actions. Es un solo job que ejecuta siempre los mismos objetivos que `make check` (`check-api`, `check-mcp`, `check-panel` y `check-instalacion`), uno tras otro, y muestra todos los fallos a la vez, solo con datos ficticios y sin secretos.
 
 - No se mergea ningún PR con la validación en rojo o sin terminar. GitHub no puede imponerlo en este repositorio privado, que no tiene protección de ramas en el plan gratuito: lo impone quien hace el merge.
 - La instalación del propietario (pila `odin`) solo instala lo validado. `make instalacion-actualizar` y `make instalacion-desplegar` instalan un commit que está en `origin/<rama>` y cuya ejecución de `validacion.yml` por push ha terminado en verde, y instalan ese commit exacto.

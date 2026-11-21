@@ -146,10 +146,10 @@ class HttpReaderServiceTest {
     @Test
     void healthTimesOutWhenTheServiceIsBusy() throws IOException {
         respond(200, example("health-200.json"));
-        delayMillis = 1500;
+        delayMillis = 6000; // margen: timeout 300 ms << umbral 2500 ms << retraso 6000 ms; solo falla si el timeout no corta
         long start = System.nanoTime();
-        assertThat(service(Optional.empty(), Duration.ofSeconds(5), Duration.ofMillis(200)).isAvailable()).isFalse();
-        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(1400));
+        assertThat(service(Optional.empty(), Duration.ofSeconds(5), Duration.ofMillis(300)).isAvailable()).isFalse();
+        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(2500));
     }
 
     @Test
@@ -198,7 +198,7 @@ class HttpReaderServiceTest {
     @Test
     void readTimeoutIsTimedOutFailure() throws IOException {
         respond(200, example("read-200.json"));
-        delayMillis = 1500;
+        delayMillis = 6000; // margen: timeout 300 ms << umbral 2500 ms << retraso 6000 ms; solo falla si el timeout no corta
         HttpReaderService slow = service(Optional.empty(), Duration.ofMillis(200), Duration.ofSeconds(5));
         assertThatThrownBy(() -> slow.read(CONTENT, DocumentFormat.IMAGE))
                 .isInstanceOf(ReaderTimedOutException.class);
