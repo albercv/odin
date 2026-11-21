@@ -4,7 +4,8 @@ El CEO lo aplica con el visto bueno del propietario; el CTO no edita esos ficher
 
 ## Odín, `CLAUDE.md`, sección Git
 
-- Cada PR a `develop` o `main`, cada push a esas ramas y cada ejecución manual lanzan `.github/workflows/validacion.yml` en GitHub Actions, con los mismos objetivos que `make check` (`check-api`, `check-mcp`, `check-panel`, `check-instalacion`).
+- Cada PR a `develop` o `main`, cada push a esas ramas y cada ejecución manual lanzan `.github/workflows/validacion.yml` en GitHub Actions, con los mismos objetivos que `make check` (`check-api`, `check-mcp`, `check-panel`, `check-instalacion`). El workflow es un solo job que ejecuta siempre las cuatro partes, una tras otra, y muestra todos los fallos a la vez; acaba en rojo si falla cualquiera.
+- Consumo de Actions: pasada la primera semana, el propietario comprueba el consumo REAL en la web de GitHub (cuenta personal, Settings → Billing and licensing → Usage, filtrado por Actions; https://github.com/settings/billing/usage). Las cifras del CTO (unos 9 minutos facturables por ejecución con caché, 13 en frío; unas 222 ejecuciones al mes dentro de los 2.000 minutos gratis; cada cambio mergeado cuesta al menos una ejecución de PR y otra de push) son una estimación (suma del tiempo del job redondeada hacia arriba), no la factura.
 - No se mergea ningún PR con la validación en rojo o sin terminar. GitHub no lo puede imponer en este repositorio privado sin protección de ramas: lo impone quien hace el merge. La puerta de la instalación impide instalarlo, no mergearlo.
 - Antes de abrir un PR de feature a `develop`, `make check` en local debe estar en verde.
 - La instalación solo se actualiza por la puerta: `make instalacion-actualizar` y `make instalacion-desplegar` instalan el commit validado de la rama fijada en `ODIN_RAMA_INSTALACION` (en `deploy/.env`) o en `RAMA=`. No hay forma de saltarla. `make instalacion-restaurar` sirve para volver a una copia.
