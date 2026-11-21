@@ -31,13 +31,15 @@ Cada PR a `develop` o `main`, cada push a esas ramas y cada ejecución manual la
 - La rama sale de `RAMA=develop|main` en la orden o de `ODIN_RAMA_INSTALACION` en `deploy/.env`. Sin una ni otra, la orden se niega y explica cómo fijarla.
 - La puerta se niega con «No se ha cambiado nada.» si falta `gh` o no tiene sesión, si no hay red, o si la validación está pendiente o en rojo. `CONSTRUIR=no` se niega en la instalación del propietario.
 - No hay forma de saltarse la puerta. `make instalacion-restaurar` (volver a una copia) no pasa por ella.
+- Si la validación de un push falla por algo ajeno al código, se repite esa misma ejecución desde la pestaña Actions. Una ejecución manual (`workflow_dispatch`) no sirve para la puerta: solo cuenta la del push.
+- **La primera vez:** la puerta está en el `desplegar.sh` nuevo. La orden usa el `desplegar.sh` y el `puerta.py` de la copia desde la que se lanza, y `comun.sh` trabaja después sobre la copia principal. Lanza la primera `make instalacion-actualizar` desde la copia donde vive `develop` (en la instalación del propietario, la worktree de `develop`), después de `git pull --ff-only`. Sin `CONFIRMAR`, la orden enseña el veredicto de la puerta sin cambiar nada. `ODIN_RAMA_INSTALACION` va en el `deploy/.env` de la copia principal. Si se lanza desde una copia anterior, esa actualización no pasa por la puerta: comprueba antes a mano que la validación del push de ese commit está en verde.
 
 Flujo habitual:
 
 1. Se mergea el PR en GitHub.
-2. Se trae la rama con `git pull`.
+2. Se trae la rama a la copia donde vive: `git pull --ff-only`. En un clon normal, sin worktrees: `git checkout <rama> && git pull`. No hagas `git checkout <rama>` si esa rama ya está sacada en otra worktree: git no lo deja.
 3. Se espera a que la validación de ese commit esté en verde en la pestaña Actions del repositorio.
-4. Se actualiza la instalación: `make instalacion-actualizar CONFIRMAR=ACTUALIZAR`.
+4. Se actualiza la instalación desde esa misma copia: `make instalacion-actualizar CONFIRMAR=ACTUALIZAR`. Sin `CONFIRMAR`, la orden solo enseña el veredicto de la puerta y no cambia nada.
 
 ## Requisitos
 
