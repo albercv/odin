@@ -12,9 +12,17 @@ El CEO lo aplica con el visto bueno del propietario; el CTO no edita esos ficher
 
 ## OCR, `CLAUDE.md`, sección Git
 
-- Cada PR a `develop` o `main` y cada push a esas ramas que cambie código (`uocr/`, `scripts/`, `tests/`, `ocr.py`, `pyproject.toml`, `uv.lock`, `Makefile`) ejecuta en GitHub Actions, en Linux, las pruebas rápidas: `uv run pytest` sin `-m model`.
-- Las pruebas con el modelo y la comprobación de Metal se quedan en local, en el Mac: `uv run pytest -m model`.
-- No se mergea ningún PR que cambie código con la validación en rojo.
+- **Validación (D-123, encargo 27):** `.github/workflows/validacion.yml` ejecuta las pruebas rápidas (`uv run pytest`, sin `-m model`) en GitHub Actions, en Linux:
+  - en cada PR a `develop` o `main` y en cada push a esas ramas que cambie código (`uocr/`, `scripts/`, `tests/`, `ocr.py`, `pyproject.toml`, `uv.lock`, `Makefile` o el propio flujo);
+  - también se lanza a mano.
+- **Qué valida:** la lógica del lector con el backend de CPU de MLX. **No valida** Metal, ni el rendimiento, ni el modelo.
+- **Lo que sigue siendo local en el Mac:**
+  - las pruebas del modelo (`uv run pytest -m model`);
+  - la prueba de Metal (`tests/test_env.py::test_metal_gpu_is_default_device`). Es la única que el flujo deja fuera, de forma explícita.
+
+  Si otra prueba pasa a depender de Metal, fallará en la validación y se verá.
+- **El backend de CPU** (`mlx[cpu]`, con la versión de `mlx` que fija `uv.lock`) se instala solo en el runner desechable de Actions. No se toca `pyproject.toml` ni `uv.lock`, así que se cumple la regla de nada global.
+- **No se mergea ningún PR que cambie código con la validación en rojo** o sin terminar.
 
 ## Prompt del CTO (`.claude/output-styles/cto.md`), sección «Cómo trabajas», viñeta Git
 
