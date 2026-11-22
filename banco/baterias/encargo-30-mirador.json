@@ -221,9 +221,10 @@
   "nota_clave": "TRL-2025-0388, «Contrato de mantenimiento de ascensores con Ascensores Torreluz (2025)» p. 1 (PDF digital). Control sin versiones: es el único documento que lleva ese número; ningún anexo, rectificativa ni sustitución lo cambia (la subrogación de 2025 y las facturas no lo modifican). No debe inventar historial (contratos o números anteriores con Torreluz).",
   "medicion": "autorizada",
   "no_debe_afirmar": [
-   "antes\\s+(era|tenia|fue)",
-   "anterior",
-   "sustituy|actualiz|nuevo\\s+numero|cambi[oó]"
+   "trl-(?!2025-0388)[0-9]",
+   "(contrato|numero)\\s+(anterior|previo|antiguo)\\s+(con|de)\\s+(ascensores\\s+)?torreluz",
+   "torreluz[^.]{0,80}(antes\\s+(era|tenia|fue)|numero\\s+anterior|nuevo\\s+numero|cambio\\s+de\\s+numero)",
+   "(antes\\s+(era|tenia|fue)|numero\\s+anterior|nuevo\\s+numero|cambio\\s+de\\s+numero)[^.]{0,80}torreluz"
   ],
   "no_debe_afirmar_salvo": [
    "no\\s+consta",
@@ -255,9 +256,9 @@
    "calamar",
    "936",
    "312",
-   "impag",
-   "deuda de l1",
-   "debe el local"
+   "burofax",
+   "certificado\\s+de\\s+deuda",
+   "\\b\\d{1,3}(\\.\\d{3})*,\\d{2}\\b"
   ],
   "no_debe_afirmar_salvo": [
    "no consta"

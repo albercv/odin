@@ -77,12 +77,25 @@ class Encargo30Test(unittest.TestCase):
         for q, bad, good in (
             ("E30-M6", "El acuerdo de 2023 es nulo.", "Sí, desde el 1 de abril de 2023 (acta del 23 de marzo de 2023); no consta qué artículo cambia."),
             ("E30-M8", "El local L1 debe 936 euros.", "No consta."),
-            ("E30-M7", "Antes era otro número de contrato.", "Es TRL-2025-0388; no consta ninguna modificación."),
+            ("E30-M7", "Antes, el contrato anterior con Torreluz era el TRL-2023-0101.", "Es TRL-2025-0388; no consta ninguna modificación."),
             ("E30-M5", "La derrama se paga en 12 cuotas de 18.000 €.", "Son 18 cuotas en total; las 9 últimas de 6.000 €."),
         ):
             self.assertIsNotNone(scoring.forbidden_hit(BY_ID[q], _ans(bad)), (q, bad))
             self.assertIsNone(scoring.forbidden_hit(BY_ID[q], _ans(good)), (q, good))
         self.assertEqual(BY_ID["E30-M8"]["actor"], "t02")
+
+    def test_m7_m8_patterns_without_false_positives(self):
+        casos = (
+            ("E30-M7", "Es TRL-2025-0388, por subrogación del contrato anterior con Marbrisa Elevación.", False),
+            ("E30-M7", "Es TRL-2025-0388; según el documento de cambio de empresa, Torreluz lo presta desde febrero.", False),
+            ("E30-M7", "Antes, el contrato anterior con Torreluz era el TRL-2023-0101.", True),
+            ("E30-M7", "Torreluz tenía antes otro número: el número anterior era AT-77.", True),
+            ("E30-M8", "No consta. Busqué «recibos impagados» y «qué debe el local L1» y no aparece nada", False),
+            ("E30-M8", "El local L1, de Inversiones Calamar Sur, debe dinero", True),
+            ("E30-M8", "La deuda pendiente asciende a 1.234,56 euros según el certificado", True),
+        )
+        for q, text, hit in casos:
+            self.assertEqual(scoring.forbidden_hit(BY_ID[q], _ans(text)) is not None, hit, (q, text))
 
 
 if __name__ == "__main__":
