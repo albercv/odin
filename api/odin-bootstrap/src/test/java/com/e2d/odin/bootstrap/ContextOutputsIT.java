@@ -250,7 +250,9 @@ class ContextOutputsIT {
         caseFile = upload(company, "Ficha de caso.txt", null, true,
                 "Ficha de caso sobre la factura ZZQ-2025-0302 y las pólizas.");
         for (int i = 0; i < 6; i++) {
-            upload(company, "Relleno " + i + ".txt", null, false, "Apunte " + i + " sobre la " + DEDUCTIBLE + ".");
+            // largos a propósito: el orden normaliza por longitud y los de relleno no deben tapar a las pólizas
+            upload(company, "Relleno " + i + ".txt", null, false,
+                    "Apunte " + i + " sobre la " + DEDUCTIBLE + ". " + "Texto de relleno sin más. ".repeat(40));
         }
     }
 
