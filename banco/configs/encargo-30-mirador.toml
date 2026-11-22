@@ -1,0 +1,26 @@
+# Encargo 30, medición autorizada: M1-M8 (M9 es futura y no entra). Juez local (Ollama), sin IA de pago.
+name = "encargo-30-mirador"
+archives = ["ficticio", "mirador"]
+battery = ["encargo-30-mirador"]
+mode = "explore"
+sample = { size = 8, strata = "tipo", seed = 7, include = ["E30-M1", "E30-M2", "E30-M3", "E30-M4", "E30-M5", "E30-M6", "E30-M7", "E30-M8"] }
+repetitions = 1
+budgetUsd = 1.0
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 3
+model = "haiku"
+
+[combiner]
+kind = "single"
+
+[[judges]]
+rubric = "strict"
+count = 1
+model = "ollama:qwen3.5:9b"
+think = false
+
+[judging]
+aggregation = "majority"

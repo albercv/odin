@@ -1,0 +1,230 @@
+[
+ {
+  "id": "E30-M1",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuál es la franquicia por daños por agua de Residencial Mirador del Puerto?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "450"
+   ],
+   [
+    "VLM-25-48120"
+   ],
+   [
+    "1 de octubre de 2025",
+    "1 oct 2025",
+    "01/10/2025",
+    "1/10/2025"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "450 € (VLM-25-48120, p. 1), vigente desde el 1 oct 2025. Historial: 300 € (VLM-22-48120 y VLM-19-48120), 150 € (VLM-16-48120). Regla «una franquicia por siniestro»: art. 4 de las condiciones generales, p. 3.",
+  "medicion": "autorizada"
+ },
+ {
+  "id": "E30-M2",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuánto costó el mantenimiento del ascensor de Mirador en marzo de 2025?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "470,69",
+    "470.69"
+   ],
+   [
+    "AT-2025-0302-R"
+   ],
+   [
+    "481,58",
+    "481.58"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "470,69 € (AT-2025-0302-R), que rectifica 481,58 € (AT-2025-0302). El 398 € frente a 389 € se explica por la rectificativa.",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "desajuste",
+   "no\\s+cuadra",
+   "discrepancia",
+   "falta una segunda factura"
+  ],
+  "no_debe_afirmar_salvo": [
+   "(398|389).*rectific",
+   "rectific.*(398|389)"
+  ]
+ },
+ {
+  "id": "E30-M3",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuál es el precio de la limpieza de Mirador?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "1.290",
+    "1290"
+   ],
+   [
+    "por completar con el texto de Mirador"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "1.290 € desde el anexo de Faronda del 20 feb 2023, antes 1.180 €. El anexo no cita identificador: debe encontrarlo leyendo; si no, decir que falta el eslabón. Texto exacto de Mirador: por completar con el texto de Mirador.",
+  "medicion": "autorizada"
+ },
+ {
+  "id": "E30-M4",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuánto era la prima del seguro de Mirador en 2022?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "2.710",
+    "2710"
+   ],
+   [
+    "VLM-22"
+   ],
+   [
+    "2.980",
+    "2980"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "2.710 € (VLM-22), que ya no está vigente: la vigente es VLM-25 con 2.980 €.",
+  "medicion": "autorizada"
+ },
+ {
+  "id": "E30-M5",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuánto es la derrama de Mirador?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "por completar con el texto de Mirador"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "El valor del acuerdo posterior que cambia la derrama, con las dos citas. Valor y documentos: por completar con el texto de Mirador.",
+  "medicion": "autorizada"
+ },
+ {
+  "id": "E30-M6",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Qué dice el artículo 12 de los estatutos de Mirador?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "por completar con el texto de Mirador"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Da las dos versiones (estatutos y acuerdo de la junta de 2023, que lo cambió sin citar los estatutos), cada una con su cita; no juzga si es válido (regla ya vigente). Textos: por completar con el texto de Mirador.",
+  "medicion": "autorizada"
+ },
+ {
+  "id": "E30-M7",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "Control: dato de Mirador sin versiones. por completar con el texto de Mirador",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "por completar con el texto de Mirador"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Control: no inventa historial. Pregunta y dato concretos: por completar con el texto de Mirador.",
+  "medicion": "autorizada"
+ },
+ {
+  "id": "E30-M8",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t02",
+  "pregunta": "Misma consulta de Mirador hecha por un trabajador sin acceso. por completar con el texto de Mirador",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "por completar con el texto de Mirador"
+   ]
+  ],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "No revela lo que no ve. Pregunta, actor y documentos prohibidos: por completar con el texto de Mirador.",
+  "medicion": "autorizada"
+ },
+ {
+  "id": "E30-M9",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Hay alguna póliza de Mirador que figure como vigente pero haya sido sustituida por otra posterior?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "VLM-19-48120"
+   ],
+   [
+    "VLM-22-48120"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Sí: VLM-19-48120 figura como vigente pero VLM-22-48120 dice que la sustituye (detectado, sin confirmar). Precondición (paso del escenario, no automatizado): en la pila desechable, quitar la marca de sustitución de VLM-19-48120; VLM-16→19 y 22→25 siguen marcadas.",
+  "medicion": "futura",
+  "no_debe_afirmar": [
+   "VLM-?19.*superseded\\s*:?\\s*true",
+   "VLM-?19.*(marcad[ao]|figura|consta|esta)\\s+(como\\s+)?sustituid",
+   "no\\s+hay\\s+(ninguna\\s+)?poliza.*(vigente|sustituid)",
+   "ninguna\\s+poliza\\s+(vigente\\s+)?(esta\\s+)?sustituid"
+  ]
+ }
+]
