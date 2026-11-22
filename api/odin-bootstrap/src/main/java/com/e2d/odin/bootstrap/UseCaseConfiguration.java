@@ -72,6 +72,7 @@ import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.UserChanges;
 import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.citation.LinkDocuments;
 import com.e2d.odin.application.intake.ClassifyIntake;
 import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
@@ -134,6 +135,7 @@ import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
 import com.e2d.odin.application.port.IdGenerator;
+import com.e2d.odin.application.port.DocumentLinkRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.KnowledgeCardRepository;
 import com.e2d.odin.application.port.KnowledgeSearch;
@@ -779,6 +781,12 @@ public class UseCaseConfiguration {
     @Bean
     AddFileToIntake addFileToIntake(IntakeRepository intake, UploadDocument upload, AuditLog audit) {
         return new AddFileToIntake(intake, upload, audit);
+    }
+
+    @Bean
+    LinkDocuments linkDocuments(DocumentLinkRepository links, Clock clock,
+            @Value("${odin.links.batch-size:50}") int batchSize) {
+        return new LinkDocuments(links, clock, batchSize);
     }
 
     /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
