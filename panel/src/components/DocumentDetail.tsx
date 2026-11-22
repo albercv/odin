@@ -8,7 +8,9 @@ import { FormDialog } from '../ui/FormDialog';
 import { StatusPill } from '../ui/StatusPill';
 import { Notice } from './Notice';
 import { useAction } from './useLoad';
+import { DocumentLinks } from './DocumentLinks';
 import { DocumentTopics } from './DocumentTopics';
+import { SupersedeDialog } from './SupersedeDialog';
 import { useProjectTerms } from './projectTerms';
 import styles from './DocumentDetail.module.css';
 
@@ -67,6 +69,8 @@ export function DocumentDetail({ document, projects, onClose, onChanged }: Props
   const [d, setD] = useState(document);
   const confirm = useConfirm();
   const { error, act } = useAction();
+  const [superseding, setSuperseding] = useState(false);
+  const refresh = async () => { setD(await api.document(d.id)); onChanged?.(); };
   const open = async (id: string) => { await act(async () => setD(await api.document(id))); };
   const unlink = async () => {
     if (await confirm({ message: UNLINK_MESSAGE, confirmLabel: 'Deshacer el enlace', danger: true }) && await act(() => api.unlinkScanCopy(d.id))) {
@@ -74,6 +78,7 @@ export function DocumentDetail({ document, projects, onClose, onChanged }: Props
       setD(await api.document(d.id));
     }
   };
+  if (superseding) return <SupersedeDialog document={d} projects={projects} onClose={() => setSuperseding(false)} onDone={refresh} />;
   return (
     <FormDialog title={d.title} open onClose={onClose}>
       <Notice message={error} />
@@ -81,6 +86,8 @@ export function DocumentDetail({ document, projects, onClose, onChanged }: Props
       {d.scanOf && <ScanOf of={d.scanOf} open={open} onUnlink={unlink} />}
       <ScanCopies copies={d.scanCopies ?? []} open={open} />
       <p><a href={originalUrl(d.id)} download>Descargar original</a></p>
+      <p><Button onClick={() => setSuperseding(true)}>Marcar como sustituido…</Button></p>
+      <DocumentLinks documentId={d.id} onChanged={refresh} />
       <DocumentTopics documentId={d.id} companyId={d.companyId} />
     </FormDialog>
   );

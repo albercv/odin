@@ -50,12 +50,12 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
             SELECT DISTINCT ON (p.document_id) p.document_id, p.number, left(p.text, 400) AS head
             FROM document_page p WHERE p.document_id = ANY (%s) AND %s ORDER BY p.document_id, p.number""";
     private static final String LINKS = """
-            SELECT l.source_document_id, l.target_document_id, l.relation, l.origin, l.evidence_page, l.evidence_quote,
+            SELECT l.source_document_id, l.target_document_id, l.relation, l.origin, l.status, l.evidence_page, l.evidence_quote,
                    s.title AS source_title, t.title AS target_title, t.superseded_by AS target_superseded_by
             FROM document_link l
             LEFT JOIN document s ON s.id = l.source_document_id AND %s AND %s AND %s
             LEFT JOIN document t ON t.id = l.target_document_id AND %s AND %s AND %s
-            WHERE %s AND (l.source_document_id = ANY (%s) OR l.target_document_id = ANY (%s))
+            WHERE %s AND l.status <> 'DISMISSED' AND (l.source_document_id = ANY (%s) OR l.target_document_id = ANY (%s))
               AND s.title IS NOT NULL AND (l.target_document_id IS NULL OR t.title IS NOT NULL)
             ORDER BY l.relation, l.cited_identifier, l.id""";
     private static final String MATCHES = """
@@ -67,8 +67,14 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
                   WHERE p.document_id = ANY (%s) AND %s AND %s AND %s AND (p.tsv @@ q.q OR %s)) r, q
             ORDER BY r.document_id, r.rank DESC, r.number""";
 
-    private record LinkRow(UUID sourceId, UUID targetId, LinkRelation relation, String origin, int page, String quote,
+    private record LinkRow(UUID sourceId, UUID targetId, LinkRelation relation, String origin, String status, int page,
+            String quote,
             String sourceTitle, String targetTitle, UUID targetSupersededBy) {
+
+        /** Lo puso un administrador o lo confirmó una persona: solo eso cuenta como confirmado. */
+        boolean confirmed() {
+            return "ADMIN".equals(origin) || "CONFIRMED".equals(status);
+        }
 
         boolean markedSupersession() {
             return relation == LinkRelation.REPLACES && sourceId.equals(targetSupersededBy);
@@ -197,7 +203,8 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
 
     private static LinkRow linkRow(ResultSet rs, int n) throws SQLException {
         return new LinkRow(Sql.uuid(rs, "source_document_id"), Sql.uuid(rs, "target_document_id"),
-                LinkRelation.valueOf(rs.getString("relation")), rs.getString("origin"), rs.getInt("evidence_page"),
+                LinkRelation.valueOf(rs.getString("relation")), rs.getString("origin"), rs.getString("status"),
+                rs.getInt("evidence_page"),
                 rs.getString("evidence_quote"), rs.getString("source_title"), rs.getString("target_title"),
                 Sql.uuid(rs, "target_superseded_by"));
     }
@@ -270,6 +277,6 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
             String otherTitle) {
         return new DocumentCorrection(direction, link.relation(),
                 Optional.of(new DocumentRef(new DocumentId(otherId), otherTitle)), false,
-                Optional.of(new PageText(link.page(), link.quote())), Optional.of("ADMIN".equals(link.origin())));
+                Optional.of(new PageText(link.page(), link.quote())), Optional.of(link.confirmed()));
     }
 }

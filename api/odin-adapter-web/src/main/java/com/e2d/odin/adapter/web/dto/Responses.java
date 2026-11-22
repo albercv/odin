@@ -3,6 +3,8 @@ package com.e2d.odin.adapter.web.dto;
 import com.e2d.odin.application.casefile.CaseFileText;
 import com.e2d.odin.application.casefile.CaseFileTextDocument;
 import com.e2d.odin.application.search.CitationVerdict;
+import com.e2d.odin.application.context.ReviewDocumentLinks;
+import com.e2d.odin.application.port.DocumentLinkReview;
 import com.e2d.odin.domain.context.CorrectionDirection;
 import com.e2d.odin.domain.context.DocumentContext;
 import com.e2d.odin.domain.context.DocumentCorrection;
@@ -495,6 +497,26 @@ public final class Responses {
 
         static List<CorrectionView> from(List<DocumentCorrection> corrections) {
             return corrections.stream().map(CorrectionView::from).toList();
+        }
+    }
+
+    /** Un vínculo de un documento visto por el administrador; {@code documentId} es nulo si la cita aún no tiene destino. */
+    public record DocumentLinkView(UUID id, String direction, String relation, String status, String origin,
+            @Nullable UUID documentId, @Nullable String title, String citedIdentifier, int evidencePage,
+            String evidenceQuote) {
+        static DocumentLinkView from(DocumentLinkReview.LinkView l) {
+            String direction = l.direction() == CorrectionDirection.CORRECTED_BY ? "correctedBy" : "corrects";
+            return new DocumentLinkView(l.id(), direction, l.relation().name(), l.status().name(), l.origin(),
+                    l.other().map(d -> d.id().value()).orElse(null), l.other().map(DocumentRef::title).orElse(null),
+                    l.citedIdentifier(), l.evidence().page(), l.evidence().text());
+        }
+    }
+
+    /** La cadena de versiones y todos los vínculos del documento, para revisarlos. */
+    public record DocumentContextView(List<VersionView> versions, List<DocumentLinkView> links) {
+        public static DocumentContextView from(ReviewDocumentLinks.AdminContext c) {
+            return new DocumentContextView(VersionView.from(c.versions()),
+                    c.links().stream().map(DocumentLinkView::from).toList());
         }
     }
 

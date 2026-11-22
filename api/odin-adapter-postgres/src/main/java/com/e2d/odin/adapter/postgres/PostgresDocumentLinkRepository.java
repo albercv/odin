@@ -36,7 +36,7 @@ public class PostgresDocumentLinkRepository implements DocumentLinkRepository {
                           AND (t.project_id IS NULL OR t.project_id = s.project_id)
                         HAVING count(*) = 1) AS target
                   FROM document_link k JOIN document s ON s.id = k.source_document_id
-                  WHERE k.company_id = :company AND k.origin = 'DETECTED') r
+                  WHERE k.company_id = :company AND k.origin = 'DETECTED' AND k.status = 'DETECTED') r
             WHERE l.id = r.id AND l.target_document_id IS DISTINCT FROM r.target""".formatted(LISTABLE);
 
     private final ScopedTransactions tx;
@@ -86,7 +86,9 @@ public class PostgresDocumentLinkRepository implements DocumentLinkRepository {
         UUID id = document.documentId().value();
         UUID company = document.companyId().value();
         jdbc.sql("DELETE FROM document_identifier WHERE document_id = :id").param("id", id).update();
-        jdbc.sql("DELETE FROM document_link WHERE source_document_id = :id AND origin = 'DETECTED'")
+        // Lo que una persona ya revisó se queda como está: un descartado no resucita y un confirmado no se duplica.
+        jdbc.sql("DELETE FROM document_link WHERE source_document_id = :id AND origin = 'DETECTED' "
+                + "AND status = 'DETECTED'")
                 .param("id", id).update();
         for (OwnIdentifier own : identifiers) {
             jdbc.sql("INSERT INTO document_identifier (company_id, document_id, identifier, page_number) "
@@ -97,7 +99,8 @@ public class PostgresDocumentLinkRepository implements DocumentLinkRepository {
             jdbc.sql("""
                     INSERT INTO document_link (id, company_id, source_document_id, relation, cited_identifier,
                         evidence_page, evidence_quote, origin, created_at)
-                    VALUES (gen_random_uuid(), :company, :id, :relation, :cited, :page, :quote, 'DETECTED', :now)""")
+                    VALUES (gen_random_uuid(), :company, :id, :relation, :cited, :page, :quote, 'DETECTED', :now)
+                    ON CONFLICT (source_document_id, relation, cited_identifier, origin) DO NOTHING""")
                     .param("company", company).param("id", id).param("relation", citation.relation().name())
                     .param("cited", citation.citedIdentifier()).param("page", citation.page())
                     .param("quote", citation.quote()).param("now", Sql.ts(now)).update();

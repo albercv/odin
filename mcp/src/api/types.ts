@@ -372,6 +372,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/document-links/{linkId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["dismiss"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/document-links/{linkId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/companies": {
         parameters: {
             query?: never;
@@ -1036,6 +1068,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["downloadOriginal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/documents/{documentId}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["context"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2268,6 +2316,25 @@ export interface components {
             topicListVersion: number;
             failureReason?: string;
         };
+        DocumentContextView: {
+            versions: components["schemas"]["VersionView"][];
+            links: components["schemas"]["DocumentLinkView"][];
+        };
+        DocumentLinkView: {
+            /** Format: uuid */
+            id: string;
+            direction: string;
+            relation: string;
+            status: string;
+            origin: string;
+            /** Format: uuid */
+            documentId?: string;
+            title?: string;
+            citedIdentifier: string;
+            /** Format: int32 */
+            evidencePage: number;
+            evidenceQuote: string;
+        };
         CardCountsView: {
             /** Format: int32 */
             saved: number;
@@ -3210,6 +3277,46 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DocumentView"];
                 };
+            };
+        };
+    };
+    dismiss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                linkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                linkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4588,6 +4695,28 @@ export interface operations {
             };
         };
     };
+    context: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentContextView"];
+                };
+            };
+        };
+    };
     usageStats: {
         parameters: {
             query?: {
@@ -4931,7 +5060,7 @@ export interface operations {
                 to?: string;
                 companyId?: string;
                 projectId?: string;
-                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_LINK_CONFIRMED" | "DOCUMENT_LINK_DISMISSED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
                 actorUserId?: string;
                 channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
                 outcome?: "DONE" | "DENIED" | "FAILED";
@@ -4981,7 +5110,7 @@ export interface operations {
                 to?: string;
                 companyId?: string;
                 projectId?: string;
-                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_LINK_CONFIRMED" | "DOCUMENT_LINK_DISMISSED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
                 actorUserId?: string;
                 channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
                 outcome?: "DONE" | "DENIED" | "FAILED";
@@ -5010,7 +5139,7 @@ export interface operations {
                 to?: string;
                 companyId?: string;
                 projectId?: string;
-                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
+                action?: "AUDIT_ENABLED" | "AUDIT_DISABLED" | "AUDIT_SETTINGS_UPDATED" | "REAUTHENTICATION_FAILED" | "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "INSTALLATION_SET_UP" | "ADMIN_PASSWORD_RECOVERED" | "COMPANY_CREATED" | "COMPANY_UPDATED" | "COMPANY_CAPABILITIES_CHANGED" | "GROUP_ADMIN_ADDED" | "GROUP_ADMIN_REVOKED" | "MEMBER_ADDED" | "MEMBER_UPDATED" | "MEMBER_REMOVED" | "USER_UPDATED" | "USER_DELETED" | "PASSWORD_CHANGED" | "ACCESS_KEY_ISSUED" | "ACCESS_KEY_REVOKED" | "PROJECT_CREATED" | "PROJECT_UPDATED" | "PROJECT_DELETED" | "PROJECT_MEMBER_ADDED" | "PROJECT_MEMBER_REMOVED" | "DOCUMENT_UPLOADED" | "DOCUMENT_RETRIED" | "DOCUMENT_WITHDRAWN" | "DOCUMENT_RESTORED" | "DOCUMENT_SUPERSEDED" | "DOCUMENT_SUPERSEDED_CLEARED" | "DOCUMENT_LINK_CONFIRMED" | "DOCUMENT_LINK_DISMISSED" | "DOCUMENT_SCAN_UNLINKED" | "DOCUMENT_CASE_MARK_CHANGED" | "DOCUMENTS_CASE_MARK_CHANGED" | "DOCUMENT_ORIGINAL_DOWNLOADED" | "DOCUMENT_TOPIC_ADDED" | "DOCUMENT_TOPIC_REMOVED" | "DOCUMENT_RETAGGED" | "TOPIC_CREATED" | "TOPIC_UPDATED" | "TOPIC_DELETED" | "CARD_APPROVED" | "CARD_CORRECTED" | "CARD_REJECTED" | "CASE_FILE_DOCUMENTS_ADDED" | "CASE_FILE_DOCUMENT_REMOVED" | "INTAKE_STARTED" | "INTAKE_UPLOAD_CLOSED" | "INTAKE_PROJECT_LIST_IMPORTED" | "INTAKE_PROJECTS_DECIDED" | "INTAKE_PROJECT_LIST_CLOSED" | "INTAKE_PROPOSALS_CONFIRMED" | "INTAKE_PROPOSAL_DECIDED" | "INTAKE_DOCUMENT_DISCARDED" | "INTAKE_DOCUMENT_PLACED" | "INTAKE_CLOSED" | "CARD_SAVED" | "UPLOAD_LINK_ISSUED" | "ORIGINAL_LINK_ISSUED" | "ACTIVITY_EXPORTED" | "CHAT_ENABLED" | "CHAT_DISABLED" | "ADMIN_CHAT_KEY_ISSUED" | "ADMIN_CHAT_KEY_REVOKED" | "CHAT_QUERY";
                 actorUserId?: string;
                 channel?: "PANEL" | "API" | "CHAT" | "CHAT_ADMIN" | "SCRIPT" | "SYSTEM";
                 outcome?: "DONE" | "DENIED" | "FAILED";
