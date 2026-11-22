@@ -1,6 +1,8 @@
 """Puntuación con el puntuador de medir y textos de página para los jueces. Sin IA ni red."""
 
 import json
+import re
+import unicodedata
 from pathlib import Path
 
 from banco.medir_path import puntuar, sustituciones
@@ -44,9 +46,32 @@ def ids_by_path(doc_paths):
     return {path: ident for ident, path in doc_paths.items()}
 
 
+def _fold(text):
+    """Minúsculas y sin tildes, para comparar sin distinguir mayúsculas ni acentos."""
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().casefold()
+
+
+def forbidden_hit(item, answer):
+    """Primer patrón de `no_debe_afirmar` (texto o regex) que casa en la respuesta, o None. `no_debe_afirmar_salvo`:
+    patrones que, si la misma frase también casa con uno, anulan esa coincidencia. Sin la clave no hay efecto.
+    shortcut: frases cortadas por . ! ? ; o salto de línea, no por análisis del idioma."""
+    patterns = item.get("no_debe_afirmar") or []
+    if not patterns or answer is None:
+        return None
+    exceptions = [re.compile(_fold(p)) for p in item.get("no_debe_afirmar_salvo") or []]
+    for sentence in re.split(r"[.!?;\n]+", _fold(answer.get("respuesta") or "")):
+        if any(e.search(sentence) for e in exceptions):
+            continue
+        for pattern in patterns:
+            if re.search(_fold(pattern), sentence):
+                return pattern
+    return None
+
+
 def is_correct(item, answer, ctx):
-    """Acierto según el script. Sin respuesta cuenta como fallo."""
-    return answer is not None and bool(puntuar.score_item(item, answer, ctx)["correcta"])
+    """Acierto según el script y sin afirmaciones prohibidas (`no_debe_afirmar`). Sin respuesta cuenta como fallo."""
+    return (answer is not None and bool(puntuar.score_item(item, answer, ctx)["correcta"])
+            and forbidden_hit(item, answer) is None)
 
 
 def page_text(ident, page, ctx):

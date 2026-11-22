@@ -48,6 +48,12 @@ def by_type_block(items, finals):
     return out
 
 
+def forbidden_block(items, finals):
+    """Preguntas medidas cuya respuesta final afirma algo de `no_debe_afirmar`: por qué fallan aunque el script las diera por buenas."""
+    hits = [(f["id"], scoring.forbidden_hit(items[f["id"]], f["answer"])) for f in finals]
+    return [{"id": qid, "patron": pattern} for qid, pattern in hits if pattern]
+
+
 def grave_block(items, finals, ctx):
     rows = [puntuar.score_item(items[f["id"]], f["answer"], ctx) for f in finals if f["answer"] is not None]
     scored = puntuar.summarise(rows)
@@ -222,6 +228,6 @@ def build_summary(items, ctx, runs, finals, verdicts, extra_runs=(), ledger=None
         summary["notMeasured"] = len(finals) - len(measured)
     if measured:
         summary.update(accuracy=accuracy_block(measured), byType=by_type_block(by_id, measured),
-                       graveFailures=grave_block(by_id, measured, ctx), agreement=agreement_block(measured, runs),
+                       graveFailures=grave_block(by_id, measured, ctx), noDebeAfirmar=forbidden_block(by_id, measured), agreement=agreement_block(measured, runs),
                        judges=judges_block(by_id, measured, verdicts), latency=latency_block(runs, measured, verdicts))
     return summary
