@@ -1,6 +1,13 @@
 package com.e2d.odin.adapter.web.dto;
 
 import com.e2d.odin.application.casefile.CaseFileText;
+import com.e2d.odin.application.casefile.CaseFileTextDocument;
+import com.e2d.odin.application.search.CitationVerdict;
+import com.e2d.odin.domain.context.CorrectionDirection;
+import com.e2d.odin.domain.context.DocumentContext;
+import com.e2d.odin.domain.context.DocumentCorrection;
+import com.e2d.odin.domain.context.DocumentVersion;
+import com.e2d.odin.domain.context.PageText;
 import com.e2d.odin.application.casefile.CaseFileView;
 import com.e2d.odin.application.document.ScanLinks;
 import com.e2d.odin.application.document.UploadOutcome;
@@ -451,6 +458,56 @@ public final class Responses {
         }
     }
 
+    public record LinkPhrase(int page, String quote) {
+    }
+
+    public record HeadingView(int page, String text) {
+    }
+
+    public record MatchView(int page, String excerpt) {
+    }
+
+    /** Una versión de la cadena de sustituciones, de la más antigua a la vigente; {@code match} solo en la búsqueda. */
+    public record VersionView(UUID documentId, String title, boolean current, @Nullable LinkPhrase link,
+            @Nullable HeadingView heading, @Nullable MatchView match) {
+        static VersionView from(DocumentVersion v) {
+            return new VersionView(v.documentId().value(), v.title(), v.current(),
+                    v.link().map(l -> new LinkPhrase(l.page(), l.text())).orElse(null),
+                    v.heading().map(h -> new HeadingView(h.page(), h.text())).orElse(null),
+                    v.match().map(m -> new MatchView(m.page(), m.text())).orElse(null));
+        }
+
+        static List<VersionView> from(List<DocumentVersion> versions) {
+            return versions.stream().map(VersionView::from).toList();
+        }
+    }
+
+    /** Un vínculo de corrección; sin documento ni título (y {@code hidden}) si quien lee no ve el otro documento. */
+    public record CorrectionView(String direction, String relation, @Nullable UUID documentId, @Nullable String title,
+            boolean hidden, @Nullable Integer evidencePage, @Nullable String evidenceQuote, boolean confirmed) {
+        static CorrectionView from(DocumentCorrection c) {
+            String direction = c.direction() == CorrectionDirection.CORRECTED_BY ? "correctedBy" : "corrects";
+            return new CorrectionView(direction, c.relation().name(),
+                    c.document().map(d -> d.id().value()).orElse(null), c.document().map(DocumentRef::title).orElse(null),
+                    c.hidden(), c.evidence().map(PageText::page).orElse(null),
+                    c.evidence().map(PageText::text).orElse(null), c.confirmed());
+        }
+
+        static List<CorrectionView> from(List<DocumentCorrection> corrections) {
+            return corrections.stream().map(CorrectionView::from).toList();
+        }
+    }
+
+    /** Un documento de una tanda del expediente: su marca de sustituido y su contexto, una vez por documento. */
+    public record CaseFileTextDocumentView(UUID documentId, boolean superseded, @Nullable Replacement replacement,
+            List<CorrectionView> corrections, boolean incomplete) {
+        static CaseFileTextDocumentView from(CaseFileTextDocument d) {
+            return new CaseFileTextDocumentView(d.documentId().value(), d.superseded(),
+                    d.replacement().map(Replacement::from).orElse(null),
+                    CorrectionView.from(d.context().corrections()), d.context().incomplete());
+        }
+    }
+
     /** Un documento enlazado como «copia escaneada» (D3): el principal o uno de sus escaneos. */
     public record ScanLink(UUID documentId, String title) {
         static ScanLink from(DocumentRef ref) {
@@ -465,14 +522,15 @@ public final class Responses {
     /** Vista del trabajador: solo documentos listos y sin datos internos del proceso. */
     public record WorkerDocumentView(UUID id, @Nullable UUID projectId, String title, String filename, String format,
             boolean paginated, Instant uploadedAt, boolean superseded, @Nullable Replacement replacement,
-            List<TopicLabelView> topics, boolean caseDocument, List<ScanLink> scanCopies) {
+            List<TopicLabelView> topics, boolean caseDocument, List<ScanLink> scanCopies, boolean corrected,
+            int correctionCount) {
         public static WorkerDocumentView from(TaggedDocument tagged) {
             Document d = tagged.entry().document();
             return new WorkerDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), d.uploadedAt(), d.superseded(),
                     tagged.entry().replacement().map(Replacement::from).orElse(null),
                     tagged.topics().stream().map(TopicLabelView::from).toList(), d.caseDocument(),
-                    ScanLink.from(tagged.scanLinks().scanCopies()));
+                    ScanLink.from(tagged.scanLinks().scanCopies()), tagged.corrected(), tagged.correctionCount());
         }
     }
 
@@ -481,16 +539,17 @@ public final class Responses {
             boolean paginated, int pageCount, UUID uploadedBy, Instant uploadedAt, boolean superseded,
             @Nullable Replacement replacement, @Nullable UUID addedBy, @Nullable Instant addedAt, String status,
             @Nullable String uploadedByName, @Nullable String addedByName, @Nullable ScanLink scanOf,
-            List<ScanLink> scanCopies) {
+            List<ScanLink> scanCopies, List<CorrectionView> corrections, boolean incomplete) {
         static CaseFileDocumentView from(DocumentEntry entry, int pageCount, @Nullable UserId addedBy,
-                @Nullable Instant addedAt, Map<UserId, String> names, ScanLinks links) {
+                @Nullable Instant addedAt, Map<UserId, String> names, ScanLinks links, DocumentContext context) {
             Document d = entry.document();
             return new CaseFileDocumentView(d.id().value(), d.projectId().map(p -> p.value()).orElse(null), d.title(),
                     d.filename(), d.format().name(), d.paginated(), pageCount, d.uploadedBy().value(), d.uploadedAt(),
                     d.superseded(), entry.replacement().map(Replacement::from).orElse(null),
                     addedBy == null ? null : addedBy.value(), addedAt, d.status().name(), names.get(d.uploadedBy()),
                     addedBy == null ? null : names.get(addedBy), links.scanOf().map(ScanLink::from).orElse(null),
-                    ScanLink.from(links.scanCopies()));
+                    ScanLink.from(links.scanCopies()), CorrectionView.from(context.corrections()),
+                    context.incomplete());
         }
     }
 
@@ -498,10 +557,11 @@ public final class Responses {
             int pendingDocuments, int unreadableDocuments) {
         public static CaseFileResponse from(CaseFileView view) {
             return new CaseFileResponse(CaseFileDocumentView.from(view.caseDocument(), view.casePageCount(), null, null,
-                    view.names(), ScanLinks.NONE),
+                    view.names(), ScanLinks.NONE,
+                    view.caseContext()),
                     view.documents().stream()
                             .map(d -> CaseFileDocumentView.from(d.document(), d.pageCount(), d.addedBy(), d.addedAt(),
-                                    view.names(), d.scanLinks())).toList(),
+                                    view.names(), d.scanLinks(), d.context())).toList(),
                     view.pendingDocuments(), view.unreadableDocuments());
         }
     }
@@ -511,12 +571,13 @@ public final class Responses {
 
     public record CaseFileTextResponse(List<CaseFileTextPageView> pages, @Nullable String nextCursor, boolean complete,
             int documentsRead, int documentsTotal, int pagesRead, int pagesTotal, int pendingDocuments,
-            int unreadableDocuments) {
+            int unreadableDocuments, List<CaseFileTextDocumentView> documents) {
         public static CaseFileTextResponse from(CaseFileText t) {
             return new CaseFileTextResponse(t.pages().stream().map(p -> new CaseFileTextPageView(p.documentId().value(),
                     p.title(), p.pageNumber(), p.text(), p.unread())).toList(), t.nextCursor().orElse(null),
                     t.complete(), t.documentsRead(), t.documentsTotal(), t.pagesRead(), t.pagesTotal(),
-                    t.pendingDocuments(), t.unreadableDocuments());
+                    t.pendingDocuments(), t.unreadableDocuments(),
+                    t.documents().stream().map(CaseFileTextDocumentView::from).toList());
         }
     }
 
@@ -758,13 +819,15 @@ public final class Responses {
 
     public record Hit(String sourceType, UUID sourceId, String title, @Nullable Integer pageNumber, boolean paginated,
             boolean caseDocument, @Nullable UUID projectId, String authorName, Instant date, String excerpt, double rank,
-            boolean superseded, @Nullable Replacement replacement, @Nullable String reviewStatus) {
+            boolean superseded, @Nullable Replacement replacement, @Nullable String reviewStatus,
+            List<VersionView> versions, List<CorrectionView> corrections, boolean incomplete) {
         static Hit from(SearchHit h) {
             return new Hit(h.sourceType().name(), h.sourceId(), h.title(), h.pageNumber().orElse(null),
                     h.paginated(), h.caseDocument(), h.projectId().map(p -> p.value()).orElse(null), h.authorName(), h.date(),
                     h.excerpt(), h.rank(), h.superseded(),
                     h.replacement().map(Replacement::from).orElse(null),
-                    h.reviewStatus().map(Enum::name).orElse(null));
+                    h.reviewStatus().map(Enum::name).orElse(null), VersionView.from(h.context().versions()),
+                    CorrectionView.from(h.context().corrections()), h.context().incomplete());
         }
     }
 
@@ -781,7 +844,7 @@ public final class Responses {
     public record SimilarCaseView(String sourceType, UUID sourceId, String title, @Nullable UUID projectId,
             Instant addedAt, int pageCount, List<CasePageView> pages, @Nullable String body, boolean truncated,
             String excerpt, String origin, @Nullable String originLabel, boolean superseded,
-            @Nullable Replacement replacement, @Nullable String reviewStatus) {
+            @Nullable Replacement replacement, @Nullable String reviewStatus, List<CorrectionView> corrections) {
         static final String CARD_LABEL = "Ficha aportada por un trabajador, redactada con IA";
 
         static SimilarCaseView from(SimilarCase c) {
@@ -791,7 +854,8 @@ public final class Responses {
                     c.pages().stream().map(p -> new CasePageView(p.number(), p.text())).toList(),
                     c.body().orElse(null), c.truncated(), c.excerpt(),
                     card ? "KNOWLEDGE_CARD" : "ORIGINAL_DOCUMENT", card ? CARD_LABEL : null, c.superseded(),
-                    c.replacement().map(Replacement::from).orElse(null), c.reviewStatus().map(Enum::name).orElse(null));
+                    c.replacement().map(Replacement::from).orElse(null), c.reviewStatus().map(Enum::name).orElse(null),
+                    CorrectionView.from(c.corrections()));
         }
     }
 
@@ -802,18 +866,27 @@ public final class Responses {
     }
 
     public record Page(UUID documentId, String title, int pageNumber, boolean paginated, String text,
-            boolean superseded, @Nullable Replacement replacement, String readerName) {
+            boolean superseded, @Nullable Replacement replacement, String readerName, List<VersionView> versions,
+            List<CorrectionView> corrections, boolean incomplete) {
         public static Page from(PageView v) {
             return new Page(v.document().id().value(), v.document().title(), v.page().number(),
                     v.document().paginated(), v.page().text(), v.document().superseded(),
-                    v.entry().replacement().map(Replacement::from).orElse(null), v.page().readerName());
+                    v.entry().replacement().map(Replacement::from).orElse(null), v.page().readerName(),
+                    VersionView.from(v.context().versions()), CorrectionView.from(v.context().corrections()),
+                    v.context().incomplete());
         }
     }
 
     public record Verification(boolean verified) {
     }
 
-    public record VerificationResult(UUID documentId, int pageNumber, boolean verified) {
+    public record VerificationResult(UUID documentId, int pageNumber, boolean verified, boolean superseded,
+            @Nullable Replacement replacement, boolean corrected, List<CorrectionView> corrections) {
+        public static VerificationResult from(UUID documentId, int pageNumber, CitationVerdict v) {
+            return new VerificationResult(documentId, pageNumber, v.verified(), v.superseded(),
+                    v.replacement().map(Replacement::from).orElse(null), v.corrected(),
+                    CorrectionView.from(v.corrections()));
+        }
     }
 
     public record Verifications(List<VerificationResult> results) {

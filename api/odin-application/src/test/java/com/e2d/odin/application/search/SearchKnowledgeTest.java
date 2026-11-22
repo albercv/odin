@@ -52,7 +52,7 @@ class SearchKnowledgeTest {
 
         assertThat(search.lastQuery().scope()).isEqualTo(CompanyScope.of(companyB));
         assertThat(search.lastQuery().terms()).containsExactly("franquicia", "seguro");
-        assertThat(search.lastQuery().limit()).isEqualTo(10);
+        assertThat(search.lastQuery().limit()).as("se piden más candidatos para poder agrupar versiones").isEqualTo(40);
     }
 
     @Test
@@ -107,7 +107,7 @@ class SearchKnowledgeTest {
     void capsLimitAt50() {
         useCase.execute(Actors.worker(companyA), request(Optional.of(500)));
 
-        assertThat(search.lastQuery().limit()).isEqualTo(50);
+        assertThat(search.lastQuery().limit()).isEqualTo(200);
     }
 
     @Test

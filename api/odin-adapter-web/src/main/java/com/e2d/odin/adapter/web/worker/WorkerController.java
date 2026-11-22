@@ -17,6 +17,7 @@ import com.e2d.odin.application.search.SearchRequest;
 import com.e2d.odin.application.search.SimilarCasesRequest;
 import com.e2d.odin.application.search.FindSimilarCases;
 import com.e2d.odin.application.search.CitationCheck;
+import com.e2d.odin.application.search.CitationVerdict;
 import com.e2d.odin.application.search.VerifyCitation;
 import com.e2d.odin.domain.identity.Actor;
 import com.e2d.odin.domain.knowledge.CardStatus;
@@ -145,10 +146,10 @@ public class WorkerController {
             throw new ValidationException("Indica de 1 a " + MAX_CITATIONS
                     + " citas, cada una con documento, página y texto");
         }
-        List<Boolean> verified = verifyCitation.executeAll(actor, citations.stream()
+        List<CitationVerdict> verified = verifyCitation.executeAll(actor, citations.stream()
                 .map(c -> new CitationCheck(new DocumentId(c.documentId()), c.pageNumber(), c.quote())).toList());
         return new Responses.Verifications(IntStream.range(0, citations.size())
-                .mapToObj(i -> new Responses.VerificationResult(citations.get(i).documentId(),
+                .mapToObj(i -> Responses.VerificationResult.from(citations.get(i).documentId(),
                         citations.get(i).pageNumber(), verified.get(i))).toList());
     }
 

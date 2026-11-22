@@ -1,5 +1,6 @@
 package com.e2d.odin.application.search;
 
+import com.e2d.odin.application.context.DocumentContexts;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
@@ -25,14 +26,22 @@ public class ListDocuments {
     private final DocumentRepository documents;
     private final TopicRepository topics;
     private final TaggingRepository tagging;
+    private final DocumentContexts contexts;
 
     public ListDocuments(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
             DocumentRepository documents, TopicRepository topics, TaggingRepository tagging) {
+        this(organizations, projectMembers, documents, topics, tagging, DocumentContexts.none());
+    }
+
+    public ListDocuments(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, TopicRepository topics, TaggingRepository tagging,
+            DocumentContexts contexts) {
         this.organizations = organizations;
         this.projectMembers = projectMembers;
         this.documents = documents;
         this.topics = topics;
         this.tagging = tagging;
+        this.contexts = contexts;
     }
 
     public List<TaggedDocument> execute(Actor actor, Optional<ProjectId> projectId, Optional<TopicId> topicId,
@@ -51,7 +60,11 @@ public class ListDocuments {
         });
         var entries = documents.list(actor.scope(), access.content(), projectId, topicId, caseDocument,
                 Optional.of(DocumentStatus.READY), Math.max(0, offset), WorkerAccess.cap(limit, 100, 500));
-        return TaggedDocuments.of(entries, actor.scope(), access.content(), companyTopics, tagging, documents,
-                Optional.of(DocumentStatus.READY));
+        List<TaggedDocument> tagged = TaggedDocuments.of(entries, actor.scope(), access.content(), companyTopics,
+                tagging, documents, Optional.of(DocumentStatus.READY));
+        var corrections = contexts.correctionsOf(actor.scope(), access.content(),
+                tagged.stream().map(t -> t.entry().document().id()).toList());
+        return tagged.stream().map(t -> t.withCorrections(
+                corrections.getOrDefault(t.entry().document().id(), List.of()))).toList();
     }
 }
