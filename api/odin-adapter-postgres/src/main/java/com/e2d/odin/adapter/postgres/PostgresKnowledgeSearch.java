@@ -188,8 +188,8 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 Sql.inScope("c.company_id"), Sql.inVisibleProjects("d.project_id"),
                 Sql.inVisibleProjects("c.project_id"), SearchSql.inProject("d.project_id"),
                 SearchSql.inProject("c.project_id"), SearchSql.visibleCards("c"),
-                Sql.listable("d"), SearchSql.inCaseFile("d"), SearchSql.NO_CASE_FILE, SearchSql.rank("p.tsv"),
-                SearchSql.rank("c.tsv"));
+                Sql.listable("d"), SearchSql.inCaseFile("d"), SearchSql.NO_CASE_FILE,
+                SearchSql.rank("p.tsv", "d.project_id", "d.title"), SearchSql.rank("c.tsv", "c.project_id", "c.title"));
     }
 
     private static SearchHit hit(ResultSet rs, List<String> terms) throws SQLException {
