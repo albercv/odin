@@ -16,7 +16,7 @@ Con `develop`, no lo hacen. Lo que trae el encargo 30: los vínculos por identif
 ## Qué se compara
 
 - **Antes:** `develop` 1fbe205d.
-- **Después:** la punta de `feature/respuestas-contexto` en el momento de lanzar. Se anota el SHA.
+- **Después:** la punta de `feature/respuestas-contexto` en el momento de lanzar. **Está congelada:** su SHA exacto se anota en albercv/odin#18 y en la nota compartida antes de lanzar, y no se une nada más a la feature mientras dure la medición. Anotarlo en este fichero movería la punta.
 - **Mismos datos:** Mirador (ficticio, `.worktrees/mirador/experimentos/2026-11-14-caso-mirador/datos/`) en una pila desechable. Nunca la instalación del propietario.
 - **Mismas preguntas,** el mismo trabajador (con acceso al proyecto) y el mismo ejecutor del banco.
 
@@ -57,7 +57,7 @@ Con `develop`, no lo hacen. Lo que trae el encargo 30: los vínculos por identif
 
 - **Tope:** se para si el gasto acumulado llega a 3 USD, dentro del máximo de 5 USD a la semana de D-094.
 - **Si la prueba de humo ya no pasa,** no se lanza la completa.
-- **Al terminar:** un resumen de 5 líneas con lo medido, separando lo medido de lo estimado.
+- **Al terminar:** un resumen de 5 líneas con lo medido, separando lo medido de lo estimado. Incluye el **consumo equivalente medio por respuesta de M1 y M2, antes y después**, con Haiku y con Sonnet. No decide la adopción, pero lo deciden el propietario y el CEO con el dato delante, por el salto de unos 12 a unos 21 KB.
 
 ## Riesgos conocidos
 
