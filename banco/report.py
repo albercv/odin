@@ -104,6 +104,15 @@ def _grave_lines(summary):
                     f"- Sustituido presentado como vigente: {grave['supersededAsCurrent']}", ""]
 
 
+def _forbidden_lines(summary):
+    hits = summary.get("noDebeAfirmar") or []
+    if not hits:
+        return []
+    return ["## Afirmaciones prohibidas", "",
+            "Respuestas que cuentan como fallo aunque el script las puntuara bien, por afirmar algo de `no_debe_afirmar`:"
+            ] + [f"- {h['id']}: casa con «{h['patron']}»" for h in hits] + [""]
+
+
 def _approach_lines(summary):
     lines = ["## Por enfoque", "", "| Enfoque | Recuperación | Acierto de sus ejecuciones | Errores |", "|---|---|---|---|"]
     rows = [f"| {name} | {_pct(row['recall'])} | {_pct(row['accuracy'])} | {row.get('errors', 0)} |"
@@ -226,7 +235,7 @@ def _curve_lines(curves):
 def render(summary):
     origin = summary.get("origen", {})
     parts = [f"# Informe del banco: {origin.get('Configuración', '')}", ""]
-    parts += _origin_lines(summary) + _accuracy_lines(summary) + _grave_lines(summary) + _approach_lines(summary)
+    parts += _origin_lines(summary) + _accuracy_lines(summary) + _grave_lines(summary) + _forbidden_lines(summary) + _approach_lines(summary)
     parts += _agreement_lines(summary) + _judge_lines(summary) + _cost_lines(summary) + _batch_lines(summary)
     if "curvas" in summary:
         parts += _curve_lines(summary["curvas"])
