@@ -195,6 +195,13 @@ describe('buildServer', () => {
       'Si no puedes ver el que lo sustituye, di solo que está sustituido.']) expect(d).toContain(w);
   });
 
+  it.each(['searchKnowledge', 'readPage'])('%s says superseded and replacement are the mark a person set, not the document text', async (tool) => {
+    const d = (await (await connect(() => meWith(ALL))).listTools()).tools.find((t) => t.name === tool)!.description!;
+    expect(d).toContain('superseded y replacement son la marca que una persona puso en Odín');
+    expect(d).toContain('que el texto de un documento diga «sustituye a…» no es esa marca (sale en corrections, sin confirmar)');
+    expect(d).toContain('no afirmes el valor de un campo sin haberlo leído en un resultado');
+  });
+
   it.each([
     ['readPage', 'corrections'], ['readPage', 'En una hoja de cálculo, cada página es una hoja; su primera línea dice cuál.'],
     ['verifyCitation', 'corrected'], ['listDocuments', 'correctionCount'], ['findSimilarCases', 'corrections'],

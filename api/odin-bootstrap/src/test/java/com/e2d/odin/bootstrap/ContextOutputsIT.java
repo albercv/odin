@@ -54,6 +54,7 @@ class ContextOutputsIT {
     private String company;
     private String marta;
     private final List<String> policies = new ArrayList<>();
+    private final List<String> gap = new ArrayList<>();
     private String invoice;
     private String correction;
     private String hiddenInvoice;
@@ -71,7 +72,12 @@ class ContextOutputsIT {
             assertThat(api.put("/v1/admin/documents/" + policies.get(i) + "/superseded-by",
                     map("replacementId", policies.get(i + 1)), "Cookie", adminCookie).status()).isEqualTo(200);
         }
-        eventually(() -> hit(search("ZZQ-2025-0302", 10), correction).get("corrections").size() == 1
+        for (int i : new int[] {0, 2}) {
+            assertThat(api.put("/v1/admin/documents/" + gap.get(i) + "/superseded-by",
+                    map("replacementId", gap.get(i + 1)), "Cookie", adminCookie).status()).isEqualTo(200);
+        }
+        eventually(() -> hit(search("ZZR-19-55002", 10), gap.get(1)).get("corrections").size() == 1
+                && hit(search("ZZQ-2025-0302", 10), correction).get("corrections").size() == 1
                 && hit(search("anexo ZZQ-99-00000", 10), annex).get("incomplete").asBoolean());
 
         assertSearch();
@@ -80,6 +86,50 @@ class ContextOutputsIT {
         assertVerifyAndList();
         assertSimilarCases();
         assertOtherCompany();
+        assertGapKeepsTheSystemFieldsLiteral();
+    }
+
+    /** Cadena 1 -> 2 marcada, 2 sin marca, 3 -> 4 marcada; el texto de la 3 dice que sustituye a la 2. */
+    private void assertGapKeepsTheSystemFieldsLiteral() {
+        JsonNode hit = hit(search("ZZR-19-55002", 10), gap.get(1));
+        assertGapSide(hit, "superseded");
+        JsonNode first = api.get("/v1/documents/" + gap.get(0) + "/pages/1", "Authorization", marta).json();
+        assertThat(first.get("superseded").asBoolean()).isTrue();
+        assertThat(first.get("replacement").get("documentId").asString()).isEqualTo(gap.get(1));
+        assertThat(first.get("incomplete").asBoolean()).isTrue();
+        JsonNode page = api.get("/v1/documents/" + gap.get(1) + "/pages/1", "Authorization", marta).json();
+        assertGapSide(page, "superseded");
+        JsonNode verified = api.post("/v1/citations/verify-batch", map("citations", List.of(map("documentId", gap.get(1),
+                "pageNumber", 1, "quote", "Efecto: 1 de octubre de 2019"))), "Authorization", marta).json()
+                .get("results").get(0);
+        assertThat(verified.get("superseded").asBoolean()).isFalse();
+        assertThat(nullish(verified.get("replacement"))).isTrue();
+        assertThat(verified.get("corrected").asBoolean()).isTrue();
+        assertThat(byId(api.get("/v1/documents", "Authorization", marta).json(), gap.get(1)).get("corrected")
+                .asBoolean()).isTrue();
+        assertGapInCaseFile();
+    }
+
+    private void assertGapSide(JsonNode node, String field) {
+        assertThat(node.get(field).asBoolean()).isFalse();
+        assertThat(nullish(node.get("replacement"))).isTrue();
+        JsonNode by = node.get("corrections").get(0);
+        assertThat(by.get("direction").asString()).isEqualTo("correctedBy");
+        assertThat(by.get("relation").asString()).isEqualTo("REPLACES");
+        assertThat(by.get("documentId").asString()).isEqualTo(gap.get(2));
+        assertThat(by.get("confirmed").asBoolean()).isFalse();
+        assertThat(node.get("incomplete").asBoolean()).isTrue();
+    }
+
+    private void assertGapInCaseFile() {
+        String file = "/v1/cases/" + caseFile + "/file";
+        JsonNode second = byId(api.get(file, "Authorization", marta).json().get("documents"), gap.get(1));
+        assertGapSide(second, "superseded");
+        assertThat(byId(api.get(file, "Authorization", marta).json().get("documents"), gap.get(0))
+                .get("replacement").get("documentId").asString()).isEqualTo(gap.get(1));
+        JsonNode inText = byDocument(api.get(file + "/text", "Authorization", marta).json().get("documents"),
+                gap.get(1));
+        assertGapSide(inText, "superseded");
     }
 
     private void assertSearch() throws IOException {
@@ -213,13 +263,14 @@ class ContextOutputsIT {
         String projectB = project("Obra cerrada");
         marta = worker(company, "marta@ejemplo.test", List.of(project("Obra A")));
         uploadPolicies();
+        uploadGap();
         uploadInvoices(projectB);
         String betaCompany = createCompany("Beta Ejemplos", "BETA01");
         beta = worker(betaCompany, "ana@ejemplo.test", List.of());
         upload(betaCompany, "Beta póliza.txt", null, false,
                 "Póliza n.º ZZQ-25-77001\nLa " + DEDUCTIBLE + " de Beta es de 90 euros.");
         waitUntilAllReady();
-        for (String id : List.of(policies.get(0), invoice)) {
+        for (String id : List.of(policies.get(0), invoice, gap.get(0), gap.get(1))) {
             assertThat(api.post("/v1/cases/" + caseFile + "/file/documents", map("documentIds", List.of(id)),
                     "Authorization", marta).status()).isEqualTo(200);
         }
@@ -233,6 +284,16 @@ class ContextOutputsIT {
             policies.add(upload(company, "Póliza ZZQ-" + year + ".txt", null, false, "Póliza n.º ZZQ-" + year
                     + "-77001\nEfecto: 1 de octubre de 20" + year + "\n" + replaces + "La " + DEDUCTIBLE + " es de "
                     + (150 + 150 * i) + " euros."));
+        }
+    }
+
+    private void uploadGap() {
+        for (int i = 0; i < 4; i++) {
+            int year = 16 + 3 * i;
+            String replaces = i == 0 ? "" : "Esta póliza sustituye y anula a la póliza n.º ZZR-" + (year - 3)
+                    + "-55002 desde el 1 de octubre de 20" + year + ".\n";
+            gap.add(upload(company, "Póliza ZZR-" + year + ".txt", null, false, "Póliza n.º ZZR-" + year
+                    + "-55002\nEfecto: 1 de octubre de 20" + year + "\n" + replaces + "Cobertura de granizo."));
         }
     }
 
