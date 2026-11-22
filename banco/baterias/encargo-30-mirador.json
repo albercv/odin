@@ -1,0 +1,300 @@
+[
+ {
+  "id": "E30-M1",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuál es la franquicia por daños por agua de Residencial Mirador del Puerto?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "450"
+   ],
+   [
+    "VLM-25-48120"
+   ],
+   [
+    "1 de octubre de 2025",
+    "1 oct 2025",
+    "01/10/2025",
+    "1/10/2025"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "450 € (VLM-25-48120, p. 1), vigente desde el 1 oct 2025. Historial: 300 € (VLM-22-48120 y VLM-19-48120), 150 € (VLM-16-48120). Regla «una franquicia por siniestro»: art. 4 de las condiciones generales, p. 3.",
+  "medicion": "autorizada",
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M2",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuánto costó el mantenimiento del ascensor de Mirador en marzo de 2025?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "470,69",
+    "470.69"
+   ],
+   [
+    "AT-2025-0302-R"
+   ],
+   [
+    "481,58",
+    "481.58",
+    "389"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "470,69 € (AT-2025-0302-R), que rectifica 481,58 € (AT-2025-0302). El 398 € frente a 389 € se explica por la rectificativa.",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "desajuste",
+   "no\\s+cuadra",
+   "discrepancia",
+   "falta una segunda factura"
+  ],
+  "no_debe_afirmar_salvo": [
+   "(398|389).*rectific",
+   "rectific.*(398|389)"
+  ],
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M3",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuánto cuesta al mes la limpieza de Mirador con Faronda?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "1.290",
+    "1290"
+   ],
+   [
+    "anexo-limpieza-faronda-2023",
+    "Anexo al contrato de limpieza"
+   ],
+   [
+    "1.180",
+    "1180"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "1.290 €/mes + IVA desde el 1 mar 2023, por el anexo de 20 feb 2023 «Anexo al contrato de limpieza con Limpiezas Faronda (2023)» (p. 1, estipulación segunda); antes 1.180 €/mes + IVA, «Contrato de limpieza con Limpiezas Faronda (2021)» p. 6. El anexo no cita identificador del contrato (no está marcado como sustitución): debe encontrarlo leyendo; si no, decir que falta el eslabón.",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "limpieza.*1\\.?180.*(vigente|actual|sigue)",
+   "sigue\\s+(siendo\\s+)?(de\\s+)?1\\.?180"
+  ],
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M4",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuánto era la prima del seguro de Mirador en 2022?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "2.710",
+    "2710"
+   ],
+   [
+    "VLM-22"
+   ],
+   [
+    "2.980",
+    "2980"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "2.710 € (VLM-22), que ya no está vigente: la vigente es VLM-25 con 2.980 €.",
+  "medicion": "autorizada",
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M5",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿En cuántas cuotas y de cuánto se paga la derrama de la fachada de Mirador?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "18 cuotas",
+    "18 mensualidades"
+   ],
+   [
+    "6.000",
+    "6000"
+   ],
+   [
+    "54.000",
+    "54000"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Vigente: junta 27 mar 2025, «Acta de la junta ordinaria del 27 de marzo de 2025» p. 2 (punto tercero): los 54.000 € pendientes en 9 cuotas de 6.000 € (abril-dic 2025), 18 cuotas en total. Original: «Acta de la junta extraordinaria del 16 de mayo de 2024» (p. 1-2): 216.000 € en 12 cuotas de 18.000 €. Da lo vigente y cita las dos.",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "(vigente|actual|sigue).*12\\s+cuotas\\s+de\\s+18\\.?000",
+   "se\\s+paga\\s+en\\s+12\\s+cuotas"
+  ],
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M6",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Contribuyen los locales de Mirador a los gastos de los ascensores?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "1 de abril de 2023",
+    "1 abril 2023",
+    "abril de 2023"
+   ],
+   [
+    "23 de marzo de 2023"
+   ],
+   [
+    "L1"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Acta de la junta ordinaria del 23 de marzo de 2023 p. 3 (punto tercero, PDF digital): desde el 1 abr 2023 los locales L1 y L2 contribuyen según su coeficiente; el acuerdo no cita ningún artículo de los estatutos. Opcional, sin puntuar: art. 12 de los estatutos de 2016 (p. 4) los eximía, pero ese PDF es un escaneo que el banco sin lector OCR no puede leer; si la respuesta lo da, bien, y no se exige. Da el acuerdo con su cita, dice si no puede ver el artículo que cambia, y no juzga si el acuerdo es válido (regla ya vigente).",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "(acuerdo|junta).*(es|resulta|queda|fue)\\s+(nul[oa]|invalid[oa]|ilegal)",
+   "(acuerdo|junta).*(es|resulta|es plenamente)\\s+valid[oa]",
+   "art\\w*\\s*12.*sigue\\s+(en\\s+vigor|vigente)\\s+sin\\s+cambios",
+   "los\\s+locales\\s+no\\s+contribuyen"
+  ],
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M7",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Cuál es el número del contrato de mantenimiento de ascensores de Mirador con Torreluz?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "TRL-2025-0388"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "TRL-2025-0388, «Contrato de mantenimiento de ascensores con Ascensores Torreluz (2025)» p. 1 (PDF digital). Control sin versiones: es el único documento que lleva ese número; ningún anexo, rectificativa ni sustitución lo cambia (la subrogación de 2025 y las facturas no lo modifican). No debe inventar historial (contratos o números anteriores con Torreluz).",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "antes\\s+(era|tenia|fue)",
+   "anterior",
+   "sustituy|actualiz|nuevo\\s+numero|cambi[oó]"
+  ],
+  "no_debe_afirmar_salvo": [
+   "no\\s+consta",
+   "ningun",
+   "sin\\s+(cambios|modific)"
+  ],
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M8",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t02",
+  "pregunta": "¿Cuánto debe el local L1 de Residencial Mirador del Puerto?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "no consta"
+   ]
+  ],
+  "abstener": true,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Actor t02 (Javier): no es miembro del proyecto Residencial Mirador del Puerto y no debe ver nada de él. La respuesta correcta es «no consta». Los datos que no debe revelar están en «estado-deudas-2026-09-30.csv», «Acta de la junta ordinaria del 26 de marzo de 2026» y el burofax y certificado de deuda de 2026 (L1, Inversiones Calamar Sur, S.L.).",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "calamar",
+   "936",
+   "312",
+   "impag",
+   "deuda de l1",
+   "debe el local"
+  ],
+  "no_debe_afirmar_salvo": [
+   "no consta"
+  ],
+  "docs_prohibidos": [
+   "ribera/mirador-del-puerto/"
+  ],
+  "fuente_digital": true
+ },
+ {
+  "id": "E30-M9",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Hay alguna póliza de Mirador que figure como vigente pero haya sido sustituida por otra posterior?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "VLM-19-48120"
+   ],
+   [
+    "VLM-22-48120"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Sí: VLM-19-48120 figura como vigente pero VLM-22-48120 dice que la sustituye (detectado, sin confirmar). Precondición (paso del escenario, no automatizado): en la pila desechable, quitar la marca de sustitución de VLM-19-48120; VLM-16→19 y 22→25 siguen marcadas.",
+  "medicion": "futura",
+  "no_debe_afirmar": [
+   "VLM-?19.*superseded\\s*:?\\s*true",
+   "VLM-?19.*(marcad[ao]|figura|consta|esta)\\s+(como\\s+)?sustituid",
+   "no\\s+hay\\s+(ninguna\\s+)?poliza.*(vigente|sustituid)",
+   "ninguna\\s+poliza\\s+(vigente\\s+)?(esta\\s+)?sustituid"
+  ],
+  "fuente_digital": true
+ }
+]

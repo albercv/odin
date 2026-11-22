@@ -41,7 +41,8 @@ def _mirador_dir(_layout):
     return Path(folder)
 
 
-ARCHIVES = {"ficticio": _exp_datos, "generalidad": _generalidad_datos, "mirador": _mirador_dir}
+ARCHIVES = {"ficticio": _exp_datos, "generalidad": _generalidad_datos, "mirador": _mirador_dir,
+            "baterias": lambda layout: layout.banco / "baterias"}
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,8 @@ BATTERIES = {
     "generalidad": Battery("generalidad", "bateria.json", ("ficticio", "generalidad")),
     "generalidad-expediente": Battery("generalidad", "bateria-expediente.json", ("ficticio", "generalidad")),
     "mirador": Battery("mirador", "bateria-mirador.json", ("ficticio", "mirador")),
+    # Versionada en el repo (encargo 30); M9 es medición futura y no entra en la config autorizada.
+    "encargo-30-mirador": Battery("baterias", "encargo-30-mirador.json", ("ficticio", "mirador")),
 }
 
 
