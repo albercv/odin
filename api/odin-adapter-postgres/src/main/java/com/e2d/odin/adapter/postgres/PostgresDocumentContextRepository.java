@@ -76,6 +76,15 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
             return "ADMIN".equals(origin) || "CONFIRMED".equals(status);
         }
 
+        /** Un REPLACES o RECTIFIES detectado y sin confirmar que no es una sustitución marcada: falta un eslabón. */
+        boolean unconfirmedChange() {
+            return targetId != null && !confirmed() && !markedSupersession() && relation != LinkRelation.MODIFIES;
+        }
+
+        boolean touches(Set<UUID> chain) {
+            return chain.contains(sourceId) || chain.contains(targetId);
+        }
+
         boolean markedSupersession() {
             return relation == LinkRelation.REPLACES && sourceId.equals(targetSupersededBy);
         }
@@ -240,7 +249,8 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
         corrections.addAll(hidden.corrections());
         Set<UUID> inChain = chain.ordered().stream().map(VersionChain.Node::id).collect(Collectors.toSet());
         boolean pending = links.stream().anyMatch(l -> l.targetId() == null && inChain.contains(l.sourceId()));
-        boolean incomplete = chain.incomplete() || pending || hidden.chain() || !hidden.corrections().isEmpty();
+        boolean incomplete = chain.incomplete() || pending || hidden.chain() || !hidden.corrections().isEmpty()
+                || links.stream().anyMatch(l -> l.unconfirmedChange() && l.touches(inChain));
         return new DocumentContext(versionsOf(chain, headings, links), corrections, incomplete);
     }
 

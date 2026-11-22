@@ -68,6 +68,14 @@ class DocumentContextIT extends AbstractPostgresIT {
 
     /** Cuatro pólizas de un seguro inventado, cada una con la frase que sustituye a la anterior, todas marcadas. */
     private List<Document> policies() {
+        List<Document> chain = unmarkedPolicies();
+        for (int i = 0; i < 3; i++) {
+            forceMark(chain.get(i), chain.get(i + 1));
+        }
+        return chain;
+    }
+
+    private List<Document> unmarkedPolicies() {
         List<Document> chain = new java.util.ArrayList<>();
         for (int i = 0; i < 4; i++) {
             int year = 16 + 3 * i;
@@ -76,9 +84,14 @@ class DocumentContextIT extends AbstractPostgresIT {
             chain.add(doc("Póliza ZZQ-" + year, own + replaces + "\nFranquicia por daños por agua " + (150 + 150 * i)));
         }
         link();
-        for (int i = 0; i < 3; i++) {
-            forceMark(chain.get(i), chain.get(i + 1));
-        }
+        return chain;
+    }
+
+    /** La cadena de cuatro con la marca de la segunda quitada: 1 -> 2 marcada, 2 sin marca, 3 -> 4 marcada. */
+    private List<Document> policiesWithGap() {
+        List<Document> chain = unmarkedPolicies();
+        forceMark(chain.get(0), chain.get(1));
+        forceMark(chain.get(2), chain.get(3));
         return chain;
     }
 
@@ -153,6 +166,34 @@ class DocumentContextIT extends AbstractPostgresIT {
         assertThat(correction.relation()).isEqualTo(LinkRelation.REPLACES);
         assertThat(correction.confirmed()).contains(false);
         assertThat(of(next).versions()).isEmpty();
+    }
+
+    @Test
+    void aGapInTheChainShowsTheUnconfirmedReplacementAndIsIncomplete() {
+        List<Document> chain = policiesWithGap();
+
+        for (Document d : chain) {
+            assertThat(of(d).incomplete()).as(d.title()).isTrue();
+        }
+        DocumentCorrection onTarget = of(chain.get(1)).corrections().get(0);
+        assertThat(onTarget.direction()).isEqualTo(CorrectionDirection.CORRECTED_BY);
+        assertThat(onTarget.relation()).isEqualTo(LinkRelation.REPLACES);
+        assertThat(onTarget.document().orElseThrow().title()).isEqualTo("Póliza ZZQ-22");
+        assertThat(onTarget.confirmed()).contains(false);
+        DocumentCorrection onSource = of(chain.get(2)).corrections().get(0);
+        assertThat(onSource.direction()).isEqualTo(CorrectionDirection.CORRECTS);
+        assertThat(onSource.relation()).isEqualTo(LinkRelation.REPLACES);
+        assertThat(onSource.confirmed()).contains(false);
+    }
+
+    @Test
+    void anUnconfirmedRectificationAlsoMakesTheContextIncomplete() {
+        Document original = doc("Factura ZZQ-2025-0302", "Número de factura: ZZQ-2025-0302\nTotal 481,58");
+        doc("Rectificativa", "Número de factura rectificativa: ZZQ-2025-0302-R\n"
+                + "Rectifica la factura ZZQ-2025-0302: importe correcto 389,00 €.");
+        link();
+
+        assertThat(of(original).incomplete()).isTrue();
     }
 
     @Test
