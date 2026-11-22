@@ -187,13 +187,14 @@ class DocumentContextIT extends AbstractPostgresIT {
     }
 
     @Test
-    void anUnconfirmedRectificationAlsoMakesTheContextIncomplete() {
+    void anUnconfirmedRectificationDoesNotMakeTheContextIncomplete() {
         Document original = doc("Factura ZZQ-2025-0302", "Número de factura: ZZQ-2025-0302\nTotal 481,58");
         doc("Rectificativa", "Número de factura rectificativa: ZZQ-2025-0302-R\n"
                 + "Rectifica la factura ZZQ-2025-0302: importe correcto 389,00 €.");
         link();
 
-        assertThat(of(original).incomplete()).isTrue();
+        assertThat(of(original).incomplete()).isFalse();
+        assertThat(of(original).corrections().get(0).confirmed()).contains(false);
     }
 
     @Test

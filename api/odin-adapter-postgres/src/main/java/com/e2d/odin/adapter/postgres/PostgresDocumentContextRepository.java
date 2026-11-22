@@ -76,9 +76,9 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
             return "ADMIN".equals(origin) || "CONFIRMED".equals(status);
         }
 
-        /** Un REPLACES o RECTIFIES detectado y sin confirmar que no es una sustitución marcada: falta un eslabón. */
+        /** Un REPLACES detectado y sin confirmar que no es una sustitución marcada: falta un eslabón. */
         boolean unconfirmedChange() {
-            return targetId != null && !confirmed() && !markedSupersession() && relation != LinkRelation.MODIFIES;
+            return targetId != null && !confirmed() && !markedSupersession() && relation == LinkRelation.REPLACES;
         }
 
         boolean touches(Set<UUID> chain) {
