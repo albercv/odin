@@ -46,31 +46,37 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
 
 // Una ficha nunca se presenta como documento: lleva cardId y su marca de origen (spec 6.8, D-024).
 const toCitation = (hit: Hit, projects: ProjectNames) =>
-  hit.sourceType === 'KNOWLEDGE_CARD'
-    ? {
-        sourceType: hit.sourceType,
-        cardId: hit.sourceId,
-        title: hit.title,
-        authorName: hit.authorName,
-        addedAt: hit.date,
-        projectId: hit.projectId ?? null,
-        projectName: projects.nameOf(hit.projectId),
-        excerpt: hit.excerpt,
-        origin: `Ficha aportada por ${hit.authorName}, redactada con IA`,
-        ...(hit.reviewStatus ? { reviewStatus: hit.reviewStatus } : {}),
-      }
-    : {
-        sourceType: hit.sourceType,
-        documentId: hit.sourceId,
-        title: hit.title,
-        pageNumber: hit.pageNumber ?? null,
-        paginated: hit.paginated,
-        caseDocument: hit.caseDocument,
-        projectId: hit.projectId ?? null,
-        projectName: projects.nameOf(hit.projectId),
-        authorName: hit.authorName,
-        addedAt: hit.date,
-        superseded: hit.superseded,
-        replacement: hit.replacement ?? null,
-        excerpt: hit.excerpt,
-      };
+  hit.sourceType === 'KNOWLEDGE_CARD' ? cardCitation(hit, projects) : documentCitation(hit, projects);
+
+const cardCitation = (hit: Hit, projects: ProjectNames) => ({
+  sourceType: hit.sourceType,
+  cardId: hit.sourceId,
+  title: hit.title,
+  authorName: hit.authorName,
+  addedAt: hit.date,
+  projectId: hit.projectId ?? null,
+  projectName: projects.nameOf(hit.projectId),
+  excerpt: hit.excerpt,
+  origin: `Ficha aportada por ${hit.authorName}, redactada con IA`,
+  ...(hit.reviewStatus ? { reviewStatus: hit.reviewStatus } : {}),
+});
+
+// versions, corrections e incomplete salen tal cual del API: las calcula Odín sin IA y ya filtradas por lo que el trabajador ve.
+const documentCitation = (hit: Hit, projects: ProjectNames) => ({
+  sourceType: hit.sourceType,
+  documentId: hit.sourceId,
+  title: hit.title,
+  pageNumber: hit.pageNumber ?? null,
+  paginated: hit.paginated,
+  caseDocument: hit.caseDocument,
+  projectId: hit.projectId ?? null,
+  projectName: projects.nameOf(hit.projectId),
+  authorName: hit.authorName,
+  addedAt: hit.date,
+  superseded: hit.superseded,
+  replacement: hit.replacement ?? null,
+  excerpt: hit.excerpt,
+  versions: hit.versions,
+  corrections: hit.corrections,
+  incomplete: hit.incomplete,
+});

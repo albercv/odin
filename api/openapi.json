@@ -4120,6 +4120,38 @@
         },
         "required" : [ "number", "text" ]
       },
+      "CorrectionView" : {
+        "type" : "object",
+        "properties" : {
+          "direction" : {
+            "type" : "string"
+          },
+          "relation" : {
+            "type" : "string"
+          },
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "hidden" : {
+            "type" : "boolean"
+          },
+          "evidencePage" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "evidenceQuote" : {
+            "type" : "string"
+          },
+          "confirmed" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "confirmed", "direction", "hidden", "relation" ]
+      },
       "Replacement" : {
         "type" : "object",
         "properties" : {
@@ -4187,9 +4219,15 @@
           },
           "reviewStatus" : {
             "type" : "string"
+          },
+          "corrections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CorrectionView"
+            }
           }
         },
-        "required" : [ "addedAt", "excerpt", "origin", "pageCount", "pages", "sourceId", "sourceType", "superseded", "title", "truncated" ]
+        "required" : [ "addedAt", "corrections", "excerpt", "origin", "pageCount", "pages", "sourceId", "sourceType", "superseded", "title", "truncated" ]
       },
       "SimilarCasesResponse" : {
         "type" : "object",
@@ -4274,6 +4312,19 @@
           }
         }
       },
+      "HeadingView" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "page", "text" ]
+      },
       "Hit" : {
         "type" : "object",
         "properties" : {
@@ -4323,9 +4374,50 @@
           },
           "reviewStatus" : {
             "type" : "string"
+          },
+          "versions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VersionView"
+            }
+          },
+          "corrections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CorrectionView"
+            }
+          },
+          "incomplete" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "authorName", "caseDocument", "date", "excerpt", "paginated", "rank", "sourceId", "sourceType", "superseded", "title" ]
+        "required" : [ "authorName", "caseDocument", "corrections", "date", "excerpt", "incomplete", "paginated", "rank", "sourceId", "sourceType", "superseded", "title", "versions" ]
+      },
+      "LinkPhrase" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "quote" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "page", "quote" ]
+      },
+      "MatchView" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "excerpt" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "excerpt", "page" ]
       },
       "SearchResponse" : {
         "type" : "object",
@@ -4341,6 +4433,31 @@
           }
         },
         "required" : [ "hits", "noSource" ]
+      },
+      "VersionView" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "current" : {
+            "type" : "boolean"
+          },
+          "link" : {
+            "$ref" : "#/components/schemas/LinkPhrase"
+          },
+          "heading" : {
+            "$ref" : "#/components/schemas/HeadingView"
+          },
+          "match" : {
+            "$ref" : "#/components/schemas/MatchView"
+          }
+        },
+        "required" : [ "current", "documentId", "title" ]
       },
       "IssuedLink" : {
         "type" : "object",
@@ -4414,9 +4531,24 @@
           },
           "verified" : {
             "type" : "boolean"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "corrected" : {
+            "type" : "boolean"
+          },
+          "corrections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CorrectionView"
+            }
           }
         },
-        "required" : [ "documentId", "pageNumber", "verified" ]
+        "required" : [ "corrected", "corrections", "documentId", "pageNumber", "superseded", "verified" ]
       },
       "Verifications" : {
         "type" : "object",
@@ -5512,9 +5644,16 @@
             "items" : {
               "$ref" : "#/components/schemas/ScanLink"
             }
+          },
+          "corrected" : {
+            "type" : "boolean"
+          },
+          "correctionCount" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         },
-        "required" : [ "caseDocument", "filename", "format", "id", "paginated", "scanCopies", "superseded", "title", "topics", "uploadedAt" ]
+        "required" : [ "caseDocument", "corrected", "correctionCount", "filename", "format", "id", "paginated", "scanCopies", "superseded", "title", "topics", "uploadedAt" ]
       },
       "Page" : {
         "type" : "object",
@@ -5544,9 +5683,24 @@
           },
           "readerName" : {
             "type" : "string"
+          },
+          "versions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VersionView"
+            }
+          },
+          "corrections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CorrectionView"
+            }
+          },
+          "incomplete" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "documentId", "pageNumber", "paginated", "readerName", "superseded", "text", "title" ]
+        "required" : [ "corrections", "documentId", "incomplete", "pageNumber", "paginated", "readerName", "superseded", "text", "title", "versions" ]
       },
       "CaseFileDocumentView" : {
         "type" : "object",
@@ -5614,9 +5768,18 @@
             "items" : {
               "$ref" : "#/components/schemas/ScanLink"
             }
+          },
+          "corrections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CorrectionView"
+            }
+          },
+          "incomplete" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "filename", "format", "id", "pageCount", "paginated", "scanCopies", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
+        "required" : [ "corrections", "filename", "format", "id", "incomplete", "pageCount", "paginated", "scanCopies", "status", "superseded", "title", "uploadedAt", "uploadedBy" ]
       },
       "CaseFileResponse" : {
         "type" : "object",
@@ -5640,6 +5803,31 @@
           }
         },
         "required" : [ "caseDocument", "documents", "pendingDocuments", "unreadableDocuments" ]
+      },
+      "CaseFileTextDocumentView" : {
+        "type" : "object",
+        "properties" : {
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "superseded" : {
+            "type" : "boolean"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/Replacement"
+          },
+          "corrections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CorrectionView"
+            }
+          },
+          "incomplete" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "corrections", "documentId", "incomplete", "superseded" ]
       },
       "CaseFileTextPageView" : {
         "type" : "object",
@@ -5702,9 +5890,15 @@
           "unreadableDocuments" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "documents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CaseFileTextDocumentView"
+            }
           }
         },
-        "required" : [ "complete", "documentsRead", "documentsTotal", "pages", "pagesRead", "pagesTotal", "pendingDocuments", "unreadableDocuments" ]
+        "required" : [ "complete", "documents", "documentsRead", "documentsTotal", "pages", "pagesRead", "pagesTotal", "pendingDocuments", "unreadableDocuments" ]
       },
       "AdminMe" : {
         "type" : "object",
