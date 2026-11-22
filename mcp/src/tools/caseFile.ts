@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ApiClient } from '../api/client.js';
-import { guarded, jsonResult } from './result.js';
+import { FRESH_READ, guarded, jsonResult } from './result.js';
 
 const caseId = z.string().describe('Identificador del caso');
 
@@ -41,7 +41,7 @@ function registerReads(server: McpServer, api: ApiClient): void {
         'Úsala siempre que la pregunta nombre un caso o un número de expediente; si no tienes su caseId, busca antes la ficha del caso con searchKnowledge (caseDocument true). ' +
         READING_RULES +
         CORRECTIONS +
-        ` ${CASE_MEMBERSHIP}`,
+        `${CASE_MEMBERSHIP} ${FRESH_READ}`,
       inputSchema: { caseId },
     },
     (args) => guarded(async () => jsonResult(await api.caseFile(args.caseId))),
@@ -53,7 +53,7 @@ function registerReads(server: McpServer, api: ApiClient): void {
         'Lee el texto literal del expediente de un caso, por tandas: repite con nextCursor hasta que complete sea true. ' +
         READING_RULES +
         CORRECTIONS +
-        ` ${CASE_MEMBERSHIP}`,
+        `${CASE_MEMBERSHIP} ${FRESH_READ}`,
       inputSchema: { caseId, cursor: z.string().optional().describe('nextCursor de la tanda anterior') },
     },
     (args) => guarded(async () => jsonResult(await api.caseFileText(args.caseId, args.cursor))),

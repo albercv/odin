@@ -87,6 +87,25 @@ class ContextOutputsIT {
         assertSimilarCases();
         assertOtherCompany();
         assertGapKeepsTheSystemFieldsLiteral();
+        assertVerifyReadsSupersessionFreshOnEachCall();
+    }
+
+    /** D-126, criterio 13: nada se cachea; si un compañero cambia la marca, la siguiente llamada lo ve. */
+    private void assertVerifyReadsSupersessionFreshOnEachCall() {
+        String path = "/v1/admin/documents/" + policies.get(0) + "/superseded-by";
+        assertThat(verifiedPolicy().get("superseded").asBoolean()).isTrue();
+        assertThat(api.delete(path, "Cookie", adminCookie).status()).isEqualTo(204);
+        JsonNode unmarked = verifiedPolicy();
+        assertThat(unmarked.get("superseded").asBoolean()).isFalse();
+        assertThat(nullish(unmarked.get("replacement"))).isTrue();
+        assertThat(api.put(path, map("replacementId", policies.get(1)), "Cookie", adminCookie).status()).isEqualTo(200);
+        assertThat(verifiedPolicy().get("superseded").asBoolean()).isTrue();
+    }
+
+    private JsonNode verifiedPolicy() {
+        return api.post("/v1/citations/verify-batch", map("citations", List.of(
+                map("documentId", policies.get(0), "pageNumber", 1, "quote", "Efecto: 1 de octubre de 2016"))), "Authorization", marta)
+                .json().get("results").get(0);
     }
 
     /** Cadena 1 -> 2 marcada, 2 sin marca, 3 -> 4 marcada; el texto de la 3 dice que sustituye a la 2. */
