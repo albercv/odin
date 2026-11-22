@@ -16,18 +16,18 @@ def _ans(text):
 
 
 class Encargo30Test(unittest.TestCase):
-    def test_loads_nine_questions_with_unique_ids(self):
-        self.assertEqual([i["id"] for i in ITEMS], [f"E30-M{n}" for n in range(1, 10)])
+    def test_loads_ten_questions_with_unique_ids(self):
+        self.assertEqual([i["id"] for i in ITEMS], [f"E30-M{n}" for n in range(1, 11)])
         self.assertTrue(all(i["pregunta"] and i["claves"] for i in ITEMS))
 
-    def test_only_m9_is_future(self):
-        self.assertEqual([i["id"] for i in ITEMS if i["medicion"] == "futura"], ["E30-M9"])
+    def test_only_m9_and_m10_are_future(self):
+        self.assertEqual([i["id"] for i in ITEMS if i["medicion"] == "futura"], ["E30-M9", "E30-M10"])
 
     def test_registered_battery_loads_through_capas(self):
         from banco import capas
-        self.assertEqual(len(capas.load_items(default_layout(), ["encargo-30-mirador"])), 9)
+        self.assertEqual(len(capas.load_items(default_layout(), ["encargo-30-mirador"])), 10)
 
-    def test_authorised_config_never_includes_m9(self):
+    def test_authorised_config_never_includes_m9_nor_m10(self):
         cfg = config.load_config(BANCO / "configs" / "encargo-30-mirador.toml", BANCO)
         sample = run.draw_sample(ITEMS, cfg.sample.strata, cfg.sample.size, cfg.sample.seed, cfg.sample.include)
         self.assertEqual(sorted(i["id"] for i in sample), [f"E30-M{n}" for n in range(1, 9)])
@@ -36,6 +36,23 @@ class Encargo30Test(unittest.TestCase):
         cfg = config.load_config(BANCO / "configs" / "encargo-30-mirador-m9.toml", BANCO)
         sample = run.draw_sample(ITEMS, cfg.sample.strata, cfg.sample.size, cfg.sample.seed, cfg.sample.include)
         self.assertEqual([i["id"] for i in sample], ["E30-M9"])
+
+    def test_m10_config_selects_only_m10(self):
+        cfg = config.load_config(BANCO / "configs" / "encargo-30-mirador-m10.toml", BANCO)
+        sample = run.draw_sample(ITEMS, cfg.sample.strata, cfg.sample.size, cfg.sample.seed, cfg.sample.include)
+        self.assertEqual([i["id"] for i in sample], ["E30-M10"])
+
+    def test_m10_is_multiturn_and_turn2_forbidden(self):
+        m10 = BY_ID["E30-M10"]
+        self.assertEqual(len(m10["turnos"]), 2)
+        self.assertEqual(len(m10["pasos_entre_turnos"]), 1)
+        t2 = dict(m10, no_debe_afirmar=m10["turnos"][1]["no_debe_afirmar"])
+        for bad in ("VLM-22 está marcada como sustituida.", "Las otras tres están marcadas como sustituidas.",
+                    "No hay ninguna póliza vigente sustituida.", "No hay ninguna póliza sustituida."):
+            self.assertIsNotNone(scoring.forbidden_hit(t2, _ans(bad)), bad)
+        for good in ("Sí: VLM-22-48120 figura como vigente, pero VLM-25-48120 dice que la sustituye (sin confirmar).",
+                     "VLM-16 y VLM-19 constan como sustituidas."):
+            self.assertIsNone(scoring.forbidden_hit(t2, _ans(good)), good)
 
     def test_m2_forbidden(self):
         m2 = BY_ID["E30-M2"]

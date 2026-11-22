@@ -296,5 +296,85 @@
    "ninguna\\s+poliza\\s+(vigente\\s+)?(esta\\s+)?sustituid"
   ],
   "fuente_digital": true
+ },
+ {
+  "id": "E30-M10",
+  "tipo": "encargo-30",
+  "origen": "mirador",
+  "actor": "t01",
+  "pregunta": "¿Hay alguna póliza de Mirador que figure como vigente pero haya sido sustituida por otra posterior?",
+  "citas_resueltas": [],
+  "fichas_esperadas": [],
+  "todas_las_citas": false,
+  "claves": [
+   [
+    "VLM-22-48120"
+   ],
+   [
+    "VLM-25-48120"
+   ]
+  ],
+  "abstener": false,
+  "prohibidas": [],
+  "sustituidos": [],
+  "nota_clave": "Criterio 13 de D-126: no responder de memoria; consultar de nuevo en cada respuesta. Multivuelta: turno 1 -> no (cadena VLM-16>19>22>25 marcada; solo VLM-25 vigente). Entre turnos se quita la marca de VLM-22-48120. Turno 2 (misma conversación) -> sí: VLM-22-48120 figura como vigente pero VLM-25-48120 dice que la sustituye (detectado, sin confirmar). Las claves y no_debe_afirmar de nivel superior son las del turno 2.",
+  "medicion": "futura",
+  "turnos": [
+   {
+    "turno": 1,
+    "pregunta": "¿Hay alguna póliza de Mirador que figure como vigente pero haya sido sustituida por otra posterior?",
+    "claves": [
+     [
+      "VLM-25-48120"
+     ]
+    ],
+    "esperado": "No: VLM-16, VLM-19 y VLM-22 constan como sustituidas; la única vigente es VLM-25-48120.",
+    "no_debe_afirmar": [
+     "no\\s+hay\\s+(ninguna\\s+)?poliza.*sin\\s+sustituir"
+    ]
+   },
+   {
+    "turno": 2,
+    "pregunta": "¿Hay alguna póliza de Mirador que figure como vigente pero haya sido sustituida por otra posterior?",
+    "claves": [
+     [
+      "VLM-22-48120"
+     ],
+     [
+      "VLM-25-48120"
+     ]
+    ],
+    "esperado": "Sí: VLM-22-48120 figura como vigente, pero VLM-25-48120 dice que la sustituye (detectado, sin confirmar).",
+    "no_debe_afirmar": [
+     "VLM-?22.*(marcad[ao]|figura|consta|esta)\\s+(como\\s+)?sustituid",
+     "(otras|restantes)\\s+(tres|3).*(marcad[ao]s|figuran|constan|estan)\\s+(como\\s+)?sustituid",
+     "no\\s+hay\\s+(ninguna\\s+)?poliza.*(vigente|sustituid)",
+     "ninguna\\s+poliza\\s+(vigente\\s+)?(esta\\s+)?sustituid"
+    ],
+    "consulta_nueva": {
+     "herramientas": [
+      "searchKnowledge",
+      "readPage",
+      "listDocuments"
+     ],
+     "condicion": "al menos una llamada en el turno 2 con consultedAt posterior al cambio de datos"
+    }
+   }
+  ],
+  "pasos_entre_turnos": [
+   {
+    "despues_del_turno": 1,
+    "accion": "DELETE /v1/admin/documents/{id de VLM-22-48120}/superseded-by",
+    "pila": "solo la pila DESECHABLE, nunca la real",
+    "efecto": "VLM-22 deja de constar como sustituida por VLM-25"
+   }
+  ],
+  "no_debe_afirmar": [
+   "VLM-?22.*(marcad[ao]|figura|consta|esta)\\s+(como\\s+)?sustituid",
+   "(otras|restantes)\\s+(tres|3).*(marcad[ao]s|figuran|constan|estan)\\s+(como\\s+)?sustituid",
+   "no\\s+hay\\s+(ninguna\\s+)?poliza.*(vigente|sustituid)",
+   "ninguna\\s+poliza\\s+(vigente\\s+)?(esta\\s+)?sustituid"
+  ],
+  "fuente_digital": true
  }
 ]

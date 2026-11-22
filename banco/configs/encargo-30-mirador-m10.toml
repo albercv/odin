@@ -1,0 +1,26 @@
+# Encargo 30, M10 sola (multivuelta): medición FUTURA, no autorizada. Sin usar hasta que el propietario la autorice.
+name = "encargo-30-mirador-m10"
+archives = ["ficticio", "mirador"]
+battery = ["encargo-30-mirador"]
+mode = "explore"
+sample = { size = 1, strata = "tipo", seed = 7, include = ["E30-M10"] }
+repetitions = 1
+budgetUsd = 1.0
+concurrency = 4
+
+[[searchers]]
+approach = "main"
+count = 3
+model = "haiku"
+
+[combiner]
+kind = "single"
+
+[[judges]]
+rubric = "strict"
+count = 1
+model = "ollama:qwen3.5:9b"
+think = false
+
+[judging]
+aggregation = "majority"
