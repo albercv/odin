@@ -27,6 +27,8 @@ import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.application.casefile.GetCaseFile;
 import com.e2d.odin.application.context.DocumentContexts;
+import com.e2d.odin.application.context.ReviewDocumentLinks;
+import com.e2d.odin.application.port.DocumentLinkReview;
 import com.e2d.odin.application.port.DocumentContextRepository;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.ReadCaseFile;
@@ -1107,6 +1109,24 @@ public class UseCaseConfiguration {
             @Override
             public void unmark(Actor actor, DocumentId documentId) {
                 transaction.executeWithoutResult(status -> super.unmark(actor, documentId));
+            }
+        };
+    }
+
+    @Bean
+    ReviewDocumentLinks reviewDocumentLinks(DocumentLinkReview links, DocumentContexts contexts,
+            DocumentRepository documents, SupersedeDocument supersede, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ReviewDocumentLinks(links, contexts, documents, supersede, clock, audit) {
+            @Override
+            public void confirm(Actor actor, UUID linkId) {
+                transaction.executeWithoutResult(status -> super.confirm(actor, linkId));
+            }
+
+            @Override
+            public void dismiss(Actor actor, UUID linkId) {
+                transaction.executeWithoutResult(status -> super.dismiss(actor, linkId));
             }
         };
     }

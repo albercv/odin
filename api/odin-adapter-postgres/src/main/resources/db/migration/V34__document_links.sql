@@ -23,6 +23,10 @@ CREATE TABLE document_link (
     evidence_quote      text NOT NULL,
     origin              text NOT NULL CHECK (origin IN ('DETECTED', 'ADMIN')),
     created_at          timestamptz NOT NULL,
+    -- Lo detectado solo cuenta cuando una persona lo confirma (D-050); un vínculo descartado no vuelve a salir.
+    status              text NOT NULL DEFAULT 'DETECTED' CHECK (status IN ('DETECTED', 'CONFIRMED', 'DISMISSED')),
+    reviewed_by         uuid NULL REFERENCES app_user (id),
+    reviewed_at         timestamptz NULL,
     UNIQUE (source_document_id, relation, cited_identifier, origin),
     FOREIGN KEY (source_document_id, company_id) REFERENCES document (id, company_id) ON DELETE CASCADE,
     FOREIGN KEY (target_document_id, company_id) REFERENCES document (id, company_id) ON DELETE CASCADE,
@@ -95,7 +99,7 @@ CREATE FUNCTION document_hidden_context(p_document uuid, p_chain uuid[])
             FROM document_link l
             JOIN document s ON s.id = l.source_document_id
             JOIN document t ON t.id = l.target_document_id
-            WHERE EXISTS (SELECT 1 FROM seed)
+            WHERE EXISTS (SELECT 1 FROM seed) AND l.status <> 'DISMISSED'
               AND (l.source_document_id = (SELECT id FROM seed) OR l.target_document_id = (SELECT id FROM seed))
               AND NOT (l.relation = 'REPLACES' AND t.superseded_by = l.source_document_id)
               AND NOT (document_visible_to_caller(s.company_id, s.project_id, s.withdrawn_at, s.intake_pending, s.scan_of)
