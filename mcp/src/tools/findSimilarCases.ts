@@ -13,6 +13,7 @@ const DESCRIPTION =
   'De cada caso parecido, presenta su resolución y su resultado con la cita del documento y la página. ' +
   'Si dos casos se resolvieron de forma distinta, enséñalos los dos con sus citas y su resultado, y sugiere solo el que acabó bien, citando ese resultado. ' +
   'Sugiere una resolución solo si su resultado está escrito en el documento; si ninguno de los casos tiene el resultado escrito, enseña las resoluciones sin sugerir ninguna. ' +
+  'corrections de un caso son rectificaciones de su documento: si hay alguna, dilo al presentarlo; si es confirmed false o hidden, di que está sin confirmar o que la corrige un documento al que no tienes acceso. ' +
   'Nunca compares ni menciones a las personas que resolvieron cada caso. ' +
   'Una ficha aportada es una ficha redactada con IA por un trabajador: preséntala como ficha, no como caso resuelto, y no le atribuyas un resultado que su texto no diga. ' +
   'addedAt es cuándo entró el documento en Odín, no la fecha del caso; esa fecha está en el texto. ' +

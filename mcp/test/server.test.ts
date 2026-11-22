@@ -174,9 +174,34 @@ describe('buildServer', () => {
   it('instructionsTellHowToTreatSupersededAndConflictingSources', async () => {
     const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
     expect(instructions).toContain(
-      'Si un resultado viene marcado como sustituido, no lo presentes como vigente: di que está sustituido y por cuál, y busca o lee el que lo sustituye antes de responder. Si no puedes ver el que lo sustituye, di solo que está sustituido.');
-    expect(instructions).toContain(
-      'Si dos fuentes no cuadran y ninguna está marcada como sustituida: si una dice expresamente que cambia a la otra (un anexo que modifica una cláusula), o es un acuerdo posterior del órgano que decide (la junta o el consejo) sobre lo mismo, da lo que vale ahora, di qué documento lo cambia y cita las dos; si el acuerdo no cita la norma que cambia, dilo, y no juzgues si es válido. Que una sea más reciente no basta. Si no se da ninguno de esos casos, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.');
+      'Si dos fuentes no cuadran y ninguna está marcada como sustituida: si una dice expresamente que cambia a la otra (un anexo que modifica una cláusula), o es un acuerdo posterior del órgano que decide (la junta o el consejo) sobre lo mismo, da lo que vale ahora, di qué documento lo cambia y cita las dos; si el acuerdo no cita la norma que cambia, dilo, y no juzgues si es válido. Que una sea más reciente no basta. Si no se da ninguno de esos casos, enseña las dos, cada una con su cita y su fecha, y no elijas ninguna.');
+  });
+
+  it.each([
+    'Responde primero lo preguntado y después el contexto.',
+    'da el valor vigente con su documento, página y la fecha que conste en el texto, y luego los anteriores en orden, cada uno con su cita',
+    'lo sustituido nunca es vigente',
+    'Si una corrección no está confirmada, dilo',
+    'si no la ves o incomplete es true, di que falta un eslabón y no lo rellenes',
+    'Compara dos documentos solo tras leer los dos, sin señalar diferencias que no hayas comprobado.',
+  ])('instructionsGiveAnswerFirstThenContext: %s', async (sentence) => {
+    expect((await connect(() => meWith(ALL))).getInstructions()).toContain(sentence);
+  });
+
+  it('searchDescriptionExplainsVersionsAndCorrections', async () => {
+    const d = (await (await connect(() => meWith(ALL))).listTools()).tools.find((t) => t.name === 'searchKnowledge')!.description!;
+    for (const w of ['versions', 'current', 'link', 'heading', 'match', 'corrections', 'confirmed', 'hidden', 'incomplete',
+      'Las fechas salen del texto', 'no de addedAt', 'La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa.', 'el importe vigente es el de la rectificativa',
+      'Si no puedes ver el que lo sustituye, di solo que está sustituido.']) expect(d).toContain(w);
+  });
+
+  it.each([
+    ['readPage', 'corrections'], ['readPage', 'En una hoja de cálculo, cada página es una hoja; su primera línea dice cuál.'],
+    ['verifyCitation', 'corrected'], ['listDocuments', 'correctionCount'], ['findSimilarCases', 'corrections'],
+    ['getCaseFile', 'corrections'], ['readCaseFile', 'corrections'],
+  ])('%s describes %s', async (tool, word) => {
+    const d = (await (await connect(() => meWith(ALL))).listTools()).tools.find((t) => t.name === tool)!.description!;
+    expect(d).toContain(word);
   });
 
   it('searchMapsHitsWithCitation', async () => {
@@ -242,12 +267,14 @@ describe('buildServer', () => {
     expect(instructions).toContain('si verifyCitation devuelve false, no uses esa cita');
   });
 
-  it('instructionsRequireLiteralQuotes', async () => {
-    const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
-    expect(instructions).toContain('Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.');
-    expect(instructions).toContain('De una ficha, cita solo su texto, sin el título, el autor ni la fecha.');
-    expect(instructions).toContain('preséntalas con su título, autor y fecha');
+  it('literalQuoteRulesLiveInSearchDescription', async () => {
+    const client = await connect(() => meWith(ALL));
+    expect(client.getInstructions()).toContain('preséntalas con su título, autor y fecha');
+    const d = (await client.listTools()).tools.find((t) => t.name === 'searchKnowledge')!.description!;
+    expect(d).toContain('Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos.');
+    expect(d).toContain('De una ficha, cita solo su texto, sin el título, el autor ni la fecha.');
   });
+
 
   it('instructionsAskForPartialSourceWarning', async () => {
     const instructions = (await connect(() => meWith(ALL))).getInstructions() ?? '';
@@ -319,6 +346,7 @@ describe('buildServer', () => {
     }
     const tool = (await client.listTools()).tools.find((t) => t.name === 'verifyCitation');
     expect(tool?.description).toContain('Comprueba en una sola llamada todas las citas literales de tu respuesta (de 1 a 20), también las de documentos que no hayas leído con readPage. Devuelve verified para cada una, en el mismo orden. Si una da false, no la uses; una cita sin comprobar no se da. El título del documento no es texto de la página: solo vale lo que aparece en el texto.');
+    expect(tool?.description).toContain('Si superseded o corrected es verdadero, la cita es de un documento que ya no es el vigente o que está corregido, y hay que decirlo.');
   });
 
   it('revokedKeyMidSessionReturnsError', async () => {

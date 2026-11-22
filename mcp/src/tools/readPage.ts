@@ -10,7 +10,9 @@ export function registerReadPage(server: McpServer, api: ApiClient): void {
       description:
         'Lee el texto literal de una página de un documento de la empresa. ' +
         'Si readerName es unlimited-ocr-2, la página es un escaneo leído por OCR y puede tener errores: cítala tal cual. ' +
-        'Una página con el texto vacío no se ha leído: no concluyas nada de ella.',
+        'Una página con el texto vacío no se ha leído: no concluyas nada de ella. ' +
+        'En una hoja de cálculo, cada página es una hoja; su primera línea dice cuál. ' +
+        'versions y corrections, como en searchKnowledge: si corrections trae una corrección sin confirmar (confirmed false) o hidden, o incomplete es true, dilo.',
       inputSchema: {
         documentId: z.string().describe('Identificador del documento'),
         pageNumber: z.number().int().positive().describe('Número de página, desde 1'),

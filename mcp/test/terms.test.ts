@@ -24,9 +24,8 @@ describe('projectTerms', () => {
 });
 
 describe('instructions', () => {
-  it('defaultOnlyAddsTheSpreadsheetSentence', () => {
+  it('defaultAddsNoLabelSentence', () => {
     const text = instructions(DEFAULT_TERMS);
-    expect(text).toContain('En una hoja de cálculo, cada página es una hoja; su primera línea dice cuál.');
     expect(text).not.toContain('se llaman');
     expect(text).toContain('Si la pregunta nombra un proyecto (el nombre de un cliente, un contrato, una obra…), búscalo con listProjects');
   });
@@ -37,7 +36,12 @@ describe('instructions', () => {
     expect(text).toContain('Si la pregunta nombra una comunidad (el nombre de un cliente');
   });
 
-  it('fitsTheLimit', () => expect(instructions(projectTerms(COMUNIDAD)).length).toBeLessThanOrEqual(2200));
+  // Palabras de 2 a 30 caracteres (ProjectLabel.java): se prueban los extremos y ambos géneros.
+  it.each([true, false])('fitsTheLimitWithEveryLabel (feminine=%s)', (feminine) => {
+    for (const [singular, plural] of [['proyecto', 'proyectos'], ['comunidad', 'comunidades'], ['OT', 'OTs'], ['x'.repeat(30), 'x'.repeat(30)]]) {
+      expect(instructions(projectTerms({ singular: singular!, plural: plural!, feminine })).length).toBeLessThanOrEqual(2200);
+    }
+  });
 });
 
 describe('conector con otra palabra', () => {
