@@ -1544,6 +1544,18 @@ export interface components {
             number: number;
             text: string;
         };
+        CorrectionView: {
+            direction: string;
+            relation: string;
+            /** Format: uuid */
+            documentId?: string;
+            title?: string;
+            hidden: boolean;
+            /** Format: int32 */
+            evidencePage?: number;
+            evidenceQuote?: string;
+            confirmed?: boolean;
+        };
         Replacement: {
             /** Format: uuid */
             documentId: string;
@@ -1569,6 +1581,7 @@ export interface components {
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
             reviewStatus?: string;
+            corrections: components["schemas"]["CorrectionView"][];
         };
         SimilarCasesResponse: {
             cases: components["schemas"]["SimilarCaseView"][];
@@ -1600,6 +1613,11 @@ export interface components {
             /** Format: uuid */
             caseId?: string;
         };
+        HeadingView: {
+            /** Format: int32 */
+            page: number;
+            text: string;
+        };
         Hit: {
             sourceType: string;
             /** Format: uuid */
@@ -1620,10 +1638,32 @@ export interface components {
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
             reviewStatus?: string;
+            versions: components["schemas"]["VersionView"][];
+            corrections: components["schemas"]["CorrectionView"][];
+            incomplete: boolean;
+        };
+        LinkPhrase: {
+            /** Format: int32 */
+            page: number;
+            quote: string;
+        };
+        MatchView: {
+            /** Format: int32 */
+            page: number;
+            excerpt: string;
         };
         SearchResponse: {
             hits: components["schemas"]["Hit"][];
             noSource: boolean;
+        };
+        VersionView: {
+            /** Format: uuid */
+            documentId: string;
+            title: string;
+            current: boolean;
+            link?: components["schemas"]["LinkPhrase"];
+            heading?: components["schemas"]["HeadingView"];
+            match?: components["schemas"]["MatchView"];
         };
         IssuedLink: {
             url: string;
@@ -1656,6 +1696,10 @@ export interface components {
             /** Format: int32 */
             pageNumber: number;
             verified: boolean;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+            corrected: boolean;
+            corrections: components["schemas"]["CorrectionView"][];
         };
         Verifications: {
             results: components["schemas"]["VerificationResult"][];
@@ -2090,6 +2134,9 @@ export interface components {
             topics: components["schemas"]["TopicLabelView"][];
             caseDocument: boolean;
             scanCopies: components["schemas"]["ScanLink"][];
+            corrected: boolean;
+            /** Format: int32 */
+            correctionCount: number;
         };
         Page: {
             /** Format: uuid */
@@ -2102,6 +2149,9 @@ export interface components {
             superseded: boolean;
             replacement?: components["schemas"]["Replacement"];
             readerName: string;
+            versions: components["schemas"]["VersionView"][];
+            corrections: components["schemas"]["CorrectionView"][];
+            incomplete: boolean;
         };
         CaseFileDocumentView: {
             /** Format: uuid */
@@ -2129,6 +2179,8 @@ export interface components {
             addedByName?: string;
             scanOf?: components["schemas"]["ScanLink"];
             scanCopies: components["schemas"]["ScanLink"][];
+            corrections: components["schemas"]["CorrectionView"][];
+            incomplete: boolean;
         };
         CaseFileResponse: {
             caseDocument: components["schemas"]["CaseFileDocumentView"];
@@ -2137,6 +2189,14 @@ export interface components {
             pendingDocuments: number;
             /** Format: int32 */
             unreadableDocuments: number;
+        };
+        CaseFileTextDocumentView: {
+            /** Format: uuid */
+            documentId: string;
+            superseded: boolean;
+            replacement?: components["schemas"]["Replacement"];
+            corrections: components["schemas"]["CorrectionView"][];
+            incomplete: boolean;
         };
         CaseFileTextPageView: {
             /** Format: uuid */
@@ -2163,6 +2223,7 @@ export interface components {
             pendingDocuments: number;
             /** Format: int32 */
             unreadableDocuments: number;
+            documents: components["schemas"]["CaseFileTextDocumentView"][];
         };
         AdminMe: {
             /** Format: uuid */

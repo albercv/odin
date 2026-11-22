@@ -1,11 +1,13 @@
 package com.e2d.odin.application.casefile;
 
+import com.e2d.odin.application.context.DocumentContexts;
 import com.e2d.odin.application.port.CaseFileRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.application.shared.CaseFileSettings;
+import com.e2d.odin.domain.context.DocumentContext;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentPage;
 import com.e2d.odin.domain.identity.Actor;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /** El texto de todas las páginas del expediente por tandas: la ficha primero y después por fecha de alta. */
@@ -32,21 +35,28 @@ public class ReadCaseFile {
     public ReadCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
             DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
             CaseFileSettings settings) {
+        this(organizations, projectMembers, documents, caseFiles, users, settings, DocumentContexts.none());
+    }
+
+    public ReadCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
+            CaseFileSettings settings, DocumentContexts contexts) {
         this.organizations = organizations;
         this.projectMembers = projectMembers;
         this.documents = documents;
-        this.getCaseFile = new GetCaseFile(organizations, projectMembers, documents, caseFiles, users);
+        this.getCaseFile = new GetCaseFile(organizations, projectMembers, documents, caseFiles, users, contexts);
         this.settings = settings;
     }
 
-    private record Source(DocumentEntry entry, int pageCount) {
+    private record Source(DocumentEntry entry, int pageCount, DocumentContext context) {
     }
 
     public CaseFileText execute(Actor actor, DocumentId caseId, Optional<String> cursor) {
         CaseFileView view = getCaseFile.execute(actor, caseId);
         var access = CaseFileAccess.of(actor, Optional.empty(), organizations, projectMembers);
-        List<Source> sources = new ArrayList<>(List.of(new Source(view.caseDocument(), view.casePageCount())));
-        view.documents().forEach(d -> sources.add(new Source(d.document(), d.pageCount())));
+        List<Source> sources = new ArrayList<>(List.of(new Source(view.caseDocument(), view.casePageCount(),
+                view.caseContext())));
+        view.documents().forEach(d -> sources.add(new Source(d.document(), d.pageCount(), d.context())));
         int total = sources.stream().mapToInt(Source::pageCount).sum();
         int start = cursor.map(c -> position(c, sources)).orElse(0);
         List<CaseFileTextPage> pages = new ArrayList<>();
@@ -64,7 +74,16 @@ public class ReadCaseFile {
         boolean complete = position >= total;
         return new CaseFileText(pages, complete ? Optional.empty() : Optional.of(cursorAt(sources, position)),
                 complete, documentsRead(sources, position), sources.size(), position, total,
-                view.pendingDocuments(), view.unreadableDocuments());
+                view.pendingDocuments(), view.unreadableDocuments(), documentsOf(sources, pages));
+    }
+
+    /** Una entrada por documento que tiene páginas en la tanda, en el orden en que salen. */
+    private static List<CaseFileTextDocument> documentsOf(List<Source> sources, List<CaseFileTextPage> pages) {
+        Set<DocumentId> inBatch = pages.stream().map(CaseFileTextPage::documentId)
+                .collect(java.util.stream.Collectors.toSet());
+        return sources.stream().filter(s -> inBatch.contains(s.entry().document().id()))
+                .map(s -> new CaseFileTextDocument(s.entry().document().id(), s.entry().document().superseded(),
+                        s.entry().replacement(), s.context())).toList();
     }
 
     private CaseFileTextPage pageAt(CaseFileAccess access, List<Source> sources, int position) {
