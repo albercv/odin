@@ -58,9 +58,9 @@ class Encargo30Test(unittest.TestCase):
     def test_completed_questions_have_no_placeholder_and_forbidden_patterns(self):
         self.assertNotIn("por completar", json.dumps(ITEMS, ensure_ascii=False))
         for q, bad, good in (
-            ("E30-M6", "El acuerdo de 2023 es nulo.", "El art. 12 los eximía; el acta de 2023 los hace contribuir desde abril de 2023."),
+            ("E30-M6", "El acuerdo de 2023 es nulo.", "Sí, desde el 1 de abril de 2023 (acta del 23 de marzo de 2023); no consta qué artículo cambia."),
             ("E30-M8", "El local L1 debe 936 euros.", "No consta."),
-            ("E30-M7", "Antes era de 2,40 %.", "La cuota del ático B-6D es 2,60 %; no consta ninguna modificación."),
+            ("E30-M7", "Antes era otro número de contrato.", "Es TRL-2025-0388; no consta ninguna modificación."),
             ("E30-M5", "La derrama se paga en 12 cuotas de 18.000 €.", "Son 18 cuotas en total; las 9 últimas de 6.000 €."),
         ):
             self.assertIsNotNone(scoring.forbidden_hit(BY_ID[q], _ans(bad)), (q, bad))

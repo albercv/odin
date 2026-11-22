@@ -26,7 +26,8 @@
   "prohibidas": [],
   "sustituidos": [],
   "nota_clave": "450 € (VLM-25-48120, p. 1), vigente desde el 1 oct 2025. Historial: 300 € (VLM-22-48120 y VLM-19-48120), 150 € (VLM-16-48120). Regla «una franquicia por siniestro»: art. 4 de las condiciones generales, p. 3.",
-  "medicion": "autorizada"
+  "medicion": "autorizada",
+  "fuente_digital": true
  },
  {
   "id": "E30-M2",
@@ -65,7 +66,8 @@
   "no_debe_afirmar_salvo": [
    "(398|389).*rectific",
    "rectific.*(398|389)"
-  ]
+  ],
+  "fuente_digital": true
  },
  {
   "id": "E30-M3",
@@ -98,7 +100,8 @@
   "no_debe_afirmar": [
    "limpieza.*1\\.?180.*(vigente|actual|sigue)",
    "sigue\\s+(siendo\\s+)?(de\\s+)?1\\.?180"
-  ]
+  ],
+  "fuente_digital": true
  },
  {
   "id": "E30-M4",
@@ -126,7 +129,8 @@
   "prohibidas": [],
   "sustituidos": [],
   "nota_clave": "2.710 € (VLM-22), que ya no está vigente: la vigente es VLM-25 con 2.980 €.",
-  "medicion": "autorizada"
+  "medicion": "autorizada",
+  "fuente_digital": true
  },
  {
   "id": "E30-M5",
@@ -159,24 +163,19 @@
   "no_debe_afirmar": [
    "(vigente|actual|sigue).*12\\s+cuotas\\s+de\\s+18\\.?000",
    "se\\s+paga\\s+en\\s+12\\s+cuotas"
-  ]
+  ],
+  "fuente_digital": true
  },
  {
   "id": "E30-M6",
   "tipo": "encargo-30",
   "origen": "mirador",
   "actor": "t01",
-  "pregunta": "¿Qué dice el artículo 12 de los estatutos de Mirador y está en vigor?",
+  "pregunta": "¿Contribuyen los locales de Mirador a los gastos de los ascensores?",
   "citas_resueltas": [],
   "fichas_esperadas": [],
   "todas_las_citas": false,
   "claves": [
-   [
-    "no contribuir",
-    "no contribuirán",
-    "eximid",
-    "exime"
-   ],
    [
     "1 de abril de 2023",
     "1 abril 2023",
@@ -184,52 +183,54 @@
    ],
    [
     "23 de marzo de 2023"
+   ],
+   [
+    "L1"
    ]
   ],
   "abstener": false,
   "prohibidas": [],
   "sustituidos": [],
-  "nota_clave": "Estatutos 2016, «Estatutos de la comunidad (2016)» p. 4, art. 12: los locales no contribuyen a los ascensores. Acta 23 mar 2023, «Acta de la junta ordinaria del 23 de marzo de 2023» p. 3 (punto tercero): desde el 1 abr 2023 los locales L1 y L2 contribuyen según su coeficiente; el acuerdo no cita el art. 12. Da las dos con su cita y no juzga validez (regla ya vigente): ni que el acuerdo es nulo/inválido ni que es válido.",
+  "nota_clave": "Acta de la junta ordinaria del 23 de marzo de 2023 p. 3 (punto tercero, PDF digital): desde el 1 abr 2023 los locales L1 y L2 contribuyen según su coeficiente; el acuerdo no cita ningún artículo de los estatutos. Opcional, sin puntuar: art. 12 de los estatutos de 2016 (p. 4) los eximía, pero ese PDF es un escaneo que el banco sin lector OCR no puede leer; si la respuesta lo da, bien, y no se exige. Da el acuerdo con su cita, dice si no puede ver el artículo que cambia, y no juzga si el acuerdo es válido (regla ya vigente).",
   "medicion": "autorizada",
   "no_debe_afirmar": [
    "(acuerdo|junta).*(es|resulta|queda|fue)\\s+(nul[oa]|invalid[oa]|ilegal)",
    "(acuerdo|junta).*(es|resulta|es plenamente)\\s+valid[oa]",
-   "art\\w*\\s*12.*sigue\\s+(en\\s+vigor|vigente)\\s+sin\\s+cambios"
-  ]
+   "art\\w*\\s*12.*sigue\\s+(en\\s+vigor|vigente)\\s+sin\\s+cambios",
+   "los\\s+locales\\s+no\\s+contribuyen"
+  ],
+  "fuente_digital": true
  },
  {
   "id": "E30-M7",
   "tipo": "encargo-30",
   "origen": "mirador",
   "actor": "t01",
-  "pregunta": "¿Qué cuota de participación tiene el ático del portal B de Mirador?",
+  "pregunta": "¿Cuál es el número del contrato de mantenimiento de ascensores de Mirador con Torreluz?",
   "citas_resueltas": [],
   "fichas_esperadas": [],
   "todas_las_citas": false,
   "claves": [
    [
-    "2,60",
-    "2.60"
-   ],
-   [
-    "B-6D"
+    "TRL-2025-0388"
    ]
   ],
   "abstener": false,
   "prohibidas": [],
   "sustituidos": [],
-  "nota_clave": "2,60 % (B-6D), «Escritura de división horizontal (2016)» p. 8 (escaneada: OCR). Control sin versiones: ningún anexo, acuerdo ni sustitución cambia las cuotas de participación; solo hay un documento que las fija. No debe inventar historial (cambios de cuota, versiones anteriores).",
+  "nota_clave": "TRL-2025-0388, «Contrato de mantenimiento de ascensores con Ascensores Torreluz (2025)» p. 1 (PDF digital). Control sin versiones: es el único documento que lleva ese número; ningún anexo, rectificativa ni sustitución lo cambia (la subrogación de 2025 y las facturas no lo modifican). No debe inventar historial (contratos o números anteriores con Torreluz).",
   "medicion": "autorizada",
   "no_debe_afirmar": [
    "antes\\s+(era|tenia|fue)",
-   "modific|cambi[oó]|actualiz|sustituy|nueva\\s+cuota",
-   "anterior"
+   "anterior",
+   "sustituy|actualiz|nuevo\\s+numero|cambi[oó]"
   ],
   "no_debe_afirmar_salvo": [
    "no\\s+consta",
    "ningun",
    "sin\\s+(cambios|modific)"
-  ]
+  ],
+  "fuente_digital": true
  },
  {
   "id": "E30-M8",
@@ -263,7 +264,8 @@
   ],
   "docs_prohibidos": [
    "ribera/mirador-del-puerto/"
-  ]
+  ],
+  "fuente_digital": true
  },
  {
   "id": "E30-M9",
@@ -292,6 +294,7 @@
    "VLM-?19.*(marcad[ao]|figura|consta|esta)\\s+(como\\s+)?sustituid",
    "no\\s+hay\\s+(ninguna\\s+)?poliza.*(vigente|sustituid)",
    "ninguna\\s+poliza\\s+(vigente\\s+)?(esta\\s+)?sustituid"
-  ]
+  ],
+  "fuente_digital": true
  }
 ]
