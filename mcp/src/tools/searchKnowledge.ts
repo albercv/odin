@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ApiClient, Hit } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
 import { noProject, type ProjectTerms } from '../terms.js';
-import { NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
+import { FRESH_ABSENCE, FRESH_READ, NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
 
 const description = (t: ProjectTerms) =>
   'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
@@ -22,7 +22,8 @@ const description = (t: ProjectTerms) =>
   'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena. ' +
   'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas. ' +
   'Si una ficha dice algo distinto que un documento, cita las dos. ' +
-  'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage.';
+  'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage. ' +
+  FRESH_READ + ' ' + FRESH_ABSENCE;
 
 // getCaseFile solo existe con la capacidad CASE_FILES: sin ella la pista llevaría a una herramienta que no está.
 const CASE_FILE_HINT =

@@ -1,7 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ApiClient } from './api/client.js';
 import { createProjectNames } from './projects.js';
 import { DEFAULT_TERMS, projectTerms, type ProjectTerms } from './terms.js';
+import { withConsultedAt } from './tools/result.js';
 import { registerCaseFileTools } from './tools/caseFile.js';
 import { registerFindSimilarCases } from './tools/findSimilarCases.js';
 import { registerListActivity } from './tools/listActivity.js';
@@ -36,16 +38,24 @@ export function instructions(t: ProjectTerms): string {
   return lines.join(' ');
 }
 
-export async function buildServer(api: ApiClient): Promise<McpServer> {
+// Un solo sitio: toda herramienta registrada responde con la hora de la consulta (D-126, criterio 14).
+function stampResults(server: McpServer, now: () => Date): McpServer {
+  const register = server.registerTool.bind(server) as (name: string, config: unknown, cb: (...a: unknown[]) => unknown) => unknown;
+  (server as unknown as { registerTool: typeof register }).registerTool = (name, config, cb) =>
+    register(name, config, async (...args) => withConsultedAt((await cb(...args)) as CallToolResult, now()));
+  return server;
+}
+
+export async function buildServer(api: ApiClient, now: () => Date = () => new Date()): Promise<McpServer> {
   const me = await api.me();
   if (me.kind === 'ADMIN_CHAT') {
-    const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(DEFAULT_TERMS) });
+    const server = stampResults(new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(DEFAULT_TERMS) }), now);
     registerListActivity(server, api);
     return server;
   }
   const capabilities = new Set(me.company?.capabilities ?? []);
   const terms = me.company ? projectTerms(me.company.projectLabel) : DEFAULT_TERMS;
-  const server = new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(terms) });
+  const server = stampResults(new McpServer({ name: 'odin', version: '0.1.0' }, { instructions: instructions(terms) }), now);
   const projects = createProjectNames(me, () => api.me(), terms);
   if (capabilities.has('SEARCH_KNOWLEDGE')) {
     registerSearchKnowledge(server, api, projects, capabilities.has('CASE_FILES'), terms);

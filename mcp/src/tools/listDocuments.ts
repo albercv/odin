@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { ApiClient, WorkerDocumentView } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
 import { noProject, type ProjectTerms } from '../terms.js';
-import { guarded, jsonResult } from './result.js';
+import { FRESH_ABSENCE, FRESH_READ, guarded, jsonResult } from './result.js';
 
 const PAGE_SIZE = 500;
 export const MAX_DOCUMENTS = 2000;
@@ -32,7 +32,8 @@ export function registerListDocuments(server: McpServer, api: ApiClient, project
         'corrected true es que otro documento corrige a este; correctionCount cuenta sus correcciones: dilo y busca el detalle con searchKnowledge. ' +
         'Los temas de origen AI los asignó una IA al ingresar el documento; preséntalos como tales. ' +
         'Una lista por tema puede estar incompleta: si taggingPending es mayor que 0, dilo. ' +
-        'Para una lista completa, combina el filtro por tema con la búsqueda, porque el etiquetado puede dejarse alguno.',
+        'Para una lista completa, combina el filtro por tema con la búsqueda, porque el etiquetado puede dejarse alguno. ' +
+        FRESH_READ + ' ' + FRESH_ABSENCE,
       inputSchema: {
         projectId: z.string().optional().describe(`Limita la lista a ${t.one}`),
         topic: z.string().optional().describe('Limita la lista a un tema de la empresa, por su nombre'),
