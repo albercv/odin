@@ -32,7 +32,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
     private static final String CANDIDATES = """
             SELECT p.document_id AS id, 'ORIGINAL_DOCUMENT' AS source, d.title, p.number AS page, d.paginated, d.case_document,
                    d.project_id, concat_ws(' ', u.first_name, u.last_name) AS author, d.uploaded_at AS date, p.text AS body,
-                   %1$s + ts_rank_cd(p.tsv, q.q)::float8 AS rank, d.superseded_by, d.company_id, NULL AS review_status
+                   %1$s + %15$s AS rank, d.superseded_by, d.company_id, NULL AS review_status
             FROM document_page p JOIN document d ON d.id = p.document_id JOIN app_user u ON u.id = d.uploaded_by,
                  q
             WHERE d.status = 'READY'
@@ -40,7 +40,7 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
               AND (p.tsv @@ q.q OR %2$s)
             UNION ALL
             SELECT c.id, 'KNOWLEDGE_CARD', c.title, NULL, false, false, c.project_id, concat_ws(' ', u.first_name, u.last_name), c.created_at, c.body,
-                   %3$s + ts_rank_cd(c.tsv, q.q)::float8, NULL::uuid, c.company_id, c.status
+                   %3$s + %16$s, NULL::uuid, c.company_id, c.status
             FROM knowledge_card c JOIN app_user u ON u.id = c.author_id, q
             WHERE %11$s
               AND %10$s AND %6$s AND %8$s AND %14$s
@@ -171,8 +171,8 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 + " superseded_by, company_id, review_status, ts_headline('odin_spanish', body, q.q, 'StartSel=\"\", StopSel=\"\","
                 + " MaxFragments=1') AS headline FROM (" + candidates(exact.size()) + ") r, q"
                 + " ORDER BY rank DESC, title, page NULLS FIRST, id LIMIT :limit";
-        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(queryTerms.size()) + " AS q) "
-                + SearchSql.withSupersession(inner, "t.page NULLS FIRST, t.id");
+        String sql = "WITH q AS (SELECT " + SearchSql.tsquery(queryTerms.size()) + " AS q), "
+                + SearchSql.lexemes(queryTerms.size()) + " " + SearchSql.withSupersession(inner, "t.page NULLS FIRST, t.id");
         StatementSpec spec = Sql.visible(Sql.scoped(jdbc.sql(sql), query.scope()), query.visibility())
                 .param("project", query.projectId().map(ProjectId::value).orElse(null))
                 .param("caseId", query.caseId().map(DocumentId::value).orElse(null))
@@ -188,7 +188,8 @@ public class PostgresKnowledgeSearch implements KnowledgeSearch {
                 Sql.inScope("c.company_id"), Sql.inVisibleProjects("d.project_id"),
                 Sql.inVisibleProjects("c.project_id"), SearchSql.inProject("d.project_id"),
                 SearchSql.inProject("c.project_id"), SearchSql.visibleCards("c"),
-                Sql.listable("d"), SearchSql.inCaseFile("d"), SearchSql.NO_CASE_FILE);
+                Sql.listable("d"), SearchSql.inCaseFile("d"), SearchSql.NO_CASE_FILE, SearchSql.rank("p.tsv"),
+                SearchSql.rank("c.tsv"));
     }
 
     private static SearchHit hit(ResultSet rs, List<String> terms) throws SQLException {
