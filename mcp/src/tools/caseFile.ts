@@ -16,6 +16,9 @@ const READING_RULES =
   'Si unreadableDocuments es mayor que 0, di en la respuesta cuántos documentos del expediente no se pudieron leer. ' +
   'Una página sin texto (una foto) figura en la lista, pero su contenido no se describe: di que es un documento sin texto y ofrece openOriginal; no inventes lo que muestra.';
 
+const CORRECTIONS =
+  'Cada documento trae superseded, replacement, corrections e incomplete, como en searchKnowledge: dilo si está sustituido o corregido, si una corrección está sin confirmar (confirmed false) o es hidden, o si incomplete es true. ';
+
 const CASE_MEMBERSHIP =
   'Un documento que cita el mismo número de caso pero no está en getCaseFile no forma parte del expediente: no lo incluyas; si lo mencionas, di aparte que no está en el expediente.';
 
@@ -37,6 +40,7 @@ function registerReads(server: McpServer, api: ApiClient): void {
         SCAN_COPIES +
         'Úsala siempre que la pregunta nombre un caso o un número de expediente; si no tienes su caseId, busca antes la ficha del caso con searchKnowledge (caseDocument true). ' +
         READING_RULES +
+        CORRECTIONS +
         ` ${CASE_MEMBERSHIP}`,
       inputSchema: { caseId },
     },
@@ -48,6 +52,7 @@ function registerReads(server: McpServer, api: ApiClient): void {
       description:
         'Lee el texto literal del expediente de un caso, por tandas: repite con nextCursor hasta que complete sea true. ' +
         READING_RULES +
+        CORRECTIONS +
         ` ${CASE_MEMBERSHIP}`,
       inputSchema: { caseId, cursor: z.string().optional().describe('nextCursor de la tanda anterior') },
     },

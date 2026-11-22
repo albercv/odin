@@ -6,7 +6,8 @@ import { guarded, jsonResult } from './result.js';
 const DESCRIPTION =
   'Comprueba en una sola llamada todas las citas literales de tu respuesta (de 1 a 20), también las de documentos que no hayas leído con readPage. ' +
   'Devuelve verified para cada una, en el mismo orden. Si una da false, no la uses; una cita sin comprobar no se da. ' +
-  'El título del documento no es texto de la página: solo vale lo que aparece en el texto.';
+  'El título del documento no es texto de la página: solo vale lo que aparece en el texto. ' +
+  'Si superseded o corrected es verdadero, la cita es de un documento que ya no es el vigente o que está corregido, y hay que decirlo.';
 
 const citation = z.object({
   documentId: z.string().describe('Identificador del documento'),

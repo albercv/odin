@@ -10,7 +10,12 @@ const description = (t: ProjectTerms) =>
   'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
   `projectName es ${t.the} ${t.singular}: una de las unidades con las que la empresa organiza su trabajo en Odín; «${noProject(t)}» si no es de ${t.none} ${t.singular} y lo ve toda la empresa. ` +
   'addedAt es la fecha en que entró en Odín, no la del documento. ' +
-  'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
+  'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). Si no puedes ver el que lo sustituye, di solo que está sustituido. ' +
+  'versions es la cadena de versiones del documento, de la más antigua a la más reciente: current marca la vigente; link es la frase (page, quote) donde una versión dice que sustituye a la anterior; heading, el encabezado de la página 1; match, la mejor página para tu consulta. ' +
+  'corrections son las rectificaciones o modificaciones de otros documentos, con direction (correctedBy: lo corrige otro; corrects: este corrige a otro), evidencePage y evidenceQuote para citarlas; confirmed false es que el administrador aún no la ha confirmado, y hidden true, que la corrige un documento al que no tienes acceso: no digas cuál. ' +
+  'incomplete true es que falta un eslabón de la cadena: dilo y no lo rellenes. ' +
+  'Las fechas salen del texto (heading, link, el fragmento), no de addedAt. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa. Si corrections trae una rectificación, el importe vigente es el de la rectificativa. ' +
+  'Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos. De una ficha, cita solo su texto, sin el título, el autor ni la fecha. ' +
   'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +
   'Cada consulta, una idea, en 1 a 3 palabras específicas. ' +
   'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena. ' +
