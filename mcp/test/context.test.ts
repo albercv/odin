@@ -22,7 +22,7 @@ afterEach(() => fake?.close());
 
 const version = { documentId: 'd1', title: 'Póliza 1', current: false, link: null, heading: { page: 1, text: 'Efecto: 1 de octubre de 2016' }, match: { page: 2, excerpt: 'franquicia' } };
 const correction = { direction: 'correctedBy', relation: 'RECTIFIES', documentId: 'd9', title: 'Rectificativa', hidden: false, evidencePage: 1, evidenceQuote: 'Rectifica la factura X-1.', confirmed: false };
-const hidden = { direction: 'correctedBy', relation: 'RECTIFIES', documentId: null, title: null, hidden: true, evidencePage: null, evidenceQuote: null, confirmed: false };
+const hidden = { direction: 'correctedBy', relation: 'RECTIFIES', documentId: null, title: null, hidden: true, evidencePage: null, evidenceQuote: null, confirmed: null };
 const context = { versions: [version], corrections: [correction, hidden], incomplete: true };
 
 describe('versiones y correcciones en la salida para el modelo', () => {

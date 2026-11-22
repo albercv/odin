@@ -1554,7 +1554,7 @@ export interface components {
             /** Format: int32 */
             evidencePage?: number;
             evidenceQuote?: string;
-            confirmed: boolean;
+            confirmed?: boolean;
         };
         Replacement: {
             /** Format: uuid */

@@ -131,7 +131,7 @@ class DocumentContextIT extends AbstractPostgresIT {
         assertThat(by.direction()).isEqualTo(CorrectionDirection.CORRECTED_BY);
         assertThat(by.relation()).isEqualTo(LinkRelation.RECTIFIES);
         assertThat(by.document().orElseThrow().title()).isEqualTo("Rectificativa");
-        assertThat(by.confirmed()).isFalse();
+        assertThat(by.confirmed()).contains(false);
         assertThat(by.hidden()).isFalse();
         assertThat(by.evidence()).contains(new PageText(1, "Rectifica la factura ZZQ-2025-0302: importe correcto 389,00 €."));
         assertThat(corrects.direction()).isEqualTo(CorrectionDirection.CORRECTS);
@@ -151,7 +151,7 @@ class DocumentContextIT extends AbstractPostgresIT {
         DocumentCorrection correction = of(next).corrections().get(0);
 
         assertThat(correction.relation()).isEqualTo(LinkRelation.REPLACES);
-        assertThat(correction.confirmed()).isFalse();
+        assertThat(correction.confirmed()).contains(false);
         assertThat(of(next).versions()).isEmpty();
     }
 
@@ -171,10 +171,87 @@ class DocumentContextIT extends AbstractPostgresIT {
         assertThat(hidden.hidden()).isTrue();
         assertThat(hidden.document()).isEmpty();
         assertThat(hidden.evidence()).isEmpty();
+        assertThat(hidden.confirmed()).isEmpty();
         assertThat(hidden.direction()).isEqualTo(CorrectionDirection.CORRECTED_BY);
         assertThat(seen.incomplete()).isTrue();
         assertThat(seen.toString()).doesNotContain("secreta");
         assertThat(of(original).corrections().get(0).hidden()).isFalse();
+    }
+
+    @Test
+    void aWorkerCannotReadTheRawLinkWhoseSourceOrTargetIsInAClosedProject() {
+        ProjectId closed = newProject(company, "Cerrado");
+        Document original = doc("Factura ZZQ-2025-0302", "Número de factura: ZZQ-2025-0302");
+        doc(Optional.of(closed), "Rectificativa secreta", "Número de factura rectificativa: ZZQ-2025-0302-R\n"
+                + "Rectifica la factura ZZQ-2025-0302: importe secreta.");
+        Document closedOriginal = doc(Optional.of(closed), "Factura cerrada", "Número de factura: ZZQ-2026-0900");
+        doc("Rectificativa abierta", "Número de factura rectificativa: ZZQ-2026-0900-R\n"
+                + "Rectifica la factura ZZQ-2026-0900: importe abierta.");
+        link();
+
+        Integer rows = tx.inScope(scope, ProjectVisibility.of(Set.of()), jdbc -> jdbc.sql("SELECT count(*) FROM document_link")
+                .query(Integer.class).single());
+        List<String> quotes = tx.inScope(scope, ProjectVisibility.of(Set.of()), jdbc -> jdbc
+                .sql("SELECT evidence_quote FROM document_link").query(String.class).list());
+
+        assertThat(rows).as("solo la cita pendiente del documento abierto").isEqualTo(1);
+        assertThat(quotes).hasSize(1).allSatisfy(q -> assertThat(q).contains("abierta").doesNotContain("secreta"));
+        assertThat(original).isNotNull();
+        assertThat(closedOriginal).isNotNull();
+    }
+
+    private record Hidden(String kind, String relation, int count) {
+    }
+
+    private List<Hidden> hiddenAround(CompanyScope as, ProjectVisibility visibility, DocumentId seed, DocumentId... chain) {
+        return tx.inScope(as, visibility, jdbc -> jdbc.sql("SELECT kind, relation, hidden_count FROM document_hidden_context("
+                + ":seed, CAST(string_to_array(:chain, ',') AS uuid[]))").param("seed", seed.value())
+                .param("chain", java.util.Arrays.stream(chain).map(c -> c.value().toString())
+                        .collect(java.util.stream.Collectors.joining(",")))
+                .query((rs, n) -> new Hidden(rs.getString("kind"), rs.getString("relation"), rs.getInt("hidden_count")))
+                .list());
+    }
+
+    @Test
+    void theHiddenFunctionReturnsOnlyCountsAndNothingForWhatTheCallerCannotSee() {
+        ProjectId closed = newProject(company, "Cerrado");
+        Document original = doc("Factura ZZQ-2025-0302", "Número de factura: ZZQ-2025-0302");
+        doc(Optional.of(closed), "Rectificativa secreta", "Número de factura rectificativa: ZZQ-2025-0302-R\n"
+                + "Rectifica la factura ZZQ-2025-0302: importe secreta.");
+        Document inClosed = doc(Optional.of(closed), "Cerrada", "texto");
+        link();
+
+        assertThat(hiddenAround(scope, ProjectVisibility.of(Set.of()), original.id(), original.id()))
+                .containsExactly(new Hidden("CORRECTED_BY", "RECTIFIES", 1));
+        assertThat(hiddenAround(scope, ProjectVisibility.all(), original.id(), original.id())).isEmpty();
+        assertThat(hiddenAround(scope, ProjectVisibility.of(Set.of()), inClosed.id(), inClosed.id())).isEmpty();
+        assertThat(hiddenAround(CompanyScope.of(newCompany()), ProjectVisibility.all(), original.id(), original.id()))
+                .isEmpty();
+        List<String> columns = tx.inScope(scope, ProjectVisibility.of(Set.of()), jdbc -> jdbc
+                .sql("SELECT * FROM document_hidden_context(:s, ARRAY[:s]::uuid[])").param("s", original.id().value())
+                .query((rs, n) -> {
+                    List<String> names = new java.util.ArrayList<>();
+                    for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                        names.add(rs.getMetaData().getColumnLabel(i));
+                    }
+                    return names;
+                }).list().get(0));
+        assertThat(columns).containsExactly("kind", "relation", "hidden_count");
+    }
+
+    @Test
+    void aHiddenPredecessorMakesTheChainIncomplete() {
+        ProjectId closed = newProject(company, "Cerrado");
+        Document old = doc(Optional.of(closed), "Vieja cerrada", "Póliza n.º ZZQ-16-77001");
+        Document next = doc("Nueva", "Póliza n.º ZZQ-19-77001");
+        forceMark(old, next);
+
+        DocumentContext seen = context.contexts(scope, ProjectVisibility.of(Set.of()), List.of(next.id()))
+                .get(next.id());
+
+        assertThat(seen.incomplete()).isTrue();
+        assertThat(seen.versions()).isEmpty();
+        assertThat(seen.toString()).doesNotContain("cerrada");
     }
 
     @Test

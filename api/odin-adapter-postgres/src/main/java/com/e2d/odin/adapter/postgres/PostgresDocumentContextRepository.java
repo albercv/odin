@@ -56,6 +56,7 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
             LEFT JOIN document s ON s.id = l.source_document_id AND %s AND %s AND %s
             LEFT JOIN document t ON t.id = l.target_document_id AND %s AND %s AND %s
             WHERE %s AND (l.source_document_id = ANY (%s) OR l.target_document_id = ANY (%s))
+              AND s.title IS NOT NULL AND (l.target_document_id IS NULL OR t.title IS NOT NULL)
             ORDER BY l.relation, l.cited_identifier, l.id""";
     private static final String MATCHES = """
             WITH q AS (SELECT %s AS q)
@@ -93,8 +94,11 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
             Map<UUID, PageText> headings = headings(jdbc, scope, all);
             List<LinkRow> links = links(jdbc, scope, visibility, all);
             Map<DocumentId, DocumentContext> result = new LinkedHashMap<>();
-            components.forEach((seed, nodes) -> result.put(new DocumentId(seed),
-                    contextOf(seed, VersionChain.of(nodes), headings, links)));
+            components.forEach((seed, nodes) -> {
+                VersionChain chain = VersionChain.of(nodes);
+                result.put(new DocumentId(seed), contextOf(seed, chain, headings, links,
+                        hidden(jdbc, seed, nodes.stream().map(VersionChain.Node::id).toList())));
+            });
             return result;
         });
     }
@@ -109,7 +113,11 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
             Set<UUID> seeds = ids.stream().map(DocumentId::value).collect(Collectors.toSet());
             List<LinkRow> links = links(jdbc, scope, visibility, seeds);
             Map<DocumentId, List<DocumentCorrection>> result = new HashMap<>();
-            seeds.forEach(seed -> result.put(new DocumentId(seed), correctionsOf(seed, links)));
+            seeds.forEach(seed -> {
+                List<DocumentCorrection> all = new java.util.ArrayList<>(correctionsOf(seed, links));
+                all.addAll(hidden(jdbc, seed, List.of(seed)).corrections());
+                result.put(new DocumentId(seed), all);
+            });
             return result;
         });
     }
@@ -194,12 +202,38 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
                 Sql.uuid(rs, "target_superseded_by"));
     }
 
+    /** Solo recuentos: la función de la base no da ids, títulos ni frases de lo que no se ve. */
+    private record Hidden(List<DocumentCorrection> corrections, boolean chain) {
+    }
+
+    private Hidden hidden(JdbcClient jdbc, UUID seed, Collection<UUID> chain) {
+        List<DocumentCorrection> corrections = new java.util.ArrayList<>();
+        boolean[] inChain = {false};
+        jdbc.sql("SELECT kind, relation, hidden_count FROM document_hidden_context(:seed, "
+                + "CAST(string_to_array(:chain, ',') AS uuid[]))").param("seed", seed)
+                .param("chain", chain.stream().map(UUID::toString).collect(Collectors.joining(",")))
+                .query((rs, n) -> {
+                    if ("CHAIN".equals(rs.getString("kind"))) {
+                        inChain[0] = rs.getInt("hidden_count") > 0;
+                    } else {
+                        CorrectionDirection direction = CorrectionDirection.valueOf(rs.getString("kind"));
+                        for (int i = 0; i < rs.getInt("hidden_count"); i++) {
+                            corrections.add(DocumentCorrection.hiddenOf(direction,
+                                    LinkRelation.valueOf(rs.getString("relation"))));
+                        }
+                    }
+                    return n;
+                }).list();
+        return new Hidden(corrections, inChain[0]);
+    }
+
     private static DocumentContext contextOf(UUID seed, VersionChain chain, Map<UUID, PageText> headings,
-            List<LinkRow> links) {
-        List<DocumentCorrection> corrections = correctionsOf(seed, links);
+            List<LinkRow> links, Hidden hidden) {
+        List<DocumentCorrection> corrections = new java.util.ArrayList<>(correctionsOf(seed, links));
+        corrections.addAll(hidden.corrections());
         Set<UUID> inChain = chain.ordered().stream().map(VersionChain.Node::id).collect(Collectors.toSet());
         boolean pending = links.stream().anyMatch(l -> l.targetId() == null && inChain.contains(l.sourceId()));
-        boolean incomplete = chain.incomplete() || pending || corrections.stream().anyMatch(DocumentCorrection::hidden);
+        boolean incomplete = chain.incomplete() || pending || hidden.chain() || !hidden.corrections().isEmpty();
         return new DocumentContext(versionsOf(chain, headings, links), corrections, incomplete);
     }
 
@@ -234,13 +268,8 @@ public class PostgresDocumentContextRepository implements DocumentContextReposit
 
     private static DocumentCorrection correction(CorrectionDirection direction, LinkRow link, UUID otherId,
             String otherTitle) {
-        boolean hidden = otherTitle == null;
-        Optional<DocumentRef> other = hidden ? Optional.empty()
-                : Optional.of(new DocumentRef(new DocumentId(otherId), otherTitle));
-        // La frase de una corrección que viene de un documento oculto es texto de ese documento: no sale.
-        boolean evidenceHidden = hidden && direction == CorrectionDirection.CORRECTED_BY;
-        return new DocumentCorrection(direction, link.relation(), other, hidden,
-                evidenceHidden ? Optional.empty() : Optional.of(new PageText(link.page(), link.quote())),
-                "ADMIN".equals(link.origin()));
+        return new DocumentCorrection(direction, link.relation(),
+                Optional.of(new DocumentRef(new DocumentId(otherId), otherTitle)), false,
+                Optional.of(new PageText(link.page(), link.quote())), Optional.of("ADMIN".equals(link.origin())));
     }
 }

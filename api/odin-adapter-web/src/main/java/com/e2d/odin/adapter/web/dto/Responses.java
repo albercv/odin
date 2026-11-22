@@ -484,13 +484,13 @@ public final class Responses {
 
     /** Un vínculo de corrección; sin documento ni título (y {@code hidden}) si quien lee no ve el otro documento. */
     public record CorrectionView(String direction, String relation, @Nullable UUID documentId, @Nullable String title,
-            boolean hidden, @Nullable Integer evidencePage, @Nullable String evidenceQuote, boolean confirmed) {
+            boolean hidden, @Nullable Integer evidencePage, @Nullable String evidenceQuote, @Nullable Boolean confirmed) {
         static CorrectionView from(DocumentCorrection c) {
             String direction = c.direction() == CorrectionDirection.CORRECTED_BY ? "correctedBy" : "corrects";
             return new CorrectionView(direction, c.relation().name(),
                     c.document().map(d -> d.id().value()).orElse(null), c.document().map(DocumentRef::title).orElse(null),
                     c.hidden(), c.evidence().map(PageText::page).orElse(null),
-                    c.evidence().map(PageText::text).orElse(null), c.confirmed());
+                    c.evidence().map(PageText::text).orElse(null), c.confirmed().orElse(null));
         }
 
         static List<CorrectionView> from(List<DocumentCorrection> corrections) {

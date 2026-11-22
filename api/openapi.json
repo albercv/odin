@@ -4150,7 +4150,7 @@
             "type" : "boolean"
           }
         },
-        "required" : [ "confirmed", "direction", "hidden", "relation" ]
+        "required" : [ "direction", "hidden", "relation" ]
       },
       "Replacement" : {
         "type" : "object",
