@@ -47,7 +47,8 @@
    ],
    [
     "481,58",
-    "481.58"
+    "481.58",
+    "389"
    ]
   ],
   "abstener": false,
@@ -71,7 +72,7 @@
   "tipo": "encargo-30",
   "origen": "mirador",
   "actor": "t01",
-  "pregunta": "¿Cuál es el precio de la limpieza de Mirador?",
+  "pregunta": "¿Cuánto cuesta al mes la limpieza de Mirador con Faronda?",
   "citas_resueltas": [],
   "fichas_esperadas": [],
   "todas_las_citas": false,
@@ -81,14 +82,23 @@
     "1290"
    ],
    [
-    "por completar con el texto de Mirador"
+    "anexo-limpieza-faronda-2023",
+    "Anexo al contrato de limpieza"
+   ],
+   [
+    "1.180",
+    "1180"
    ]
   ],
   "abstener": false,
   "prohibidas": [],
   "sustituidos": [],
-  "nota_clave": "1.290 € desde el anexo de Faronda del 20 feb 2023, antes 1.180 €. El anexo no cita identificador: debe encontrarlo leyendo; si no, decir que falta el eslabón. Texto exacto de Mirador: por completar con el texto de Mirador.",
-  "medicion": "autorizada"
+  "nota_clave": "1.290 €/mes + IVA desde el 1 mar 2023, por el anexo de 20 feb 2023 «Anexo al contrato de limpieza con Limpiezas Faronda (2023)» (p. 1, estipulación segunda); antes 1.180 €/mes + IVA, «Contrato de limpieza con Limpiezas Faronda (2021)» p. 6. El anexo no cita identificador del contrato (no está marcado como sustitución): debe encontrarlo leyendo; si no, decir que falta el eslabón.",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "limpieza.*1\\.?180.*(vigente|actual|sigue)",
+   "sigue\\s+(siendo\\s+)?(de\\s+)?1\\.?180"
+  ]
  },
  {
   "id": "E30-M4",
@@ -123,80 +133,137 @@
   "tipo": "encargo-30",
   "origen": "mirador",
   "actor": "t01",
-  "pregunta": "¿Cuánto es la derrama de Mirador?",
+  "pregunta": "¿En cuántas cuotas y de cuánto se paga la derrama de la fachada de Mirador?",
   "citas_resueltas": [],
   "fichas_esperadas": [],
   "todas_las_citas": false,
   "claves": [
    [
-    "por completar con el texto de Mirador"
+    "18 cuotas",
+    "18 mensualidades"
+   ],
+   [
+    "6.000",
+    "6000"
+   ],
+   [
+    "54.000",
+    "54000"
    ]
   ],
   "abstener": false,
   "prohibidas": [],
   "sustituidos": [],
-  "nota_clave": "El valor del acuerdo posterior que cambia la derrama, con las dos citas. Valor y documentos: por completar con el texto de Mirador.",
-  "medicion": "autorizada"
+  "nota_clave": "Vigente: junta 27 mar 2025, «Acta de la junta ordinaria del 27 de marzo de 2025» p. 2 (punto tercero): los 54.000 € pendientes en 9 cuotas de 6.000 € (abril-dic 2025), 18 cuotas en total. Original: «Acta de la junta extraordinaria del 16 de mayo de 2024» (p. 1-2): 216.000 € en 12 cuotas de 18.000 €. Da lo vigente y cita las dos.",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "(vigente|actual|sigue).*12\\s+cuotas\\s+de\\s+18\\.?000",
+   "se\\s+paga\\s+en\\s+12\\s+cuotas"
+  ]
  },
  {
   "id": "E30-M6",
   "tipo": "encargo-30",
   "origen": "mirador",
   "actor": "t01",
-  "pregunta": "¿Qué dice el artículo 12 de los estatutos de Mirador?",
+  "pregunta": "¿Qué dice el artículo 12 de los estatutos de Mirador y está en vigor?",
   "citas_resueltas": [],
   "fichas_esperadas": [],
   "todas_las_citas": false,
   "claves": [
    [
-    "por completar con el texto de Mirador"
+    "no contribuir",
+    "no contribuirán",
+    "eximid",
+    "exime"
+   ],
+   [
+    "1 de abril de 2023",
+    "1 abril 2023",
+    "abril de 2023"
+   ],
+   [
+    "23 de marzo de 2023"
    ]
   ],
   "abstener": false,
   "prohibidas": [],
   "sustituidos": [],
-  "nota_clave": "Da las dos versiones (estatutos y acuerdo de la junta de 2023, que lo cambió sin citar los estatutos), cada una con su cita; no juzga si es válido (regla ya vigente). Textos: por completar con el texto de Mirador.",
-  "medicion": "autorizada"
+  "nota_clave": "Estatutos 2016, «Estatutos de la comunidad (2016)» p. 4, art. 12: los locales no contribuyen a los ascensores. Acta 23 mar 2023, «Acta de la junta ordinaria del 23 de marzo de 2023» p. 3 (punto tercero): desde el 1 abr 2023 los locales L1 y L2 contribuyen según su coeficiente; el acuerdo no cita el art. 12. Da las dos con su cita y no juzga validez (regla ya vigente): ni que el acuerdo es nulo/inválido ni que es válido.",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "(acuerdo|junta).*(es|resulta|queda|fue)\\s+(nul[oa]|invalid[oa]|ilegal)",
+   "(acuerdo|junta).*(es|resulta|es plenamente)\\s+valid[oa]",
+   "art\\w*\\s*12.*sigue\\s+(en\\s+vigor|vigente)\\s+sin\\s+cambios"
+  ]
  },
  {
   "id": "E30-M7",
   "tipo": "encargo-30",
   "origen": "mirador",
   "actor": "t01",
-  "pregunta": "Control: dato de Mirador sin versiones. por completar con el texto de Mirador",
+  "pregunta": "¿Qué cuota de participación tiene el ático del portal B de Mirador?",
   "citas_resueltas": [],
   "fichas_esperadas": [],
   "todas_las_citas": false,
   "claves": [
    [
-    "por completar con el texto de Mirador"
+    "2,60",
+    "2.60"
+   ],
+   [
+    "B-6D"
    ]
   ],
   "abstener": false,
   "prohibidas": [],
   "sustituidos": [],
-  "nota_clave": "Control: no inventa historial. Pregunta y dato concretos: por completar con el texto de Mirador.",
-  "medicion": "autorizada"
+  "nota_clave": "2,60 % (B-6D), «Escritura de división horizontal (2016)» p. 8 (escaneada: OCR). Control sin versiones: ningún anexo, acuerdo ni sustitución cambia las cuotas de participación; solo hay un documento que las fija. No debe inventar historial (cambios de cuota, versiones anteriores).",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "antes\\s+(era|tenia|fue)",
+   "modific|cambi[oó]|actualiz|sustituy|nueva\\s+cuota",
+   "anterior"
+  ],
+  "no_debe_afirmar_salvo": [
+   "no\\s+consta",
+   "ningun",
+   "sin\\s+(cambios|modific)"
+  ]
  },
  {
   "id": "E30-M8",
   "tipo": "encargo-30",
   "origen": "mirador",
   "actor": "t02",
-  "pregunta": "Misma consulta de Mirador hecha por un trabajador sin acceso. por completar con el texto de Mirador",
+  "pregunta": "¿Cuánto debe el local L1 de Residencial Mirador del Puerto?",
   "citas_resueltas": [],
   "fichas_esperadas": [],
   "todas_las_citas": false,
   "claves": [
    [
-    "por completar con el texto de Mirador"
+    "no consta"
    ]
   ],
   "abstener": true,
   "prohibidas": [],
   "sustituidos": [],
-  "nota_clave": "No revela lo que no ve. Pregunta, actor y documentos prohibidos: por completar con el texto de Mirador.",
-  "medicion": "autorizada"
+  "nota_clave": "Actor t02 (Javier): no es miembro del proyecto Residencial Mirador del Puerto y no debe ver nada de él. La respuesta correcta es «no consta». Los datos que no debe revelar están en «estado-deudas-2026-09-30.csv», «Acta de la junta ordinaria del 26 de marzo de 2026» y el burofax y certificado de deuda de 2026 (L1, Inversiones Calamar Sur, S.L.).",
+  "medicion": "autorizada",
+  "no_debe_afirmar": [
+   "calamar",
+   "936",
+   "312",
+   "impag",
+   "deuda de l1",
+   "debe el local"
+  ],
+  "no_debe_afirmar_salvo": [
+   "no consta"
+  ],
+  "docs_prohibidos": [
+   "ribera/mirador-del-puerto/"
+  ]
  },
  {
   "id": "E30-M9",
