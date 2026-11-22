@@ -38,6 +38,29 @@ final class SearchSql {
         return String.join(" || ", parts);
     }
 
+    /** Los lexemas distintos de la consulta (CTE {@code ql}), los mismos que el analizador saca de cada término. */
+    static String lexemes(int termCount) {
+        List<String> parts = new ArrayList<>();
+        for (int i = 0; i < termCount; i++) {
+            parts.add(":t" + i);
+        }
+        return "ql AS (SELECT quote_literal(l)::tsquery AS lq FROM unnest(tsvector_to_array(to_tsvector('odin_spanish', "
+                + String.join(" || ' ' || ", parts) + "))) l)";
+    }
+
+    /**
+     * La relevancia de texto: {@code ts_rank_cd} con la norma 2 (dividido por la longitud de la página, para que una
+     * página corta con lo pedido no quede tapada por actas largas) por el cuadrado de la fracción de lexemas de la
+     * consulta que tiene. Un lexema cuenta como presente si está en la página, en el nombre de su comunidad o en el título
+     * del documento: el nombre de la comunidad que se pregunta no se repite en la página de un acta donde está la respuesta.
+     */
+    static String rank(String tsv, String projectId, String title) {
+        String context = "to_tsvector('odin_spanish', coalesce((SELECT pr.name FROM project pr WHERE pr.id = " + projectId
+                + "), '') || ' ' || " + title + ")";
+        return "ts_rank_cd(" + tsv + ", q.q, 2)::float8 * power(coalesce((SELECT count(*) FROM ql WHERE " + tsv
+                + " @@ ql.lq OR " + context + " @@ ql.lq)::float8 / NULLIF((SELECT count(*) FROM ql), 0), 1), 2)";
+    }
+
     static String anyMatch(String column, int exactCount) {
         List<String> parts = new ArrayList<>(List.of("false"));
         for (int i = 0; i < exactCount; i++) {

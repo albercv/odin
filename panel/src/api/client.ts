@@ -185,6 +185,9 @@ export const api = {
   retry: (documentId: string) => request<S['DocumentView']>('POST', `${a}/documents/${documentId}/retry`),
   supersede: (documentId: string, replacementId: string) =>
     request<S['DocumentView']>('PUT', `${a}/documents/${documentId}/superseded-by`, { replacementId }),
+  documentContext: (documentId: string) => request<S['DocumentContextView']>('GET', `${a}/documents/${documentId}/context`),
+  confirmLink: (linkId: string) => request<void>('POST', `${a}/document-links/${linkId}/confirm`),
+  dismissLink: (linkId: string) => request<void>('POST', `${a}/document-links/${linkId}/dismiss`),
   unsupersede: (documentId: string) => request<void>('DELETE', `${a}/documents/${documentId}/superseded-by`),
   pendingCount: (id: string) => cardPage(id, { limit: 10 }).then((page) => page.total),
   cardPage,

@@ -16,6 +16,9 @@ import com.e2d.odin.adapter.postgres.PostgresAccessLinkRepository;
 import com.e2d.odin.adapter.postgres.PostgresAdminSessionRepository;
 import com.e2d.odin.adapter.postgres.PostgresDeliveryMeter;
 import com.e2d.odin.adapter.postgres.PostgresCaseFileRepository;
+import com.e2d.odin.adapter.postgres.PostgresDocumentContextRepository;
+import com.e2d.odin.adapter.postgres.PostgresDocumentLinkRepository;
+import com.e2d.odin.adapter.postgres.PostgresDocumentLinkReview;
 import com.e2d.odin.adapter.postgres.PostgresIntakeRepository;
 import com.e2d.odin.adapter.postgres.PostgresDocumentRepository;
 import com.e2d.odin.adapter.postgres.PostgresKnowledgeCardRepository;
@@ -40,6 +43,9 @@ import com.e2d.odin.application.port.AdminSessionRepository;
 import com.e2d.odin.application.port.DeliveryMeter;
 import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.CaseFileRepository;
+import com.e2d.odin.application.port.DocumentContextRepository;
+import com.e2d.odin.application.port.DocumentLinkRepository;
+import com.e2d.odin.application.port.DocumentLinkReview;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
@@ -170,6 +176,21 @@ public class AdapterConfiguration {
     @Bean
     TopicRepository topicRepository(ScopedTransactions tx) {
         return new PostgresTopicRepository(tx);
+    }
+
+    @Bean
+    DocumentContextRepository documentContextRepository(ScopedTransactions tx) {
+        return new PostgresDocumentContextRepository(tx);
+    }
+
+    @Bean
+    DocumentLinkRepository documentLinkRepository(ScopedTransactions tx) {
+        return new PostgresDocumentLinkRepository(tx);
+    }
+
+    @Bean
+    DocumentLinkReview documentLinkReview(ScopedTransactions tx) {
+        return new PostgresDocumentLinkReview(tx);
     }
 
     @Bean

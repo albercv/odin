@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ApiClient } from '../api/client.js';
-import { guarded, jsonResult } from './result.js';
+import { FRESH_READ, guarded, jsonResult } from './result.js';
 
 const caseId = z.string().describe('Identificador del caso');
 
@@ -15,6 +15,9 @@ const READING_RULES =
   'Si pendingDocuments es mayor que 0, di en la respuesta cuántos documentos están pendientes de lectura. ' +
   'Si unreadableDocuments es mayor que 0, di en la respuesta cuántos documentos del expediente no se pudieron leer. ' +
   'Una página sin texto (una foto) figura en la lista, pero su contenido no se describe: di que es un documento sin texto y ofrece openOriginal; no inventes lo que muestra.';
+
+const CORRECTIONS =
+  'Cada documento trae superseded, replacement, corrections e incomplete, como en searchKnowledge: dilo si está sustituido o corregido, si una corrección está sin confirmar (confirmed false) o es hidden, o si incomplete es true. ';
 
 const CASE_MEMBERSHIP =
   'Un documento que cita el mismo número de caso pero no está en getCaseFile no forma parte del expediente: no lo incluyas; si lo mencionas, di aparte que no está en el expediente.';
@@ -37,7 +40,8 @@ function registerReads(server: McpServer, api: ApiClient): void {
         SCAN_COPIES +
         'Úsala siempre que la pregunta nombre un caso o un número de expediente; si no tienes su caseId, busca antes la ficha del caso con searchKnowledge (caseDocument true). ' +
         READING_RULES +
-        ` ${CASE_MEMBERSHIP}`,
+        CORRECTIONS +
+        `${CASE_MEMBERSHIP} ${FRESH_READ}`,
       inputSchema: { caseId },
     },
     (args) => guarded(async () => jsonResult(await api.caseFile(args.caseId))),
@@ -48,7 +52,8 @@ function registerReads(server: McpServer, api: ApiClient): void {
       description:
         'Lee el texto literal del expediente de un caso, por tandas: repite con nextCursor hasta que complete sea true. ' +
         READING_RULES +
-        ` ${CASE_MEMBERSHIP}`,
+        CORRECTIONS +
+        `${CASE_MEMBERSHIP} ${FRESH_READ}`,
       inputSchema: { caseId, cursor: z.string().optional().describe('nextCursor de la tanda anterior') },
     },
     (args) => guarded(async () => jsonResult(await api.caseFileText(args.caseId, args.cursor))),

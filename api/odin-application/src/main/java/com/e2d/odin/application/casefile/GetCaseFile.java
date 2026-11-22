@@ -1,5 +1,6 @@
 package com.e2d.odin.application.casefile;
 
+import com.e2d.odin.application.context.DocumentContexts;
 import com.e2d.odin.application.document.ScanLinks;
 import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.port.CaseFileRepository;
@@ -8,6 +9,7 @@ import com.e2d.odin.application.port.OrganizationRepository;
 import com.e2d.odin.application.port.ProjectMemberRepository;
 import com.e2d.odin.application.port.UserRepository;
 import com.e2d.odin.domain.casefile.CaseFileEntry;
+import com.e2d.odin.domain.context.DocumentContext;
 import com.e2d.odin.domain.document.DocumentEntry;
 import com.e2d.odin.domain.document.DocumentStatus;
 import com.e2d.odin.domain.identity.Actor;
@@ -32,14 +34,22 @@ public class GetCaseFile {
     private final DocumentRepository documents;
     private final CaseFileRepository caseFiles;
     private final UserNames names;
+    private final DocumentContexts contexts;
 
     public GetCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
             DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users) {
+        this(organizations, projectMembers, documents, caseFiles, users, DocumentContexts.none());
+    }
+
+    public GetCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
+            DocumentContexts contexts) {
         this.organizations = organizations;
         this.projectMembers = projectMembers;
         this.documents = documents;
         this.caseFiles = caseFiles;
         this.names = new UserNames(users);
+        this.contexts = contexts;
     }
 
     public CaseFileView execute(Actor actor, DocumentId caseId) {
@@ -75,12 +85,15 @@ public class GetCaseFile {
         Set<DocumentId> toCount = new HashSet<>(readable.keySet());
         toCount.add(caseId);
         Map<DocumentId, Integer> pages = caseFiles.pageCounts(access.scope(), access.visibility(), toCount);
-        List<CaseFileDocumentView> views = views(access, relations, readable, pages, listUnread);
-        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views, pending, unreadable, names(caseEntry, views));
+        Map<DocumentId, DocumentContext> context = contexts.of(access.scope(), access.visibility(), toCount);
+        List<CaseFileDocumentView> views = views(access, relations, readable, pages, context, listUnread);
+        return new CaseFileView(caseEntry, pages.getOrDefault(caseId, 0), views, pending, unreadable,
+                names(caseEntry, views), context.getOrDefault(caseId, DocumentContext.NONE));
     }
 
     private List<CaseFileDocumentView> views(CaseFileAccess access, List<CaseFileEntry> relations,
-            Map<DocumentId, DocumentEntry> readable, Map<DocumentId, Integer> pages, boolean listUnread) {
+            Map<DocumentId, DocumentEntry> readable, Map<DocumentId, Integer> pages,
+            Map<DocumentId, DocumentContext> context, boolean listUnread) {
         Map<DocumentId, ScanLinks> links = ScanLinks.of(documents, access.scope(), access.visibility(),
                 listUnread ? Optional.empty() : Optional.of(DocumentStatus.READY),
                 readable.values().stream().map(DocumentEntry::document).toList());
@@ -88,7 +101,8 @@ public class GetCaseFile {
         return relations.stream().filter(r -> readable.containsKey(r.documentId()))
                 .filter(r -> !isScanOfAnother(readable, r.documentId()))
                 .map(r -> new CaseFileDocumentView(readable.get(r.documentId()),
-                        pages.getOrDefault(r.documentId(), 0), r.addedBy(), r.addedAt(), links.get(r.documentId())))
+                        pages.getOrDefault(r.documentId(), 0), r.addedBy(), r.addedAt(), links.get(r.documentId()),
+                        context.getOrDefault(r.documentId(), DocumentContext.NONE)))
                 .toList();
     }
 

@@ -50,4 +50,26 @@ class SearchSqlTest {
         List<String> terms = List.of("111 222 333 444 555 666 777");
         assertThat(SearchSql.exactTokens(terms)).hasSize(10);
     }
+
+    @Test
+    void rankNormalisesByLengthAndRewardsTheShareOfQueryLexemes() {
+        String rank = SearchSql.rank("p.tsv", "d.project_id", "d.title");
+
+        assertThat(rank).startsWith("ts_rank_cd(p.tsv, q.q, 2)").contains("power(").contains("p.tsv @@ ql.lq")
+                .contains("NULLIF((SELECT count(*) FROM ql), 0), 1)");
+    }
+
+    @Test
+    void aLexemeCountsAsPresentIfItIsInTheCommunityNameOrTheTitle() {
+        String rank = SearchSql.rank("c.tsv", "c.project_id", "c.title");
+
+        assertThat(rank).contains("SELECT pr.name FROM project pr WHERE pr.id = c.project_id")
+                .contains("|| ' ' || c.title)").contains("OR to_tsvector('odin_spanish'");
+    }
+
+    @Test
+    void lexemesCteTakesEveryTermOfTheQuery() {
+        assertThat(SearchSql.lexemes(3)).startsWith("ql AS (")
+                .contains("to_tsvector('odin_spanish', :t0 || ' ' || :t1 || ' ' || :t2)");
+    }
 }

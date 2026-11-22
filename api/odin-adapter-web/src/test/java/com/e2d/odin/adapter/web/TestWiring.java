@@ -26,6 +26,14 @@ import com.e2d.odin.application.document.UnlinkScanCopy;
 import com.e2d.odin.application.document.RestoreDocument;
 import com.e2d.odin.application.document.RetryDocument;
 import com.e2d.odin.application.document.SupersedeDocument;
+import com.e2d.odin.application.context.DocumentContexts;
+import com.e2d.odin.application.context.ReviewDocumentLinks;
+import com.e2d.odin.application.port.DocumentLinkReview;
+import com.e2d.odin.domain.citation.LinkStatus;
+import com.e2d.odin.domain.shared.CompanyId;
+import com.e2d.odin.domain.shared.CompanyScope;
+import com.e2d.odin.domain.shared.DocumentId;
+import com.e2d.odin.domain.shared.UserId;
 import com.e2d.odin.application.document.UpdateDocument;
 import com.e2d.odin.application.document.UploadDocument;
 import com.e2d.odin.application.document.UploadToProject;
@@ -554,6 +562,24 @@ public class TestWiring {
 
     @Bean ListCaseFileEvents listCaseFileEvents() {
         return new ListCaseFileEvents(docs, caseFiles);
+    }
+
+    @Bean ReviewDocumentLinks reviewDocumentLinks() {
+        return new ReviewDocumentLinks(new NoLinkReview(), DocumentContexts.none(), docs, supersedeDocument(), clock,
+                auditLog());
+    }
+
+    /** Sin vínculos: estas pruebas no los usan; las de extremo a extremo están en el arranque. */
+    private static final class NoLinkReview implements DocumentLinkReview {
+        @Override public java.util.Optional<Link> find(CompanyScope scope, java.util.UUID linkId) {
+            return java.util.Optional.empty();
+        }
+        @Override public java.util.List<LinkView> linksOf(CompanyScope scope, DocumentId document) {
+            return java.util.List.of();
+        }
+        @Override public void setStatus(CompanyId company, java.util.UUID linkId, LinkStatus status, UserId reviewer,
+                java.time.Instant at) {
+        }
     }
 
     @Bean SupersedeDocument supersedeDocument() {

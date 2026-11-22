@@ -26,6 +26,10 @@ import com.e2d.odin.domain.knowledge.KnowledgeCard;
 import com.e2d.odin.domain.knowledge.ReviewDecision;
 import com.e2d.odin.domain.shared.CardId;
 import com.e2d.odin.application.casefile.GetCaseFile;
+import com.e2d.odin.application.context.DocumentContexts;
+import com.e2d.odin.application.context.ReviewDocumentLinks;
+import com.e2d.odin.application.port.DocumentLinkReview;
+import com.e2d.odin.application.port.DocumentContextRepository;
 import com.e2d.odin.application.casefile.ListCaseFileEvents;
 import com.e2d.odin.application.casefile.ReadCaseFile;
 import com.e2d.odin.application.casefile.RemoveFromCaseFile;
@@ -72,6 +76,7 @@ import com.e2d.odin.application.identity.UpdateUser;
 import com.e2d.odin.application.identity.UserChanges;
 import com.e2d.odin.application.identity.UserNames;
 import com.e2d.odin.application.intake.AddFileToIntake;
+import com.e2d.odin.application.citation.LinkDocuments;
 import com.e2d.odin.application.intake.ClassifyIntake;
 import com.e2d.odin.application.intake.CloseIntakeBatch;
 import com.e2d.odin.application.intake.CloseIntakeUpload;
@@ -134,6 +139,7 @@ import com.e2d.odin.application.port.DocumentFormatDetector;
 import com.e2d.odin.application.port.DocumentRepository;
 import com.e2d.odin.application.port.DocumentTextReader;
 import com.e2d.odin.application.port.IdGenerator;
+import com.e2d.odin.application.port.DocumentLinkRepository;
 import com.e2d.odin.application.port.IntakeRepository;
 import com.e2d.odin.application.port.KnowledgeCardRepository;
 import com.e2d.odin.application.port.KnowledgeSearch;
@@ -781,6 +787,12 @@ public class UseCaseConfiguration {
         return new AddFileToIntake(intake, upload, audit);
     }
 
+    @Bean
+    LinkDocuments linkDocuments(DocumentLinkRepository links, Clock clock,
+            @Value("${odin.links.batch-size:50}") int batchSize) {
+        return new LinkDocuments(links, clock, batchSize);
+    }
+
     /** El proponente solo existe con odin.tagger.url: sin él, la clasificación usa solo las reglas. */
     @Bean
     ClassifyIntake classifyIntake(IntakeRepository intake, DocumentRepository documents,
@@ -1025,16 +1037,22 @@ public class UseCaseConfiguration {
     }
 
     @Bean
+    DocumentContexts documentContexts(DocumentContextRepository repository) {
+        return new DocumentContexts(repository);
+    }
+
+    @Bean
     GetCaseFile getCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users) {
-        return new GetCaseFile(organizations, projectMembers, documents, caseFiles, users);
+            DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
+            DocumentContexts contexts) {
+        return new GetCaseFile(organizations, projectMembers, documents, caseFiles, users, contexts);
     }
 
     @Bean
     ReadCaseFile readCaseFile(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
             DocumentRepository documents, CaseFileRepository caseFiles, UserRepository users,
-            CaseFileSettings settings) {
-        return new ReadCaseFile(organizations, projectMembers, documents, caseFiles, users, settings);
+            CaseFileSettings settings, DocumentContexts contexts) {
+        return new ReadCaseFile(organizations, projectMembers, documents, caseFiles, users, settings, contexts);
     }
 
     @Bean
@@ -1091,6 +1109,24 @@ public class UseCaseConfiguration {
             @Override
             public void unmark(Actor actor, DocumentId documentId) {
                 transaction.executeWithoutResult(status -> super.unmark(actor, documentId));
+            }
+        };
+    }
+
+    @Bean
+    ReviewDocumentLinks reviewDocumentLinks(DocumentLinkReview links, DocumentContexts contexts,
+            DocumentRepository documents, SupersedeDocument supersede, Clock clock,
+            PlatformTransactionManager transactionManager, AuditLog audit) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        return new ReviewDocumentLinks(links, contexts, documents, supersede, clock, audit) {
+            @Override
+            public void confirm(Actor actor, UUID linkId) {
+                transaction.executeWithoutResult(status -> super.confirm(actor, linkId));
+            }
+
+            @Override
+            public void dismiss(Actor actor, UUID linkId) {
+                transaction.executeWithoutResult(status -> super.dismiss(actor, linkId));
             }
         };
     }
@@ -1156,14 +1192,16 @@ public class UseCaseConfiguration {
             KnowledgeSearch search,
             QuestionLog questions,
             IdGenerator ids,
-            Clock clock) {
-        return new SearchKnowledge(organizations, projectMembers, search, questions, ids, clock);
+            Clock clock,
+            DocumentContexts contexts) {
+        return new SearchKnowledge(organizations, projectMembers, search, questions, ids, clock, contexts);
     }
 
     @Bean
     FindSimilarCases findSimilarCases(OrganizationRepository organizations, ProjectMemberRepository projectMembers,
-            KnowledgeSearch search, QuestionLog questions, IdGenerator ids, Clock clock) {
-        return new FindSimilarCases(organizations, projectMembers, search, questions, ids, clock);
+            KnowledgeSearch search, QuestionLog questions, IdGenerator ids, Clock clock,
+            DocumentContexts contexts) {
+        return new FindSimilarCases(organizations, projectMembers, search, questions, ids, clock, contexts);
     }
 
     @Bean
@@ -1172,24 +1210,27 @@ public class UseCaseConfiguration {
             ProjectMemberRepository projectMembers,
             DocumentRepository documents,
             TopicRepository topics,
-            TaggingRepository tagging) {
-        return new ListDocuments(organizations, projectMembers, documents, topics, tagging);
+            TaggingRepository tagging,
+            DocumentContexts contexts) {
+        return new ListDocuments(organizations, projectMembers, documents, topics, tagging, contexts);
     }
 
     @Bean
     ReadPage readPage(
             OrganizationRepository organizations,
             ProjectMemberRepository projectMembers,
-            DocumentRepository documents) {
-        return new ReadPage(organizations, projectMembers, documents);
+            DocumentRepository documents,
+            DocumentContexts contexts) {
+        return new ReadPage(organizations, projectMembers, documents, contexts);
     }
 
     @Bean
     VerifyCitation verifyCitation(
             OrganizationRepository organizations,
             ProjectMemberRepository projectMembers,
-            DocumentRepository documents) {
-        return new VerifyCitation(organizations, projectMembers, documents);
+            DocumentRepository documents,
+            DocumentContexts contexts) {
+        return new VerifyCitation(organizations, projectMembers, documents, contexts);
     }
 
     @Bean

@@ -1,3 +1,6 @@
 .facts { display: grid; gap: 10px; margin: 0; }
 .facts dt { font-size: 13px; color: var(--text-muted); }
 .facts dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+
+.links ul { list-style: none; padding: 0; display: grid; gap: 12px; }
+.links blockquote { margin: 4px 0 0; color: var(--text-muted); }

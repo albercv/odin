@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ApiClient, SimilarCasesResponse } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
 import type { ProjectTerms } from '../terms.js';
-import { guarded, jsonResult, textResult } from './result.js';
+import { FRESH_READ, guarded, jsonResult, textResult } from './result.js';
 
 const NO_CASES_MESSAGE = 'No constan casos parecidos en los documentos de tu empresa.';
 
@@ -13,12 +13,14 @@ const DESCRIPTION =
   'De cada caso parecido, presenta su resolución y su resultado con la cita del documento y la página. ' +
   'Si dos casos se resolvieron de forma distinta, enséñalos los dos con sus citas y su resultado, y sugiere solo el que acabó bien, citando ese resultado. ' +
   'Sugiere una resolución solo si su resultado está escrito en el documento; si ninguno de los casos tiene el resultado escrito, enseña las resoluciones sin sugerir ninguna. ' +
+  'corrections de un caso son rectificaciones de su documento: si hay alguna, dilo al presentarlo; si es confirmed false o hidden, di que está sin confirmar o que la corrige un documento al que no tienes acceso. ' +
   'Nunca compares ni menciones a las personas que resolvieron cada caso. ' +
   'Una ficha aportada es una ficha redactada con IA por un trabajador: preséntala como ficha, no como caso resuelto, y no le atribuyas un resultado que su texto no diga. ' +
   'addedAt es cuándo entró el documento en Odín, no la fecha del caso; esa fecha está en el texto. ' +
   'Si un caso no tiene resolución o resultado escritos, dilo; si es el mismo caso nuevo que te han dado, descártalo. ' +
   'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes ver cuál). ' +
-  'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven.';
+  'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +
+  FRESH_READ;
 
 export function registerFindSimilarCases(server: McpServer, api: ApiClient, projects: ProjectNames, t: ProjectTerms): void {
   server.registerTool(

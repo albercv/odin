@@ -105,7 +105,7 @@ class VerifyCitationTest {
                 new CitationCheck(other.id(), 1, "franquicia"), new CitationCheck(failed.id(), 1, "franquicia"),
                 new CitationCheck(withdrawn.id(), 1, "franquicia")));
 
-        assertThat(result).containsExactly(true, false, false, false, false);
+        assertThat(result).extracting(CitationVerdict::verified).containsExactly(true, false, false, false, false);
     }
 
     @Test

@@ -3,20 +3,27 @@ import { z } from 'zod';
 import type { ApiClient, Hit } from '../api/client.js';
 import type { ProjectNames } from '../projects.js';
 import { noProject, type ProjectTerms } from '../terms.js';
-import { NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
+import { FRESH_ABSENCE, FRESH_READ, NO_SOURCE_MESSAGE, guarded, jsonResult, textResult } from './result.js';
 
 const description = (t: ProjectTerms) =>
   'Busca en los documentos y fichas aprobadas de la empresa. Los documentos traen documentId, página y extracto para citar; ' +
   'las fichas (KNOWLEDGE_CARD) traen cardId, autor, fecha de alta y su origen, y no tienen página. ' +
   `projectName es ${t.the} ${t.singular}: una de las unidades con las que la empresa organiza su trabajo en Odín; «${noProject(t)}» si no es de ${t.none} ${t.singular} y lo ve toda la empresa. ` +
   'addedAt es la fecha en que entró en Odín, no la del documento. ' +
-  'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). ' +
+  'superseded indica que un documento está sustituido; replacement es el documento vigente que lo sustituye (null si no puedes verlo). Si no puedes ver el que lo sustituye, di solo que está sustituido. ' +
+  'versions es la cadena de versiones del documento, de la más antigua a la más reciente: current marca la vigente; link es la frase (page, quote) donde una versión dice que sustituye a la anterior; heading, el encabezado de la página 1; match, la mejor página para tu consulta. ' +
+  'corrections son las rectificaciones o modificaciones de otros documentos, con direction (correctedBy: lo corrige otro; corrects: este corrige a otro), evidencePage y evidenceQuote para citarlas; confirmed false es que el administrador aún no la ha confirmado, y hidden true, que la corrige un documento al que no tienes acceso: no digas cuál. ' +
+  'superseded y replacement son la marca que una persona puso en Odín; que el texto de un documento diga «sustituye a…» no es esa marca (sale en corrections, sin confirmar); no afirmes el valor de un campo sin haberlo leído en un resultado. ' +
+  'incomplete true es que falta un eslabón de la cadena: dilo y no lo rellenes. ' +
+  'Las fechas salen del texto (heading, link, el fragmento), no de addedAt. La fecha es la que conste en el texto del documento; si no consta, da la fecha en que entró en Odín y di que es esa. Si corrections trae una rectificación, el importe vigente es el de la rectificativa. ' +
+  'Copia cada fragmento literal por separado; no unas trozos con puntos suspensivos. De una ficha, cita solo su texto, sin el título, el autor ni la fecha. ' +
   'Una ficha con reviewStatus PENDING es tuya y está pendiente de revisión: dilo al citarla y recuerda que tus compañeros todavía no la ven. ' +
   'Cada consulta, una idea, en 1 a 3 palabras específicas. ' +
   'Si una búsqueda no trae lo que buscas, repite en otra llamada con una sola consulta corta y específica: las consultas de una misma llamada se suman y una genérica puede tapar a la buena. ' +
   'Si el documento da una fecha o un plazo concreto, dalo con su cita y no te abstengas. ' +
   'Si una ficha dice algo distinto que un documento, cita las dos. ' +
-  'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage.';
+  'title es el nombre del documento, no texto de la página: no lo cites; cita el extracto o el texto de readPage. ' +
+  FRESH_READ + ' ' + FRESH_ABSENCE;
 
 // getCaseFile solo existe con la capacidad CASE_FILES: sin ella la pista llevaría a una herramienta que no está.
 const CASE_FILE_HINT =
@@ -46,31 +53,37 @@ export function registerSearchKnowledge(server: McpServer, api: ApiClient, proje
 
 // Una ficha nunca se presenta como documento: lleva cardId y su marca de origen (spec 6.8, D-024).
 const toCitation = (hit: Hit, projects: ProjectNames) =>
-  hit.sourceType === 'KNOWLEDGE_CARD'
-    ? {
-        sourceType: hit.sourceType,
-        cardId: hit.sourceId,
-        title: hit.title,
-        authorName: hit.authorName,
-        addedAt: hit.date,
-        projectId: hit.projectId ?? null,
-        projectName: projects.nameOf(hit.projectId),
-        excerpt: hit.excerpt,
-        origin: `Ficha aportada por ${hit.authorName}, redactada con IA`,
-        ...(hit.reviewStatus ? { reviewStatus: hit.reviewStatus } : {}),
-      }
-    : {
-        sourceType: hit.sourceType,
-        documentId: hit.sourceId,
-        title: hit.title,
-        pageNumber: hit.pageNumber ?? null,
-        paginated: hit.paginated,
-        caseDocument: hit.caseDocument,
-        projectId: hit.projectId ?? null,
-        projectName: projects.nameOf(hit.projectId),
-        authorName: hit.authorName,
-        addedAt: hit.date,
-        superseded: hit.superseded,
-        replacement: hit.replacement ?? null,
-        excerpt: hit.excerpt,
-      };
+  hit.sourceType === 'KNOWLEDGE_CARD' ? cardCitation(hit, projects) : documentCitation(hit, projects);
+
+const cardCitation = (hit: Hit, projects: ProjectNames) => ({
+  sourceType: hit.sourceType,
+  cardId: hit.sourceId,
+  title: hit.title,
+  authorName: hit.authorName,
+  addedAt: hit.date,
+  projectId: hit.projectId ?? null,
+  projectName: projects.nameOf(hit.projectId),
+  excerpt: hit.excerpt,
+  origin: `Ficha aportada por ${hit.authorName}, redactada con IA`,
+  ...(hit.reviewStatus ? { reviewStatus: hit.reviewStatus } : {}),
+});
+
+// versions, corrections e incomplete salen tal cual del API: las calcula Odín sin IA y ya filtradas por lo que el trabajador ve.
+const documentCitation = (hit: Hit, projects: ProjectNames) => ({
+  sourceType: hit.sourceType,
+  documentId: hit.sourceId,
+  title: hit.title,
+  pageNumber: hit.pageNumber ?? null,
+  paginated: hit.paginated,
+  caseDocument: hit.caseDocument,
+  projectId: hit.projectId ?? null,
+  projectName: projects.nameOf(hit.projectId),
+  authorName: hit.authorName,
+  addedAt: hit.date,
+  superseded: hit.superseded,
+  replacement: hit.replacement ?? null,
+  excerpt: hit.excerpt,
+  versions: hit.versions,
+  corrections: hit.corrections,
+  incomplete: hit.incomplete,
+});
